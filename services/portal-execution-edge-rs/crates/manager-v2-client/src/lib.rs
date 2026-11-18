@@ -22,7 +22,7 @@ use manager_v2_contract::{
     MAXIMUM_RESPONSE_BYTES, RUNTIME_CONTRACT_REVISION,
 };
 use reqwest::{
-    header::{HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE},
+    header::{HeaderMap, HeaderName, HeaderValue, ACCEPT, RETRY_AFTER},
     redirect::Policy,
     Certificate, Client, Identity,
 };
@@ -107,16 +107,25 @@ impl ManagerV2Client {
             .no_proxy()
             .user_agent("portal-execution-edge/manager-v2.runtime.v1");
         if enforce_tls {
-            let root = Certificate::from_pem(config.root_ca_pem)
+            if config.root_ca_pem.len() > 1024 * 1024 {
+                return Err(ManagerV2ClientError::InvalidTrustAnchor);
+            }
+            let roots = Certificate::from_pem_bundle(config.root_ca_pem)
                 .map_err(|_| ManagerV2ClientError::InvalidTrustAnchor)?;
+            if roots.is_empty() {
+                return Err(ManagerV2ClientError::InvalidTrustAnchor);
+            }
             let identity = Identity::from_pem(config.client_identity_pem)
                 .map_err(|_| ManagerV2ClientError::InvalidClientIdentity)?;
             builder = builder
                 .https_only(true)
                 .min_tls_version(reqwest::tls::Version::TLS_1_3)
                 .max_tls_version(reqwest::tls::Version::TLS_1_3)
-                .add_root_certificate(root)
+                .tls_built_in_root_certs(false)
                 .identity(identity);
+            for root in roots {
+                builder = builder.add_root_certificate(root);
+            }
         }
         let client = builder
             .build()
@@ -242,6 +251,11 @@ impl ManagerV2Client {
             return Err(ManagerV2ClientError::RedirectDenied);
         }
         let status = response.status().as_u16();
+        if status == 429 {
+            return Err(ManagerV2ClientError::RateLimited {
+                retry_after: parse_retry_after(response.headers())?,
+            });
+        }
         if !matches!(status, 200 | 503) {
             return Err(ManagerV2ClientError::UnexpectedHttpStatus(status));
         }
@@ -405,6 +419,33 @@ impl ManagerV2Client {
     }
 }
 
+/// Parse both RFC Retry-After forms. A malformed or ambiguous server hint
+/// fails closed rather than allowing a retry earlier than the source asked.
+fn parse_retry_after(headers: &HeaderMap) -> Result<Option<Duration>, ManagerV2ClientError> {
+    let all = headers.get_all(RETRY_AFTER);
+    let mut values = all.iter();
+    let Some(value) = values.next() else {
+        return Ok(None);
+    };
+    if values.next().is_some() {
+        return Err(ManagerV2ClientError::InvalidRetryAfter);
+    }
+    let value = value
+        .to_str()
+        .map_err(|_| ManagerV2ClientError::InvalidRetryAfter)?
+        .trim();
+    if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) {
+        let seconds = value
+            .parse::<u64>()
+            .map_err(|_| ManagerV2ClientError::InvalidRetryAfter)?;
+        return Ok(Some(Duration::from_secs(seconds)));
+    }
+    let deadline = chrono::DateTime::parse_from_rfc2822(value)
+        .map_err(|_| ManagerV2ClientError::InvalidRetryAfter)?;
+    let delta = deadline.signed_duration_since(chrono::Utc::now());
+    Ok(Some(delta.to_std().unwrap_or(Duration::ZERO)))
+}
+
 fn validate_origin(raw: &str, require_https: bool) -> Result<Url, ManagerV2ClientError> {
     let url = Url::parse(raw).map_err(|_| ManagerV2ClientError::InvalidSourceProxyOrigin)?;
     let scheme_ok = url.scheme() == "https" || (!require_https && url.scheme() == "http");
@@ -450,56 +491,55 @@ fn validate_profile_id(profile_id: &str) -> Result<(), ManagerV2ClientError> {
 fn validate_response_headers(
     headers: &reqwest::header::HeaderMap,
 ) -> Result<(), ManagerV2ClientError> {
-    let contract = headers
-        .get(HeaderName::from_static("x-manager-contract"))
-        .and_then(|value| value.to_str().ok());
+    let contract = single_header_value(headers, "x-manager-contract");
     if contract != Some(RUNTIME_CONTRACT_REVISION) {
         return Err(ManagerV2ClientError::ContractHeaderMismatch);
     }
-    let content_type = headers
-        .get(CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_ascii_lowercase);
-    if !content_type.is_some_and(|value| value.starts_with("application/json")) {
-        return Err(ManagerV2ClientError::InvalidContentType);
-    }
-    Ok(())
+    validate_json_content_type(headers)
 }
 
 fn validate_extension_response_headers(
     headers: &reqwest::header::HeaderMap,
     expected_contract: &str,
 ) -> Result<(), ManagerV2ClientError> {
-    let contract = headers
-        .get(HeaderName::from_static("x-manager-contract"))
-        .and_then(|value| value.to_str().ok());
+    let contract = single_header_value(headers, "x-manager-contract");
     if contract != Some(expected_contract) {
         return Err(ManagerV2ClientError::ExtensionContractHeaderMismatch);
     }
-    let content_type = headers
-        .get(CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_ascii_lowercase);
-    if !content_type.is_some_and(|value| value.starts_with("application/json")) {
-        return Err(ManagerV2ClientError::InvalidContentType);
-    }
-    Ok(())
+    validate_json_content_type(headers)
 }
 
 fn validate_market_context_adapter_headers(
     headers: &reqwest::header::HeaderMap,
 ) -> Result<(), ManagerV2ClientError> {
-    let adapter = headers
-        .get(HeaderName::from_static("x-portal-source-adapter"))
-        .and_then(|value| value.to_str().ok());
+    let adapter = single_header_value(headers, "x-portal-source-adapter");
     if adapter != Some(MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION) {
         return Err(ManagerV2ClientError::MarketContextAdapterHeaderMismatch);
     }
-    let content_type = headers
-        .get(CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_ascii_lowercase);
-    if !content_type.is_some_and(|value| value.starts_with("application/json")) {
+    validate_json_content_type(headers)
+}
+
+/// A response revision or media type must have one interpretation throughout
+/// the proxy chain, not whichever duplicate field happened to arrive first.
+fn single_header_value<'a>(headers: &'a reqwest::header::HeaderMap, name: &str) -> Option<&'a str> {
+    let all = headers.get_all(name);
+    let mut values = all.iter();
+    let value = values.next()?.to_str().ok()?;
+    if values.next().is_some() {
+        return None;
+    }
+    Some(value)
+}
+
+fn validate_json_content_type(
+    headers: &reqwest::header::HeaderMap,
+) -> Result<(), ManagerV2ClientError> {
+    if !single_header_value(headers, "content-type").is_some_and(|value| {
+        value
+            .split(';')
+            .next()
+            .is_some_and(|media_type| media_type.trim().eq_ignore_ascii_case("application/json"))
+    }) {
         return Err(ManagerV2ClientError::InvalidContentType);
     }
     Ok(())
@@ -543,6 +583,10 @@ pub enum ManagerV2ClientError {
     InvalidContentType,
     #[error("Manager-v2 response exceeded the owner-qualified byte limit")]
     ResponseTooLarge,
+    #[error("Manager-v2 Source Proxy is rate limited")]
+    RateLimited { retry_after: Option<Duration> },
+    #[error("Manager-v2 Source Proxy returned an invalid Retry-After")]
+    InvalidRetryAfter,
     #[error("Manager-v2 Source Proxy returned unexpected HTTP status {0}")]
     UnexpectedHttpStatus(u16),
     #[error("Manager extension Source Proxy returned unexpected HTTP status {0}")]

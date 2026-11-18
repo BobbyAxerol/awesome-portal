@@ -1,0 +1,85 @@
+{
+  "schema_version": "epg10-08.native-test-target-guard.v1",
+  "status": "PASS_PURE_UNIT_ONLY",
+  "phase_exit": "NOT_MET",
+  "authority_installed": false,
+  "recorded_utc": "2026-10-18T04:16:00Z",
+  "source_directory": "/tmp/epg10-08-native-test-guard-OO8oaL3p",
+  "source_sha256": {
+    "native-test-target-guard.ts": "ffba18f34ec2b0b48c41b1db3d957658077b1cfa0ef473446bd6653d2c804320",
+    "native-test-target-guard.node-test.ts": "44e0edbfa8294392c2ef0b2f44a2d4ff1479ac66891be2e6b67813f6a94308ef"
+  },
+  "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+  "execution": {
+    "command": "node --experimental-strip-types --test /source/native-test-target-guard.node-test.ts",
+    "network": "none",
+    "rootfs": "read-only",
+    "source_mount": "read-only",
+    "cpu_limit": 1,
+    "memory_mib": 256,
+    "database": "NONE",
+    "metadata_in_unit_tests": "MOCKED_TEST_ONLY",
+    "worker_uid": 1001,
+    "pass": 23,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "duration_ms": 287.61254
+  },
+  "retained_failure": {
+    "reason": "initial worker UID1000 could not traverse source-owner1001 mode0700 directory",
+    "business_cases": 0,
+    "source_or_assertions_changed": false,
+    "cleanup_complete": true
+  },
+  "cleanup": {
+    "owned_containers_remaining": 0,
+    "own_lease_removed": true,
+    "new_images": 0,
+    "new_build_cache": 0,
+    "operational_mutations": 0,
+    "runtime_tuple_sha256_before_and_after": "59d1ff2523518395977c9341303958d962c291453624969d748aa05fcc15eaf6",
+    "shared_available_bytes_before": 220590768128,
+    "shared_available_bytes_after": 220652548096,
+    "exclusive_reclaim_claimed": false,
+    "shared_images_retained": 111,
+    "shared_build_cache_records_retained": 423,
+    "broad_prune": false
+  },
+  "tuple_fix_rerun": {
+    "recorded_utc": "2026-10-18T06:44:30.825054+00:00",
+    "status": "PASS_PURE_UNIT_ONLY",
+    "source_sha256": {
+      "native-test-target-guard.ts": "ffba18f34ec2b0b48c41b1db3d957658077b1cfa0ef473446bd6653d2c804320",
+      "native-test-target-guard.node-test.ts": "e8844091363d22ac5f08a265e802ed20b2ae716285837520ed93f7e954802396"
+    },
+    "receipt_sha256": "9c8e86e604afafbf9726f1225f06df23352d1a1f87224d4bbdee05a7a27404bd",
+    "tap_sha256": "056bc7214a5f477fd507ea2b9cd664f5f6cb52b7e65684a203ac7e00952002f4",
+    "cpu_limit": 0.5,
+    "memory_mib": 128,
+    "pass": 23,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0,
+    "additional_unique_cases": 0,
+    "controller_elapsed_seconds": 1.581,
+    "source_unchanged": true,
+    "cleanup_complete": true,
+    "protected_hk_runtime_tuples_unchanged": 40,
+    "shared_free_bytes_before": 222742237184,
+    "shared_free_bytes_after": 222738530304,
+    "new_images_build_cache": 0,
+    "strict_typecheck": "NOT_RUN",
+    "actual_pg": "NOT_RUN",
+    "runtime_acceptance": "NOT_MET"
+  },
+  "not_qualified": [
+    "real PostgreSQL target introspection",
+    "spec and standard-hook integration",
+    "strict TypeScript compilation",
+    "actual identity or policy installation",
+    "connected Edge SSE acceptance"
+  ]
+}

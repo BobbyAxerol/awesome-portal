@@ -1,0 +1,235 @@
+{
+  "schema": "epg10.final-source-runtime-reconciliation.v1",
+  "phase": "EPG10-06",
+  "at_utc": "2026-10-16 07:41:03 UTC",
+  "inputs": {
+    "source_file_count": 399,
+    "runner_file_count": 4,
+    "source_mismatches": [],
+    "runner_mismatches": [],
+    "manifest_sha256": "1ecac620d46f5678a4d9370c35499705dce14f7040b4b30161ced1139925170e",
+    "source_bytes_unchanged_during_remote_run": true,
+    "remote_mtime_refresh_bytes_unchanged": true,
+    "local_candidate_matches_remote_tested_input": true
+  },
+  "authority": {
+    "partner_non_journal_inputs": 34,
+    "approved_guides": 4,
+    "mismatches": [],
+    "compared_to": "../EPG10-00/source-runtime-manifest.json",
+    "all_unchanged": true
+  },
+  "hosts": {
+    "HK": {
+      "before_at_utc": "2026-10-16T06:39:40.725584+00:00",
+      "after_at_utc": "2026-10-16T07:39:54.733323+00:00",
+      "protected_tuples": 12,
+      "tuple_changes": [],
+      "all_restarts_zero": true,
+      "before_docker_inventory": [
+        {
+          "Active": "42",
+          "Reclaimable": "13.15GB (37%)",
+          "Size": "34.69GB",
+          "TotalCount": "126",
+          "Type": "Images"
+        },
+        {
+          "Active": "45",
+          "Reclaimable": "17.29MB (0%)",
+          "Size": "3.522GB",
+          "TotalCount": "74",
+          "Type": "Containers"
+        },
+        {
+          "Active": "14",
+          "Reclaimable": "218.3MB (0%)",
+          "Size": "117.1GB",
+          "TotalCount": "78",
+          "Type": "Local Volumes"
+        },
+        {
+          "Active": "47",
+          "Reclaimable": "694.1MB",
+          "Size": "27.92GB",
+          "TotalCount": "398",
+          "Type": "Build Cache"
+        }
+      ],
+      "after_docker_inventory": [
+        {
+          "Active": "42",
+          "Reclaimable": "13.15GB (37%)",
+          "Size": "34.69GB",
+          "TotalCount": "126",
+          "Type": "Images"
+        },
+        {
+          "Active": "54",
+          "Reclaimable": "17.29MB (0%)",
+          "Size": "3.531GB",
+          "TotalCount": "83",
+          "Type": "Containers"
+        },
+        {
+          "Active": "16",
+          "Reclaimable": "218.3MB (0%)",
+          "Size": "118.6GB",
+          "TotalCount": "80",
+          "Type": "Local Volumes"
+        },
+        {
+          "Active": "47",
+          "Reclaimable": "694.1MB",
+          "Size": "27.92GB",
+          "TotalCount": "398",
+          "Type": "Build Cache"
+        }
+      ],
+      "disk_available_after_bytes": 198256500736,
+      "source_after": [
+        {
+          "branch": "feat/v2-rust-first-okx-demo",
+          "head": "471ff37c12f02e4989089d16f5dfd048723a0d6e",
+          "journal_sha256": "75d9c80350050dcaa9e2efc999029d25dea98c3c3762dc00eeff8a3a80708e79",
+          "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+          "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unstaged_sha256": "e00df2ed4fbd43a5c81f9f5cdf0eaab0a940518a4acf12fd54a3c2f798f9f671",
+          "untracked_count": 1,
+          "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2"
+        },
+        {
+          "branch": "feat/portfolio-account-v1_1-parallel",
+          "head": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+          "journal_sha256": "96ee825d90a33f3cab614b8c7053408fc34b6ae965db867e6efc33ef769735fd",
+          "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+          "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "untracked_count": 0,
+          "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "branch": "fix/p184-dl-closure",
+          "head": "68556d40a8ef71420f3d65ba850796ea5fe68887",
+          "journal_sha256": "e10b8268813c0cd7ced8403157610ac76f737048a4d4e78f1fc709521ab1cb1c",
+          "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+          "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "untracked_count": 0,
+          "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "branch": "feat/manager-v2-paper-read",
+          "head": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+          "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+          "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "untracked_count": 4,
+          "untracked_paths_sha256": "51ffb84753145825dbfd449cfa77440dd156af83e34fc40fd6400b82663e75a4"
+        }
+      ],
+      "host_lock_after": {
+        "owner": "claude-burst-b16-amend1",
+        "purpose": "P18.4 B16 burst amendment-1 rerun: isolated internal-burst TEST_ONLY on production pins, writer Subscribe depth 2000, 5 cells incl. core-pause 700 ms; --rm containers, no production mutation",
+        "started_utc": "2026-10-16T07:22:06+00:00",
+        "until_utc": "2026-10-16T10:22:06+00:00"
+      },
+      "worktrees_unchanged": true
+    },
+    "SGP": {
+      "before_at_utc": "2026-10-16T06:39:51.600062+00:00",
+      "after_at_utc": "2026-10-16T07:40:17.741283+00:00",
+      "protected_tuples": 5,
+      "tuple_changes": [],
+      "all_restarts_zero": true,
+      "before_docker_inventory": [
+        {
+          "Active": "25",
+          "Reclaimable": "74.4GB (83%)",
+          "Size": "88.82GB",
+          "TotalCount": "328",
+          "Type": "Images"
+        },
+        {
+          "Active": "51",
+          "Reclaimable": "471kB (19%)",
+          "Size": "2.449MB",
+          "TotalCount": "59",
+          "Type": "Containers"
+        },
+        {
+          "Active": "22",
+          "Reclaimable": "13.78GB (43%)",
+          "Size": "32.01GB",
+          "TotalCount": "97",
+          "Type": "Local Volumes"
+        },
+        {
+          "Active": "93",
+          "Reclaimable": "62.97GB",
+          "Size": "195.9GB",
+          "TotalCount": "3776",
+          "Type": "Build Cache"
+        }
+      ],
+      "after_docker_inventory": [
+        {
+          "Active": "26",
+          "Reclaimable": "74.4GB (83%)",
+          "Size": "88.82GB",
+          "TotalCount": "328",
+          "Type": "Images"
+        },
+        {
+          "Active": "53",
+          "Reclaimable": "471kB (18%)",
+          "Size": "2.494MB",
+          "TotalCount": "61",
+          "Type": "Containers"
+        },
+        {
+          "Active": "22",
+          "Reclaimable": "13.78GB (43%)",
+          "Size": "32.01GB",
+          "TotalCount": "97",
+          "Type": "Local Volumes"
+        },
+        {
+          "Active": "93",
+          "Reclaimable": "62.97GB",
+          "Size": "195.9GB",
+          "TotalCount": "3776",
+          "Type": "Build Cache"
+        }
+      ],
+      "disk_available_after_bytes": 168452857856,
+      "source_after": [
+        {
+          "branch": "docs/research-loop-plan",
+          "head": "c4109ef350a58c1ae3840d9c3f4c2110b312a079",
+          "path": "/home/bobby/portal-research",
+          "staged_sha256": "277c30f680bc98e025e5442dfd121f90330667e20625ec33250ad3bec7900d9a",
+          "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "untracked_count": 0,
+          "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "branch": "main",
+          "head": "533162635f56584d630e3d971d77d50860595f15",
+          "path": "/home/bobby/portal-main-release",
+          "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "untracked_count": 0,
+          "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "host_lock_after": null,
+      "research_contracts_unchanged": true
+    }
+  },
+  "runtime_activation": false,
+  "production_mutations": 0,
+  "images_built_or_pulled": 0,
+  "push_or_merge": false,
+  "research_wip_ruling": "Research HEAD unchanged, staging changed concurrently; three contract hashes unchanged. WIP preserved, not accepted as deployment/source authority."
+}

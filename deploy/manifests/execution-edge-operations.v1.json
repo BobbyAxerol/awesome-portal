@@ -1,0 +1,813 @@
+{
+  "schema": "execution.edge-operations.v1",
+  "status": "INDEPENDENT_HANDOFF_SOURCE_DARK",
+  "activation": {
+    "source": false,
+    "read_route": false,
+    "commands": false,
+    "live_traffic": false,
+    "alerts_installed": false
+  },
+  "production_budget": null,
+  "production_on_call": "UNBOUND_PRIVATE_RELEASE_INPUT",
+  "configuration": {
+    "decision_revision": "ops.v1",
+    "logical_read_ceiling": {
+      "rows": 200,
+      "bytes": 1048576
+    },
+    "schema": "Portal PG migrations0001–0022 additive; no new migration in11",
+    "production_numeric_envelope": "UNBOUND_01_06_CONNECTED_RETURN",
+    "runtime_config": "UNCHANGED_NOT_THIS_SOURCE_REVISION",
+    "score_runtime_artifact": "REQUIRED_NOT_INVENTED",
+    "command_operation_profiles": [],
+    "scoped_return_packet": "EPG10-10 SOURCE/TRUST/COMMAND/RESEARCH/LOAD/RELEASE"
+  },
+  "retention": [
+    {
+      "id": "user_identity_mapping",
+      "owner": "TS identity/membership",
+      "source_history_scope": [
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "portfolio_registry",
+      "owner": "TS registry; TS identity/membership",
+      "source_history_scope": [
+        "current registry plus candidate receipts/outbox; full history unproven",
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "portfolio_membership",
+      "owner": "TS identity/membership",
+      "source_history_scope": [
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "alpha_registry",
+      "owner": "TS registry",
+      "source_history_scope": [
+        "current registry plus candidate receipts/outbox; full history unproven"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "alpha_ownership",
+      "owner": "TS identity/membership; TS registry",
+      "source_history_scope": [
+        "temporal membership/revocation revisions; export history not certified",
+        "current registry plus candidate receipts/outbox; full history unproven"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "deployment_registry",
+      "owner": "TS registry; TS profile/binding",
+      "source_history_scope": [
+        "current registry plus candidate receipts/outbox; full history unproven",
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "internal_accounts",
+      "owner": "TS registry; TS profile/binding",
+      "source_history_scope": [
+        "current registry plus candidate receipts/outbox; full history unproven",
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "venue_physical_account_registry",
+      "owner": "TS profile/binding; TS registry",
+      "source_history_scope": [
+        "effective binding/profile revisions; installed temporal proof unverified",
+        "current registry plus candidate receipts/outbox; full history unproven"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "account_binding",
+      "owner": "TS profile/binding",
+      "source_history_scope": [
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "root_capital_limit",
+      "owner": "TS capital/admission",
+      "source_history_scope": [
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "economic_capital_assignment",
+      "owner": "TS capital/admission; TS economics/accounting",
+      "source_history_scope": [
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "budget_entitlement",
+      "owner": "TS capital/admission",
+      "source_history_scope": [
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "execution_grant_reservation",
+      "owner": "TS execution; TS risk/lock/recall",
+      "source_history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "exact command partitions and revisions; external history unproven"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "administrative_locks",
+      "owner": "TS risk/lock/recall",
+      "source_history_scope": [
+        "exact command partitions and revisions; external history unproven"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "recall_requests",
+      "owner": "TS risk/lock/recall",
+      "source_history_scope": [
+        "exact command partitions and revisions; external history unproven"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "trading_state",
+      "owner": "TS risk/lock/recall; TS execution",
+      "source_history_scope": [
+        "exact command partitions and revisions; external history unproven",
+        "SourceScope opt-in transactional journal; compatibility writers not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "order_intents",
+      "owner": "TS execution; TS economics/accounting",
+      "source_history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "obligations_unknown_execution_outcomes",
+      "owner": "TS execution; TS economics/accounting; TS risk/lock/recall",
+      "source_history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "exact command partitions and revisions; external history unproven"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "orders_execution_status",
+      "owner": "TS execution; TS economics/accounting",
+      "source_history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "fills",
+      "owner": "TS execution; TS economics/accounting",
+      "source_history_scope": [
+        "SourceScope opt-in transactional journal; compatibility writers not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "positions_episodes",
+      "owner": "TS economics/accounting",
+      "source_history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "balances_collateral",
+      "owner": "TS economics/accounting; TS profile/binding",
+      "source_history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "fees_funding",
+      "owner": "TS economics/accounting",
+      "source_history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "accounting_postings_corrections",
+      "owner": "TS economics/accounting",
+      "source_history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "economic_journal",
+      "owner": "TS economics/accounting; TS journal/publication",
+      "source_history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "valuation_prices_used",
+      "owner": "TS economics/accounting; DL admission/TS valuation",
+      "source_history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "per-dataset retention; md.latest6h marker no tombstones; not economic retention"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "risk_state_limits",
+      "owner": "TS risk/lock/recall; TS execution",
+      "source_history_scope": [
+        "exact command partitions and revisions; external history unproven",
+        "SourceScope opt-in transactional journal; compatibility writers not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "reconciliation",
+      "owner": "TS economics/accounting; TS profile/binding",
+      "source_history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "effective binding/profile revisions; installed temporal proof unverified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "command_receipts",
+      "owner": "TS capital/admission; TS risk/lock/recall; Portal projection owner",
+      "source_history_scope": [
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "exact command partitions and revisions; external history unproven",
+        "retained observations not complete source history"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "operational_audit",
+      "owner": "TS identity/membership; TS capital/admission; TS risk/lock/recall; TS economics/accounting; Portal projection owner",
+      "source_history_scope": [
+        "temporal membership/revocation revisions; export history not certified",
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "exact command partitions and revisions; external history unproven",
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "retained observations not complete source history"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "publication_catalogue_manifest",
+      "owner": "TS journal/publication",
+      "source_history_scope": [
+        "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "sync_health_cursor_retention",
+      "owner": "TS journal/publication; Portal projection owner; DL admission/TS valuation",
+      "source_history_scope": [
+        "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap",
+        "retained observations not complete source history",
+        "per-dataset retention; md.latest6h marker no tombstones; not economic retention"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "recovery_quality_events",
+      "owner": "TS economics/accounting; TS journal/publication; Portal projection owner; DL admission/TS valuation",
+      "source_history_scope": [
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "commit-order groups; materialized JOURNAL_CHECKPOINT_V1 not all-table bootstrap",
+        "retained observations not complete source history",
+        "per-dataset retention; md.latest6h marker no tombstones; not economic retention"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "report_snapshots",
+      "owner": "TS PM report publisher; Research analytics; Portal projection owner",
+      "source_history_scope": [
+        "immutable report hashes; delta/applied checkpoints null; factory unmounted",
+        "logical formula/metadata only; runtime config/inputs not certified",
+        "retained observations not complete source history"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "qbts_per_alpha",
+      "owner": "Research analytics",
+      "source_history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "manager_alpha_score",
+      "owner": "Research analytics; TS capital/admission; TS identity/membership",
+      "source_history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified",
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "portfolio_score",
+      "owner": "Research analytics; TS economics/accounting",
+      "source_history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified",
+        "immutable postings/revision-specific positions; source/correction/export coverage required"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "regime_fit",
+      "owner": "Research analytics",
+      "source_history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "archive_paper_watch",
+      "owner": "Research analytics; Portal projection owner",
+      "source_history_scope": [
+        "logical formula/metadata only; runtime config/inputs not certified",
+        "retained observations not complete source history"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "portal_identity_profile_session",
+      "owner": "Portal identity/session owner",
+      "source_history_scope": [
+        "in-flight ELP2-03/04 policy revisions; no Edge source authority"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "fund_portfolio_overview",
+      "owner": "Portal projection owner; TS capital/admission; TS economics/accounting; TS PM report publisher",
+      "source_history_scope": [
+        "retained observations not complete source history",
+        "candidate receipts; ISOLATED_CANDIDATE_NOT_CAPTURE_CERTIFIED",
+        "immutable postings/revision-specific positions; source/correction/export coverage required",
+        "immutable report hashes; delta/applied checkpoints null; factory unmounted"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    },
+    {
+      "id": "alpha_fleet_overview",
+      "owner": "Portal projection owner; TS registry; TS identity/membership",
+      "source_history_scope": [
+        "retained observations not complete source history",
+        "current registry plus candidate receipts/outbox; full history unproven",
+        "temporal membership/revocation revisions; export history not certified"
+      ],
+      "state": "UNQUALIFIED_NOT_RUNTIME_BOUND",
+      "retention_seconds": null,
+      "archive_floor": null,
+      "quality": "SOURCE_COVERAGE_REQUIRED"
+    }
+  ],
+  "alerts": [
+    {
+      "id": "source-gap",
+      "owner": "TS publisher + Edge",
+      "signal": "checkpoint/retention proof",
+      "fire": [
+        "GAP",
+        "FLOOR_BREACH"
+      ],
+      "clear": [
+        "MATCHED_RESYNC_VERIFIED"
+      ],
+      "action": "Contain dependent replay/read; preserve archive and checkpoints",
+      "recovery": "Verify new authenticated B/delta and full coverage/digest before resume"
+    },
+    {
+      "id": "source-backlog",
+      "owner": "TS publisher + Edge",
+      "signal": "durable source vs applied checkpoint",
+      "fire": [
+        "BACKLOG_BREACH"
+      ],
+      "clear": [
+        "CHECKPOINT_CAUGHT_UP"
+      ],
+      "action": "Pause dependent background work; retain status and immutable input",
+      "recovery": "Within measured approved backlog bound and no unexplained gap"
+    },
+    {
+      "id": "stale-data",
+      "owner": "Edge + source owner",
+      "signal": "family quality/freshness reason",
+      "fire": [
+        "STALE",
+        "UNAVAILABLE"
+      ],
+      "clear": [
+        "FRESH_CERTIFIED"
+      ],
+      "action": "Serve explicit stale/unavailable only within certified family policy",
+      "recovery": "Verify current watermark/quality under actual family policy"
+    },
+    {
+      "id": "cursor-expired",
+      "owner": "Edge backend operator",
+      "signal": "scoped query/replay result",
+      "fire": [
+        "RESYNC_REQUIRED"
+      ],
+      "clear": [
+        "NEW_GENERATION_VERIFIED"
+      ],
+      "action": "Reset affected continuation; new authenticated snapshot; do not parse cursor",
+      "recovery": "New scoped generation digest/coverage verified; old cursor rejects"
+    },
+    {
+      "id": "slow-client",
+      "owner": "Edge backend operator",
+      "signal": "bounded queue/drop/reset reason",
+      "fire": [
+        "SLOW_CONSUMER",
+        "OVERFLOW"
+      ],
+      "clear": [
+        "SCOPED_REPLAY_CAUGHT_UP"
+      ],
+      "action": "Disconnect affected client; retain producer progress and bounded queue",
+      "recovery": "Current-policy replay/resnapshot with bounded lag"
+    },
+    {
+      "id": "authority",
+      "owner": "PM authority + Portal identity",
+      "signal": "current-policy provider result",
+      "fire": [
+        "DENIED",
+        "PROVIDER_UNAVAILABLE",
+        "EXPIRED"
+      ],
+      "clear": [
+        "CURRENT_PROOF_VERIFIED"
+      ],
+      "action": "Deny affected new reads/replay/queued sends; retain safe status/ingestion",
+      "recovery": "Verify stable identity/session/field mapping and fresh proof; no cached fallback"
+    },
+    {
+      "id": "revoke-channel",
+      "owner": "Portal identity + PM authority",
+      "signal": "revocation/provider continuity",
+      "fire": [
+        "REVOKE_UNAVAILABLE"
+      ],
+      "clear": [
+        "REVOKE_CURRENT_VERIFIED"
+      ],
+      "action": "Fail closed affected reads/commands; never retain a stale grant",
+      "recovery": "Verify policy/session revision and through-COMMIT command authority separately"
+    },
+    {
+      "id": "unknown-command",
+      "owner": "PM command owner + Edge",
+      "signal": "durable command state/full outcome",
+      "fire": [
+        "UNKNOWN",
+        "UNCERTAIN"
+      ],
+      "clear": [
+        "AUTHORITATIVE_FINAL_RECEIPT"
+      ],
+      "action": "Preserve same intent/key; typed status/service recovery only; no new-key send",
+      "recovery": "Native final full outcome/receipt reconciled without duplicate business effect"
+    },
+    {
+      "id": "projection-integrity",
+      "owner": "Edge backend operator",
+      "signal": "canonical digest/coverage",
+      "fire": [
+        "DIGEST_MISMATCH",
+        "CORRUPT"
+      ],
+      "clear": [
+        "RESTORE_RESYNC_TIEOUT"
+      ],
+      "action": "Contain affected generation; preserve history/receipts; restore only isolated target",
+      "recovery": "Full scope rows/revisions/tombstones/facts/coverage and checkpoint verified"
+    },
+    {
+      "id": "tls",
+      "owner": "Host PKI + Portal identity",
+      "signal": "strict TLS result/cert notAfter policy",
+      "fire": [
+        "EXPIRING",
+        "EXPIRED",
+        "UNTRUSTED"
+      ],
+      "clear": [
+        "SAME_IDENTITY_TLS_VERIFIED"
+      ],
+      "action": "Stop affected connection at invalid identity; approved same-identity renewal",
+      "recovery": "Strict chain/SAN/mTLS positives and negatives; valid named fallback only"
+    },
+    {
+      "id": "storage",
+      "owner": "Host operations + Edge",
+      "signal": "ResourceEnvelope storage reason",
+      "fire": [
+        "STORAGE_HIGH",
+        "STORAGE_HARD",
+        "STORAGE_STALE"
+      ],
+      "clear": [
+        "FRESH_BELOW_APPROVED_CEILINGS"
+      ],
+      "action": "Pause background at high; deny writes hard/stale; reserve control; no shared deletion",
+      "recovery": "Fresh measured storage and explicit bounded resume under approved limits"
+    },
+    {
+      "id": "watch-backlog",
+      "owner": "Research watch owner",
+      "signal": "consumer job admission/watermark",
+      "fire": [
+        "WATCH_BACKLOG"
+      ],
+      "clear": [
+        "WATCH_WATERMARK_CAUGHT_UP"
+      ],
+      "action": "Pause consumer background work; preserve raw history/status; no TS heavy recompute",
+      "recovery": "Bounded current-policy resume at last committed watermark"
+    },
+    {
+      "id": "score-backlog",
+      "owner": "Research analytics owner",
+      "signal": "consumer job admission/watermark",
+      "fire": [
+        "SCORE_BACKLOG"
+      ],
+      "clear": [
+        "SCORE_WATERMARK_CAUGHT_UP"
+      ],
+      "action": "Pause score consumer jobs; preserve raw history/original published revisions",
+      "recovery": "Bounded resume with approved runtime artifact; no numeric fallback"
+    },
+    {
+      "id": "policy-revision",
+      "owner": "Research analytics + Portal policy",
+      "signal": "approved policy artifact digest",
+      "fire": [
+        "POLICY_PENDING",
+        "POLICY_CHANGED"
+      ],
+      "clear": [
+        "POLICY_REVISION_VERIFIED"
+      ],
+      "action": "Dependent metrics policy_pending/stale; pause affected consumer job only",
+      "recovery": "Approved config hash/source/cutoff bound to append-only published revision"
+    },
+    {
+      "id": "correction",
+      "owner": "Research analytics + source owner",
+      "signal": "source correction/metric revision",
+      "fire": [
+        "CORRECTION_PENDING"
+      ],
+      "clear": [
+        "CORRECTION_REVISION_TIED_OUT"
+      ],
+      "action": "Retain original_as_published/raw history; queue bounded affected-scope restatement",
+      "recovery": "New append-only metric revision links source/correction/policy with availability cutoff"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "T11-01",
+      "connected": "NOT_MET",
+      "returns": [
+        "RELEASE"
+      ]
+    },
+    {
+      "id": "T11-02",
+      "connected": "NOT_MET",
+      "returns": [
+        "SOURCE",
+        "RELEASE"
+      ]
+    },
+    {
+      "id": "T11-03",
+      "connected": "NOT_MET",
+      "returns": [
+        "SOURCE",
+        "TRUST",
+        "COMMAND",
+        "RESEARCH",
+        "LOAD",
+        "RELEASE"
+      ]
+    },
+    {
+      "id": "T11-04",
+      "connected": "NOT_MET",
+      "returns": [
+        "SOURCE",
+        "TRUST",
+        "COMMAND",
+        "RESEARCH",
+        "LOAD",
+        "RELEASE"
+      ]
+    },
+    {
+      "id": "T11-05",
+      "connected": "NOT_MET",
+      "returns": [
+        "SOURCE",
+        "TRUST",
+        "RESEARCH",
+        "LOAD"
+      ]
+    }
+  ],
+  "xlc": {
+    "XLC-01": "identity/current-policy",
+    "XLC-02": "catalogue/family coverage",
+    "XLC-03": "checkpoint/resync/cursor",
+    "XLC-04": "command UNKNOWN/status",
+    "XLC-05": "revoke/expiry/no resurrection",
+    "XLC-06": "retention/storage/lease/coexistence",
+    "XLC-07": "raw economic authority/no invented metrics",
+    "XLC-08": "source vs release vs runtime",
+    "XLC-09": "researcher current field policy",
+    "XLC-10": "stage/lifecycle/ownership continuity",
+    "XLC-11": "policy/correction/metric raw-history provenance"
+  },
+  "references": [
+    "deploy/runbooks/execution-edge-operations.md",
+    "deploy/manifests/execution-edge-scoped-cutover.v1.json",
+    "deploy/runbooks/execution-edge-scoped-cutover-and-rollback.md",
+    "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/registry.json",
+    "services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0022_bootstrap_rollout.sql",
+    "services/portal-execution-edge-rs/crates/projection-store-pg/tests/epg10_11/operations.rs",
+    "scripts/epg10-11/operations.py",
+    "scripts/epg10-11/test_operations.py"
+  ]
+}

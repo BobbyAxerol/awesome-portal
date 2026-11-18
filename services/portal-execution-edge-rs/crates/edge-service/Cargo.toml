@@ -6,6 +6,12 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# TEST_ONLY real disposable PostgreSQL qualification. No production behavior.
+pm-custody-pg-test = []
+# Explicit opt-in: loopback mTLS source + owned disposable PostgreSQL only.
+manager-projection-pg-test = []
+
 [dependencies]
 analytics = { path = "../analytics" }
 authoritative-event-core = { path = "../authoritative-event-core" }
@@ -23,6 +29,7 @@ manager-extension-contract = { path = "../manager-extension-contract" }
 manager-projection = { path = "../manager-projection" }
 manager-v2-client = { path = "../manager-v2-client" }
 manager-v2-contract = { path = "../manager-v2-contract" }
+maximum-data-adapter = { path = "../maximum-data-adapter" }
 paper-source-ingestor = { path = "../paper-source-ingestor" }
 paper-source-runner = { path = "../paper-source-runner" }
 paper-source-transport = { path = "../paper-source-transport" }
@@ -35,6 +42,7 @@ rustls.workspace = true
 rustls-pemfile.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 source-qualification = { path = "../source-qualification" }
 thiserror.workspace = true
 tokio.workspace = true
@@ -49,6 +57,7 @@ base64.workspace = true
 jsonwebtoken.workspace = true
 rcgen = "0.13.2"
 rsa = { version = "0.9.8", features = ["pem"] }
+sqlx.workspace = true
 time.workspace = true
 
 [lints]

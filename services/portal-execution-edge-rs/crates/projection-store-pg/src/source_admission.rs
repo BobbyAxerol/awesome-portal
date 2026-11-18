@@ -67,7 +67,9 @@ pub struct SourceReadCacheEntry {
 impl PgProjectionStore {
     /// Atomically admits one source request against both the cell-wide source
     /// budget and its profile budget. `PostgreSQL` time and row locks are the
-    /// authority across all Edge replicas.
+    /// authority across all Edge replicas. First admission freezes the shared
+    /// source/profile ceilings; differing replica configuration is an error,
+    /// never permission to rewrite or raise an existing operational budget.
     ///
     /// # Errors
     ///
@@ -89,10 +91,7 @@ impl PgProjectionStore {
                 "INSERT INTO portal_projection.source_admission_state
                    (scope_kind,scope_key,maximum_rps,maximum_concurrency,next_permit_at,updated_at)
                  VALUES ($1,$2,$3,$4,clock_timestamp(),clock_timestamp())
-                 ON CONFLICT (scope_kind,scope_key) DO UPDATE SET
-                   maximum_rps=EXCLUDED.maximum_rps,
-                   maximum_concurrency=EXCLUDED.maximum_concurrency,
-                   updated_at=clock_timestamp()",
+                 ON CONFLICT (scope_kind,scope_key) DO NOTHING",
             )
             .bind(kind)
             .bind(key)
@@ -102,7 +101,8 @@ impl PgProjectionStore {
             .await?;
         }
         let rows = sqlx::query(
-            "SELECT scope_kind,scope_key,next_permit_at,clock_timestamp() AS database_now
+            "SELECT scope_kind,scope_key,maximum_rps,maximum_concurrency,
+                    next_permit_at,clock_timestamp() AS database_now
              FROM portal_projection.source_admission_state
              WHERE (scope_kind='SOURCE' AND scope_key=$1)
                 OR (scope_kind='PROFILE' AND scope_key=$2)
@@ -114,6 +114,17 @@ impl PgProjectionStore {
         .await?;
         if rows.len() != 2 {
             return Err(StoreError::InvalidSourceAdmission);
+        }
+        for row in &rows {
+            if row.try_get::<i32, _>("maximum_rps")?
+                != i32::from(request.maximum_requests_per_second)
+                || row.try_get::<i32, _>("maximum_concurrency")?
+                    != i32::from(request.maximum_concurrency)
+            {
+                // Roll back any newly inserted profile row as well. Do not
+                // expire leases, advance scheduling or change stored ceilings.
+                return Err(StoreError::InvalidSourceAdmission);
+            }
         }
         sqlx::query(
             "DELETE FROM portal_projection.source_admission_leases
@@ -413,6 +424,142 @@ mod tests {
         .execute(&store.pool)
         .await
         .unwrap();
+    }
+
+    fn policy_keys(source: &str) -> Vec<String> {
+        let mut keys = vec![source.to_owned()];
+        keys.extend(
+            ["PAPER_N21", "SANDBOX_N21", "LIVE_N21"].map(|profile| format!("{source}:{profile}")),
+        );
+        keys
+    }
+
+    async fn policy_snapshot(store: &PgProjectionStore, source: &str) -> Value {
+        let states: Vec<Value> = sqlx::query_scalar(
+            "SELECT to_jsonb(s) FROM portal_projection.source_admission_state s
+             WHERE scope_key=ANY($1) ORDER BY scope_kind,scope_key",
+        )
+        .bind(policy_keys(source))
+        .fetch_all(&store.pool)
+        .await
+        .unwrap();
+        let leases: Vec<Value> = sqlx::query_scalar(
+            "SELECT to_jsonb(l) FROM portal_projection.source_admission_leases l
+             WHERE source_id=$1 ORDER BY lease_id",
+        )
+        .bind(source)
+        .fetch_all(&store.pool)
+        .await
+        .unwrap();
+        serde_json::json!({"states":states,"leases":leases})
+    }
+
+    async fn cleanup_policy_source(store: &PgProjectionStore, source: &str) {
+        assert!(source.starts_with("n21-policy-"));
+        sqlx::query("DELETE FROM portal_projection.source_admission_leases WHERE source_id=$1")
+            .bind(source)
+            .execute(&store.pool)
+            .await
+            .unwrap();
+        sqlx::query("DELETE FROM portal_projection.source_admission_state WHERE scope_key=ANY($1)")
+            .bind(policy_keys(source))
+            .execute(&store.pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            policy_snapshot(store, source).await,
+            serde_json::json!({"states":[],"leases":[]})
+        );
+    }
+
+    #[tokio::test]
+    async fn replica_config_drift_cannot_rewrite_same_profile_caps_or_schedule() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let first = PgProjectionStore::connect(&database_url).await.unwrap();
+        first.migrate().await.unwrap();
+        let second = PgProjectionStore::connect(&database_url).await.unwrap();
+        let mut original = request("edge:policy-first");
+        original.source_id = format!("n21-policy-{}", Uuid::now_v7());
+        original.maximum_requests_per_second = 8;
+        original.maximum_concurrency = 2;
+        original.lease_ttl = Duration::from_secs(35);
+        let SourceAdmissionOutcome::Accepted(lease) =
+            first.acquire_source_admission(&original).await.unwrap()
+        else {
+            panic!("initial policy must admit");
+        };
+        let before = policy_snapshot(&first, &original.source_id).await;
+        for (rate, concurrency) in [(9, 2), (7, 2), (8, 3), (8, 1)] {
+            let mut drifted = original.clone();
+            drifted.owner_id = "edge:policy-drift".to_owned();
+            drifted.maximum_requests_per_second = rate;
+            drifted.maximum_concurrency = concurrency;
+            assert!(matches!(
+                second.acquire_source_admission(&drifted).await,
+                Err(StoreError::InvalidSourceAdmission)
+            ));
+            assert_eq!(policy_snapshot(&first, &original.source_id).await, before);
+        }
+        first.release_source_admission(&lease).await.unwrap();
+        let mut matched = original.clone();
+        matched.owner_id = "edge:policy-matched".to_owned();
+        let SourceAdmissionOutcome::Accepted(reused) =
+            second.acquire_source_admission(&matched).await.unwrap()
+        else {
+            panic!("matching replica must reuse the frozen policy");
+        };
+        second.release_source_admission(&reused).await.unwrap();
+        cleanup_policy_source(&first, &original.source_id).await;
+    }
+
+    #[tokio::test]
+    async fn profile_config_drift_cannot_widen_or_tighten_shared_source_caps() {
+        let Ok(database_url) = std::env::var("TEST_PROJECTION_DATABASE_URL") else {
+            return;
+        };
+        let first = PgProjectionStore::connect(&database_url).await.unwrap();
+        first.migrate().await.unwrap();
+        let second = PgProjectionStore::connect(&database_url).await.unwrap();
+        let mut original = request("edge:profile-first");
+        original.source_id = format!("n21-policy-{}", Uuid::now_v7());
+        original.maximum_requests_per_second = 8;
+        original.maximum_concurrency = 2;
+        original.lease_ttl = Duration::from_secs(35);
+        let SourceAdmissionOutcome::Accepted(lease) =
+            first.acquire_source_admission(&original).await.unwrap()
+        else {
+            panic!("initial source policy must admit");
+        };
+        let before = policy_snapshot(&first, &original.source_id).await;
+        for profile in ["SANDBOX_N21", "LIVE_N21"] {
+            for (rate, concurrency) in [(9, 2), (7, 2), (8, 3), (8, 1)] {
+                let mut drifted = original.clone();
+                drifted.profile_id = profile.to_owned();
+                drifted.owner_id = "edge:profile-drift".to_owned();
+                drifted.maximum_requests_per_second = rate;
+                drifted.maximum_concurrency = concurrency;
+                assert!(matches!(
+                    second.acquire_source_admission(&drifted).await,
+                    Err(StoreError::InvalidSourceAdmission)
+                ));
+                // Includes policy timestamps/next permit and the full active
+                // lease. Even a newly inserted profile row must roll back.
+                assert_eq!(policy_snapshot(&first, &original.source_id).await, before);
+            }
+        }
+        let mut matched = original.clone();
+        matched.profile_id = "SANDBOX_N21".to_owned();
+        matched.owner_id = "edge:profile-matched".to_owned();
+        let SourceAdmissionOutcome::Accepted(sibling) =
+            second.acquire_source_admission(&matched).await.unwrap()
+        else {
+            panic!("another profile may share only the same frozen source policy");
+        };
+        first.release_source_admission(&lease).await.unwrap();
+        second.release_source_admission(&sibling).await.unwrap();
+        cleanup_policy_source(&first, &original.source_id).await;
     }
 
     #[tokio::test]

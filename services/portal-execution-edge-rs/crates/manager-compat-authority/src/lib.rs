@@ -11,15 +11,15 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use manager_v2_contract::{
-    ContractError, ManagerCapabilities, ManagerCatalogue, ManagerRecord, ManagerV2Request,
-    OpaqueCursor, PageLimit, ProjectionKind, RUNTIME_CONTRACT_REVISION,
+    ContractError, LedgerStatus, ManagerCapabilities, ManagerCatalogue, ManagerRecord,
+    ManagerV2Request, OpaqueCursor, PageLimit, ProjectionKind, RUNTIME_CONTRACT_REVISION,
 };
 use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 const CENSUS_JSON: &str =
-    include_str!("../../../contracts/manager-surface-census-v1/manager-surface-census.v1.json");
+    include_str!("../../../contracts/manager-surface-census-v2/manager-surface-census.v2.json");
 const MATRIX_JSON: &str =
     include_str!("../../../contracts/manager-compat-authority-v1/adapter-matrix.v1.json");
 const ACTIVATION_JSON: &str =
@@ -36,12 +36,19 @@ const PRODUCT_RELEASE_PROFILE_JSON: &str = include_str!(
 
 pub const AUTHORITY_REVISION: &str = "portal.execution.manager-compat-authority.v1";
 pub const DELEGATED_RESOURCE: &str = "execution:manager-v2:read";
+/// Typed problem code the Edge returns when the Manager reads another database.
+pub const SOURCE_DB_IDENTITY_MISMATCH_CODE: &str = "MANAGER_V2_SOURCE_DB_IDENTITY_MISMATCH";
+const SOURCE_IDENTITY_PIN_SCHEMA: &str = "portal.execution.manager-source-identity-pin.v1";
+const SOURCE_IDENTITY_PIN_MAXIMUM_BYTES: usize = 65_536;
 const N18_CENSUS_DIGEST: &str =
-    "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3";
+    "sha256:cab031d8495c61b8d319bb84b5a7506840011daa263e08d3ee06b5f2cf48516c";
 const N19_MATRIX_DIGEST: &str =
-    "sha256:51d971d7029ac6d3028f5b8168bafbf40f6cd58c0cdd24fe4fc262316c5e3102";
+    "sha256:9ff30c0df4a1a2f1f123c0b4c9592116d9449def645f3ccc8a8dbad7724bbb8d";
 const RUNTIME_ACTIVATION_DIGEST: &str =
-    "sha256:6f38c74ac1cbd42aa6b17755e584fafdc9a429dd64217ccb37da88a5b2b460fa";
+    "sha256:d33e5c19627f2abaa1cc59b68e2d074d1ecc050632fa8ec6a516d506949f4c68";
+/// Relations in the frozen N18 census v2: the 96 of v1 plus 13 projection-input relations. A release
+/// manifest still enables only the subset it names, so a larger census changes no runtime behaviour.
+const CENSUS_RELATION_COUNT: usize = 109;
 const REQUIRED_OPERATIONS: [&str; 5] = [
     "managerCapabilities",
     "managerCatalog",
@@ -115,6 +122,58 @@ pub struct ManagerCompatibilityAuthority {
     approved_relations: BTreeSet<String>,
     expected_operation_ids: BTreeSet<String>,
     expected_projection_kinds: BTreeSet<String>,
+    pinned_catalogue_digest: Option<String>,
+    pinned_context: Option<(DeploymentEnvironment, String)>,
+    source_identity_pins: BTreeMap<String, SourceIdentityPin>,
+}
+
+/// Release-pinned identity of the database one Manager profile must read.
+/// Built only from a trusted, digest-pinned deployment input; never from a
+/// caller or from an upstream Manager response.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceIdentityPin {
+    schema_version: String,
+    environment: String,
+    profile_id: String,
+    /// `false` accepts a legacy Manager that sends no `source_identity`; a
+    /// Manager that does send one must still match. There is no default: a
+    /// pin without this member is rejected.
+    source_identity_required: bool,
+    database_name: String,
+    /// SHA-256 of the decimal database OID: 64 lowercase hex, no prefix.
+    database_oid_sha256: String,
+    /// `null` or absent: the ledger row count is not checked. When set, the
+    /// ledger must be `READABLE` with at least this many rows.
+    #[serde(default)]
+    minimum_schema_ledger_rows: Option<u64>,
+    /// `true` additionally requires a `READABLE` ledger without a minimum.
+    #[serde(default)]
+    ledger_status_required: bool,
+}
+
+/// Why a Manager's reported source database was refused. The names are the
+/// public `reason` codes; none of them carries a hash or a count.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceIdentityMismatchReason {
+    IdentityAbsent,
+    DatabaseName,
+    DatabaseOid,
+    LedgerNotReadable,
+    LedgerBelowMinimum,
+}
+
+impl SourceIdentityMismatchReason {
+    #[must_use]
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::IdentityAbsent => "IDENTITY_ABSENT",
+            Self::DatabaseName => "DATABASE_NAME",
+            Self::DatabaseOid => "DATABASE_OID",
+            Self::LedgerNotReadable => "LEDGER_NOT_READABLE",
+            Self::LedgerBelowMinimum => "LEDGER_BELOW_MINIMUM",
+        }
+    }
 }
 
 /// A compatibility authority bound to one exact deployment/profile/resource
@@ -162,7 +221,125 @@ impl ManagerCompatibilityAuthority {
                 .into_iter()
                 .map(str::to_owned)
                 .collect(),
+            pinned_catalogue_digest: None,
+            pinned_context: None,
+            source_identity_pins: BTreeMap::new(),
         })
+    }
+
+    /// Loads an exact release manifest from a trusted deployment input. The
+    /// separately configured digest pins the raw bytes, not an upstream reply.
+    /// The manifest narrows the frozen authority and is bound to one profile.
+    ///
+    /// # Errors
+    /// Rejects unpinned, malformed, oversized, mismatched or widened releases.
+    pub fn from_pinned_release(
+        bytes: &[u8],
+        manifest_digest: &str,
+        environment: DeploymentEnvironment,
+        profile_id: &str,
+    ) -> Result<Self, AuthorityError> {
+        if bytes.is_empty() || bytes.len() > 65_536 || digest(bytes) != manifest_digest {
+            return Err(AuthorityError::InvalidCatalogueRestriction);
+        }
+        let manifest: CatalogueReleaseManifest = serde_json::from_slice(bytes)
+            .map_err(|_| AuthorityError::InvalidCatalogueRestriction)?;
+        if manifest.schema_version != "portal.execution.manager-catalogue-release.v1"
+            || manifest.environment != environment.as_str()
+            || manifest.profile_id != profile_id
+        {
+            return Err(AuthorityError::InvalidCatalogueRestriction);
+        }
+        let authority = Self::canonical()?;
+        authority.bind(ManagerRequestContext {
+            environment,
+            profile_id,
+            delegated_resource: DELEGATED_RESOURCE,
+            owner_contract_revision: RUNTIME_CONTRACT_REVISION,
+        })?;
+        let relations: Vec<&str> = manifest.relations.iter().map(String::as_str).collect();
+        let mut restricted =
+            authority.restrict_to_pinned_catalogue(&manifest.catalogue_sha256, &relations)?;
+        restricted.pinned_context = Some((environment, profile_id.to_owned()));
+        Ok(restricted)
+    }
+
+    /// Narrows an already validated authority to an exact release-pinned set.
+    /// Both arguments must come from trusted deployment configuration, never
+    /// from a caller or an upstream catalogue response. This cannot authorize
+    /// any relation absent from the canonical frozen census.
+    ///
+    /// # Errors
+    /// Rejects malformed digests, empty/duplicate sets and unapproved names.
+    pub fn restrict_to_pinned_catalogue(
+        mut self,
+        digest: &str,
+        relations: &[&str],
+    ) -> Result<Self, AuthorityError> {
+        let valid_digest = digest.strip_prefix("sha256:").is_some_and(|value| {
+            value.len() == 64
+                && value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        });
+        let restricted: BTreeSet<String> =
+            relations.iter().map(|item| (*item).to_owned()).collect();
+        if !valid_digest
+            || restricted.is_empty()
+            || restricted.len() != relations.len()
+            || !restricted.is_subset(&self.approved_relations)
+        {
+            return Err(AuthorityError::InvalidCatalogueRestriction);
+        }
+        self.expected_projection_kinds.retain(|kind| {
+            projection_relation(kind).is_some_and(|relation| restricted.contains(relation))
+        });
+        self.approved_relations = restricted;
+        self.pinned_catalogue_digest = Some(digest.to_owned());
+        Ok(self)
+    }
+
+    /// Adds the database identity pin of one profile from a trusted deployment
+    /// input. `pin_digest` (`sha256:` plus the SHA-256 of the exact bytes) is
+    /// configured separately from the file. Profiles without a pin are not
+    /// identity-checked; once pinned, a mismatch fails closed.
+    ///
+    /// # Errors
+    ///
+    /// Rejects unpinned, malformed, oversized, mismatched or unbound pins.
+    pub fn with_source_identity_pin(
+        mut self,
+        bytes: &[u8],
+        pin_digest: &str,
+        environment: DeploymentEnvironment,
+        profile_id: &str,
+    ) -> Result<Self, AuthorityError> {
+        if bytes.is_empty()
+            || bytes.len() > SOURCE_IDENTITY_PIN_MAXIMUM_BYTES
+            || digest(bytes) != pin_digest
+        {
+            return Err(AuthorityError::InvalidSourceIdentityPin);
+        }
+        let pin: SourceIdentityPin =
+            serde_json::from_slice(bytes).map_err(|_| AuthorityError::InvalidSourceIdentityPin)?;
+        if pin.schema_version != SOURCE_IDENTITY_PIN_SCHEMA
+            || pin.environment != environment.as_str()
+            || pin.profile_id != profile_id
+            || pin.database_name.is_empty()
+            || pin.database_name.len() > 63
+            || !is_lowercase_hex_64(&pin.database_oid_sha256)
+        {
+            return Err(AuthorityError::InvalidSourceIdentityPin);
+        }
+        self.bind(ManagerRequestContext {
+            environment,
+            profile_id,
+            delegated_resource: DELEGATED_RESOURCE,
+            owner_contract_revision: RUNTIME_CONTRACT_REVISION,
+        })?;
+        let pinned_profile = pin.profile_id.clone();
+        self.source_identity_pins.insert(pinned_profile, pin);
+        Ok(self)
     }
 
     #[must_use]
@@ -191,6 +368,15 @@ impl ManagerCompatibilityAuthority {
         &self,
         context: ManagerRequestContext<'_>,
     ) -> Result<BoundManagerAuthority<'_>, AuthorityError> {
+        if self
+            .pinned_context
+            .as_ref()
+            .is_some_and(|(environment, profile)| {
+                *environment != context.environment || profile != context.profile_id
+            })
+        {
+            return Err(AuthorityError::ProfileDenied);
+        }
         let binding = self
             .matrix
             .profile_bindings
@@ -286,10 +472,65 @@ impl ManagerCompatibilityAuthority {
             .iter()
             .map(|relation| format!("{}.{}", relation.id().schema(), relation.id().relation()))
             .collect();
-        if actual != self.approved_relations {
+        if actual != self.approved_relations
+            || self
+                .pinned_catalogue_digest
+                .as_deref()
+                .is_some_and(|digest| catalogue.catalogue_revision().as_str() != digest)
+        {
             return Err(AuthorityError::CatalogueDrift);
         }
         Ok(())
+    }
+
+    /// Verifies the database the Manager reports against the release pin of
+    /// `profile_id`: exact name and OID hash always; when the pin sets a
+    /// minimum (or requires a readable ledger) the ledger must be `READABLE`
+    /// with at least that many rows. A profile with no pin is not checked.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`AuthorityError::SourceDbIdentityMismatch`] with the first
+    /// failing reason, including an absent member while the pin requires it.
+    pub fn validate_source_identity(
+        &self,
+        profile_id: &str,
+        catalogue: &ManagerCatalogue,
+    ) -> Result<(), AuthorityError> {
+        use SourceIdentityMismatchReason as Reason;
+        let Some(pin) = self.source_identity_pins.get(profile_id) else {
+            return Ok(());
+        };
+        let Some(identity) = catalogue.source_identity() else {
+            return if pin.source_identity_required {
+                Err(identity_mismatch(pin, Reason::IdentityAbsent, None))
+            } else {
+                Ok(())
+            };
+        };
+        let minimum = pin.minimum_schema_ledger_rows.unwrap_or(0);
+        let checked = pin.ledger_status_required || pin.minimum_schema_ledger_rows.is_some();
+        let reason = if identity.database_name() != pin.database_name {
+            Some(Reason::DatabaseName)
+        } else if identity.database_oid_sha256() != pin.database_oid_sha256 {
+            Some(Reason::DatabaseOid)
+        } else if !checked {
+            None
+        } else {
+            match (identity.ledger_status(), identity.schema_ledger_rows()) {
+                (LedgerStatus::Readable, Some(rows)) if rows >= minimum => None,
+                (LedgerStatus::Readable, Some(_)) => Some(Reason::LedgerBelowMinimum),
+                _ => Some(Reason::LedgerNotReadable),
+            }
+        };
+        match reason {
+            Some(reason) => Err(identity_mismatch(
+                pin,
+                reason,
+                Some(identity.database_name()),
+            )),
+            None => Ok(()),
+        }
     }
 
     fn adapter_for_owner_revision(
@@ -301,6 +542,30 @@ impl ManagerCompatibilityAuthority {
             .iter()
             .find(|adapter| adapter.owner_contract_revision == owner_contract_revision)
             .ok_or(AuthorityError::RevisionUnsupported)
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CatalogueReleaseManifest {
+    schema_version: String,
+    environment: String,
+    profile_id: String,
+    catalogue_sha256: String,
+    relations: Vec<String>,
+}
+
+// Published Manager named-projection mapping, not derived from user input.
+fn projection_relation(kind: &str) -> Option<&'static str> {
+    match kind {
+        "portfolio" => Some("public.portfolios"),
+        "account" => Some("public.accounts"),
+        "order" => Some("public.orders"),
+        "fill" => Some("public.fills"),
+        "position" => Some("public.positions_v2"),
+        "reconciliation" => Some("public.reconciliation_findings"),
+        "command_journal" => Some("public.command_journal"),
+        _ => None,
     }
 }
 
@@ -325,13 +590,16 @@ impl BoundManagerAuthority<'_> {
         ManagerV2Request::capabilities()
     }
 
-    /// Verifies the complete owner catalogue against the N18 allowlist.
+    /// Verifies the complete owner catalogue against the N18 allowlist and,
+    /// when this profile is pinned, the source database identity.
     ///
     /// # Errors
     ///
-    /// Rejects missing or extra relations.
+    /// Rejects missing or extra relations and a source database mismatch.
     pub fn validate_catalogue(&self, catalogue: &ManagerCatalogue) -> Result<(), AuthorityError> {
-        self.authority.validate_catalogue(catalogue)
+        self.authority.validate_catalogue(catalogue)?;
+        self.authority
+            .validate_source_identity(&self.binding.profile_id, catalogue)
     }
 
     /// Verifies the exact five runtime capability descriptors.
@@ -367,7 +635,7 @@ impl BoundManagerAuthority<'_> {
         cursor: Option<&OpaqueCursor>,
         limit: PageLimit,
     ) -> Result<ManagerV2Request, AuthorityError> {
-        self.authority.validate_catalogue(catalogue)?;
+        self.validate_catalogue(catalogue)?;
         if !self.authority.approved_relations.contains(relation_id) {
             return Err(AuthorityError::RelationNotApproved);
         }
@@ -392,7 +660,7 @@ impl BoundManagerAuthority<'_> {
         catalogue: &ManagerCatalogue,
         record: &ManagerRecord,
     ) -> Result<ManagerV2Request, AuthorityError> {
-        self.authority.validate_catalogue(catalogue)?;
+        self.validate_catalogue(catalogue)?;
         let relation_id = format!(
             "{}.{}",
             record.relation().schema(),
@@ -420,7 +688,7 @@ impl BoundManagerAuthority<'_> {
         cursor: Option<&OpaqueCursor>,
         limit: PageLimit,
     ) -> Result<ManagerV2Request, AuthorityError> {
-        self.authority.validate_catalogue(catalogue)?;
+        self.validate_catalogue(catalogue)?;
         if !self
             .authority
             .expected_projection_kinds
@@ -464,6 +732,16 @@ pub enum AuthorityError {
     RollbackUndefined,
     #[error("owner catalogue differs from the frozen N18 relation set")]
     CatalogueDrift,
+    #[error("catalogue restriction is malformed or exceeds the frozen N18 set")]
+    InvalidCatalogueRestriction,
+    #[error("manager source database identity does not match the release pin: {reason:?}")]
+    SourceDbIdentityMismatch {
+        reason: SourceIdentityMismatchReason,
+        pinned_database_name: String,
+        observed_database_name: Option<String>,
+    },
+    #[error("source database identity pin is malformed or not bound to this deployment")]
+    InvalidSourceIdentityPin,
     #[error("relation is not approved by N18")]
     RelationNotApproved,
     #[error("projection is not approved")]
@@ -474,6 +752,27 @@ pub enum AuthorityError {
     Contract(#[from] ContractError),
     #[error("compatibility authority JSON is invalid")]
     Json(#[from] serde_json::Error),
+}
+
+impl AuthorityError {
+    /// For a source database mismatch: the public reason code, the pinned
+    /// database name and the database name the Manager reported. Never a hash
+    /// or a count.
+    #[must_use]
+    pub fn source_identity_detail(&self) -> Option<(&'static str, &str, Option<&str>)> {
+        match self {
+            Self::SourceDbIdentityMismatch {
+                reason,
+                pinned_database_name,
+                observed_database_name,
+            } => Some((
+                reason.code(),
+                pinned_database_name,
+                observed_database_name.as_deref(),
+            )),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -751,15 +1050,15 @@ fn validate_census(census: &Census) -> bool {
         .iter()
         .map(|relation| relation.relation_id.as_str())
         .collect();
-    census.schema_version == "portal.execution.manager-surface-census.v1"
+    census.schema_version == "portal.execution.manager-surface-census.v2"
         && census.phase == "N18"
         && census.decision == "N18_CAPABILITY_DATA_COVERAGE_CENSUS_COMPLETE"
         && census.runtime_effect == "NONE"
         && census.generated_from_sanitized_contracts_only
-        && census.counts.relations == 96
+        && census.counts.relations == CENSUS_RELATION_COUNT
         && census.counts.manager_primitives == 5
-        && census.relations.len() == 96
-        && relation_ids.len() == 96
+        && census.relations.len() == CENSUS_RELATION_COUNT
+        && relation_ids.len() == CENSUS_RELATION_COUNT
         && census.manager_primitives.len() == 5
         && operations == required_operations
         && census
@@ -900,6 +1199,25 @@ fn false_flags(names: &[&str]) -> BTreeMap<String, bool> {
 
 fn digest(bytes: &[u8]) -> String {
     format!("sha256:{:x}", Sha256::digest(bytes))
+}
+
+fn is_lowercase_hex_64(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+}
+
+fn identity_mismatch(
+    pin: &SourceIdentityPin,
+    reason: SourceIdentityMismatchReason,
+    observed_database_name: Option<&str>,
+) -> AuthorityError {
+    AuthorityError::SourceDbIdentityMismatch {
+        reason,
+        pinned_database_name: pin.database_name.clone(),
+        observed_database_name: observed_database_name.map(str::to_owned),
+    }
 }
 
 #[cfg(test)]

@@ -1,0 +1,236 @@
+{
+  "schema": "epg10.security-tls-observations.v1",
+  "at_utc": "2026-10-16T11:21:56.596376+00:00",
+  "provenance": "READ_ONLY_TLS_HANDSHAKE_NO_HTTP_NO_CREDENTIALS",
+  "manager_upstreams": [
+    {
+      "profile": "paper",
+      "role": "facade",
+      "port": 8023,
+      "exit_code": 1,
+      "verification": "CERTIFICATE_EXPIRED",
+      "safe_observations": [
+        "verify error:num=10:certificate has expired",
+        "notAfter=Sep 27 03:40:51 2026 GMT"
+      ]
+    },
+    {
+      "profile": "paper",
+      "role": "issuer",
+      "port": 8024,
+      "exit_code": 1,
+      "verification": "CERTIFICATE_EXPIRED",
+      "safe_observations": [
+        "verify error:num=10:certificate has expired",
+        "notAfter=Sep 27 03:40:51 2026 GMT"
+      ]
+    },
+    {
+      "profile": "sandbox",
+      "role": "facade",
+      "port": 8123,
+      "exit_code": 1,
+      "verification": "CERTIFICATE_EXPIRED",
+      "safe_observations": [
+        "verify error:num=10:certificate has expired",
+        "notAfter=Sep 27 03:40:51 2026 GMT"
+      ]
+    },
+    {
+      "profile": "sandbox",
+      "role": "issuer",
+      "port": 8124,
+      "exit_code": 1,
+      "verification": "CERTIFICATE_EXPIRED",
+      "safe_observations": [
+        "verify error:num=10:certificate has expired",
+        "notAfter=Sep 27 03:40:51 2026 GMT"
+      ]
+    },
+    {
+      "profile": "live",
+      "role": "facade",
+      "port": 8223,
+      "exit_code": 1,
+      "verification": "CERTIFICATE_EXPIRED",
+      "safe_observations": [
+        "verify error:num=10:certificate has expired",
+        "notAfter=Sep 27 03:40:51 2026 GMT"
+      ]
+    },
+    {
+      "profile": "live",
+      "role": "issuer",
+      "port": 8224,
+      "exit_code": 1,
+      "verification": "CERTIFICATE_EXPIRED",
+      "safe_observations": [
+        "verify error:num=10:certificate has expired",
+        "notAfter=Sep 27 03:40:51 2026 GMT"
+      ]
+    }
+  ],
+  "source_proxy_frontend": {
+    "target": "172.23.0.1:8444",
+    "authority": "explicit /srv/primus/portal/execution-edge/source-proxy-ca.crt",
+    "verify_ip": "172.23.0.1",
+    "tls": "TLSv1.3",
+    "cipher": "TLS_AES_256_GCM_SHA384",
+    "verification": "OK",
+    "authenticated_application_read": "NOT_RUN",
+    "private_credentials_used": false
+  },
+  "public_certificates": {
+    "manager_ca": {
+      "not_after_utc": "2027-08-27T10:31:33Z",
+      "sha256": "e4a0ff8f882f073e600dc3ec99b862b9bd88a953a91e694d347ee0c71883ddfe"
+    },
+    "manager_proxy_client": {
+      "not_after_utc": "2026-09-27T03:40:51Z",
+      "sha256": "144e6c7879aaf35690e290b9050f39f620719f6ac93f1dcfef66df2564761804",
+      "status": "EXPIRED",
+      "extraction": "public x509 metadata only; no private PEM bytes exported"
+    },
+    "source_proxy_frontend_disk": {
+      "not_after_utc": "2027-10-03T05:42:05Z",
+      "sha256": "ef9121acf8b3cd26dc2369c5e29d23b322461951a5a0d51723d98189a1d0e109"
+    },
+    "edge_server_disk": {
+      "not_after_utc": "2027-02-20T05:34:40Z",
+      "sha256": "ccd65b3196200a4c410dce729b850f0367701629374200bf90472f1e166aea9b",
+      "loaded_leaf_and_chain": "Loaded endpoints verify chain/IP through actual SGP server CA; on-disk fingerprint not bound to loaded leaf"
+    }
+  },
+  "manager_runtime_before": [
+    {
+      "name": "/portal-manager-read-paper-v2-portal_manager_read-1",
+      "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+      "config": "225db7755ea8ca9317e18af8febf06c7f3a4f92892a57f344a626126c98bf889",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 3,
+      "ports": {
+        "8023/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8023"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/portal-manager-read-paper-v2-portal_manager_issuer-1",
+      "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+      "config": "7710fc8e206a9812eb2abea7d7d222a1c568217a2f7ee6d8b122ed0009043342",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 0,
+      "ports": {
+        "8024/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8024"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/trading-system-manager-read-sandbox-portal_manager_read-1",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "config": "453f59be45d1935795155c1aa2e44ceb7c6e10d636878f54f7319e4fa831a5bd",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 4,
+      "ports": {
+        "8023/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8123"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/trading-system-manager-read-sandbox-portal_manager_issuer-1",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "config": "a97d6be022ee4c9c11e61539980aa80a15a96d77f18d2af94b057cae1d89c4df",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 0,
+      "ports": {
+        "8024/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8124"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/trading-system-manager-read-live-portal_manager_read-1",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "config": "976ebe89ed6839c23119c4ed7b927a6465de0cd333941c93fcbe077d740f8111",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 4,
+      "ports": {
+        "8023/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8223"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/trading-system-manager-read-live-portal_manager_issuer-1",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "config": "e68c442990013c2c22a55a0816d62124823aa5d0aabfc95ad27278a2d76664ba",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 0,
+      "ports": {
+        "8024/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8224"
+          }
+        ]
+      }
+    }
+  ],
+  "mutations": [],
+  "insecure_verification_bypasses": 0,
+  "meaning": "Source Proxy frontend verifies; all six loaded TS Manager leafs and configured shared proxy client certificate expired. No claim that existing Manager application read is currently healthy.",
+  "edge_listeners": {
+    "at_utc": "2026-10-16T11:40:20Z",
+    "provenance": "READ_ONLY_SGP_TLS_HANDSHAKES_NO_HTTP_NO_CLIENT_CREDENTIALS",
+    "authority": "Actual Control API mount /srv/primus/portal/control-api/edge-server-ca.crt",
+    "verify_ip": "10.70.0.2",
+    "tls": "TLSv1.3",
+    "cipher": "TLS_AES_256_GCM_SHA384",
+    "listeners": [
+      {
+        "profile": "paper",
+        "port": 8443,
+        "verification": "OK",
+        "presented_cn": "portal-execution-edge.paper"
+      },
+      {
+        "profile": "sandbox",
+        "port": 8444,
+        "verification": "OK",
+        "presented_cn": "portal-execution-edge.paper"
+      },
+      {
+        "profile": "live",
+        "port": 8445,
+        "verification": "OK",
+        "presented_cn": "portal-execution-edge.paper"
+      }
+    ],
+    "scope_limit": "Chain/IP verification only; shared presented CN/URI is not a current human/workload/profile grant, authenticated read or production rotation evidence.",
+    "wrong_boundary_negative": "Inbound SGP-client CA does not verify Edge-server issuer; correct existing Control API server CA verifies. No fallback/bypass.",
+    "loaded_leaf_fingerprint": "NOT_EXTRACTED_NOT_ASSUMED_IDENTICAL_TO_ON_DISK_LEAF"
+  }
+}

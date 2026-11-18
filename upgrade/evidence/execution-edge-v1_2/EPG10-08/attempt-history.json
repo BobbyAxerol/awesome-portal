@@ -1,0 +1,910 @@
+{
+  "schema": "epg10.security-attempt-history.v1",
+  "provenance": "ISOLATED_TEST_ONLY_NOT_PRODUCT_ACCEPTANCE",
+  "attempts": [
+    {
+      "attempt": 1,
+      "receipt_without_large_source_manifest": {
+        "at_utc": "2026-10-16T11:09:57.912336+00:00",
+        "cleanup": {
+          "errors": [],
+          "images_built": 0,
+          "images_pulled": 0,
+          "owned_container_removed": true,
+          "private_build_dir_pending_removal": "/tmp/epg10-08-2o2e0k22",
+          "resource_sampler_stopped_before_container_cleanup": true,
+          "volumes_created": 0,
+          "volumes_removed": 0
+        },
+        "dependency_fetch_allowed_during_compile_only": true,
+        "disk_after_container": 161723707392,
+        "disk_before": 167858610176,
+        "elapsed_seconds_observational": 1108.488,
+        "error_type": "CalledProcessError",
+        "expected_bootstrap_tests": 22,
+        "expected_command_tests": 22,
+        "expected_manager_tests": 11,
+        "expected_read_tests": 38,
+        "expected_resource_tests": 8,
+        "expected_tls_tests": 10,
+        "failed_stage": "edge_tests",
+        "foreign_test_metadata_before": [],
+        "input_manifest_sha256": "549166f8324802a3e057ff5b337fc6c9ada345f39e389747000b5ca4b4dc0c2c",
+        "integration_compile_coverage": {
+          "all_targets": true,
+          "basis": "COVERED_BY_08_ALL_TARGETS_NO_RUN",
+          "locked": true,
+          "no_run": true,
+          "package_count": 11
+        },
+        "limitation": "CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF",
+        "lock_window_seconds": 1500,
+        "performance_acceptance": false,
+        "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "postgresql_observation": {
+          "duration_seconds_observational": 359.568634,
+          "interval_seconds": 1,
+          "limitations": [
+            "SHARED_HOST_NOT_CAPACITY_OR_PERFORMANCE_ACCEPTANCE",
+            "SAMPLED_MAXIMUM_NOT_INSTANTANEOUS_PEAK",
+            "PROCESS_RSS_SUM_CAN_DOUBLE_COUNT_SHARED_PAGES",
+            "ONLY_TEST_POSTGRESQL_CGROUP_NOT_CARGO_WORKER_RESOURCES"
+          ],
+          "maximum_samples": 1500,
+          "maximum_sampling_gap_seconds": 1.003582,
+          "postgresql": {
+            "anonymous_max_bytes": 49590272,
+            "average_cores": 0.086492,
+            "cpu_core_seconds": 31.099877,
+            "io_delta": {
+              "rbytes": 0,
+              "rios": 0,
+              "wbytes": 0,
+              "wios": 0
+            },
+            "memory_end_bytes": 134414336,
+            "memory_events_delta": {
+              "high": 0,
+              "low": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0
+            },
+            "memory_start_bytes": 62799872,
+            "name": "epg10-08-pg-c6272cd5e2ad",
+            "network_delta": {
+              "rx_bytes": 930630,
+              "tx_bytes": 13218172
+            },
+            "pids_max": 11,
+            "sampled_memory_max_bytes": 523042816,
+            "throttled_usec": 47834690
+          },
+          "process_rss_sum_sampled_max_bytes": 238284800,
+          "sample_count": 360,
+          "status": "PASS_OBSERVATION_ONLY",
+          "tainted_for_capacity": true
+        },
+        "production_mutations": 0,
+        "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+        "resources": {
+          "cargo_cpu_affinity": [
+            0
+          ],
+          "cargo_jobs": 1,
+          "cargo_nice": 15,
+          "pg_cpu_limit": 0.5,
+          "pg_max_connections": 24,
+          "pg_memory_limit_bytes": 805306368,
+          "pg_pids_limit": 128,
+          "pg_tmpfs_limit_bytes": 536870912,
+          "private_log_limit_bytes_per_stage": 8388608
+        },
+        "runner_hashes": {
+          "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+          "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+          "run.py": "1edfce7ac1489a00cf95b80a2600fbcbb395655980b9d53c7f97cb6d01c2afe2",
+          "test_run.py": "a7bca4f853328cce4977e6a9d2184203960a85712841c879025a4af0fef986e9"
+        },
+        "runner_safety_tests": {
+          "failed": 0,
+          "passed": 85,
+          "skipped": 0
+        },
+        "runtime_activation": false,
+        "rustfmt": "PASS",
+        "schema": "epg10.security-correctness.v1",
+        "source_mtime_refresh": {
+          "basis": "VALIDATED_PRIVATE_SOURCE_MTIME_REFRESH_NOT_BYTE_CHANGE",
+          "bytes_unchanged": true,
+          "refreshed_at_ns": 1792149000666072600,
+          "target_or_cache_touched": false,
+          "touched_files": 426
+        },
+        "source_requests": 0,
+        "source_revision": "f10c15f6bd6d7e30358af5946c2877b33b8fe4c2",
+        "source_workspace_relative": "services/portal-execution-edge-rs",
+        "stages": {
+          "compile": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 64608,
+              "block_output_operations": 8832616,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 900012,
+              "maxrss_before_kib": 54820,
+              "maxrss_cumulative_highwater_delta_kib": 845192,
+              "system_cpu_seconds": 54.236108,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 392.850931
+            },
+            "elapsed_seconds": 486.353,
+            "private_log_bytes": 19081,
+            "returncode": 0
+          },
+          "compile_edge_service": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 8,
+              "block_output_operations": 2070296,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 900012,
+              "maxrss_before_kib": 900012,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 30.294613,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 186.46670999999998
+            },
+            "elapsed_seconds": 255.211,
+            "private_log_bytes": 8894,
+            "returncode": 0
+          },
+          "edge_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 34968,
+              "block_output_operations": 986736,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 900524,
+              "maxrss_before_kib": 900012,
+              "maxrss_cumulative_highwater_delta_kib": 512,
+              "system_cpu_seconds": 4.461015000000003,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 64.54023099999995
+            },
+            "elapsed_seconds": 69.405,
+            "private_log_bytes": 6054,
+            "returncode": 101
+          },
+          "runner_safety_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 304,
+              "block_output_operations": 21816,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 41112,
+              "maxrss_before_kib": 29916,
+              "maxrss_cumulative_highwater_delta_kib": 11196,
+              "system_cpu_seconds": 0.374595,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 0.777141
+            },
+            "elapsed_seconds": 1.172,
+            "private_log_bytes": 8181,
+            "returncode": 0
+          },
+          "rustfmt": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 0,
+              "block_output_operations": 0,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 54820,
+              "maxrss_before_kib": 41112,
+              "maxrss_cumulative_highwater_delta_kib": 13708,
+              "system_cpu_seconds": 0.051238000000000006,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 0.9527869999999999
+            },
+            "elapsed_seconds": 1.006,
+            "private_log_bytes": 0,
+            "returncode": 0
+          },
+          "unit_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 120,
+              "block_output_operations": 3472968,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 900012,
+              "maxrss_before_kib": 900012,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 16.443500999999998,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 212.1504920000001
+            },
+            "elapsed_seconds": 290.075,
+            "private_log_bytes": 27133,
+            "returncode": 0
+          }
+        },
+        "status": "FAIL",
+        "tainted_for_capacity": true,
+        "test_profile": "08",
+        "unit_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 250,
+          "passed_per_binary": [
+            31,
+            61,
+            15,
+            16,
+            9,
+            26,
+            20,
+            36,
+            30,
+            6
+          ],
+          "test_binaries": 10
+        }
+      },
+      "edge_result": {
+        "passed": 38,
+        "failed": 4,
+        "ignored": 0,
+        "reason": "All four added SSE tests failed at fixture construction: capacity2 below existing minimum8; assertions not reached."
+      },
+      "resolution": "Correct TEST_ONLY hub capacity to8; no runtime safety bounds changed. Rerun immutable final candidate; also include reviewed PG/TLS/command/Bearer refinements.",
+      "tls_and_pg_suites": "NOT_RUN_BECAUSE_EDGE_STAGE_FAILED"
+    },
+    {
+      "attempt": 2,
+      "receipt_without_large_source_manifest": {
+        "at_utc": "2026-10-16T11:30:09.578702+00:00",
+        "bootstrap_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 22,
+          "passed_per_binary": [
+            22
+          ],
+          "test_binaries": 1
+        },
+        "cleanup": {
+          "errors": [],
+          "images_built": 0,
+          "images_pulled": 0,
+          "owned_container_removed": true,
+          "private_build_dir_pending_removal": "/tmp/epg10-08-2o2e0k22",
+          "resource_sampler_stopped_before_container_cleanup": true,
+          "volumes_created": 0,
+          "volumes_removed": 0
+        },
+        "clippy": {
+          "owned_warnings": [],
+          "upstream_advisory_warnings": 0
+        },
+        "command_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 24,
+          "passed_per_binary": [
+            24
+          ],
+          "test_binaries": 1
+        },
+        "database_test_stage_seconds_observational": {
+          "bootstrap_tests": 113.775,
+          "command_tests": 13.42,
+          "manager_tests": 18.466,
+          "read_tests": 23.799,
+          "resource_tests": 9.876,
+          "unit_tests": 143.266
+        },
+        "dependency_fetch_allowed_during_compile_only": false,
+        "disk_after_container": 160017195008,
+        "disk_before": 161711579136,
+        "edge_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 42,
+          "passed_per_binary": [
+            42
+          ],
+          "test_binaries": 1
+        },
+        "elapsed_seconds_observational": 533.277,
+        "error_type": "ValueError",
+        "expected_bootstrap_tests": 22,
+        "expected_command_tests": 24,
+        "expected_manager_tests": 11,
+        "expected_read_tests": 38,
+        "expected_resource_tests": 8,
+        "expected_tls_tests": 10,
+        "failed_stage": "clippy",
+        "foreign_test_metadata_before": [],
+        "input_manifest_sha256": "f941b322d865cd7106a957dd83f8c2006dd1452d4e51b027c1fb7f119b292c83",
+        "integration_compile_coverage": {
+          "all_targets": true,
+          "basis": "COVERED_BY_08_ALL_TARGETS_NO_RUN",
+          "locked": true,
+          "no_run": true,
+          "package_count": 11
+        },
+        "limitation": "CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF",
+        "lock_window_seconds": 1500,
+        "manager_cost_observation": {
+          "basis": "SCOPED_TEST_QUERY_STRUCTURE_AND_FULL_SNAPSHOT_REFERENCE_NOT_TOTAL_SQL_OR_LEGACY_SPEEDUP",
+          "performance_acceptance": false,
+          "tainted_for_capacity": true,
+          "values": {
+            "applied_entities": 1,
+            "baseline_full_snapshot_applied_entities": 128,
+            "baseline_full_snapshot_elapsed_us": 541188,
+            "baseline_full_snapshot_wal_bytes": 492160,
+            "baseline_record_lookup_commands": 128,
+            "baseline_record_lookup_elapsed_us": 107618,
+            "candidate_current_bulk_reads": 1,
+            "candidate_cycle_elapsed_us": 297552,
+            "candidate_unchanged_record_lookups": 0,
+            "candidate_wal_bytes": 21864,
+            "changed_entities": 1,
+            "entities": 128,
+            "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+            "removed_entities": 0,
+            "schema": "epg10.manager-cost.v1",
+            "tainted_for_capacity": true,
+            "unchanged_entities": 127
+          }
+        },
+        "manager_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 11,
+          "passed_per_binary": [
+            11
+          ],
+          "test_binaries": 1
+        },
+        "owned_wal_observation": {
+          "after": {
+            "database": "portal_projection_test_epg10_04",
+            "stats_reset": "2026-10-16 11:31:46.677814+00",
+            "wal_bytes": 367508881,
+            "wal_fpi": 3378,
+            "wal_records": 1928873
+          },
+          "basis": "OWNED_CLUSTER_PG_STAT_WAL_INTERVAL_NOT_PER_TEST_TRANSACTION",
+          "before": {
+            "database": "portal_projection_test_epg10_04",
+            "stats_reset": "2026-10-16 11:31:46.677814+00",
+            "wal_bytes": 9516728,
+            "wal_fpi": 1418,
+            "wal_records": 25229
+          },
+          "delta": {
+            "wal_bytes": 357992153,
+            "wal_fpi": 1960,
+            "wal_records": 1903644
+          },
+          "limitations": [
+            "STATISTICS_FLUSH_LAG_POSSIBLE",
+            "INCLUDES_ALL_OWNED_TEST_DATABASE_AND_MIGRATION_WAL",
+            "NOT_SOURCE_DATABASE_WAL_OR_CAPACITY_ACCEPTANCE"
+          ],
+          "tainted_for_capacity": true
+        },
+        "performance_acceptance": false,
+        "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "postgresql_observation": {
+          "duration_seconds_observational": 431.602416,
+          "interval_seconds": 1,
+          "limitations": [
+            "SHARED_HOST_NOT_CAPACITY_OR_PERFORMANCE_ACCEPTANCE",
+            "SAMPLED_MAXIMUM_NOT_INSTANTANEOUS_PEAK",
+            "PROCESS_RSS_SUM_CAN_DOUBLE_COUNT_SHARED_PAGES",
+            "ONLY_TEST_POSTGRESQL_CGROUP_NOT_CARGO_WORKER_RESOURCES"
+          ],
+          "maximum_samples": 1500,
+          "maximum_sampling_gap_seconds": 1.00573,
+          "postgresql": {
+            "anonymous_max_bytes": 22405120,
+            "average_cores": 0.092836,
+            "cpu_core_seconds": 40.068086,
+            "io_delta": {
+              "rbytes": 892928,
+              "rios": 68,
+              "wbytes": 0,
+              "wios": 0
+            },
+            "memory_end_bytes": 150757376,
+            "memory_events_delta": {
+              "high": 0,
+              "low": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0
+            },
+            "memory_start_bytes": 72572928,
+            "name": "epg10-08-pg-c6272cd5e2ad",
+            "network_delta": {
+              "rx_bytes": 9860899,
+              "tx_bytes": 28096223
+            },
+            "pids_max": 14,
+            "sampled_memory_max_bytes": 498802688,
+            "throttled_usec": 34213781
+          },
+          "process_rss_sum_sampled_max_bytes": 227229696,
+          "sample_count": 432,
+          "status": "PASS_OBSERVATION_ONLY",
+          "tainted_for_capacity": true
+        },
+        "production_mutations": 0,
+        "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+        "read_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 38,
+          "passed_per_binary": [
+            38
+          ],
+          "test_binaries": 1
+        },
+        "resource_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 8,
+          "passed_per_binary": [
+            8
+          ],
+          "test_binaries": 1
+        },
+        "resources": {
+          "cargo_cpu_affinity": [
+            0
+          ],
+          "cargo_jobs": 1,
+          "cargo_nice": 15,
+          "pg_cpu_limit": 0.5,
+          "pg_max_connections": 24,
+          "pg_memory_limit_bytes": 805306368,
+          "pg_pids_limit": 128,
+          "pg_tmpfs_limit_bytes": 536870912,
+          "private_log_limit_bytes_per_stage": 8388608
+        },
+        "runner_hashes": {
+          "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+          "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+          "run.py": "1edfce7ac1489a00cf95b80a2600fbcbb395655980b9d53c7f97cb6d01c2afe2",
+          "test_run.py": "a7bca4f853328cce4977e6a9d2184203960a85712841c879025a4af0fef986e9"
+        },
+        "runner_safety_tests": {
+          "failed": 0,
+          "passed": 85,
+          "skipped": 0
+        },
+        "runtime_activation": false,
+        "rustfmt": "PASS",
+        "schema": "epg10.security-correctness.v1",
+        "source_mtime_refresh": {
+          "basis": "VALIDATED_PRIVATE_SOURCE_MTIME_REFRESH_NOT_BYTE_CHANGE",
+          "bytes_unchanged": true,
+          "refreshed_at_ns": 1792150212878799400,
+          "target_or_cache_touched": false,
+          "touched_files": 426
+        },
+        "source_requests": 0,
+        "source_revision": "f10c15f6bd6d7e30358af5946c2877b33b8fe4c2",
+        "source_workspace_relative": "services/portal-execution-edge-rs",
+        "stages": {
+          "bootstrap_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 113744,
+              "block_output_operations": 1825744,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 8.916387,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 94.07216799999998
+            },
+            "elapsed_seconds": 113.775,
+            "private_log_bytes": 4423,
+            "returncode": 0
+          },
+          "clippy": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 32216,
+              "block_output_operations": 54168,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 0.6456820000000008,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 6.196407000000022
+            },
+            "elapsed_seconds": 6.975,
+            "private_log_bytes": 208022,
+            "returncode": 101
+          },
+          "command_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 64,
+              "block_output_operations": 226032,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 1.0212959999999995,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 9.464601000000016
+            },
+            "elapsed_seconds": 13.42,
+            "private_log_bytes": 2007,
+            "returncode": 0
+          },
+          "compile": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 299408,
+              "block_output_operations": 3876408,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 54588,
+              "maxrss_cumulative_highwater_delta_kib": 852292,
+              "system_cpu_seconds": 15.580464,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 66.325362
+            },
+            "elapsed_seconds": 82.7,
+            "private_log_bytes": 5344,
+            "returncode": 0
+          },
+          "compile_edge_service": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 1400,
+              "block_output_operations": 456904,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 2.4768640000000026,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 7.3947160000000025
+            },
+            "elapsed_seconds": 10.072,
+            "private_log_bytes": 3433,
+            "returncode": 0
+          },
+          "edge_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 16776,
+              "block_output_operations": 561432,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 2.245000000000001,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 34.56181700000002
+            },
+            "elapsed_seconds": 37.057,
+            "private_log_bytes": 4225,
+            "returncode": 0
+          },
+          "manager_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 248,
+              "block_output_operations": 234736,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 1.772677999999999,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 12.782195999999999
+            },
+            "elapsed_seconds": 18.466,
+            "private_log_bytes": 1803,
+            "returncode": 0
+          },
+          "read_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 8216,
+              "block_output_operations": 265168,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 1.6028869999999955,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 18.07106600000003
+            },
+            "elapsed_seconds": 23.799,
+            "private_log_bytes": 3609,
+            "returncode": 0
+          },
+          "resource_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 40,
+              "block_output_operations": 241696,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 1.1173160000000024,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 8.214124999999967
+            },
+            "elapsed_seconds": 9.876,
+            "private_log_bytes": 1040,
+            "returncode": 0
+          },
+          "runner_safety_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 64,
+              "block_output_operations": 21816,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 41036,
+              "maxrss_before_kib": 30140,
+              "maxrss_cumulative_highwater_delta_kib": 10896,
+              "system_cpu_seconds": 0.39722599999999997,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 1.147892
+            },
+            "elapsed_seconds": 1.56,
+            "private_log_bytes": 8181,
+            "returncode": 0
+          },
+          "rustfmt": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 0,
+              "block_output_operations": 0,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 54588,
+              "maxrss_before_kib": 41036,
+              "maxrss_cumulative_highwater_delta_kib": 13552,
+              "system_cpu_seconds": 0.04240200000000005,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 1.020168
+            },
+            "elapsed_seconds": 1.065,
+            "private_log_bytes": 0,
+            "returncode": 0
+          },
+          "tls_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 5888,
+              "block_output_operations": 1097808,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 6.429131000000002,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 55.599311
+            },
+            "elapsed_seconds": 64.671,
+            "private_log_bytes": 2685,
+            "returncode": 0
+          },
+          "unit_tests": {
+            "child_resource_observation": {
+              "basis": "RUSAGE_CHILDREN_REAPED_LINEAGE_STAGE_INTERVAL",
+              "block_input_operations": 8,
+              "block_output_operations": 1769240,
+              "limitations": [
+                "MAXRSS_IS_CUMULATIVE_REAPED_CHILD_HIGHWATER_NOT_INDIVIDUAL_STAGE_PEAK",
+                "INTERVAL_CAN_INCLUDE_REAPED_OBSERVER_DOCKER_CLIENTS",
+                "BLOCK_OPERATIONS_ARE_NOT_BYTES_OR_OWNED_POSTGRESQL_CGROUP_IO"
+              ],
+              "maxrss_after_kib": 906880,
+              "maxrss_before_kib": 906880,
+              "maxrss_cumulative_highwater_delta_kib": 0,
+              "system_cpu_seconds": 7.004379999999998,
+              "tainted_for_capacity": true,
+              "user_cpu_seconds": 78.571305
+            },
+            "elapsed_seconds": 143.266,
+            "private_log_bytes": 25837,
+            "returncode": 0
+          }
+        },
+        "status": "FAIL",
+        "tainted_for_capacity": true,
+        "test_database_counts": {
+          "basis": "POST_SUITE_REMAINING_TEST_STATE_NOT_TOTAL_LIFECYCLE_FACTS",
+          "query_seconds_observational": 0.094049,
+          "tainted_for_capacity": true,
+          "values": {
+            "committed_groups": 51,
+            "current_rows": 766,
+            "database": "portal_projection_test_epg10_04",
+            "database_size_bytes": 16456727,
+            "dataset_checkpoints": 172,
+            "generations": 88,
+            "immutable_facts": 76,
+            "pending_chunks": 14,
+            "tombstoned_current_rows": 3,
+            "visible_current_rows": 763
+          }
+        },
+        "test_profile": "08",
+        "tls_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 10,
+          "passed_per_binary": [
+            10
+          ],
+          "test_binaries": 1
+        },
+        "unit_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 250,
+          "passed_per_binary": [
+            31,
+            61,
+            15,
+            16,
+            9,
+            26,
+            20,
+            36,
+            30,
+            6
+          ],
+          "test_binaries": 10
+        }
+      },
+      "automated_result": {
+        "passed": 490,
+        "failed": 0,
+        "ignored": 0,
+        "skipped": 0
+      },
+      "qualification": "NOT_PASS_STRICT_LINT_FAILED",
+      "lint_diagnostic": "query-api/scoped.rs:255 redundant_closure_for_method_calls under existing workspace pedantic -D warnings",
+      "resolution": "Replace closure with the equivalent char method; strict all-target lint preflight followed by fresh immutable final suite.",
+      "isolated_sse_timeline": {
+        "started_utc": "2026-10-16T11:38:11.506501801+00:00",
+        "post_revoke_delivery_check_us": 293,
+        "restricted_notices_after_revoke": 0,
+        "production_bound": null
+      }
+    },
+    {
+      "attempt": 3,
+      "receipt": "qualification.json",
+      "raw_receipt_sha256": "3fc50c53ffc41e57c5c6b1cdc1659cb3837710128020c0aaa071715f381ab4af",
+      "automated_result": {
+        "passed": 490,
+        "failed": 0,
+        "skipped": 0,
+        "ignored": 0
+      },
+      "qualification": "PASS_ISOLATED_CORRECTNESS_ONLY",
+      "strict_clippy": "PASS_STRICT_ZERO_WARNINGS",
+      "rustfmt": "PASS",
+      "input_manifest_sha256": "7b8130d48037c0084fc3dffbb44954feecd49059915df4daafdc4f1637189197",
+      "source_input_unchanged": true,
+      "isolated_sse_timeline": [
+        {
+          "post_revoke_delivery_check_us": 206,
+          "production_bound": null,
+          "restricted_notices_after_revoke": 0,
+          "started_utc": "2026-10-16T11:48:49.386663086+00:00"
+        }
+      ],
+      "cleanup_receipt": "cleanup-receipt.json",
+      "lint_preflight_fix": "Redundant closure replaced by char method; test-only doc backticks and inline format arguments corrected. Strict all-target offline preflight return0; no warning suppression."
+    }
+  ]
+}

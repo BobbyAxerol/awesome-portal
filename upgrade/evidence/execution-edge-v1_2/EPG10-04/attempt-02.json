@@ -1,0 +1,137 @@
+{
+  "at_utc": "2026-10-16T04:30:09.424310+00:00",
+  "cleanup": {
+    "errors": [],
+    "images_built": 0,
+    "images_pulled": 0,
+    "owned_container_removed": true,
+    "private_build_dir_pending_removal": "/tmp/epg10-04-7XkoBkLq",
+    "resource_sampler_stopped_before_container_cleanup": true,
+    "volumes_created": 0,
+    "volumes_removed": 0
+  },
+  "dependency_fetch_allowed_during_compile_only": false,
+  "disk_after_container": 167228157952,
+  "disk_before": 167585357824,
+  "elapsed_seconds_observational": 109.322,
+  "error_type": "CalledProcessError",
+  "expected_bootstrap_tests": 20,
+  "failed_stage": "bootstrap_tests",
+  "foreign_test_metadata_before": [],
+  "input_manifest_sha256": "35ac3d1cd2736230612076b6f56e2cd2ee46db0b7f7f03c56451e140a6e7630e",
+  "limitation": "CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF",
+  "lock_window_seconds": 1500,
+  "performance_acceptance": false,
+  "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+  "postgresql_observation": {
+    "duration_seconds_observational": 88.863341,
+    "interval_seconds": 1,
+    "limitations": [
+      "SHARED_HOST_NOT_CAPACITY_OR_PERFORMANCE_ACCEPTANCE",
+      "SAMPLED_MAXIMUM_NOT_INSTANTANEOUS_PEAK",
+      "PROCESS_RSS_SUM_CAN_DOUBLE_COUNT_SHARED_PAGES",
+      "ONLY_TEST_POSTGRESQL_CGROUP_NOT_CARGO_WORKER_RESOURCES"
+    ],
+    "maximum_samples": 1500,
+    "maximum_sampling_gap_seconds": 1.003508,
+    "postgresql": {
+      "anonymous_max_bytes": 16961536,
+      "average_cores": 0.332935,
+      "cpu_core_seconds": 29.585708,
+      "io_delta": {
+        "rbytes": 135168,
+        "rios": 2,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 135307264,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 62730240,
+      "name": "epg10-04-pg-36f25242fb7b",
+      "network_delta": {
+        "rx_bytes": 2682649,
+        "tx_bytes": 15558652
+      },
+      "pids_max": 10,
+      "sampled_memory_max_bytes": 486264832,
+      "throttled_usec": 28989372
+    },
+    "process_rss_sum_sampled_max_bytes": 165408768,
+    "sample_count": 90,
+    "status": "PASS_OBSERVATION_ONLY",
+    "tainted_for_capacity": true
+  },
+  "production_mutations": 0,
+  "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+  "resources": {
+    "cargo_cpu_affinity": [
+      0
+    ],
+    "cargo_jobs": 1,
+    "cargo_nice": 15,
+    "pg_cpu_limit": 0.5,
+    "pg_max_connections": 24,
+    "pg_memory_limit_bytes": 805306368,
+    "pg_pids_limit": 128,
+    "pg_tmpfs_limit_bytes": 536870912,
+    "private_log_limit_bytes_per_stage": 8388608
+  },
+  "runner_hashes": {
+    "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+    "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+    "run.py": "2c2feca804fceffc21c2614d5036bfa37bd0af6f9f3fc7bf19e6cb618e2e419c",
+    "test_run.py": "4b1011a86ae7304c3e8991fed962a3c4919c85afd35a75a623e85aecd8f9ddbf"
+  },
+  "runner_safety_tests": {
+    "failed": 0,
+    "passed": 26,
+    "skipped": 0
+  },
+  "runtime_activation": false,
+  "rustfmt": "PASS",
+  "schema": "epg10.bootstrap-correctness.v1",
+  "source_requests": 0,
+  "source_revision": "fd41382716f39aeed8b680c4689afa177f009d79",
+  "stages": {
+    "compile": {
+      "elapsed_seconds": 13.163,
+      "private_log_bytes": 515,
+      "returncode": 0
+    },
+    "runner_safety_tests": {
+      "elapsed_seconds": 0.217,
+      "private_log_bytes": 2194,
+      "returncode": 0
+    },
+    "rustfmt": {
+      "elapsed_seconds": 1.056,
+      "private_log_bytes": 0,
+      "returncode": 0
+    },
+    "unit_tests": {
+      "elapsed_seconds": 58.693,
+      "private_log_bytes": 5072,
+      "returncode": 0
+    }
+  },
+  "status": "FAIL",
+  "tainted_for_capacity": true,
+  "unit_tests": {
+    "failed": 0,
+    "filtered_out": 0,
+    "ignored": 0,
+    "measured": 0,
+    "passed": 51,
+    "passed_per_binary": [
+      31,
+      20
+    ],
+    "test_binaries": 2
+  }
+}

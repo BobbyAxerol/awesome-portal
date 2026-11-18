@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod resources;
+
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,

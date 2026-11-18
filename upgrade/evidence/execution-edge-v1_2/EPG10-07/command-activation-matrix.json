@@ -1,0 +1,66 @@
+{
+  "schema_version": "execution-edge.command-activation-evidence.v1",
+  "provenance": "SOURCE_REVIEW_NOT_RUNTIME_ACCEPTANCE",
+  "reviewed_at_utc": "2026-10-23T08:36:00Z",
+  "runtime_activation": false,
+  "qualified_runtime_operations": [],
+  "structural_environment_support": ["paper", "sandbox", "live"],
+  "pm_capital": {
+    "business_schema": "pma.capital-command.v1.1",
+    "structural_operations": [
+      "FUND", "INITIAL_GRANT", "TOP_UP", "SET_ROOT_LIMIT",
+      "IMMEDIATE_DECREASE", "RECALL_PARTIAL", "RECALL_FULL", "ADJUST_TARGET_BUDGET"
+    ],
+    "profile_bindings": [],
+    "native_candidate_mounted": false,
+    "authenticated_command_wire": "PUBLISHED_SOURCE_ONLY",
+    "wire_schema": "pma.edge-command-transport.v1",
+    "wire_routes": [
+      "POST /internal/elp210/pm-command/submit",
+      "POST /internal/elp210/pm-command/status"
+    ],
+    "wire_descriptor_sha256": "83d251e847169571bdfd13839d9a2bcace7db3dda1e5be5b340650a56a6437ba",
+    "wire_implementation_sha256": "912fe9d80a952ef7ef825ee8e8e015834de6c16cd6c7573fa4bde3e14fadd2c9",
+    "current_authority_provider": "SOURCE_IMPLEMENTED_NOT_COMMISSIONED_FOR_COMMAND",
+    "service_recovery_provider": "SERVICE_ONLY_WIRE_UNPUBLISHED",
+    "runtime_disposition": "TYPED_UNAVAILABLE",
+    "source_revision": "6aebbff1898d14bbee5c2482a53985965b8209d0",
+    "wire_first_published_revision": "73473c9122dab888d5de23bff4e1f93391028df4"
+  },
+  "edge_source": {
+    "core_ingress_schema": "execution.core-pm-original.v1",
+    "core_result_schema": "execution.core-pm-result.v1",
+    "bounded_http_port": "IMPLEMENTED_TESTED_ISOLATED",
+    "original_and_full_outcome_custody": "DURABLE_PG_TESTED_ISOLATED",
+    "core_command_route_mounted": false,
+    "private_service_recovery_transport_mounted": false,
+    "legacy_cli_entries": 64,
+    "legacy_cli_runtime_qualification": "NOT_PROVEN_BY_PM_CAPITAL_ADAPTER",
+    "command_semantic_aliases_allowed": false
+  },
+  "existing_n12": {
+    "published": false,
+    "portal_reachable": false,
+    "paper": ["halt", "cancel-open-orders"],
+    "sandbox": ["halt", "cancel-open-orders"],
+    "live": ["halt", "reduce", "emergency-close", "resume", "scale"],
+    "workload_identity_is_pm_human_authority": false,
+    "source_revision": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+    "catalogue_path": "contracts/portal-execution-owner/ts-oc-08c/command-capability-catalogue.json",
+    "catalogue_sha256": "d437dabebf28b667526fc2da5d1e71593894c31857fa9622eabfdc8aa994700e"
+  },
+  "not_aliased_to_capital": [
+    "RETURN_CAPITAL", "ADMIN_LOCK", "UNLOCK", "REALLOCATE_BUDGET",
+    "APPLY_PENDING", "CANCEL_REMAINING", "management", "profile", "exchange_order"
+  ],
+  "research_revision": "daf434875e28aa131105d7f27d910b2f0ca05792",
+  "research_command_contract_origin_revision": "3d537127313fb3c282eda054fd180499fe4732ca",
+  "notes": [
+    "The PM two-POST signed-human wire is published in source; this does not install its listener, signer, authority or native target.",
+    "Human STATUS and private service-only recovery are different authority and transport boundaries.",
+    "The eight capital shapes do not implement the 64 CLI entries or the nine N12 protective/lifecycle capabilities.",
+    "Read activation and mTLS workload identity alone never grant PM mutation authority.",
+    "No generic SQL, table, source URL, CLI shell or native exchange bypass.",
+    "Actual source adapters must bind exact operation, native profile, current human and workload authority through TS commit."
+  ]
+}

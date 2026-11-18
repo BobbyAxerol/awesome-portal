@@ -1,0 +1,206 @@
+{
+  "schema": "epg10.e2e-attempt-history.v1",
+  "provenance": "TEST_ONLY",
+  "attempts": [
+    {
+      "at_utc": "2026-10-16T13:43:40.350119+00:00",
+      "status": "FAIL",
+      "failed_stage": "tls_tests",
+      "error_type": "CalledProcessError",
+      "elapsed_seconds_observational": 1162.869,
+      "runner_hashes": {
+        "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+        "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+        "run.py": "c33b5877e429b57c487178f0ed94d2d50d7198fa51ea2a765ee77675bd7266b4",
+        "test_run.py": "d296c98ad43b6990035c4ba8811559c1dcebcc95eacaa844f9d9e0fa2ee24249"
+      },
+      "input_manifest_sha256": "d1e169504605b9a4242df94ef0c14444fb3f222eb203979d03f1cccfffe11f2f",
+      "cleanup": {
+        "errors": [],
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": true,
+        "private_build_dir_pending_removal": "/tmp/epg10-09-pJye2Rpu",
+        "resource_sampler_stopped_before_container_cleanup": true,
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "attempt": 1,
+      "original_receipt_sha256": "6f6c005cb32efbadff9540e02e84a38c9d1fa9809c9ac358394d181efc6f594b",
+      "counts": {
+        "edge_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 42,
+          "passed_per_binary": [
+            42
+          ],
+          "test_binaries": 1
+        },
+        "runner_safety_tests": {
+          "failed": 0,
+          "passed": 90,
+          "skipped": 0
+        },
+        "unit_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 250,
+          "passed_per_binary": [
+            31,
+            61,
+            15,
+            16,
+            9,
+            26,
+            20,
+            36,
+            30,
+            6
+          ],
+          "test_binaries": 10
+        }
+      },
+      "root_cause": "TLS_TEST_FIXTURE_ROOT_REJECTED_PHASE09_BEFORE_HANDSHAKE",
+      "fixed_in_final_source": true
+    },
+    {
+      "at_utc": "2026-10-16T14:05:36.981940+00:00",
+      "status": "FAIL",
+      "failed_stage": "clippy",
+      "error_type": "ValueError",
+      "elapsed_seconds_observational": 536.929,
+      "runner_hashes": {
+        "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+        "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+        "run.py": "d8c325d9766dabb81c24cbb42998461acbd7a8cad465104115c714dcafa8c1c5",
+        "test_run.py": "a9823f09f143454fd85a333145f023de82e7293ba150588440ab30c1ed8da007"
+      },
+      "input_manifest_sha256": "80fb20f2e909d015a2a521981db4a36413d286e43f77f21334d196978109bc76",
+      "cleanup": {
+        "errors": [],
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": true,
+        "private_build_dir_pending_removal": "/tmp/epg10-09-pJye2Rpu",
+        "resource_sampler_stopped_before_container_cleanup": true,
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "attempt": 2,
+      "original_receipt_sha256": "8f89a2d0e1d773437d4fad3b3fc9e345c19e0287226bdf312452c0124abf0d68",
+      "counts": {
+        "bootstrap_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 22,
+          "passed_per_binary": [
+            22
+          ],
+          "test_binaries": 1
+        },
+        "command_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 27,
+          "passed_per_binary": [
+            27
+          ],
+          "test_binaries": 1
+        },
+        "edge_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 42,
+          "passed_per_binary": [
+            42
+          ],
+          "test_binaries": 1
+        },
+        "manager_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 11,
+          "passed_per_binary": [
+            11
+          ],
+          "test_binaries": 1
+        },
+        "read_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 42,
+          "passed_per_binary": [
+            42
+          ],
+          "test_binaries": 1
+        },
+        "resource_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 8,
+          "passed_per_binary": [
+            8
+          ],
+          "test_binaries": 1
+        },
+        "runner_safety_tests": {
+          "failed": 0,
+          "passed": 90,
+          "skipped": 0
+        },
+        "tls_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 12,
+          "passed_per_binary": [
+            12
+          ],
+          "test_binaries": 1
+        },
+        "unit_tests": {
+          "failed": 0,
+          "filtered_out": 0,
+          "ignored": 0,
+          "measured": 0,
+          "passed": 250,
+          "passed_per_binary": [
+            31,
+            61,
+            15,
+            16,
+            9,
+            26,
+            20,
+            36,
+            30,
+            6
+          ],
+          "test_binaries": 10
+        }
+      },
+      "root_cause": "CLIPPY_DOC_MARKDOWN_TEST_ONLY_HEADER_MISSING_BACKTICKS",
+      "fixed_in_final_source": true
+    }
+  ],
+  "final_qualification": "qualification.json",
+  "failed_attempts_are_not_external_debt": true
+}

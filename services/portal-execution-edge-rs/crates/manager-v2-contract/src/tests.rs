@@ -66,6 +66,69 @@ fn catalogue() -> ManagerCatalogue {
 }
 
 #[test]
+fn duplicate_record_fields_and_nested_values_are_rejected_before_map_decode() {
+    let catalogue = catalogue();
+    let relation = catalogue.relation("public", "orders").unwrap();
+    let request = ManagerV2Request::relation_records(relation, None, PageLimit::default()).unwrap();
+    let mut item = record("public", "orders", "record-key");
+    item["fields"]["amount"] = json!({"kind":"OBJECT","value":{
+        "settled":{"kind":"DECIMAL","value":"12.500000000000000001"}
+    }});
+    let raw = envelope(json!({"relation":{"schema":"public","relation":"orders"},
+        "items":[item],"next_cursor":null}))
+    .to_string();
+    assert!(decode_success(&request, raw.as_bytes()).is_ok());
+    for ambiguous in [
+        raw.replace(
+            "\"fields\":{",
+            "\"fields\":{\"id\":{\"kind\":\"INTEGER\",\"value\":9},",
+        ),
+        raw.replace("\"settled\":", "\"settled\":null,\"settled\":"),
+        raw.replace("\"settled\":", "\"\\u0073ettled\":null,\"settled\":"),
+        raw.replace(
+            "\"value\":\"12.500000000000000001\"",
+            "\"value\":\"1\",\"value\":\"12.500000000000000001\"",
+        ),
+    ] {
+        assert_ne!(ambiguous, raw);
+        assert!(matches!(
+            decode_success(&request, ambiguous.as_bytes()),
+            Err(ContractError::InvalidJsonSchema)
+        ));
+    }
+}
+
+#[test]
+fn strict_manager_decoding_preserves_all_explicit_profile_bindings() {
+    for profile in [
+        "PAPER_BINANCE_USDM",
+        "SANDBOX_BINANCE_USDM",
+        "LIVE_BINANCE_USDM",
+    ] {
+        let mut body = catalogue_response();
+        body["profile_id"] = json!(profile);
+        assert!(decode_success_for_profile(
+            &ManagerV2Request::catalogue(),
+            &serde_json::to_vec(&body).unwrap(),
+            profile
+        )
+        .is_ok());
+        let unavailable = json!({"contract_version":RUNTIME_CONTRACT_REVISION,
+            "authority":"EXECUTION_CELL","profile_id":profile,"catalogue_sha256":DIGEST,
+            "availability":"UNAVAILABLE","reason_code":"SOURCE_UNAVAILABLE","trace_id":"TEST_ONLY-profile"}).to_string();
+        assert!(decode_unavailable_for_profile(unavailable.as_bytes(), profile).is_ok());
+        let ambiguous = unavailable.replace(
+            "\"profile_id\":",
+            "\"profile_id\":\"FOREIGN\",\"profile_id\":",
+        );
+        assert!(matches!(
+            decode_unavailable_for_profile(ambiguous.as_bytes(), profile),
+            Err(ContractError::InvalidJsonSchema)
+        ));
+    }
+}
+
+#[test]
 fn build_lock_exposes_only_the_runtime_paper_identity_and_bounds() {
     assert_eq!(
         RUNTIME_CONTRACT_REVISION,
@@ -422,4 +485,264 @@ fn relayed_envelopes_preserve_owner_shape_without_validation_only_state() {
         catalogue.relation("public", "orders").unwrap(),
     )
     .is_err());
+}
+
+const OID_HASH: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+fn source_identity_member() -> Value {
+    json!({
+        "database_name": "trading_system",
+        "database_oid_sha256": OID_HASH,
+        "schema_ledger_rows": 173,
+        "latest_ledger_version": "99zzzzzzzzzzzzzz-package-release-command-kind-v1",
+        "ledger_status": "READABLE"
+    })
+}
+
+fn not_readable_member() -> Value {
+    json!({
+        "database_name": "trading_system_sandbox",
+        "database_oid_sha256": OID_HASH,
+        "schema_ledger_rows": null,
+        "latest_ledger_version": null,
+        "ledger_status": "NOT_READABLE"
+    })
+}
+
+fn decode_catalogue_with(identity: Option<Value>) -> Result<ManagerPayload, ContractError> {
+    let mut response = catalogue_response();
+    if let Some(identity) = identity {
+        response["data"]["source_identity"] = identity;
+    }
+    decode_success(
+        &ManagerV2Request::catalogue(),
+        &serde_json::to_vec(&response).unwrap(),
+    )
+}
+
+#[test]
+fn legacy_catalogue_without_source_identity_decodes_as_none() {
+    assert!(catalogue().source_identity().is_none());
+    let serialized = serde_json::to_value(catalogue()).unwrap();
+    assert!(serialized.get("source_identity").is_none());
+}
+
+#[test]
+fn source_identity_member_is_decoded_exactly_and_survives_a_serialise_decode_round_trip() {
+    let ManagerPayload::Catalogue(response) =
+        decode_catalogue_with(Some(source_identity_member())).unwrap()
+    else {
+        panic!("expected catalogue");
+    };
+    let identity = response.data().source_identity().unwrap();
+    assert_eq!(identity.database_name(), "trading_system");
+    assert_eq!(identity.database_oid_sha256(), OID_HASH);
+    assert_eq!(identity.schema_ledger_rows(), Some(173));
+    assert_eq!(
+        identity.latest_ledger_version(),
+        Some("99zzzzzzzzzzzzzz-package-release-command-kind-v1")
+    );
+    assert_eq!(identity.ledger_status(), LedgerStatus::Readable);
+
+    let serialized = serde_json::to_value(&response).unwrap();
+    assert_eq!(
+        serialized["data"]["source_identity"],
+        source_identity_member()
+    );
+    let body = serde_json::to_vec(&serialized).unwrap();
+    let ManagerPayload::Catalogue(again) =
+        decode_success(&ManagerV2Request::catalogue(), &body).unwrap()
+    else {
+        panic!("expected catalogue");
+    };
+    assert_eq!(again.data().source_identity(), Some(identity));
+}
+
+#[test]
+fn a_not_readable_ledger_decodes_with_null_rows_and_version_and_round_trips() {
+    let ManagerPayload::Catalogue(response) =
+        decode_catalogue_with(Some(not_readable_member())).unwrap()
+    else {
+        panic!("expected catalogue");
+    };
+    let identity = response.data().source_identity().unwrap();
+    assert_eq!(identity.schema_ledger_rows(), None);
+    assert_eq!(identity.latest_ledger_version(), None);
+    assert_eq!(identity.ledger_status(), LedgerStatus::NotReadable);
+    let serialized = serde_json::to_value(&response).unwrap();
+    assert_eq!(serialized["data"]["source_identity"], not_readable_member());
+}
+
+#[test]
+fn malformed_inconsistent_or_widened_source_identity_members_are_rejected() {
+    let with = |key: &str, value: Value| {
+        let mut member = source_identity_member();
+        member[key] = value;
+        member
+    };
+    let without = |key: &str| {
+        let mut member = source_identity_member();
+        member.as_object_mut().unwrap().remove(key);
+        member
+    };
+    for member in [
+        with("database_oid_sha256", json!(format!("sha256:{OID_HASH}"))),
+        with("database_oid_sha256", json!("not-a-digest")),
+        with("database_oid_sha256", json!(OID_HASH.to_uppercase())),
+        with("database_name", json!("")),
+        with("database_name", json!("x".repeat(64))),
+        with("schema_ledger_rows", json!(-1)),
+        with("schema_ledger_rows", json!("173")),
+        with("ledger_status", json!("UNKNOWN")),
+        with("ledger_status", json!("readable")),
+        with("latest_ledger_version", json!("x".repeat(1025))),
+        // READABLE with null rows, NOT_READABLE with rows or a version.
+        with("schema_ledger_rows", Value::Null),
+        with("ledger_status", json!("NOT_READABLE")),
+        without("database_name"),
+        without("database_oid_sha256"),
+        without("schema_ledger_rows"),
+        without("latest_ledger_version"),
+        without("ledger_status"),
+        with("system_id", json!("raw-cluster-id")),
+        json!("trading_system"),
+    ] {
+        assert!(decode_catalogue_with(Some(member)).is_err());
+    }
+    let mut not_readable_with_version = not_readable_member();
+    not_readable_with_version["latest_ledger_version"] = json!("v1");
+    assert!(decode_catalogue_with(Some(not_readable_with_version)).is_err());
+}
+
+/// Wire the S1 Manager (`manager_s1.py`, `_RELATIONS` = `account_balances` and `portfolios`) adds to a relation
+/// page of exactly those two relations: an envelope-level `source_snapshot` member.
+fn s1_snapshot(relation: &str, scope: &Value) -> Value {
+    json!({
+        "version": "edge-s1.v1", "mechanism": "M0",
+        "source_id": format!("sha256:{}", "a".repeat(64)),
+        "relation": relation, "scope": scope,
+        "generation": {"at": "2026-08-28T00:00:00Z", "snapshot": "10:20:11,12"},
+        "total_in_scope": 1, "status": "COMPLETE", "reason": null, "absence_authority": false
+    })
+}
+
+fn s1_catalogue() -> ManagerCatalogue {
+    let body = serde_json::to_vec(&envelope(json!({
+        "catalogue_revision": DIGEST,
+        "relation_count": 3,
+        "relations": [
+            relation("public", "account_balances"),
+            relation("public", "orders"),
+            relation("public", "portfolios")
+        ]
+    })))
+    .unwrap();
+    let ManagerPayload::Catalogue(response) =
+        decode_success(&ManagerV2Request::catalogue(), &body).unwrap()
+    else {
+        panic!("expected catalogue");
+    };
+    response.into_data()
+}
+
+fn decode_s1_page(
+    relation_name: &str,
+    snapshot: Option<Value>,
+    completeness: &str,
+) -> Result<ManagerPayload, ContractError> {
+    let catalogue = s1_catalogue();
+    let request = ManagerV2Request::relation_records(
+        catalogue.relation("public", relation_name).unwrap(),
+        None,
+        PageLimit::new(2).unwrap(),
+    )
+    .unwrap();
+    let mut page = envelope(json!({
+        "relation": {"schema": "public", "relation": relation_name},
+        "items": [record("public", relation_name, "record-key")],
+        "next_cursor": null
+    }));
+    page["completeness"] = json!(completeness);
+    if let Some(snapshot) = snapshot {
+        page["source_snapshot"] = snapshot;
+    }
+    decode_success(&request, &serde_json::to_vec(&page).unwrap())
+}
+
+#[test]
+fn s1_pages_of_portfolios_and_account_balances_carry_a_source_snapshot_the_edge_must_accept() {
+    // Regression: the integrated Edge rejected both with MANAGER_V2_SOURCE_CONTRACT_REJECTED because the
+    // envelope wire denies unknown members and did not know `source_snapshot`.
+    let scoped = json!({"mode": "paper", "venue": "OKX"});
+    assert!(decode_s1_page(
+        "account_balances",
+        Some(s1_snapshot("public.account_balances", &scoped)),
+        "COMPLETE"
+    )
+    .is_ok());
+    assert!(decode_s1_page(
+        "portfolios",
+        Some(s1_snapshot("public.portfolios", &Value::Null)),
+        "COMPLETE"
+    )
+    .is_ok());
+}
+
+#[test]
+fn the_accepted_snapshot_is_exposed_and_a_snapshot_on_any_other_relation_is_refused() {
+    let scoped = json!({"mode": "paper", "venue": "OKX"});
+    let ManagerPayload::RelationRecords(page) = decode_s1_page(
+        "account_balances",
+        Some(s1_snapshot("public.account_balances", &scoped)),
+        "COMPLETE",
+    )
+    .unwrap() else {
+        panic!("expected relation page")
+    };
+    let snapshot = page.meta().source_snapshot().unwrap();
+    assert_eq!(snapshot.relation, "public.account_balances");
+    assert!(!snapshot.absence_authority);
+    // A page without the member (every other relation) still decodes and carries none.
+    let ManagerPayload::RelationRecords(plain) =
+        decode_s1_page("orders", None, "COMPLETE").unwrap()
+    else {
+        panic!("expected relation page")
+    };
+    assert!(plain.meta().source_snapshot().is_none());
+    // The member is only valid for the two S1 relations.
+    assert!(decode_s1_page(
+        "orders",
+        Some(s1_snapshot("public.orders", &Value::Null)),
+        "COMPLETE"
+    )
+    .is_err());
+    assert!(decode_s1_page(
+        "portfolios",
+        Some(s1_snapshot("public.portfolios", &scoped)),
+        "COMPLETE"
+    )
+    .is_err());
+}
+
+#[test]
+fn a_malformed_or_inconsistent_snapshot_never_decodes() {
+    let good = || s1_snapshot("public.portfolios", &Value::Null);
+    let mut absence = good();
+    absence["absence_authority"] = json!(true);
+    let mut wrong_time = good();
+    wrong_time["generation"]["at"] = json!("2026-08-28T00:00:01Z");
+    let mut widened = good();
+    widened["unexpected"] = json!(true);
+    for (label, snapshot) in [
+        ("absence authority", absence),
+        ("generation differs from as_of", wrong_time),
+        ("unknown member", widened),
+    ] {
+        assert!(
+            decode_s1_page("portfolios", Some(snapshot), "COMPLETE").is_err(),
+            "{label}"
+        );
+    }
+    // The page completeness must agree with the snapshot status.
+    assert!(decode_s1_page("portfolios", Some(good()), "PARTIAL").is_err());
 }

@@ -1,0 +1,108 @@
+{
+  "cleanup": {
+    "errors": [],
+    "images_built": 0,
+    "images_pulled": 0,
+    "owned_container_removed": true,
+    "private_build_dir_pending_removal": "/tmp/epg10-03-native.azQ8THAs",
+    "volumes_created": 0,
+    "volumes_removed": 0
+  },
+  "clippy": {
+    "owned_extension_warnings": 0,
+    "status": "OWNED_EXTENSION_PASS_NOT_UPSTREAM_LINT_CERTIFICATION",
+    "upstream_advisory_warnings": 14
+  },
+  "disk_after_container": 167609409536,
+  "disk_before": 167609712640,
+  "elapsed_seconds": 17.617,
+  "extension_sha256": "c0307a5ac6377d6bea38d7c82eacf8d5aee074add16adf216183f151d33cf863",
+  "facts": [
+    {
+      "aborted_events": 0,
+      "case": "continuous_late_commit",
+      "exact_ids_and_payload_digests": true,
+      "late_commit_groups": 2,
+      "published_events": 3,
+      "result": "PASS",
+      "same_slot": true
+    },
+    {
+      "ack_before_commit": false,
+      "backend_kill_before_append_recovered_once": true,
+      "case": "commit_ack_conflict_retention",
+      "conflict_stream_poisoned_without_ack": true,
+      "conflicting_digest_rejected": true,
+      "durable_effects": 1,
+      "fault_kind": "actual PG sink backend kill; TEST_ONLY response loss after real SQL commit; saved-decoded-commit replay, NOT reconnect/WAL resume; inherited test covers deferred COMMIT rollback plus resnapshot",
+      "original_hash": "a2b02e0af88674c9058dacd2dcb72a830b34b99f91f9cd05e673c46814001c0a",
+      "replay_attempts": 2,
+      "result": "PASS",
+      "retention_floor": 2
+    },
+    {
+      "case": "producer_generation_fence",
+      "duplicate_effects": 0,
+      "formal_status": "BLOCKED_SOURCE_FENCE_ABSENT",
+      "independent_slots": 2,
+      "old_writer_new_commit_accepted": true,
+      "owner": "TS native publication",
+      "required": "durable commit-time generation/owner fence for each source scope",
+      "result": "COUNTEREXAMPLE_REPRODUCED",
+      "sink_role": "source_journal_publisher"
+    },
+    {
+      "backlog_after": 0,
+      "backlog_before": 32,
+      "case": "bounded_write_cost",
+      "domain_only_elapsed_us": "89438",
+      "domain_plus_journal_elapsed_us": "132005",
+      "limits": "single synthetic serial run; sampled no-contention, NOT concurrent writer lock-cost/capacity certification",
+      "native_publication_elapsed_us": "395102",
+      "result": "PASS_DIAGNOSTIC_ONLY",
+      "sampled_lock_waiters_after": 0,
+      "transactions_each": 32,
+      "wal_bytes_domain_only": 6008,
+      "wal_bytes_domain_plus_journal": 74712,
+      "wal_bytes_publication": 125016
+    }
+  ],
+  "generated_test_sha256": "91d27f7efac7b291b6e471854fcdc3211cc8ffe0a38bf32ff4094156795d6d3a",
+  "input_hashes": {
+    "init-db/48-v2-source-change-journal.sql": "b35a4f05020c4518bfe752c6ad71bdbc32a3e09624763d2ebe23cea04b5e33d4",
+    "init-db/58-v2-semantic-journal-coverage.sql": "186109473a474fd5f5b3b5f7a68f2b7d2374eedccf90d79292bdbef38296b4b1",
+    "init-db/59-v2-source-commit-order-replay.sql": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+    "init-db/60-v2-source-journal-paper-reader.sql": "e6d37838552bcb2d67531666956377faf3940e4930ceef9c6d733d31696ab9c2",
+    "init-db/67-v2-p16-consumer-publication-controls.sql": "7ada53a992661723eab1f701821fa1aba0ef983f978ffc245d4651e9bcd84e87",
+    "rust/Cargo.lock": "f2d3139b1c02b281198beb280b1525048f1d0009b9ec04a3e5f915bb5927a898",
+    "rust/Cargo.toml": "00683541d961da407575f17da7743ee39f0bd8d77440180b6be13df507bdaf14",
+    "rust/crates/trading-core/src/canonical.rs": "eff6ccd0a1470ca6a2742fed7b896e4237a2e41a2cbe6a457e0f81588ee7c63f",
+    "rust/crates/trading-core/src/error.rs": "c384846be733188315907f1e732d6fe1efe5a59b90b05315df26370893e87933",
+    "rust/crates/trading-core/src/source_journal.rs": "b54dcb06bb5a8f9e0f12785a94ec098d34ed8cdd9af9dbc2ef90100475776ded",
+    "rust/crates/trading-core/src/source_journal_replay.rs": "23ba6f6757de0c8dbc66132991e9a8153ef1caaf7323001a2b8a9c721fc78d58",
+    "rust/crates/trading-runtime/src/logical_replication.rs": "9991c191c06ac988526489ab0d9447881627e6f933cec636714d933cd6e6ae82",
+    "rust/crates/trading-runtime/src/publication.rs": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+    "rust/crates/trading-runtime/tests/p13_logical_replication.rs": "7111adf43fceb97ec7eca3e39eed3f19aac4c4f57007905b67397e3ea1ca965f",
+    "rust/crates/trading-runtime/tests/support/p13_publication_snapshot.rs": "b2908e574d389abc5e7d806615dca8746a6b1b02ffb226c1f06d0ac0f6b4a5dd"
+  },
+  "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+  "pg_version": "16.15",
+  "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+  "runner_safety_tests": {
+    "failed": 0,
+    "passed": 12,
+    "skipped": 0
+  },
+  "runtime_activation": false,
+  "rust_tests": {
+    "failed": 0,
+    "filtered_out": 0,
+    "ignored": 0,
+    "passed": 6
+  },
+  "rustfmt": "PASS",
+  "schema": "epg10.capture-proof.v1",
+  "slots_after_tests": 0,
+  "source_revision": "bdf7685e166d1bdb94edf45d356c298c427a4db4",
+  "status": "PASS_SCOPED_PROOF_WITH_PRODUCER_FENCE_GAP"
+}

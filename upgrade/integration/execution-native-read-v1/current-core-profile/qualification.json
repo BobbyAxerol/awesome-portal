@@ -1,0 +1,85 @@
+{
+  "schema_version": "portal.epg10-08.current-core-source-qualification.v1",
+  "status": "SOURCE_QUALIFIED_233_CASES_BOTH_STRICT_GATES_PASS_NOT_INSTALLED",
+  "phase": "EPG10-08",
+  "source_base": "5291a80f68a11cbccad879d1e99bb6282634f636",
+  "authored_files": 32,
+  "patch_sha256": "7638de85f4ce8602aa493c461e3c290a8efad5da4f0a66f002ef312f5d8ee679",
+  "safe_qualification_dependencies": 1148,
+  "qualified_source_manifest_sha256": "f64cf0b0bc54ed7f6f5b5b92f0043b04f1de6309b369d379dd8de5cc1ed4cc0f",
+  "transferred_source_files": 1152,
+  "transfer_manifest_sha256": "e08d405ef75c51550fd241b5576e1e1e70e3aeb91956c555de730496e8274559",
+  "package_lock_sha256": "81f9975ea19b321aea0e2e71ef6eead1b4ad19838434119e958ce59bafc76fa1",
+  "execution": {
+    "host": "SGP",
+    "provenance": "TEST_ONLY_CURRENT_AUTHORITY_PM_PROTOCOL_ACTUAL_DISPOSABLE_PG_MTLS_HTTP",
+    "maximum_job_lease_seconds": 300,
+    "node_cpu_limit": 2,
+    "node_memory_bytes": 2147483648,
+    "postgres_cpu_limit": 1,
+    "postgres_memory_bytes": 805306368,
+    "persistent_volumes": 0,
+    "host_listener_ports": 0,
+    "dependency_mount": "EXACT_PUBLIC_NODE_MODULES_ONLY_READ_ONLY_NO_INSTALL",
+    "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+    "postgres_image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
+  },
+  "gates": {
+    "production_strict": {
+      "run_id": "171343",
+      "ended_utc": "2026-10-18T17:17:02.571353+00:00",
+      "exit_code": 0,
+      "log_sha256": "ec1350f5c3d393df7d74a8b1a75a68b805dd42f09905af4adef821b5c27893f9"
+    },
+    "seven_spec_strict": {
+      "run_id": "172605",
+      "ended_utc": "2026-10-18T17:29:37.625760+00:00",
+      "exit_code": 0,
+      "log_sha256": "86c02cd1df447d718a03f8e3ae64f5adf65b9dcaaae334361965837273439de1"
+    },
+    "affected_fixture_http": {
+      "run_id": "173008",
+      "ended_utc": "2026-10-18T17:31:48.730108+00:00",
+      "exit_code": 0,
+      "actual_cases": 233,
+      "unique_cases": 233,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "log_sha256": "d22ab47d047712c096d78e2dad4fa9f5e7c8811a706aa771a22127b6a46d9f48",
+      "junit_sha256": "4691bea3238badd30ba04cd49af3ce41a34c1319640b102942ffa4750cbfefb9",
+      "suite_cases": {
+        "elp210-manager-domain-access.spec.ts": 56,
+        "elp210-native-frame-coupled.spec.ts": 45,
+        "manager-observation-resume.spec.ts": 35,
+        "manager-observation-source.spec.ts": 40,
+        "native-manager-epoch.spec.ts": 14,
+        "native-manager-install-ack.spec.ts": 6,
+        "native-manager-preparation.spec.ts": 37
+      }
+    }
+  },
+  "cleanup": {
+    "each_job_terminal_before_teardown": true,
+    "each_job_owned_containers_remaining": 0,
+    "each_job_owned_networks_remaining": 0,
+    "each_job_own_lease_removed": true,
+    "each_job_protected_runtime_count": 51,
+    "each_job_protected_runtime_unchanged": true,
+    "images_built_or_pulled": 0,
+    "shared_cache_prune": false,
+    "active_source_copy_final_cleanup": "EXACT_REMOTE_COPY_REMOVED_AFTER_BOUNDED_EVIDENCE_COLLECTION",
+    "source_cleanup_files": 1166,
+    "source_cleanup_logical_bytes": 24290084,
+    "source_cleanup_free_before_bytes": 163443126272,
+    "source_cleanup_free_after_bytes": 163470274560,
+    "disk_values_are_shared_host_observations": true,
+    "source_cleanup_operational_runtime_unchanged": true
+  },
+  "prior_failures_retained": true,
+  "sse_draft_qualified_by_this_receipt": false,
+  "commissioned_identity_or_provider": false,
+  "operational_database_mutations": 0,
+  "deployed": false,
+  "full_connected_acceptance": "NOT_MET"
+}

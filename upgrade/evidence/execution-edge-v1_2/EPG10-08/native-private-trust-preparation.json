@@ -1,0 +1,40 @@
+{
+  "schema_version": "portal.epg10-08.private-trust-preparation.v1",
+  "status": "PREPARED_NOT_INSTALLED",
+  "runtime_authority_activated": false,
+  "guide": "upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23207-original08--actual-provider-owning-boundary-and-connected-acceptance",
+  "private_manifest_reference": "/home/bobby/secure/portal-native-manager-read/v1/trust-material.json",
+  "private_manifest_sha256": "cd5f806b673ff141cea5c308e2e300a6eeb1238427ca2146947146849485f539",
+  "certificate_der_sha256": {
+    "ca": "a3cf58845dcce5a0438e63068811988f6f3e60d7080bb81a02774b09eff580f0",
+    "manager": "16ec31b02877a8818b81f8b6b1c181e7fc380bed6037bf1948af9c73141f7f91",
+    "core": "036a05189e42564b764a3d0f1c8051d9534254f75bb1a26e5e05aa62d4c0a8f2"
+  },
+  "qualification": {
+    "openssl_verify_server_purpose": "PASS",
+    "openssl_verify_client_purpose": "PASS",
+    "manager_hostname_native_manager_read_internal": "PASS",
+    "manager_ip_10_70_0_2": "PASS",
+    "human_ed25519_key_integrity": "PASS",
+    "terminal_ed25519_key_integrity": "PASS",
+    "public_human_jwks_generated": true,
+    "directory_root_0700": true,
+    "all_17_files_root_0600": true
+  },
+  "impact": {
+    "secret_values_emitted": false,
+    "keys_transferred_to_sgp": false,
+    "keys_mounted": false,
+    "existing_credentials_rotated": false,
+    "database_schema_role_identity_policy_grant_changes": false,
+    "listeners_started": false,
+    "service_restarts": 0,
+    "ca_private_key_runtime_mount_allowed": false
+  },
+  "retention": "Named active native commissioning package outside Git; not disposable test material.",
+  "limitations": [
+    "Crypto/file preparation only, not authenticated connected authority acceptance.",
+    "Actual node-readable runtime copies and exact source/identity/field bindings remain owned commissioning work.",
+    "Neither a workload certificate nor a private manifest grants a human permission."
+  ]
+}

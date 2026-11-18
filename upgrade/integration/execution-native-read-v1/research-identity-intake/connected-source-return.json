@@ -1,0 +1,115 @@
+{
+  "schema_version": "portal.research-native-read-source-return.v1",
+  "observed_date_utc": "2026-10-20",
+  "status": "IDENTITY_COMMITTED_NATIVE_READY_SNAPSHOT_CORE_009_NOT_COMPOSED",
+  "source_commit": "1380ab9d3d05baa16d54ef3cdb72f3e27ae7d77b",
+  "core_commit": "7818d5631e0da37563bca5715fd46d40b66ef1de",
+  "identity": {
+    "attempt_id": "bc91a536-4f50-408e-8a31-e11dd5e588ee",
+    "lease_id": "75604271-623c-41fe-9e3f-512f43358dad",
+    "phase": "COMMITTED",
+    "portal_acknowledged": true,
+    "source_receipt_id": "c257e2d3-d753-4398-a906-8e4867e54f3c",
+    "source_receipt_digest": "sha256:d499fb96835040c73391771805c2db8610818ea77dc7736491e59f9f51e13d86",
+    "ts_user_id": "608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd",
+    "mapping_version": "1",
+    "source_role_retired": true,
+    "independent_database_readback": "PASS",
+    "identity_role_sessions": 0,
+    "identity_role_grant_dependencies": 0,
+    "identity_role_password_absent": true,
+    "operator_physical_exit": 0,
+    "core_finish_state": "FINISHED",
+    "core_unresolved": 0,
+    "core_callback_in_flight": 0,
+    "operator_events_sha256": "9b7c597953eb0695ab2b48cd4025a6a15034d20d7bb2732c8606ec6b0b2a2b25"
+  },
+  "acceptance": {
+    "acceptance_id": "b922c105-4e99-4830-8be2-bb2e1f41b5d9",
+    "command_id": "1e14f26d-adc0-42db-8ff0-3eac122f5ec7",
+    "manifest_sha256": "f9ed08e555d0efd312d520654f6a5b8d2496f6f704275d5f157d58f1ae2477e0",
+    "official_maintenance_result": "RECORDED",
+    "same_approved_manifest_status": "PASS",
+    "held_authority": false,
+    "runtime_enabled_by_recording": false
+  },
+  "selected_pins": {
+    "binding": {
+      "human_issuer": "portal-control-api.native-manager-read",
+      "subject": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+      "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+      "environment": "paper",
+      "workload_id": "elp210-e2aad424-fcd4-48c0-b8b0-63e54b98e2e9:pm"
+    },
+    "domain": {
+      "profile_id": "PAPER_BINANCE_USDM",
+      "catalogue_sha256": "0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44",
+      "profile_sha256": "5c33c4e0276dd849215d2662c157418a75e91a06fd405f6b369dcc172b722c03",
+      "field_policy_sha256": "b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3"
+    },
+    "human": {
+      "issuer": "portal-control-api.native-manager-read",
+      "subject": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+      "portal_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+      "ts_user_id": "608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd",
+      "mapping_revision": "ts-user:608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd:1"
+    },
+    "native": {
+      "revision": "1",
+      "receipt_id": "1e14f26d-adc0-42db-8ff0-3eac122f5ec7",
+      "receipt_digest": "sha256:c517a257c14588c47a91e776910d22129989cfb68c80fce5ac8ba2fea7bf749d",
+      "document_digest": "sha256:f9ed08e555d0efd312d520654f6a5b8d2496f6f704275d5f157d58f1ae2477e0",
+      "policy_revision": "1",
+      "owner_mapping_revision": "ts-user:a72b0e8c-70f7-4795-aff3-6ae58619149d:1",
+      "semantic_revision": "sha256:d9104e60fe276104aa9440c78eddeb81596436b38257d570bd73251e1d31608a",
+      "effective_from": "2026-10-20T04:06:55.179895+00:00",
+      "expires_at": "2026-10-20T04:35:00+00:00"
+    },
+    "source_fingerprint": "5a67e653003f91ce95d364284cfc2ab6259dee322804f630caee0244f7ac79da"
+  },
+  "candidate_transport": {
+    "origin": "https://pm.elp210.candidate.invalid:28446",
+    "bind_host": "10.70.0.2",
+    "pm_leaf_sha256": "sha256:1ad74ad741cd4c5bf2882777891e929209c28d93ae804329d354d3a7c8123a3e",
+    "core_client_leaf_sha256": "sha256:a7fe6cb9069e85cb77ba0de475b016e025098f66e2b033f77c7f7961dff66c6d",
+    "core_signer_key_id": "elp210-e2aad424-fcd4-48c0-b8b0-63e54b98e2e9:core",
+    "human_issuer": "portal-control-api.native-manager-read",
+    "human_audience": "urn:elp210-e2aad424-fcd4-48c0-b8b0-63e54b98e2e9:pm",
+    "terminal_issuer": "portal-control-api.native-manager-read-terminal",
+    "terminal_audience": "trading-system.native-business-read-terminal",
+    "terminal_purpose": "pma.native-business-to-core-terminal.v1",
+    "runtime_config_sha256": "2dbb9569e5b090cb8c3313a396fe40b7f3389105e954babc1d1e295ed8abc0a7",
+    "container_id": "43026b4c8ab3e400850ca0af5644e6de55df3177fcf9471746e0a78e361c0fee",
+    "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+    "started_at": "2026-10-20T04:09:20.272449994Z",
+    "finite_end_utc": "2026-10-20T04:35:00Z",
+    "source_pool_max": 1,
+    "control_pool_max": 1,
+    "request_bytes": 32768,
+    "response_bytes": 32768,
+    "max_inflight": 1,
+    "stable_28445_changed": false,
+    "scope": "FINITE_CORRECTNESS_ONLY_NOT_PRODUCTION_CAPACITY"
+  },
+  "limits": {
+    "core_read_policy_installed": false,
+    "core_stream_policy_installed": false,
+    "connected_business_read_or_sse_accepted": false,
+    "commands_enabled": false,
+    "cloudflare_authentication_qualified": false,
+    "full_08_exit": "NOT_MET",
+    "connected_09": "NOT_STARTED",
+    "expiry_is_not_custody_release": true
+  },
+  "transport_qualification": {
+    "observed_utc": "2026-10-20T04:12:32.628343+00:00",
+    "origin": "SGP_TO_HK_REAL_CANDIDATE_MTLS",
+    "valid_tls13": "PASS",
+    "authenticated_unknown_route": "HTTP_404_DENIED",
+    "wrong_hostname": "PASS_DENIED",
+    "missing_client_certificate": "PASS_DENIED_TLS_EOF_ZERO_APPLICATION_BYTES",
+    "final_cases_pass": 4,
+    "failed_prior_specimen": "Three-case probe wrongly required SSL exception instead of zero-byte TLS1.3 EOF; retained as failed oracle, corrected with authenticated HTTP positive control.",
+    "genuine_business_read_or_stream": false
+  }
+}

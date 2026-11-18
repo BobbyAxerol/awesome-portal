@@ -6,7 +6,10 @@
 //! The journal preserves `202` as non-terminal and makes ambiguous outcomes
 //! fail closed across replay and restart.
 
+pub mod authority;
 pub mod current_primitive;
+pub mod durable;
+pub mod pm_source;
 
 use std::collections::HashMap;
 

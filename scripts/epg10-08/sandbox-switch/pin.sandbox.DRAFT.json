@@ -1,0 +1,10 @@
+{
+  "database_name": "trading_system_sandbox",
+  "database_oid_sha256": "3455fa708d1b9ad728b8c44f400b93f178468a33511eac2db099e01a8edbbb5f",
+  "environment": "sandbox",
+  "ledger_status_required": false,
+  "minimum_schema_ledger_rows": 122,
+  "profile_id": "SANDBOX_BINANCE_USDM",
+  "schema_version": "portal.execution.manager-source-identity-pin.v1",
+  "source_identity_required": true
+}

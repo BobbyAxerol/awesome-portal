@@ -1,0 +1,61 @@
+{
+  "schema": "epg10.capture-verification.v1",
+  "phase": "EPG10-03",
+  "status": "IN_PROGRESS_OWNED_PROOF_DELIVERED",
+  "exit": "NOT_MET",
+  "evidence_class": "TEST_ONLY_ISOLATED_NATIVE_POSTGRESQL_NOT_PRODUCTION_ACCEPTANCE",
+  "runtime_activation": false,
+  "formal_cases": {
+    "T03-01": "PASS_ISOLATED_NATIVE_CONTINUOUS_SLOT",
+    "T03-02": "PASS_ISOLATED_ABORT_NO_DOMAIN_OR_JOURNAL_DELTA",
+    "T03-03": "PASS_INJECTED_COMMIT_ACK_BOUNDARIES_NOT_PROCESS_WAL_RECONNECT",
+    "T03-04": "BLOCKED_SOURCE_FENCE_ABSENT_COUNTEREXAMPLE_REPRODUCED",
+    "T03-05": "PASS_CONFLICT_REJECTED_NATIVE_SESSION_POISONED_NO_ACK"
+  },
+  "formal_counts": {"passed": 4, "blocked": 1},
+  "final_automated_tests": {
+    "native_rust": {"passed": 6, "failed": 0, "ignored": 0, "filtered_out": 0},
+    "runner_safety_sgp": {"passed": 12, "failed": 0, "skipped": 0},
+    "local_python": {"passed": 24, "failed": 0, "skipped": 0, "elapsed_seconds": 0.662},
+    "distinct_cases": 30,
+    "count_note": "Local24 includes same12runner safety plus12unchanged catalogue tests; SGP12 not double-counted; formal cases separate"
+  },
+  "lint": {
+    "rustfmt": "PASS",
+    "owned_extension_clippy_warnings": 0,
+    "upstream_advisory_clippy_warnings": 14,
+    "whole_ts_strict_clippy": "NOT_CLEAN_12_PREEXISTING_CORE_DIAGNOSTICS_ATTEMPT4"
+  },
+  "not_certified": [
+    "All actual TS/PM writers, unsupported legacy APIs and profile adoption",
+    "Durable generic producer owner/generation fence",
+    "External N03 endpoint/identity/publication or runtime activation",
+    "OS-process restart, persistent-slot reconnect and WAL resume",
+    "Concurrent contention, production capacity, placement, HA, live/provider evidence",
+    "Infinite or unconditional consumer-ACK-pinned source retention"
+  ],
+  "source_reconciliation": {
+    "tested_ts": "bdf7685e166d1bdb94edf45d356c298c427a4db4",
+    "final_observed_ts": "3d9582de9a9daea8b293d966165114d1b1fb5bf5",
+    "native_input_hashes_identical": 15,
+    "pm": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+    "final_observed_dl": "2169c267a393934b19a2fbab6ba6f62f80d04d60",
+    "research": "c1d6b2dc53f1f80ac44cdfd9d96d159c4e9aae64",
+    "research_dirty": true,
+    "mirrored_foundation_unchanged": true,
+    "peer_edits": 0
+  },
+  "runtime_reconciliation": {
+    "hk_unchanged_image_config_restart_tuples": 12,
+    "sgp_unchanged_image_config_restart_tuples": 5,
+    "all_selected_restarts": 0,
+    "operational_mutations": 0,
+    "new_exporters_routes_or_credentials": 0,
+    "phase_images_built_pulled_or_retained": 0
+  },
+  "cleanup_receipt": "cleanup-receipt.json",
+  "native_receipt": "native-receipt.json",
+  "attempt_history": "attempt-summary.json",
+  "single_producer_packet": "CAPTURE_CONTRACT_AND_OWNER_RETURN.md",
+  "next_step": "TS native publisher commit-time fence plus selected producer coverage; rerun same EPG10-03; no implicit EPG10-04 start"
+}

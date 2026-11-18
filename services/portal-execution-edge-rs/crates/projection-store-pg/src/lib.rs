@@ -1,14 +1,16 @@
 #![forbid(unsafe_code)]
 
-use std::{str::FromStr as _, time::Duration};
+use std::{str::FromStr as _, sync::Arc, time::Duration};
 
 use chrono::{DateTime, TimeDelta, Utc};
 use execution_contracts::{CanonicalId, SourceAuthority, SourceCompleteness, SourceCursor};
 use projection_core::{
-    canonical_digest, semantic_state_digest, ApplyDisposition, FreshnessPolicy, ProjectedEntity,
-    ProjectionEntityKey, ProjectionEntityKind, ProjectionEpochStatus, ProjectionError,
-    ProjectionObservation, ProjectionOperation, ProjectionReducer, ProjectionScope, ReplayRecord,
-    SnapshotCompleteness, SourceSequenceSemantics,
+    canonical_digest,
+    resources::{ResourceEnvelope, ResourceError, ResourceLease, WorkClass},
+    semantic_state_digest, ApplyDisposition, FreshnessPolicy, ProjectedEntity, ProjectionEntityKey,
+    ProjectionEntityKind, ProjectionEpochStatus, ProjectionError, ProjectionObservation,
+    ProjectionOperation, ProjectionReducer, ProjectionScope, ReplayRecord, SnapshotCompleteness,
+    SourceSequenceSemantics,
 };
 use source_qualification::shadow_screen::{
     accept_shadow_activation, AcceptedShadowActivation, ShadowActivationEvidence,
@@ -19,12 +21,19 @@ use uuid::Uuid;
 
 mod analytics_repository;
 mod authoritative_event_store;
+pub mod bootstrap;
+pub mod bootstrap_rollout;
+pub mod command;
+pub mod command_pm;
 mod d4_writer;
 mod manager_projection;
 mod manager_query_analytics;
+mod manager_source_health;
+pub mod p16_history;
 mod query;
 mod realtime;
 mod retention;
+pub mod scoped_read;
 mod shared_consumer;
 mod source_admission;
 
@@ -42,16 +51,17 @@ pub use d4_writer::{
     D4SnapshotLeaseInput, D4_CONTRACT_REVISION, D4_SCOPE_ID,
 };
 pub use manager_projection::{
-    manager_snapshot_semantic_digest, ManagerCycleCommitInput, ManagerProjectionCycleReceipt,
-    ManagerProjectionEpochSelection, ManagerProjectionLeaseAcquireOutcome,
-    ManagerProjectionLeaseGrant, ManagerProjectionLeaseProof, ManagerSnapshotCommitInput,
-    ManagerSnapshotCommitReceipt, MANAGER_PROJECTION_SOURCE_SCOPE,
+    manager_snapshot_semantic_digest, ManagerCycleCommitInput, ManagerFeedObservation,
+    ManagerProjectionCycleReceipt, ManagerProjectionEpochSelection,
+    ManagerProjectionLeaseAcquireOutcome, ManagerProjectionLeaseGrant, ManagerProjectionLeaseProof,
+    ManagerSnapshotCommitInput, ManagerSnapshotCommitReceipt, MANAGER_PROJECTION_SOURCE_SCOPE,
 };
 pub use manager_query_analytics::{
     ManagerAnalyticsFact, ManagerAnalyticsSnapshot, ManagerAnalyticsSubject,
     ManagerAnalyticsSubjectKind, N25_MANAGER_ANALYTICS_MAX_FACTS,
 };
-pub use query::{RetentionPolicySnapshot, SeriesPointWrite};
+pub use manager_source_health::{ManagerSourceAttempt, ManagerSourceHealth};
+pub use query::{RetentionPolicySnapshot, ScopedProjectionPage, SeriesPointWrite};
 pub use realtime::{
     ManagerRealtimeAuthority, RealtimeActiveEpochWatermark, RealtimeEpochAvailability,
     RealtimeJournalPage, RealtimeJournalRecord, RealtimeScopeAvailability,
@@ -117,6 +127,7 @@ pub struct ShadowScreenAuthority {
 #[derive(Clone)]
 pub struct PgProjectionStore {
     pool: PgPool,
+    resources: Option<Arc<ResourceEnvelope>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -139,7 +150,64 @@ impl PgProjectionStore {
             .idle_timeout(Duration::from_secs(60))
             .connect(database_url)
             .await?;
-        Ok(Self { pool })
+        Ok(Self {
+            pool,
+            resources: None,
+        })
+    }
+
+    /// Opt-in resource envelope for the versioned04/05 paths. All clones share
+    /// admission and one pool. Legacy/domain-specific APIs are not governed by
+    /// this constructor; do not share this pool with ungoverned worker traffic.
+    /// # Errors
+    /// Rejects a pool smaller than the total admitted work or an oversized pool.
+    /// The foreground reserve is meaningful only with this bounded pool binding.
+    pub async fn connect_with_resources(
+        database_url: &str,
+        resources: Arc<ResourceEnvelope>,
+        max_connections: u32,
+    ) -> Result<Self, StoreError> {
+        if max_connections == 0
+            || max_connections > 64
+            || usize::try_from(max_connections).map_err(|_| ResourceError::Config)?
+                < resources.limits().max_active
+        {
+            return Err(ResourceError::Config.into());
+        }
+        let pool = PgPoolOptions::new()
+            .max_connections(max_connections)
+            .min_connections(0)
+            .acquire_timeout(Duration::from_secs(3))
+            .idle_timeout(Duration::from_secs(60))
+            .connect(database_url)
+            .await?;
+        Ok(Self {
+            pool,
+            resources: Some(resources),
+        })
+    }
+
+    /// Requires the explicit shared envelope used by newly composed workloads.
+    /// This checks local pool governance, not source authority or measured capacity.
+    /// # Errors
+    /// Legacy pools without an envelope cannot opt into governed composition.
+    pub fn require_resource_governance(&self) -> Result<(), ResourceError> {
+        self.resources
+            .as_ref()
+            .map(|_| ())
+            .ok_or(ResourceError::Config)
+    }
+
+    fn admit(
+        &self,
+        class: WorkClass,
+        entries: usize,
+        bytes: usize,
+    ) -> Result<Option<ResourceLease>, ResourceError> {
+        self.resources
+            .as_ref()
+            .map(|resources| resources.try_acquire(class, entries, bytes, Utc::now()))
+            .transpose()
     }
 
     /// Applies embedded expand-compatible projection migrations.
@@ -1406,6 +1474,8 @@ fn i64_from_u64(value: u64) -> Result<i64, StoreError> {
 #[derive(Debug, Error)]
 pub enum StoreError {
     #[error(transparent)]
+    Resource(#[from] ResourceError),
+    #[error(transparent)]
     Database(#[from] sqlx::Error),
     #[error(transparent)]
     Migration(#[from] sqlx::migrate::MigrateError),
@@ -1463,6 +1533,8 @@ pub enum StoreError {
     InvalidRealtimePageLimit,
     #[error("analytics source snapshot does not exist")]
     AnalyticsSourceNotFound,
+    #[error("analytics source attribution is not proven for the requested subject")]
+    AnalyticsAttributionUnproven,
     #[error("analytics source snapshot delivery profile does not match the requested profile")]
     AnalyticsSourceProfileMismatch,
     #[error("analytics source capability snapshot does not match the active capability")]
@@ -1531,6 +1603,8 @@ pub enum StoreError {
     ManagerProjectionInputDigestMismatch,
     #[error("N24 Manager projection snapshot was rejected atomically")]
     ManagerProjectionSnapshotRejected,
+    #[error("N24 Manager poll is missing prior entities without authoritative absence proof")]
+    ManagerProjectionMissingAbsenceAuthority,
     #[error("N24 Manager projection durable commit collides with existing evidence")]
     ManagerProjectionCommitCollision,
     #[error("N24 Manager projection cycle is invalid")]

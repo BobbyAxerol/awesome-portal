@@ -1,11 +1,575 @@
 # Backend Architecture Deep Dives
 
+**08Nov N25 aged source:** snapshot-bound oldest/newest feed as-of is checked
+against the existing shadow policy, so stale/future proof downgrades analytics.
+PG14 26/26, Edge 3/3, synthetic schema 1/1 and scoped Clippy PASS; source-only,
+not immediate worker-crash detection or connected acceptance. [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-health-seal-20261107).
+
+**08Nov N25 health:** single-query health maps unknown/degraded to UNKNOWN
+completeness and an existing bounded reason without changing the wire shape.
+Isolated PG14 26/26, Edge 3/3, synthetic schema 2/2 and scoped Clippy PASS.
+No deployment; crash-before-marker, cache/realtime and connected 08/read09
+remain open. [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-health-seal-20261107).
+
+**08Nov Manager worker health:** disposable PG **26/26**, shadow mapping
+**1/1**, test Clippy and **1/1** guarded worker/mTLS/PG14 scenario passed.
+Crash-before-marker, cache/analytics, mixed-version and real-source release
+remain open; 08/read09 connected are NOT_MET. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-health-seal-20261107).
+
+**07Nov Manager health seal:** atomic failure/recovery ordering has isolated
+PG14 25/25 and Clippy PASS; worker/read/cache wiring and crash/rollback tests
+remain. Not deployed or connected acceptance. [Unified evidence](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-health-seal-20261107).
+
+**07Nov worker source quality:** expanded TEST_ONLY worker/mTLS/PG14 rejection,
+recovery and restart scenario 1/1 plus test-inclusive Clippy PASS; immediate
+failure-to-reader freshness remains unfinished. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#worker-source-quality-rejection-20261107).
+
+**07Nov Edge/N25:** source-only explicit deployment/portfolio attribution
+precedence has isolated PG 21/21 and scoped Clippy PASS; rows missing explicit
+IDs now have a source-only fail-closed successor with PG regression 23/23;
+the HTTP mapper is 1/1 and scoped lint passes. 08/read09 remain `NOT_MET`. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#n25-weak-attribution-20261107).
+
 Các tài liệu trong thư mục này triển khai chi tiết từng `BAR-*` slice của
 [Backend Architecture Implementation Guide](../BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md).
 Chúng không thay thế phase hoặc exit gate trong
 [Unified Implementation Plan](../UNIFIED_IMPLEMENTATION_PLAN.md).
 
 ## Active deep dives
+
+- **04Nov TS C2 Paper CORE-03 — DELIVERED / A2 PENDING:**
+  [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#04nov--ts-c2-paper-core-03-authority-relay-and-edge-proposals)
+  records exact r2/A1 public delivery and independent facade/worker proposals.
+  Core ACK and A2, TS verification and the later B1/B2 exchange remain open;
+  no runtime, TS DB or authority change and no connected acceptance claimed.
+
+- **28Oct Core ACK follow-through — BOUNDED_SOURCE_TESTED / CONNECTED_NOT_MET:**
+  [journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--core-e1e5-consumption-ack-follow-through)
+  and [Core return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONSUMPTION_FOLLOWTHROUGH_2026-10-28.md)
+  correct the V1 safe-integer interpretation, report 13 gateway tests PASS /
+  1 SKIP, and publish the static financial mapping and Canary workload finding.
+  Real source binding/authority remain independent commissioning work.
+
+- **28Oct Core consumption — SOURCE_READY / CONNECTED_NOT_MET:**
+  [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--edge-completion-and-core-consumption-handoff),
+  [start-here CLI/type/ownership index](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE_READY_TO_CONSUME_2026-10-28.md)
+  and [Core prompt](../evidence/execution-edge-v1_2/EPG10-08/PROMPT_FOR_CORE_EDGE_SOURCE_CONSUMPTION_2026-10-28.md)
+  let Core continue per-item consumer preparation without another code bundle.
+  No fake originals/config, old-window reuse or connected claim; candidate
+  binary68344dad buildPASS/4offline refusal smokePASS; ownbuild/cache/compiler
+  cleaned, artifact retained. Actual Core-branch publication receipts in journal.
+
+- **28Oct connected-source E1–E5 — SOURCE_REVALIDATED / CONNECTED_NOT_MET:**
+  [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--e1e5-connected-source-coordinator-follow-through)
+  and [incremental Core return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md)
+  record3fresh actual-source checks, ACTIVE mapping/zero scoped heads and no
+  current Paper root; trust locators acknowledged, secure transport/native
+  workflow not commissioned. Financial/STATUS/calendar/workload source census
+  returned independently; PM publication pin defect fixed6276588b/10PASS.
+  Edge's single action packet delivered to PM/DL mailboxes; E1 mirrored to
+  Core without all-five wait. No runtime/grant/command/Live change, full08/read09
+  stillNOT_MET; each new owner input unlocks only its matching binding/test.
+
+- **27Oct Research membership reader — INSTALLED / EDGE_METADATA_VERIFIED:**
+  [same08/read09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
+  and [current source/test/install return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)
+  record PMfb9a7ce7,139focused/86full-Timescale PG15/77strict legacyPASS.
+  Exact existing52-object metadata exception pinned; actual-source guardPASS,
+  no shared ACL change/new metadata grant. Core installed approved roles/accessor;
+  Edge independently verified actual grants/function/old catalogue and retained
+  observation: ACTIVE mapping, zero scoped Paper heads/receipts. No duplicate
+  install/new business observation or grant. Secure PM→Edge→Core discovery
+  composition is next; actual trust pins/custody and reviewed DB transport remain
+  to bind. Membership/original gates READ, not discovery. Full08/read09NOT_MET;
+  current Coref50c4ea72 and actual pins/owners in the linked return.
+
+- **24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
+  [same06 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
+  records old-image OOM/die137 and removal of redundant retained SQL result
+  populations from both Manager-only loaders. Existing transaction/lease,
+  row validation,80k bounds and exact digests remain. Required decoded entities
+  are not constant-memory. Gates/cleanup are recorded in that journal; no
+  production default, RAM change, restart or operational fix is claimed.
+
+- **23Oct executable scoped backend assembly — source-only:**
+  [same-phase04/05/06/08/09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-entrypoint-assembly-20261023)
+  covers actual query/history/export/notification router and serving lifecycle,
+  async current-policy/original custody, shared governed resources and financial
+  worker recovery/ACK. No fake provider/proof wire or operational activation;
+  new binary paths explicitly unavailable until actual authority binding.
+  Full08/09 connected remains NOT_MET; exact test/cleanup evidence in journal.
+
+- **23Oct business backend composition — source-only:**
+  [current04/05/06/07/09 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-backend-composition-20261023)
+  covers financial transport/atomic projection/scoped reads, native P16
+  observations/checkpoints, command full-result composition and Manager
+  cadence/lease/cap-drift safety. Resource factory is opt-in and rejects mixing
+  legacy traffic; no runtime budgets or auth are inferred. Eight PM capital
+  shapes do not provide64CLI/nine N12 operations. Callable source qualification
+  is not mounted provider/router/connected acceptance; tests/pins/cleanup are
+  recorded in that journal.
+
+- **Four-input Portal handoff,20Oct23:16ICT — documentation/coordination:**
+  [single owner packet](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md)
+  separates Core009→08/read09, PM07, TS03 and target/bounds01/06. Read the
+  [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0807030106--consolidated-portal-owner-handoff-20oct2316ict)
+  for delivery/validation. Existing source bc4b8fe1 is published, no operational
+  activation. Fresh actual return, not copied fixture or delivery ACK, unlocks
+  the corresponding Edge binding; full connected gates remain NOT_MET.
+
+- **Original06 Manager materialization,20Oct — ISOLATED_QUALIFIED, source-only:**
+  [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original06--manager-worker-materialization-follow-through-20oct1440utc)
+  adds immutable shared feed cache and explicit opt-in source-fact JSON bounds.
+  Legacy absent-config behavior, exact business/state digests and post-commit
+  cache installation remain invariant. Not builder/SQL/allocator/RSS accounting,
+  not deployed and not an asserted fix for the old worker's observed OOM.
+  Actual113PASS (26new), fmt/check/strict Clippy/451 immutable inputs PASS;
+  corrected test-compile predecessor retained. Normal-hook/cleanup/publication
+  receipts stay in the journal. Full01/06 capacity and08connected remain NOT_MET.
+
+- **Original01/06 shared governed composition,20Oct — ISOLATED_QUALIFIED:**
+  [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--shared-governed-pgcachefanout-composition--20oct1305utc)
+  closes independently runnable PG/cache/fanout test-target instrumentation;
+  existing governor APIs/runner only. Runner119PASS (12new), selectedRust316PASS
+  (3new), fmt/strictClippy/449immutable inputs PASS through documented staged
+  actual-PG qualification; failed predecessors retained. Exact cleanup and
+  mandatory commit-hook receipts in journal. No production bounds/capacity claim.
+
+- **Original04 bounded report HTTPS preparation,20Oct — ISOLATED_QUALIFIED:**
+  [same-phase scope/journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original04--bounded-selected-report-https-exchange--20oct1215utc)
+  closes the independent delivery-client preparation without widening existing
+  V1/Manager/command clients. Fixed POST/mTLS/TLS1.3 and bounded admission,
+  externally issued assertion, UNTRUSTED response only. No source proof,
+  projection ACK or runtime activation. Offline fmt/full63tests (26new)/strict
+  all-target Clippy PASS; exact cleanup/publication receipt in the journal.
+  Capacity source descriptions distinguish
+  historical failures from DLv2.2.5§3b;60offline cases PASS, not capacity evidence.
+
+- **Original03–11 runnable-first correctness preparation,20Oct:**
+  [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
+  records159focused PASS/0FAIL/SKIP,27new cases: per-owner correctness activity,
+  no foreign-job/global-lock ban, original-inode bounded cleanup, one-core
+  Cargo03 and disposable PG auto-removal. Absolute measurements stay exclusive;
+  no capacity/runtime authority follows. Core009 revision3 focused qualification
+  is terminal89PASS (3actualPG+86fixtures), build/restore PASS; ordinary fullR3,
+  installed009 and connected acceptance remain separate. Full08/09 NOT_MET.
+  Original04 PM selected-report wire is37/37PASS (31new), fmt/strictClippy PASS;
+  [bounded proof](../evidence/execution-edge-v1_2/EPG10-04/report-publication-wire-qualification.json).
+  Untrusted AS_PUBLISHED wire only, no HTTP/auth/source-proof/apply/runtime claim.
+
+- **Original01/06 offline host-lock alignment,20Oct:**
+  [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--offline-preparation-and-current-host-lock-class-alignment-20oct)
+  tracks root34b preparation fix; no job/lock/runtime mutation or weakening of
+  recorded-run taint/source/budget gates. Connected capacity remains NOT_MET.
+
+- **Original08 acceptance runner,20Oct — ISOLATED_QUALIFIED:**
+  [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08--active-sse-observation-and-independent-stream-revoke-preparation-20oct)
+  and [owner packet](../evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md)
+  pin66unit PASS (40prior+26new) for bounded active-SSE observation and
+  independent official STREAM-revoke/READ-positive specimens. Client EOF,
+  timing or reconnect denial is not active revoke/cache/final-egress proof.
+  GET-only/no runtime mutation. Core009 revision3 source fixes are received;
+  actual PG qualification/release installation are tracked separately;
+  full08NOT_MET,09connectedNOT_STARTED. See main journal for final hook/cleanup.
+
+- **Original08 installed intake/finite lifecycle,20Oct — IN_PROGRESS:**
+  [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+  confirms Core0087818d563 installed and new1df9adad transfer verified. Edge
+  closure/finite provider lifecycle is isolated-qualified30+9distinct PASS,
+  [receipt](../integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json);
+  published1380ab9d/normal hook PASS. Actual
+  [source return](../integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
+  proves identity COMMIT/Core ACK, independent exact retirement/logout and
+  finite native source preflight/observer plus4mTLS cases. The
+  [finite closeout](../integration/execution-native-read-v1/research-identity-intake/finite-source-closeout.json)
+  records graceful drain04:26:57UTC and official revision2 revokedtrue with
+  exact resource cleanup; candidate28446 is no longer active.4040cae8 is
+  published, normal hook130contracts/717API/build/restore PASS.
+  Core009 READ/STREAM composition and genuine connected cases remain. Full08
+  NOT_MET,09connectedNOT_STARTED; old source-only/paused-goal entries below are
+  historical, not current blockers. No stable/provider28445 change implied.
+
+- **Original08 operator publication/binding,19Oct/20Oct — ISOLATED_QUALIFIED:**
+  [current packet](../integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
+  and [main journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)
+  pin unchanged e108 operator/a9ea tests and67PASS (65 overlap+2 real loopback
+  TLS cases, TEST_ONLY SDK/Core/DB callbacks). Normal-hook source publication
+  is separate from installed Core008/009 and genuine READ/STREAM/revoke/cache/
+  cursor/SSE. Existing recovery/retirement/logout is reused, UNKNOWN retains
+  custody. Full08NOT_MET/09connectedNOT_STARTED; no stable/provider28445 change.
+
+- **Original08 pre-ENTER recovery,19Oct — IMPLEMENTED / ISOLATED_QUALIFIED:**
+  [same-phase helper/test journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-pre-enter-identity-window-recovery--2026-10-19-asiasaigon)
+  and [packet](../integration/execution-native-read-v1/research-identity-intake/README.md).
+  Original attempt + physical rollback receipt + compatible Core ACK, no fake
+  SDK finished/ENTER. HK-only source/test/publication; Core owns its matching
+  recovery protocol and Research session/release. Goal remains blocked;
+  full08NOT_MET/09connectedNOT_STARTED. Do not activate the old235-line helper.
+  Final89distinct PASS (17new+72regression/baseline),0FAIL/SKIP; modeled Core
+  ACKs only. Own cells/network/lease gone,0newimages/cache,41runtime unchanged.
+
+- **Original08 current handoff entrypoint,19Oct — CURRENT:**
+  [start here](../integration/execution-native-read-v1/README.md#current-entrypoint--19oct-asiasaigon).
+  Core adopted atd0789674; old e19/5291 patch instructions are historical, not
+  a new install action. Source44ee6c18 exact pins/130contract+717API normal gate/
+  cleanup are in the bounded identity return. Reuse72unchanged focused cases;
+  do not recreate schema/role/provider. [Current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-current-handoff-entrypoint-reconciliation--2026-10-19-asiasaigon)
+  names Core's real Research composition/private session as remaining input.
+  Full08NOT_MET/09connected NOT_STARTED; no new runtime authority or approval ask.
+
+- **Original08 finite identity-role window,19Oct14:40Asia/Saigon — CURRENT:**
+  [one-shot official SDK/ACL packet](../integration/execution-native-read-v1/research-identity-intake/README.md#finite-identity-role-window--independently-implemented19oct),
+  40new actual-PG15/SCRAM +18baseline +14regression PASS; explicit TEST_ONLY
+  Core ACK fixtures, not genuine current-human acceptance. Lost ACK/UNKNOWN
+  retain recovery; matching terminal ACK/receipt and drained pool precede exact
+  retirement. No old native roles/SDK pins changed; effective-ACL pin accounts
+  for owner-ACL materialization. Actual TS remains NOLOGIN/no-writer/0receipts;
+  41runtime tuples unchanged, own cells/network/lease removed,0newimages/cache.
+  [Original08 execution journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-acl-window--2026-10-19-asiasaigon)
+  distinguishes owned preparation from Core's real composition/session input.
+  Full08NOT_MET,09connected NOT_STARTED; stable/commands/financial untouched.
+
+- **Original08 Research identity prerequisite,19Oct — CURRENT:**
+  [official SDK/operator packet](../integration/execution-native-read-v1/research-identity-intake/README.md),
+  14wrapper+18real-disposable-PG15 cases PASS. Actual pinned TS read-only lookup:
+  NO_ACTIVE_EXACT_MAPPING; never auto-reactivate or seed a user. Owner approved
+  one receipt schema + isolated role; actual dormant NOLOGIN/no-grants preparation
+  COMMITTED14:13Asia/Saigon/0receipt rows, original native hash and registry
+  ACLs preserved, old provider28445 unchanged. Preservation is not authority. Actual Core
+  reverse/session, bounded ACL window and connected revoke/cache/cursor/SSE
+  remain original08. [Install/outcome journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-intake-preparation--2026-10-19-asiasaigon).
+  Full08NOT_MET,09connected not started; no command/capacity/runtime claim.
+
+- **Original08 owner target correction,19Oct Asia/Saigon — CURRENT:** security
+  on main/stable `portal.primusspark.com`; dev is preview, not the Execution v2
+  consumer. Actual consumer `research-portal` -> nginx8095 -> Research stack,
+  source `/home/bobby/portal-research`, `docs/research-loop-plan@d0789674`.
+  Earlier c43/dev selection is superseded, not a missing Access setup from
+  Bobby. [Actual route/DB/identity and action](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-owner-target-correction--2026-10-19-asiasaigon).
+  Research DB7688673963308855330/127 and IDs differ from stable; public preview
+  auto-login is not genuine-human security. Main6front-door negatives redirect
+  to Access, not native revoke/SSE qualification. No deploy/schema/auth/session
+  or grant mutation. ee664f2e published; normal hook130contract/717API PASS,
+  build/restore PASS; exact new test image cleaned,0new cache,41tuples unchanged.
+  Source adoption closed, consumer runtime/authority assembly still original08
+  NOT_MET;09connected not started. Older dated entries are historical.
+
+- **Original08 resumed19Oct12:54Asia/Saigon:** both pending cleanups closed:
+  HK1175files/20.63MB and SGP2exact cache IDs/16KiB;41HK/51SGP tuples unchanged.
+  Core adopted native read/runtime in d0789674 and its actual terminal records
+  1118contract/8102API PASS,3SKIP/build/restore PASS. Source-only, not connected
+  commissioning; later Core WIP is preserved and unqualified by that result.
+  [Current transaction and exact remaining integration inputs](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-resumed-integration-commissioning-and-exact-cleanup--2026-10-19-1254-asiasaigon).
+  Five owned tracking/receipt paths go through the normal hook; stable and all
+  operational/private/rollback resources remain unchanged.08NOT_MET/09not started.
+
+- **Original08 Core source published19Oct09:51Asia/Saigon:**
+  feat/execution-native-read-integration@b87f73db on awesome-portal, clean25path
+  source candidate;1087contract PASS,8060API PASS/7SKIP,0FAIL, restore PASS.
+  [Core adoption and exact remaining cleanup/connected boundary](../integration/execution-native-read-v1/current-core-reconciliation/README.md#current-owner-direction--integration-first).
+  51operational tuples unchanged; only2foreign test additions explain raw drift.
+  Own cells/network/lease/test image gone;2cache IDs/16KiB and HK specimen/journal hook still
+  wait for quiet. No stable/runtime/DB/auth/PKI/rollback/dev/main mutation.
+  Core review+matching integration auth/schema/private refs precede real08
+  revoke/cache/cursor/SSE. No consumer ACK or09connected acceptance claimed.
+  Core later advanced to35953e07:0overlap with22native paths,6query/operational
+  dependency changes. Patch-check PASS/writes0; old e19test evidence is not
+  inherited as qualification of that actual merged release. Preserve peer/UI.
+  Read-only10:39Asia/Saigon: b87clean, exact2cache IDs still present, foreign
+  SGP npm/Node active; HK window until11:57:58. Five-path journal/receipt is
+  local WIP, not yet a separate published documentation commit.
+
+- **Original08 resumed19Oct08:18Asia/Saigon:** latest owner choice is Core
+  integration release first, stable unchanged. [Adoption boundary](../integration/execution-native-read-v1/current-core-reconciliation/README.md#current-owner-direction--integration-first)
+  distinguishes actual old integrationc43/8400439b/dev-auth from qualified
+  e19+22delta, its separate DB and normal genuine-user/IdP flow. No production
+  mutation or session fabrication;08NOT_MET,09connected not started.
+  Actual08:30–08:43Asia/Saigon: exact5f433 fetched and22file e19preflight PASS;
+  separate SGP feat/execution-native-read-integration holds verified22source+
+  3tracking paths staged. Peer checkouts/51runtime tuples unchanged; temporary
+  packet/lease removed. Normal hook/commit/publication and Core-owner ACK pending.
+
+- **Original08 current e19/stable39 factory (2026-10-19,00:07UTC):**
+  [focused receipt](../integration/execution-native-read-v1/current-core-reconciliation/stable39-qualification.json)
+  records strict PASS +7existing factory cases PASS/0FAIL/ERROR/SKIP on exact
+  current e19+22delta, not historical5291 or connected PM authority.41runtime
+  tuples unchanged, own cells/network/lease/tmpfs keys removed; one source
+  specimen awaits exact quiet teardown under the shared-host rule. No actual
+  Core install/auth/session or service change. Full08NOT_MET/09connected
+  NOT_STARTED; genuine caller and exact production adoption remain required.
+  Actual releasede4fd→e19 delta is987paths;171was only5291→e19. Four actual
+  Core services have no native config; three are dev-auth. The00:33 audit pins
+  four different physical DBs; only stable matches the commissioned target.
+  Preview has a different Bobby ID; integration/probe have Stan INVITED.
+  The same receipt pins this release boundary, not a full-release
+  compatibility certificate or permission to deploy unrelated peer changes.
+  SGP read-only remote visibility00:43UTC confirms Edge5f433f8c is readable;
+  actual fetch/apply now recorded above; consumer ACK and connected acceptance
+  are not inferred from source visibility or preparation.
+
+- **Original08 current Core e19 reconciliation (2026-10-18,23:35UTC):**
+  [22-file source delta](../integration/execution-native-read-v1/current-core-reconciliation/README.md)
+  preserves current eligibility/grants/scalar-only journal and genuine same-pool
+  HTTP/SSE mount/drain. Source e19ad906 matches captured WIP with zero drift.
+  Expanded-spec strict found11synthetic-fixture diagnostics, corrected only in
+  the private specimen; fresh21-spec strict and931behavior executions
+  (393+534+4) PASS/0FAIL/ERROR/SKIP, no inherited historical/failed-run counts.
+  Production strict has an explicit single-EOF-LF format bridge; exact final
+  affected strict/behavior pins are in the receipt. Core e19 is committed on
+  SGP, not yet in the checked advertised remote line; do not push its branch.
+  Exact application/output/wrong-preimage rehearsal3PASS; no Core/DB/runtime
+  install or secret transfer. Full08NOT_MET,09connected NOT_STARTED.
+
+- **Original08 actual Core private inputs (2026-10-18,22:50UTC):**
+  [same native commissioning packet](../integration/execution-native-read-v1/native-db-commissioning/README.md#current-core-private-inputs--2026-10-182250utc)
+  records six genuine same-RR observations and the verified actual Core target/
+  identities/39-ledger. Root0600 inactive config has six selections/two offline
+  intakes; six real-file offline checks PASS after a retained Vite startup
+  failure. No Core grant/session/runtime install or secret transfer.41runtime
+  tuples unchanged; own helpers/leases removed. Current peer source comparison
+  finds17changed/6missing paths needing reconciliation, not blind patching.
+  Full08NOT_MET,09connected NOT_STARTED; active native producer is retained.
+
+- **Original08 actual producer commissioning (2026-10-18,22:25UTC):**
+  [native DB/runtime packet](../integration/execution-native-read-v1/native-db-commissioning/README.md)
+  records actual GUARDED install,3new identities/roles,6READ acceptances across
+  paper/sandbox/live, real SCRAM/least-privilege and6binding observation preflight.
+  One new stable private WireGuard producer ACTIVE_COMMISSIONING_ONLY;
+  5actual TLS/deny probes PASS, no fake session/positive business request.
+  Four new unit +two isolated PG15 cases PASS; original independent pins retained
+  after fixing the new-table pgcrypto UUID-default mismatch. Old715relation
+  metadata/40runtime tuples unchanged; disposable cells/networks/leases removed.
+  Actual Core consumer/connected drills remain OWNED08work; full08NOT_MET,
+  09connected NOT_STARTED. No command/financial/capacity qualification implied.
+
+- **Original08 genuine factory qualification (2026-10-18,21:34UTC):**
+  [real-loader/PG/AppModule packet](../integration/execution-native-read-v1/current-core-runtime-factory/README.md)
+  closes isolated factory/schema compatibility: strict compile and7cases PASS,
+  separate independent current-SSE schema export1PASS; original stale finite
+  golden setup failure retained. Exact39stable migrations plus reviewed native
+  additions, no latest full migration bootstrap or automatic policy.40runtime
+  tuples unchanged, exact1163-file/20.4MB source copy/cells/keys cleaned.
+  Actual PM provider/DB identities/Core runtime/session and connected revoke/
+  cache/cursor/SSE remain unfinished original08work, full08NOT_MET. Existing
+  mocked13cases and393source tests are not relabelled connected acceptance.
+
+- **Original08 current source publication (2026-10-18):**
+  [guarded actual Core source](../integration/execution-native-read-v1/README.md)
+  retains the original26-file authored patch and three original213-case receipts.
+  Its additive complete-profile repairs four omitted qualified dependencies:
+  30changed files plus667unchanged exact0d5files reproduce all697qualified hashes.
+  Apply/hash/no-op/reverse/preimage round-trip and14publication-guard units PASS.
+  Current Coreff83f176 changes must be reconciled, not overwritten or relabelled
+  qualified; retain its later legacy membership qualification guard. The32-file
+  current-Core HTTP mount's priorff83strict gates PASS, but227/229cases passed.
+  Latest5291pending-recall changes survive three-way reconciliation; the
+  [32-file current source profile](../integration/execution-native-read-v1/current-core-profile/README.md)
+  has fresh production/seven-spec strict and233unique cases PASS,0FAIL/ERROR/SKIP
+  after typed-refusal/completion-join fixes; old failures remain. No provider commissioning or connected
+  acceptance follows from source publication. The fuller
+  [current SSE/runtime profile](../integration/execution-native-read-v1/current-core-runtime-profile/README.md)
+  now freezes43authored files/full1154app-source closure on5291. Both fresh
+  production/14-spec strict gates PASS;389unique regression/unit cases plus
+  4separate actual-PG rollback cases PASS, zeroFAIL/ERROR/SKIP.393distinct across
+  two runs, no inherited historical/SGP credit. It includes all360SSE/finite
+  cases on the changed pool/runtime source. SGP191942raw360 remains TAINTED;
+  explicitly retire its still-unstarted narrower retake only after the stronger
+  profile/roundtrip is verified, then exact source/public cleanup. No fake
+  result, relaxed guard/timeout or source egress. PG15independent reference
+  PASS is not installed permission/identity; loader tests mock refs/composition,
+  not actual factory commissioning. SSE reuses the coordinator/Hub and joins
+  actual late completion, not a new poller or TS Event source.
+  Actual provider/schema/identity/current-Core mount and connected revoke/
+  cache/cursor/SSE remain the same owned08work; no operational mutation.
+  original08 remains IN_PROGRESS_OWNED_IMPLEMENTATION/NOT_MET;09connected
+  NOT_STARTED. The older "no owned runnable work" statements below describe
+  historical independent slices, not the current mounting/commissioning work.
+  Source commit9d9d0950 is now pushed/ls-remote verified on the feature branch,
+  normal hook PASS(717worktree API cases plus restore, separate from393).
+  The unstarted narrow SGP retake is terminal by intentional supersession;
+  all five obsolete HK copies and exact SGP source/public copy are removed,
+  plus the redundant141824000B HK tar and own unused hook-test image index.
+  Bounded receipts/pins and active commissioning inputs remain;40HK/51SGP
+  runtime tuples unchanged,428shared BuildKit records retained/new own IDs0.
+  Main journal records exact disk/hashes/retention. This is source/cleanup
+  completion, NOT commissioned authority or connected08 acceptance.
+
+- [Execution Edge v1.2 — EPG10-00…11 detailed plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
+  — **EPG10-00 completed inventory;01 in progress;02 completed contract-only;03…10 approved/in progress;11 independent COMPLETE; original10/11 connected round2 approved, NOT_MET**. Six offline
+  metadata cases PASS, with source/runtime/TLS and owned unknowns recorded in
+  §23.9 and its manifest. No activation/runtime acceptance. The campaign starts
+  from current `origin/dev`, keeps the complete four-file owner guide bundle under
+  `upgrade/upgrade_v1.2`, and links Edge, Portal contracts, scoring and PM R2 inputs.
+  Goals, scope, source pins, invariants, tests, exit gates, rollback, resource and
+  debt/owner tracking are recorded per phase. No product/runtime acceptance implied;
+  **08 (§23.17): independent round complete; three explicit integration debts
+  retained for round2.09 independent round COMPLETE (§23.18):606PASS,
+  fmt/strict Clippy PASS; full connected gate NOT_MET, four scoped return groups
+  OPEN, no owned runnable work left.** See [09 E2E/owner return](../evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md)
+  for exact21case/11XLC traceability and scoped round2 inputs; not full connected acceptance.
+  Own8,386,752,512B private test artifacts removed;23protected runtime tuples
+  unchanged, no activation/peer edit. **10 independent round COMPLETE/full connected NOT_MET (§23.19):**
+  additive Rust held-shadow/CAS/read-rollback/status + source-dark release
+  template/runbook qualified519PASS/fmt/strict Clippy;8,416,370,688B private
+  artifacts removed,23protected tuples unchanged. Single
+  [10 packet](../evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md)
+  tracks six scoped round2 returns, not connected acceptance; no runnable owned
+  work left. **11 independent handoff COMPLETE (§23.20):535PASS/fmt/strict Clippy,
+  8,619,655,168B disposable artifacts removed,23protected tuples unchanged.**
+  [11 handoff](../evidence/execution-edge-v1_2/EPG10-11/OPERATIONS_HANDOFF_AND_ACCEPTANCE.md)
+  binds5scoped cases and source/retention/alert/restore limitations; no owned
+  runnable code/test/cleanup left. Full connected10/11 remains NOT_MET pending
+  original scoped owner returns; no new phase/duplicate generic approval.
+  Owned current-scope/JWT/SSE-expiry/strict-TLS/selected-field
+  package qualified source-dark, final490automated PASS/0FAIL/ignored/skip,
+  fmt/strict zero-warning Clippy PASS. Full08 NOT_MET: actual authority/TS native
+  commit/researcher field implementation remain exact scoped
+  dependencies. Current [round2 intake](../evidence/execution-edge-v1_2/EPG10-11/round2-intake.json)
+  consumes PM current-human candidate0e7059cc (23 peer TEST_ONLY PASS) and
+  owner-accepted field matrixr1; neither installs the real provider. Field-policy
+  approval and human lifecycle source implementation are no longer missing.
+  Research retry now landed clean`d92efc0e` with normal-hook PASS; first exit124
+  remains historical, not a current blocker. PM r1 financial/composition source
+  now has965pytest PASS/25offline separate, committed84456381 with its qualified
+  provider-publication receipt; it is no longer pending owner source publication.
+  This is isolated source, not runtime or another policy approval request.
+  Actual authenticated workload/field provider and source export remain unbound.
+  Latest PM HTTP1009PASS/owning outcomes/private handler consumed; Edge PM source
+  codec75PASS/strict Clippy/fmt/cleanup COMPLETE. Independent11 COMPLETE/full10/11
+  NOT_MET. Next original08 trust, separately07 mounted transport/08-command COMMIT,
+  then connected09→10→11; no new phase/general approval (main plan§23.20.2).
+  Fresh [08 commissioning intake](../evidence/execution-edge-v1_2/EPG10-08/commissioning-intake.json)
+  /main plan§23.20.3 pins PM5f0d60b2 and Research9a3a27c8: actual workload/app/
+  field providers and source-backed verifiedHumanMapping require producer
+  implementation, not a switch or more Edge codecs. Human mTLS/session/read
+  wrappers already exist; use them unchanged. Current provider binding is not
+  executable from returned inputs; full connected gates remain NOT_MET.
+  The newer approved producer implementation is tracked in main plan§23.20.4:
+  disjoint PM existing-identity SELECT-only wire and Research pinned-mTLS client,
+  preserving PM accepted-current-access/importer and Research installation WIP.
+  [Exact mapping contract](../evidence/execution-edge-v1_2/EPG10-08/existing-identity-mapping-contract.json)
+  grants no read/command rights. [Current producer receipt](../evidence/execution-edge-v1_2/EPG10-08/producer-qualification.json):
+  PM mappingf9b5b32c61freshPASS, Research103focusPASS (admission/expiry fixed),
+  Research8ba33de3 normal hook exit0:691contractsPASS,4463API PASS/3SKIP,
+  build/restore passed. Whole-source monitor NOT_PASS retained for two peer
+  WIP files; own committed source/test/journal pins verified, not whole-branch
+  immutable/runtime acceptance. PM current source/importer74474c96 is also
+  source-qualified separately, not installed grants. Actual identity/trust/source
+  alignment/installation and Edge08 remain open; no connected09. Preserve PM's
+  restricted-r1 producer work; stored BUSINESS report66743c88 is now source-
+  qualified (416ownerPASS), not external debt or an unfinished adapter.
+  Current-relations producer/PM native receipt→Core membership normalization
+  remains real implementation work, not just missing config. Historical dev
+  lookup found one invited user; [actual volume audit](../evidence/execution-edge-v1_2/EPG10-08/database-volume-audit.json)
+  /main§23.20.5 corrects released stable to all3ACTIVE, not a new invitation.
+  Dev and Research preview use separate volumes; preview Bobby has a different ID.
+  No duplicate account creation. Seven requested
+  new PM identity/authority relations are absent on the existing Manager target;
+  this does not identify/commission the actual PM target. See current08 receipt.
+  Manager's source is confirmed HK trading_system_pgdata, not a mistaken Portal
+  DB; PM authority relations are not deployed on its checked cluster. PMd95bf36a
+  native correspondence263owner PASS is a proposal/oracle, not a Core adapter.
+  R1 current source c7c3997f is qualified; no longer missing r1 code/approval.
+  New original08 continuation [main§23.20.6](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23206-original08--resource-scoped-authority-completion-and-reviewed-installation)
+  has135/135focused Core correspondence PASS (72new+63legacy),0FAIL/SKIP;
+  [exact bounded qualification](../evidence/execution-edge-v1_2/EPG10-08/current-correspondence-qualification.json).
+  Full original acceptance digest and all-grant subject/workspace correlation
+  are required; invalid new authority never falls back to legacy. This is an
+  TEST_ONLY source compatibility, not authenticated runtime authority.
+  Research commitd483357a now landed through normal hooks:715contractsPASS,
+  4825API PASS/3SKIP, build and PostgreSQL scoped-access restore PASS. Its whole
+  working-tree wrapper remains NOT_PASS because17peer paths drifted concurrently;
+  all11owned source/test paths still match qualified pins. Earlier failures and
+  zero-case refusals remain in the receipt, no bypass or history rewrite.
+  Bobby protected OWNER full authority and Stan subordinate-grant management
+  within Bobby's ceiling are now owner-approved, not command/financial activation.
+  Native SELECT-only observer final canonical148PASS (18owner-policy cases),
+  committed PM003d08d4, unmounted. Separate private fence58PASS remains an
+  uninstalled experiment, not canonical product/full writer/capacity proof.
+  Neither is an installed held authority;
+  source/client/writer-fence integration is still owned work.
+  Latest [source/runtime/cleanup reconciliation](../evidence/execution-edge-v1_2/EPG10-08/current-correspondence-runtime.json)
+  has18HK+10SGP unchanged tuples and exact terminal source/archive cleanup
+  (HK2,262,040B; SGP2,128,920B), no new images/cache or operational changes.
+  Actual producer/fence/bootstrap/installation and Edge08 are still unfinished.
+  No account/activation/grant/runtime change; preserve active peer hook/source.
+  18HK+8SGP protected tuples unchanged, exact own cells/lease removed; current
+  continuation removed54,584,746B terminal source copies (previous continuation
+  separately removed49,616,770B). Active draft/staged source and bounded receipts
+  retained for retry. No shared Docker/cache prune during peer jobs.
+  Historical08 completion round after earlier deferral recorded PM
+  `c401a023` still publishes no actual human/workload/COMMIT provider and Research
+  `169195ca` remains unqualified/UNMAPPED. Single owner packet now specifies
+  RG03/RG08 read trust and separate restricted-field/command returns, not a
+  whole-PM13/P184 gate. Read-only audit matches18HK+5SGP post-repair tuples;
+  no new runtime mutation/tests. Named6Manager+3Proxy TLS repair is connected-
+  qualified:6TLS +12positive/12denial PASS; final46helper tests PASS, valid
+  same-identity fallback loaded. Incorrect first method assertion + bounded
+  containment/recovery retained in §23.17/TLS continuation; no policy weakening.
+  Own8.388GB artifacts cleaned;17original +6Manager tuples
+  images/configs unchanged, only6Manager approved restart timestamps/counters
+  changed. Additional212,992B test targets cleaned. No authority activation.
+  Single owner packet and verification
+  linked in §23.17; its historical09…11 status is superseded above.
+  01 available-source continuation now has53offline tests
+  plus six00metadata PASS, both-host120s observations, two real+two isolated
+  retained repository runs (20subcases PASS), native schema idempotency and
+  six-table3,623row exact parity. Isolated target cleaned; narrow numeric
+  proposals are not production defaults. **Formal T01:0PASS/3PARTIAL/2NOT_RUN/
+  1BLOCKED; exit not met**, no B0/B1/B2/6k/9k acceptance. See §23.10.1 and
+  inventory §7 for the single current dependency/action packet;14production
+  groups remain UNDECIDED. No source/runtime mutation or invented capacity PASS.
+  **02receipt (§23.11):**42logical family metadata rows, unchanged ELP2 shared
+  schemas, exact Rust wire/clock/cursor/reference-pagination mapping, source-aware
+  metric dependencies and PM/Archive fixtures.11formal cases;36Rust+12Python
+  PASS,57shared FX vectors agree; fmt/clippy PASS. No new source path enabled.
+  Owned602MB test copy/target/cache removed; shared runtime/images retained.
+  **03receipt (§23.12):**6Rust native real-PG +12runner safety +12catalogue
+  regressions PASS; formal T03:4PASS/1BLOCKED in isolated native scope.
+  Actual TS publisher-generation fence counterexample reproduced; **exit NOT_MET**,
+  no all-writer/external N03/runtime acceptance. The single linked producer
+  packet defines the TS/PM return and same-phase rerun, not a new generic gate.
+  Owned1.315GB private build/cache/fixture removed; operational state untouched.
+  **04 (§23.13), owned implementation tested/source-dark:** scoped Rust bootstrap,
+  delta and atomic projection/checkpoint/generation package;99automated PASS,
+  0FAIL/skip, fmt/strict clippy PASS;8formal cases PASS isolated. Full connected
+  exit NOT_MET for actual03publication +01capacity/permissions, never fixture
+  authority. Owned1.909GB private build/cache/source removed and own PG/lock0;
+  12HK+5SGP runtime tuples unchanged/restarts0. No source grant/route/deploy.
+  **05 (§23.14), approved/in progress, owned implementation tested/source-dark:**
+  scoped read/history/export/cache and notification-only fanout;191automated PASS,
+  0FAIL/skip, fmt/strict clippy PASS;8formal families PASS isolated. Full connected
+  exit NOT_MET for04source +06budgets +08read-security/TLS +partner BFF receipts,
+  0owned debt. Own2.266GB source/target/cache/test logs removed;12HK+5SGP protected
+  tuples unchanged/restarts0. No BFF route, TS fallback/source grant or activation.
+  **06 (§23.15), approved/in progress:** shared resource envelopes and04/05
+  pre-pool reservations, aggregate cache/fanout bounds and Manager recurrence/
+  mixed-cadence/tombstone correction;317automated PASS/0FAIL/skip, fmt/strict
+  zero-warning Clippy PASS. Owned isolated package qualified/source-dark; full06
+  exit NOT_MET for01numeric budgets/03publication, fresh paired measurements and
+  Research returns, not waived by correctness. Own5.863GB source/cache/logs
+  cleaned;12HK+5SGP tuples unchanged/restarts0. No runtime/source mutation or
+  capacity claim. §23.15 links evidence, binding limits and one action packet.
+  Owner clarification in `AGENTS.md`: execute independent approved work now;
+  scope blockers narrowly, finish runnable work before a blocked handoff or
+  phase transition. Budget/target preparation is not external TS debt; no
+  measurement-lock or source/activation gate is waived.
+  **06 independent preparation now verified:**70offline helper/observer PASS,
+  0FAIL/error/skip +2CLI checks. Numeric isolated logical sizing, all-replica
+  pool/copy worksheets,14budget collector mappings and original12-cell matrix
+  implemented. Not a deployed stack, approved production budget or connected
+  capacity PASS; full06 remains NOT_MET. See §23.15 continuation/cleanup evidence.
+  **07 (§23.16) approved/in progress:** bounded Rust async relay and additive
+  Portal PG durable correlation/full-receipt store; same-key replay/conflict,
+  one-send CAS, no blind resend after timeout/restart, separate current public
+  status versus service-only recovery. Final416automated PASS/0FAIL/skip,
+  fmt/strict zero-warning Clippy PASS, exact424+4input hashes match. Full07 exit
+  NOT_MET: actual command wire/current PM providers/operation publication and
+  dependent connected Edge binding remain unfinished. Own7.365GB private copies/
+  cache/logs cleaned;12HK+5SGP protected tuples unchanged/restarts0. No actual TS
+  effect or runtime activation. §23.16 links evidence and the single owner return.
 
 - [Official Trading System owner request — Portal Execution capability campaign](./TRADING_SYSTEM_PORTAL_EXECUTION_MASTER_CAPABILITY_REQUEST.md)
   — **the governing owner request.** It consolidates N02/N03 incremental
@@ -1981,3 +2545,244 @@ SPA HTML fallback. This closes the blank-page failure caused by a browser
 holding a previous release entry document. The scoped Nginx regression test and
 loopback-TLS header probe are required before promotion; no API, data, command,
 Cloudflare Access or database behavior changes.
+
+**2026-11-07 Edge / TS source preparation:** see the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#07nov--edge-workerread-preparation-while-ts-c2-continues)
+for the 96-relation metadata comparison, missing target-DB read privileges,
+and worker 429/recovery tests. This is source/test preparation only; the
+worker, target DB binding and connected 08/read09 remain unqualified.
+The worker additionally refuses non-fresh source pages or incomplete catalogue
+and capabilities; projection/worker focused tests pass in isolation only.
+The shadow page now reports the worst returned-row freshness and retains
+UNKNOWN completeness; 3 focused synthetic tests and clippy pass. This does
+not establish real-source freshness or immediate stale-cache propagation.
+Paginated Manager feeds also retain oldest accepted page timestamps and reject
+individual clock inversions; 31 focused worker tests and clippy pass in
+isolation, without an HTTP/PG connected acceptance.
+The source-only Manager seal watermark additionally refuses query/analytics
+reads during a changed unsealed cycle. Disposable PG regression passed 16/16
+and the 503-mapper unit test 1/1; migration/rollout and cross-request cursor
+consistency are not yet qualified. Both Clippy checks passed and the isolated
+test cells were removed; see the Unified journal for disk evidence and the
+remaining availability trade-off.
+Manager entity-query cursors now bind to the sealed local projection sequence:
+changed cycles require resnapshot, unchanged cycles can continue. Disposable
+PG 17/17, query-api 36/36 and Clippy passed; test cells were removed. This is
+not a retained snapshot, restore-generation proof, or connected acceptance.
+
+**2026-11-08 journal SSE delivery freshness:** source-only replay/live now
+re-evaluates age at dequeue without changing payload or cursor. Isolated
+realtime library 30/30, Edge freshness 2/2, stream 6/6 and Clippy pass; exact
+hashes and cleanup are in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+This is not deployed or connected acceptance; worker crash-before-marker and
+real source-health/per-frame revocation remain open.
+
+**2026-11-08 Manager crash-before-marker follow-through:** the source-only
+durable pending-attempt/UNKNOWN path now has PG14 27/27, race 5/5, worker
+31/31, a guarded child-kill/recovery scenario 1/1 and test-inclusive Clippy
+PASS. Exact inputs and scoped cleanup are in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+This does not certify deadline calibration, capacity, mixed-version rollout,
+real per-frame policy or connected 08/read09.
+
+**2026-11-08 Edge worker candidate:** local image
+`sha256:ea2ebf524862f37c19cfbdebb268435e5c6e673758a0b315d037ed7f29182175`
+is built and has only a no-network/no-DB startup smoke. Source manifests,
+rollback retention and scoped build cleanup are in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+It is not deployed, runtime-capacity qualified or connected acceptance.
+
+The exact `ea2ebf52…` image executable subsequently passed an isolated SGP
+mTLS/PG14 worker scenario including candidate-process 429 and recovery, and
+fixture Clippy passed. It ran as a host process with generated data; container
+capacity, real-source and connected qualification remain open. Cleanup and
+hashes are in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+The exact candidate container also passed a synthetic 10-page/2,000-order
+SGP test (1/1; 24 requests) and test-inclusive Clippy. Sampled cgroup maximum
+was 64,008,192 bytes, not a kernel peak or production capacity figure. Owned
+test resources were removed and HK candidate/rollback retained; target-source
+and connected qualification remain open. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+12Nov M0 r2: source overlay on the existing TS Manager (not a new Python Edge
+service), typed Rust snapshot/worker guards and49-relation/all13-feed metadata
+candidate implemented. 191 selected unit/isolated-PG/TLS cases PASS; actual
+facade-login source probe reached official trading_system over verify-full,
+post-reset balances empty/shared portfolios2. No install, DB writes, E2E or
+continuity/deletion claim; M1 OFF. Full08/connected09 remain NOT_MET. Read the
+[source/worker evidence](../evidence/execution-edge-v1_2/EPG10-08/EDGE_S1_M0_R2_SOURCE_WORKER_INTEGRATION_20261112.md)
+and Unified for final resource cleanup and precise activation/Core inputs.
+
+12Nov scoped Manager worker follow-through: source now rejects a catalogue-valid
+record if its relation differs from the TS backing relation of its particular
+feed. This is source-only and does not supply missing parent predicates,
+snapshot authority or connected acceptance; see the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+TS subsequently confirmed the portfolio master is database-shared. The
+uninstalled Paper candidate now includes it as a reference, not membership:
+48 relations pass the Manager parser and exact Rust release authority; the
+worker still lacks the scoped `account_balances` feed and S1 implementation.
+See the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+**11Nov pagination guard:** the source-only worker checks repeated stable
+keys while collecting each feed (projection 63/63, worker 32/32 isolated
+tests). This does not provide coherent snapshot or deletion authority, and
+is not deployed. TS IDR-178 source publisher remains uninstalled; real bounded
+read is tracked independently in the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+PM stage mapping now locally preserves the source's four distinct stages and
+validates exact instance scope; it does not expose a current-stage route or
+enable Canary. 65 isolated projection tests passed; details are in the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov: bounded Manager-tagged G7 position and PM candidate revision/storage
+linkage have source-only isolated tests (60/60); they are not live source or
+worker acceptance. Current gaps and evidence are in the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov: PM candidate target/alias/alpha linkage has 61/61 isolated tests;
+source publication and connected acceptance remain open. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov 08 continuation: offline catalogue candidate has 47/96 relations,
+including two venue-scoped references shared across modes; 14 parent-scoped,
+33 unqualified and two credential relations remain out of this candidate.
+39 Rust tests and deployed Manager's in-memory parser check passed; no source
+was installed and 08/connected09 remain open. Details and cleanup:
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov authority/worker continuation: source supports an opt-in pinned subset
+without widening canonical N18 and refuses an incomplete 13-feed cycle before
+polling. 50 focused Rust tests, strict Clippy and Edge `cargo check` passed;
+the subset is not wired/deployed and lacks two worker feeds. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Optional Manager catalogue release configuration (source implementation,
+not a deployed release): `EDGE_MANAGER_CATALOGUE_RELEASE_FILE` points to a
+read-only operator-controlled JSON file, and
+`EDGE_MANAGER_CATALOGUE_RELEASE_SHA256` is `sha256:` plus the SHA256 of the
+exact file bytes. Both must be empty/unset for the existing 96-relation
+authority, or both set. The strict JSON object has exactly `schema_version`
+(`portal.execution.manager-catalogue-release.v1`), `environment`, `profile_id`,
+`catalogue_sha256` (`sha256:` plus catalogue digest), and `relations` (nonempty
+array of fully qualified frozen-N18 relation IDs). It is bound to the selected
+deployment environment/profile and cannot enlarge N18. Missing or wrong pins,
+extra fields, duplicates and unsupported profiles fail startup; a pinned
+subset that lacks any 13-feed relation cannot run a full projection cycle.
+Serving Edge and worker must receive the same reviewed file and digest; the
+47-relation candidate has not been commissioned or accepted as a release.
+
+11Nov TS R2 inventory follow-through: the offline generator attaches draft
+explanatory scope hints to the 33 previously unresolved legacy relations; it
+does not admit them or expand the candidate. G7/G10 source review remains a
+draft, not a typed adapter. See the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Later 11Nov source-only continuation adds limited typed fact/posting and PM
+instance mapping drafts, locally tested but not bound to a source or endpoint;
+the remainder of G7/G10 and connected acceptance remain open. See the latest
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Subsequent 11Nov adapter accepts existing Manager tagged records for the
+limited G7/PM drafts, and a scope-key-bound G7 position metadata summary; it
+does not publish a relation, full projection or authorize a scope. 58 local
+tests pass; see the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov update: facade identity can now read the official DB, but the existing
+catalogue/policy cannot be re-pointed unchanged. An offline Rust candidate
+covered 45 mode+venue relations and passed the actual Manager parser; 51 other
+relations and complete-worker scope remain open. Five synthetic disposable
+PostgreSQL absence/recovery/cursor/health tests passed; this is not connected
+Core or production acceptance. The test DB/build copy were cleaned. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+11Nov: consolidated TS/Edge/Core official-database read request delivered to
+TS and Core mailboxes; 107 isolated runner/preflight cases passed. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md) for
+hashes, exact owner inputs and per-mode acceptance; connected 08/read09 and
+Canary binding are not yet accepted.
+
+11Nov R2 adds exact Core/TS input and R01–R13 test matrix; bounded runner
+receipts preserve freshness and completeness, and 109 isolated cases pass.
+See [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+The 08Nov Manager pagination counterexamples and their reconciliation boundary
+are recorded in [evidence](../evidence/execution-edge-v1_2/EPG10-08/EDGE_MANAGER_PAGINATION_CONSISTENCY_20261108.md).
+Poll-bounded shadow quality is PARTIAL; source-consistent absence and real
+connected testing are not yet established.
+
+**08Nov Edge multi-feed test:** candidate `8022ea09…` passed 10 pages each of
+2,000 synthetic orders and 2,000 synthetic fills, plus the 2,000-order
+pagination regression. These are isolated correctness results, not connected
+or production-capacity acceptance. Test-inclusive Clippy passed and the cell
+was cleaned; see the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+**08Nov fixed-context inventory:** metadata identifies 14 candidate direct
+profile-parent paths, six unmarked-parent paths and 21 relations with no
+outgoing FK in the census. Four synthetic PostgreSQL semantics cases passed;
+all-mode visibility, shared/empty portfolio meaning, actual grants and real
+source acceptance remain unchanged. See the [inventory](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TS_V206_FIXED_CONTEXT_SCOPE_INVENTORY_20261108.md).
+
+**08Nov target role/keyset preflight:** facade login and manager-read group
+have SELECT on zero of the 96 mounted catalogue relations / 1,350 returnable
+columns at the TS target; login lacks CONNECT. Four isolated keyset/view tests
+passed but do not establish connected access or full history. [Evidence](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TS_V206_PRIVILEGE_AND_KEYSET_PREFLIGHT_20261108.md).
+
+TS v2.0.6 / actual facade reconciliation: 13 worker feeds mapped; two are
+fixed-context with `TRUE` rather than a profile predicate. Classify all 41
+fixed-context relations before the shared-target Paper re-point; preserve
+owner-approved all-profile visibility. Time-first fills/events keysets,
+six legacy-key bindings and the inbox nullable drift need target-specific
+contract and connected evidence. Four full-column, first/continuation
+EXPLAIN-only plans for fills/events using a synthetic lowercase venue selected
+time-first indexes; the actual uppercase profile retake below differs. These
+are not real-role execution or capacity measurements. The running module is not
+the inspected TS release module. No DB/runtime change or 08/09 closure.
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Bounded aggregate-size probing of four TS feeds found zero rows for synthetic
+lowercase `paper/binance`; the verified actual Paper venue is uppercase
+`BINANCE`, and the retake returned nonempty small samples without row values.
+Case-correct first-page EXPLAIN produced seven index and six sort/seq plans;
+neither result proves representative performance or production capacity.
+
+**08Nov worker logical-budget failure:** isolated HK PG/mTLS tests of candidate
+`8022ea09…` passed record/retained/working rejection, sealed-state/cache
+preservation and recovery; candidate child record rejection/recovery and 429
+regression also passed. This is not total RSS or production budget evidence.
+See the [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+**08Nov successor candidate:** `sha256:8022ea09016eaa3ffdcbfce13d8f3d6696d45d61b1408e97e9c0f93b672e9cef`
+contains the locally qualified digest-sort source and passed an isolated
+startup smoke, then its own synthetic 429/recovery/restart and candidate
+container 10-page/2,000-row pagination tests, each 1/1 on HK. rustfmt/Clippy
+passed; real-source capacity and connected acceptance remain unproven. The
+Paper worker was not restarted. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Manager cycle digest sorting now has a locally tested comparator with legacy
+fallback: Rust 1.85.1 locked library 32/32, rustfmt and Clippy passed. The
+existing candidate image predates this change and a new build/worker test is
+needed to include it; paired probe figures are not production performance.
+No deployment or contract change is claimed. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+Read-only TS target statistics metadata covers only 4/13 worker feed
+relations; estimates are not JSON maxima or RSS. Nine feeds lack column
+statistics, so representative financial/fill workload and production budget
+remain unproven. The 08Nov privilege recheck still finds facade DB CONNECT
+false and effective SELECT on 0/13 feeds. No business rows were scanned. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+TS release source has an isolated-tested publisher fence candidate, but the
+inspected target has no installed fence schema or active logical slot; a
+replication-source pin differs from an older receipt; current-source unit
+retests passed 25/25 plus 1/1 cadence, not PG/WAL/fence. Current runtime proof,
+writer/retention coverage and connected 03/04/09 remain open. See the
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+The current TS source subsequently passed **16 distinct actual PG15 native
+WAL/fence tests** in an owned isolated cell (stale owner 1, atomic claim 7,
+idle renewal 4, multi-source 4). The stale owner did not advance ACK. The cell
+was removed; this is not evidence the fence is installed or that production
+writer coverage, retention, TLS or connected 03/04/08/09 have been accepted.
+[Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).

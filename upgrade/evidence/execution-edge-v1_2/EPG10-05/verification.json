@@ -1,0 +1,214 @@
+{
+  "schema": "epg10.scoped-read-verification.v1",
+  "phase": "EPG10-05",
+  "status": "IN_PROGRESS_OWNED_IMPLEMENTATION_TESTED_SOURCE_DARK",
+  "exit": "NOT_MET_SOURCE_CONNECTED_DEPENDENCIES",
+  "owned_technical_debt": 0,
+  "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+  "runtime_activation": false,
+  "production_mutations": 0,
+  "source_requests": 0,
+  "formal_cases_isolated": {
+    "T05-01": "PASS_SCOPE_FIELD_POLICY_CACHE_AND_SQL_AUTH_BEFORE_PAGING",
+    "T05-02": "PASS_100_QUEUE_ONLY_TABS_ONE_CONCRETE_PG_POLL_NO_TS_CLIENT",
+    "T05-03": "PASS_SLOW_CLIENT_DISCONNECT_ENTRY_BYTE_GLOBAL_CAPS_PEER_CONTINUES",
+    "T05-04": "PASS_VALID_CONTINUATION_RESTART_RECONNECT_FOREIGN_EXPIRED_KEY_GENERATION_RESYNC",
+    "T05-05": "PASS_PARTIAL_STALE_UNKNOWN_UNAVAILABLE_TRANSPORT_NEVER_UPGRADES_SOURCE_QUALITY",
+    "T05-06": "PASS_EXACT_HISTORY_TIES_CORRECTION_TOMBSTONE_PINNED_BACKFILL_DECIMAL_EXTREMA_DISPLAY_ONLY",
+    "T05-07": "PASS_LOST_HINT_DURABLE_FALLBACK_MISSING_RECEIPT_MEMBER_REJECT_NO_PHANTOM_BACKFILL_NOTICE",
+    "T05-08": "PASS_SINGLE_FLIGHT_CANCEL_RESET_CORRECTION_REVOKE_KEY_LIMITS_CURSOR_STALE_DEADLINES"
+  },
+  "formal_counts_isolated": {
+    "passed": 8,
+    "failed": 0,
+    "blocked": 0,
+    "count_note": "Eight families map to automated cases, not eight additional tests"
+  },
+  "automated": {
+    "runner_safety": {
+      "failed": 0,
+      "passed": 42,
+      "skipped": 0
+    },
+    "unit": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 99,
+      "passed_per_binary": [
+        31,
+        20,
+        22,
+        26
+      ],
+      "test_binaries": 4
+    },
+    "pg_bootstrap": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 22,
+      "passed_per_binary": [
+        22
+      ],
+      "test_binaries": 1
+    },
+    "pg_scoped_read": {
+      "failed": 0,
+      "filtered_out": 0,
+      "ignored": 0,
+      "measured": 0,
+      "passed": 28,
+      "passed_per_binary": [
+        28
+      ],
+      "test_binaries": 1
+    },
+    "total_passed": 191,
+    "total_failed": 0,
+    "ignored_skipped_filtered": 0
+  },
+  "lint": {
+    "rustfmt": "PASS",
+    "clippy": {
+      "owned_warnings": [],
+      "status": "PASS_STRICT_ZERO_WARNINGS",
+      "upstream_advisory_warnings": 0
+    },
+    "whole_monorepo_verify": "NOT_RUN_OUTSIDE_SCOPED_PACKAGES_NO_HK_JOB_UNDER_FOREIGN_LOCK"
+  },
+  "input_verification": {
+    "base_sha": "e77a8ed0b6983880b646d17088f8f3c1581d4f86",
+    "manifest_sha256": "02019ce2f8095aaa0ba3071603e4c091b32e78e53346bf32ec3a5079d39fc5d4",
+    "source_files": 374,
+    "local_candidate_matches_all_inputs": true,
+    "all_four_runner_helper_hashes_match": true,
+    "immutable_during_qualification": true,
+    "owner_guides_unchanged": 4,
+    "candidate_not_deployed": true
+  },
+  "connected_acceptance": {
+    "status": "BLOCKED_EXISTING_DEPENDENCIES",
+    "XLC_02_03_06": "NOT_RUN_CONNECTED",
+    "source": "TS/PM03 publisher fence and writer/export authority return, then actual04 publication",
+    "budgets": "06 approved numeric envelope and clean paired measurements",
+    "security": "08 current principal/field/operation identity, read TLS and revoke receipts",
+    "partner": "Research BFF/consumer binding and endpoint/consumer acceptance",
+    "no_repeated_blanket_approval": true,
+    "action_packet": "QUERY_HISTORY_FANOUT_CONTRACT_AND_ACCEPTANCE.md#reproduction-and-partner-handoff"
+  },
+  "domain_behavior": {
+    "new_http_routes": 0,
+    "current_history_export_page_rows": 200,
+    "current_history_export_page_bytes": 1048576,
+    "history": "Exact immutable retained observations only; missing history typed unavailable",
+    "notice": "NOTIFICATION_ONLY coalesced refetch hints, not financial event replay",
+    "cache": "Full semantic scope/revision/generation identity; bounded single-flight, final async deadline/auth fences",
+    "migration": "0020 additive Portal projection only, applied to disposable PG, not operational storage",
+    "legacy_routes_and_dtos": "UNCHANGED"
+  },
+  "resource_observation": {
+    "duration_seconds_observational": 85.95964,
+    "interval_seconds": 1,
+    "limitations": [
+      "SHARED_HOST_NOT_CAPACITY_OR_PERFORMANCE_ACCEPTANCE",
+      "SAMPLED_MAXIMUM_NOT_INSTANTANEOUS_PEAK",
+      "PROCESS_RSS_SUM_CAN_DOUBLE_COUNT_SHARED_PAGES",
+      "ONLY_TEST_POSTGRESQL_CGROUP_NOT_CARGO_WORKER_RESOURCES"
+    ],
+    "maximum_samples": 1500,
+    "maximum_sampling_gap_seconds": 1.002913,
+    "postgresql": {
+      "anonymous_max_bytes": 17068032,
+      "average_cores": 0.376955,
+      "cpu_core_seconds": 32.402873,
+      "io_delta": {
+        "rbytes": 12288,
+        "rios": 3,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 139100160,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 65855488,
+      "name": "epg10-05-pg-0f6dffe34dc6",
+      "network_delta": {
+        "rx_bytes": 4484444,
+        "tx_bytes": 19638592
+      },
+      "pids_max": 10,
+      "sampled_memory_max_bytes": 489598976,
+      "throttled_usec": 29186415
+    },
+    "process_rss_sum_sampled_max_bytes": 164429824,
+    "sample_count": 87,
+    "status": "PASS_OBSERVATION_ONLY",
+    "tainted_for_capacity": true
+  },
+  "runtime_reconciliation": {
+    "HK": {
+      "tuple_count": 12,
+      "unchanged": true,
+      "restarts": 0,
+      "record": "hk-source-runtime-final.json"
+    },
+    "SGP": {
+      "tuple_count": 5,
+      "unchanged": true,
+      "restarts": 0,
+      "record": "sgp-source-runtime-final.json"
+    },
+    "canonical_checkout": {
+      "branch": "feat/manager-v2-paper-read",
+      "head": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+      "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 4,
+      "untracked_paths_sha256": "51ffb84753145825dbfd449cfa77440dd156af83e34fc40fd6400b82663e75a4"
+    },
+    "stable_sgp": {
+      "branch": "main",
+      "head": "533162635f56584d630e3d971d77d50860595f15",
+      "path": "/home/bobby/portal-main-release",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "active_edge_worker_image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+    "active_edge_oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+    "HK_release": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+    "SGP_release": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose",
+    "active_feature_worktrees_record": "hk-source-runtime-final.json#worktrees",
+    "rollback": "All pre-existing operational/rollback resources retained untouched; no new release/image or rollback artifact created or requalified"
+  },
+  "cleanup": {
+    "record": "cleanup-receipt.json",
+    "allocated_bytes_removed": 2265501696,
+    "owned_pg_absent": true,
+    "own_lock_released": true,
+    "temporary_directory_removed": true,
+    "images_built_pulled_removed": 0,
+    "buildkit_created_removed": 0,
+    "volumes_networks_removed": 0,
+    "shared_docker_decision": "NO_ACTION_NEEDED_NO_OWNED_IMAGE_CACHE_CREATED",
+    "HK": "READ_ONLY_NO_JOB_OR_CLEANUP_FOREIGN_MEASUREMENT_LOCK"
+  },
+  "evidence": {
+    "receipt": "pg-receipt.json",
+    "attempts": "qualification-attempts.json",
+    "partner": "partner-source-review.json",
+    "contract": "QUERY_HISTORY_FANOUT_CONTRACT_AND_ACCEPTANCE.md",
+    "digests": "artifact-digests.sha256"
+  },
+  "next_permitted_step": "On named owner approval,06 instrumentation/budgets/isolated hot-path work can proceed independently; connected05 remains open until the listed existing returns. Do not self-start06 or install fixture authority."
+}

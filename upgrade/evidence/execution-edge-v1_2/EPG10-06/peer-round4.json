@@ -1,0 +1,122 @@
+{
+  "schema": "epg10.partner-source-review.v1",
+  "phase": "EPG10-06",
+  "round": 4,
+  "observation_started_at_utc": "2026-10-16T07:22:26Z",
+  "observation_ended_at_utc": "2026-10-16T07:24:39Z",
+  "evidence_class": "READ_ONLY_SOURCE_METADATA_NOT_RUNTIME_OR_CAPACITY_ACCEPTANCE",
+  "peer_edits": 0,
+  "peer_tests_or_heavy_jobs": 0,
+  "sources": [
+    {
+      "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "branch": "feat/v2-rust-first-okx-demo",
+      "head": "471ff37c12f02e4989089d16f5dfd048723a0d6e",
+      "previous_head": "ebc1252555d4fc7b986ced902ac67b1eba17077f",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256_at_round_start": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256_at_072310z": "ffdbaa28d8bd65b10a78508c1e66ce82caee5866f5bc11c0680062cd42b74b2b",
+      "unstaged_sha256_at_round_end": "e00df2ed4fbd43a5c81f9f5cdf0eaab0a940518a4acf12fd54a3c2f798f9f671",
+      "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2",
+      "untracked_count": 1,
+      "journal_sha256": "75d9c80350050dcaa9e2efc999029d25dea98c3c3762dc00eeff8a3a80708e79",
+      "dirty_files_at_072310z": [
+        "rust/crates/market-data-writer/src/health.rs",
+        "rust/crates/market-data-writer/src/session.rs"
+      ],
+      "dirty_files_at_round_end": [
+        "rust/crates/market-data-writer/src/health.rs",
+        "rust/crates/market-data-writer/src/session.rs",
+        "rust/crates/market-data-writer/tests/health.rs",
+        "rust/crates/market-data-writer/tests/session.rs"
+      ],
+      "commit_ruling": "ADDITIVE_NATIVE_PROBE_OBSERVABILITY_NOT_SOURCE_JOURNAL_OR_PUBLICATION_AUTHORITY",
+      "working_tree_ruling": "PEER_WIP_QUOTE_OBSERVE_CADENCE_BOUND_DIVISOR_4_TO_3_FOR_QUERY_QUOTA_MARGIN_NOT_DEPLOYED_OR_ACCEPTED_BY_EDGE",
+      "wip_quote_cadence_ms_at_2000ms_bound": 666,
+      "documented_query_quota_requests_per_minute": 3000
+    },
+    {
+      "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "head": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "journal_sha256": "96ee825d90a33f3cab614b8c7053408fc34b6ae965db867e6efc33ef769735fd"
+    },
+    {
+      "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+      "branch": "fix/p184-dl-closure",
+      "head": "68556d40a8ef71420f3d65ba850796ea5fe68887",
+      "previous_head": "7e40264ece699d886294dc9b3cdb6d5a06b22e09",
+      "intermediate_head_reported_by_parent": "2542cf045de188e7ce1987b598907ad5e19eaed3",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "journal_sha256": "e10b8268813c0cd7ced8403157610ac76f737048a4d4e78f1fc709521ab1cb1c",
+      "changed_commits": [
+        "ee2c3597090cd01d78cad0c414bed3795ec67a64",
+        "89d2587946877a6d45330cb66ab27b9d1cddf163",
+        "2542cf045de188e7ce1987b598907ad5e19eaed3",
+        "68556d40a8ef71420f3d65ba850796ea5fe68887"
+      ],
+      "coordinator_load_script_sha256": "c6d995ff4467f839fe38cb6afd4c7ba4f593f9f7b18fd30ea235ebeac6fb6f79",
+      "compaction_script_sha256": "deaa74e767d8630627b5aaf9f9f242be71452701f6eafbfe4aa355e9f4e2b204",
+      "commit_ruling": "COORDINATOR_LOAD_HARNESS_AND_OWNER_APPROVED_MEASURED_KAFKA_C_PLAN_PLUS_READ_ONLY_OBSERVE_NOT_RUNTIME_APPLY_OR_CONVERGENCE_PROOF"
+    }
+  ],
+  "authority": {
+    "comparison_manifest": "upgrade/evidence/execution-edge-v1_2/EPG10-00/source-runtime-manifest.json",
+    "non_journal_files_compared": 34,
+    "mismatches": 0,
+    "authority_hashes_unchanged": true,
+    "ts_native_15_plus_n03_p16_controls": "18_FILES_UNCHANGED",
+    "pm_guide_and_source_contracts": "15_FILES_UNCHANGED_PLUS_UNCHANGED_JOURNAL",
+    "dl_access_guide": "UNCHANGED",
+    "new_source_publication": false,
+    "generic_publisher_generation_fence": "UNCHANGED_ABSENT_COUNTEREXAMPLE_REPRODUCED_IN_EPG10_03",
+    "n03": "SOURCE_DARK",
+    "snapshot": "JOURNAL_PREFIX_NOT_BUSINESS_CURRENT_SNAPSHOT",
+    "pm_runtime": "COMPONENT_RECEIPTS_NOT_MOUNTED_FULL_SOURCE_EXPORT_OR_CONSUMER_ACCEPTANCE"
+  },
+  "b16": {
+    "amendment_path": "contracts/baseline/rust-first-v2/p18/p184-burst-b16-prereg.v1.amendment-1.json",
+    "amendment_sha256": "ab597f7043fc2a69f68d6cc97763a572246d81aee8cdf07c0158f61612122b29",
+    "provenance": "TEST_ONLY",
+    "capacity_acceptance": false,
+    "amended_evidence_directory": "/home/bobby/.local/state/trading-system/p184-burst-b16-amend1-20261016",
+    "amended_evidence_directory_exists": true,
+    "current_cell": "a1-9k-1",
+    "status": "FIRST_CELL_STARTED_NO_COMPLETED_RECEIPT_OBSERVED",
+    "current_cell_receipt_exists": false,
+    "amendment_index_exists": false,
+    "new_completed_amendment_receipts": 0,
+    "master_log_bytes_observed": 236,
+    "planned_subscription_depth": 2000,
+    "production_subscription_depth_documented": 1000,
+    "prior_ladder": "7_OF_8_CLEAN_WITH_9K_SECOND_RUN_RULE_S_FAILURE",
+    "limitation": "INTERNAL_TRADE_EVENT_THROUGHPUT_NOT_PORTAL_USERS_QPS_VENUE_LATENCY_OR_EDGE_CAPACITY_PASS"
+  },
+  "dl_coordinator_return": {
+    "evidence_directory": "/home/bobby/.local/state/qdl-v2/p184-g12-coordinator-load-20261016",
+    "fit_output_sha256": "a3f4aef910ff681c9d1685562d28c0871de8f29952a493c7930d35ee3c4ad650",
+    "b_packet_check_sha256": "f7456f7fe5628d360863b14a7e5ff5fac7a786fccb3f258f3b933a248bbb70ed",
+    "script_plan_status": "MEASURED",
+    "owner_decision": "B_PLUS_C_10_MINUTES",
+    "planned_consumer_offsets_delete_retention_ms": 600000,
+    "planned_consumer_offsets_segment_ms": 60000,
+    "planned_transaction_state_segment_ms": 600000,
+    "ruling": "OWNER_PLAN_AND_AGED_STATE_FIT_NOT_NEW_EDGE_CAPACITY_OR_SOURCE_ACCEPTANCE",
+    "runtime_apply_or_convergence_verified_by_this_review": false
+  },
+  "gate_change": false,
+  "remaining_external_returns_unchanged": true,
+  "hk_foreign_lock": {
+    "owner": "claude-burst-b16-amend1",
+    "started_utc": "2026-10-16T07:22:06+00:00",
+    "until_utc": "2026-10-16T10:22:06+00:00",
+    "ruling": "NO_HK_TEST_BUILD_OR_HEAVY_JOB"
+  }
+}

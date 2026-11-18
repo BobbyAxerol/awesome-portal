@@ -31,6 +31,8 @@ use serde_json::Value;
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
+pub mod financial_report;
+
 pub const PUBLICATION_REGISTRY_VERSION: &str =
     "portal.execution.maximum-data.e5.existing-data-publication.v1";
 pub const NAMED_PAGE_SCHEMA_VERSION: &str = "portal.execution.maximum-data.e5.named-page.v1";

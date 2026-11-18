@@ -1,0 +1,298 @@
+{
+  "schema": "epg10.command-attempt-history.v1",
+  "phase": "EPG10-07",
+  "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+  "attempts": [
+    {
+      "at_utc": "2026-10-16T09:54:39.450149+00:00",
+      "status": "FAIL",
+      "failed_stage": "compile",
+      "error_type": "CalledProcessError",
+      "input_manifest_sha256": "d01abf0afaa4ba88455a1af0064c78ad93e02d9b9249822d80d2669f7c968a6c",
+      "runner_hashes": {
+        "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+        "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+        "run.py": "72e229a4cf1817036fc1d4a7f090b2102f63850e1e4691dd3152ecf9b5469889",
+        "test_run.py": "d2a413f038d70a25c923f1bf36205d33d75cb9201b0ce4749e3f2f9d123980fc"
+      },
+      "runner_safety_tests": {
+        "failed": 0,
+        "passed": 73,
+        "skipped": 0
+      },
+      "rustfmt": "PASS",
+      "cleanup": {
+        "errors": [],
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": false,
+        "private_build_dir_pending_removal": "/tmp/epg10-07-gVjNCDAA",
+        "resource_sampler_stopped_before_container_cleanup": true,
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "production_mutations": 0,
+      "source_requests": 0,
+      "runtime_activation": false,
+      "disk_before": 168105185280,
+      "disk_after_container": 164522106880,
+      "elapsed_seconds_observational": 456.436,
+      "attempt": 1,
+      "stages": {
+        "compile": {
+          "returncode": 101,
+          "elapsed_seconds": 454.141
+        },
+        "runner_safety_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 0.78
+        },
+        "rustfmt": {
+          "returncode": 0,
+          "elapsed_seconds": 0.983
+        }
+      },
+      "cause": "Owned copy allowlist omitted public command-relay-denied fixture; fixed with bounded hash-checked fixture and safety case."
+    },
+    {
+      "at_utc": "2026-10-16T10:04:05.065757+00:00",
+      "status": "FAIL",
+      "failed_stage": "unit_tests",
+      "error_type": "TimeoutExpired",
+      "input_manifest_sha256": "3c30f0c9bd184a1b858b1e3778356844f73807aa00ddcce4f3a8cc961052c512",
+      "runner_hashes": {
+        "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+        "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+        "run.py": "74541994c9e2258135649beb25e39817a32b26131c3acc72ad66b1905e1fe090",
+        "test_run.py": "00ad2e4839739ecaf9c4b8aa03dd4cbf4c7b791140ca3150f9b4a5c322a454b4"
+      },
+      "runner_safety_tests": {
+        "failed": 0,
+        "passed": 74,
+        "skipped": 0
+      },
+      "rustfmt": "PASS",
+      "cleanup": {
+        "errors": [],
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": true,
+        "private_build_dir_pending_removal": "/tmp/epg10-07-gVjNCDAA",
+        "resource_sampler_stopped_before_container_cleanup": true,
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "production_mutations": 0,
+      "source_requests": 0,
+      "runtime_activation": false,
+      "disk_before": 164626989056,
+      "disk_after_container": 162585722880,
+      "elapsed_seconds_observational": 567.576,
+      "attempt": 2,
+      "stages": {
+        "compile": {
+          "returncode": 0,
+          "elapsed_seconds": 70.656
+        },
+        "compile_edge_service": {
+          "returncode": 0,
+          "elapsed_seconds": 249.453
+        },
+        "runner_safety_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 0.86
+        },
+        "rustfmt": {
+          "returncode": 0,
+          "elapsed_seconds": 1.004
+        }
+      },
+      "cause": "Expanded eight-library regression exceeded inherited240s test-stage deadline; no assertion failure observed. Only profile07 unit deadline raised to600s, total1500s lease unchanged; safety case added."
+    },
+    {
+      "at_utc": "2026-10-16T10:16:19.177915+00:00",
+      "status": "FAIL",
+      "failed_stage": "clippy",
+      "error_type": "ValueError",
+      "input_manifest_sha256": "9df871e97d2e5c4594791d50ac171b307305525b22cc91040f0947f9add4d9fa",
+      "runner_hashes": {
+        "epg03_run.py": "99ad890f0243fa0c2c0d07f48d5d30f897aef04e76a0254e34d4f79acba1b298",
+        "execution_edge_observe.py": "cde8804626aec22bdddfdaec86b39b18e473314eddef9932c58a9f75f4120569",
+        "run.py": "f63e0df009f2627344b9141d4e7f2cb1e17be28d0413d3d320efafd1c3bf95e1",
+        "test_run.py": "e1bd44d5b710d946a11668ab782f1cdebb56d27c27797f6b386560882530c8d8"
+      },
+      "runner_safety_tests": {
+        "failed": 0,
+        "passed": 75,
+        "skipped": 0
+      },
+      "unit_tests": {
+        "failed": 0,
+        "filtered_out": 0,
+        "ignored": 0,
+        "measured": 0,
+        "passed": 211,
+        "passed_per_binary": [
+          31,
+          61,
+          3,
+          16,
+          26,
+          20,
+          24,
+          30
+        ],
+        "test_binaries": 8
+      },
+      "edge_tests": {
+        "failed": 0,
+        "filtered_out": 0,
+        "ignored": 0,
+        "measured": 0,
+        "passed": 38,
+        "passed_per_binary": [
+          38
+        ],
+        "test_binaries": 1
+      },
+      "bootstrap_tests": {
+        "failed": 0,
+        "filtered_out": 0,
+        "ignored": 0,
+        "measured": 0,
+        "passed": 22,
+        "passed_per_binary": [
+          22
+        ],
+        "test_binaries": 1
+      },
+      "read_tests": {
+        "failed": 0,
+        "filtered_out": 0,
+        "ignored": 0,
+        "measured": 0,
+        "passed": 29,
+        "passed_per_binary": [
+          29
+        ],
+        "test_binaries": 1
+      },
+      "resource_tests": {
+        "failed": 0,
+        "filtered_out": 0,
+        "ignored": 0,
+        "measured": 0,
+        "passed": 8,
+        "passed_per_binary": [
+          8
+        ],
+        "test_binaries": 1
+      },
+      "manager_tests": {
+        "failed": 0,
+        "filtered_out": 0,
+        "ignored": 0,
+        "measured": 0,
+        "passed": 11,
+        "passed_per_binary": [
+          11
+        ],
+        "test_binaries": 1
+      },
+      "command_tests": {
+        "failed": 0,
+        "filtered_out": 0,
+        "ignored": 0,
+        "measured": 0,
+        "passed": 22,
+        "passed_per_binary": [
+          22
+        ],
+        "test_binaries": 1
+      },
+      "rustfmt": "PASS",
+      "cleanup": {
+        "errors": [],
+        "images_built": 0,
+        "images_pulled": 0,
+        "owned_container_removed": true,
+        "private_build_dir_pending_removal": "/tmp/epg10-07-gVjNCDAA",
+        "resource_sampler_stopped_before_container_cleanup": true,
+        "volumes_created": 0,
+        "volumes_removed": 0
+      },
+      "production_mutations": 0,
+      "source_requests": 0,
+      "runtime_activation": false,
+      "disk_before": 162509697024,
+      "disk_after_container": 160983306240,
+      "elapsed_seconds_observational": 503.13,
+      "attempt": 3,
+      "stages": {
+        "bootstrap_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 103.39
+        },
+        "clippy": {
+          "returncode": 101,
+          "elapsed_seconds": 20.163
+        },
+        "command_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 13.001
+        },
+        "compile": {
+          "returncode": 0,
+          "elapsed_seconds": 65.184
+        },
+        "compile_edge_service": {
+          "returncode": 0,
+          "elapsed_seconds": 9.037
+        },
+        "edge_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 94.487
+        },
+        "manager_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 19.04
+        },
+        "read_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 18.84
+        },
+        "resource_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 9.596
+        },
+        "runner_safety_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 0.828
+        },
+        "rustfmt": {
+          "returncode": 0,
+          "elapsed_seconds": 1.082
+        },
+        "unit_tests": {
+          "returncode": 0,
+          "elapsed_seconds": 142.846
+        }
+      },
+      "cause": "All416 automated cases passed; overall qualification failed on clippy::doc_markdown in owned command.rs. Added backticks in one doc comment, no logic/lint suppression; full final rerun required."
+    }
+  ],
+  "lint_preflight": {
+    "status": "FAIL_FIXED_BEFORE_FINAL_RUN",
+    "owned_diagnostic": "clippy::semicolon_if_nothing_returned",
+    "location": "crates/command-relay/src/durable.rs",
+    "fix": "Added semicolon; no lint suppression or behavior change",
+    "runtime_mutations": 0
+  },
+  "additional_lint_preflight": {
+    "status": "FAIL_FIXED_BEFORE_FINAL_RUN",
+    "owned_diagnostic": "clippy::doc_markdown",
+    "location": "crates/projection-store-pg/tests/epg10_07_command.rs module documentation",
+    "fix": "Added code ticks to TEST_ONLY and PostgreSQL; no test logic change or lint suppression.",
+    "final_result": "Strict nine-package all-target preflight and full final qualification both PASS."
+  }
+}

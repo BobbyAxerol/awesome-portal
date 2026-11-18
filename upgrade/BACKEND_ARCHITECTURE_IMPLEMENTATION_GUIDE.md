@@ -650,6 +650,600 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**28Oct Core ACK follow-through — BOUNDED_SOURCE_TESTED / CONNECTED_NOT_MET:**
+[journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--core-e1e5-consumption-ack-follow-through)
+and [Core return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONSUMPTION_FOLLOWTHROUGH_2026-10-28.md)
+record the already-enforced V1 numeric boundary, 13 gateway tests PASS / 1
+SKIP, static financial carrier mapping and current workload Canary limitation.
+Real source binding, rights and connected 08/read09 remain unqualified.
+
+**28Oct Core consumption index — SOURCE_READY / CONNECTED_NOT_MET:**
+[same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--edge-completion-and-core-consumption-handoff)
+and [start-here handoff](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE_READY_TO_CONSUME_2026-10-28.md)
+identify the existing concrete PM/Edge/Core discovery loaders and exact closed
+types, financial check/serve/proof/receiver and current-human STATUS wire.
+Core can prepare each consumer independently; no new relay/framework needed.
+Matching source commissioning is separate. Old discovery cutoff has elapsed;
+no listener/grant/source-state change. Candidate release binary68344dad now
+buildPASS/4offline fail-closed smokePASS; bounded build/cache/compiler cleanup
+done, named artifact retained outside source. Actual Core-branch Markdown
+publication is tracked in the same journal; source/binary READY does not imply
+a deployed image, unattended recovery or connected PASS.
+
+**28Oct connected-source E1–E5 — SOURCE_REVALIDATED / CONNECTED_NOT_MET:**
+[same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--e1e5-connected-source-coordinator-follow-through)
+and [incremental Core return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONNECTED_SOURCE_RETURN_2026-10-28.md)
+record3fresh actual-source PASS checks: metadata, scoped observation ACTIVE/
+0heads/0receipts, independent all-Paper root census0. Existing two SGP trust
+bundles/locators acknowledged, not missing or installed. Secure final PG hop
+and official native protected-root workflow remain missing; no invented grant.
+E3 actual financial carrier/proof/ACK source inventory is ready, not mounted;
+E4 stale publication pin fixed at PM6276588b with10focusedPASS, runtime gateway
+and independent service recovery not commissioned. E5 current calendar absent,
+current workload/apparatus pins returned without capacity/load acceptance.
+Edge delivered its single owner-action packet directly to PM/DL incoming
+mailboxes and independently mirrored E1 to Core. No runtime/source-business/
+credential/grant/command/Live change; private observations retained, test cell
+removed. Full08/read09NOT_MET; per-input second-round actions in linked return.
+
+**27Oct Research membership reader — INSTALLED / EDGE_METADATA_VERIFIED:**
+[same08/read09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-research-reader-db-scope-20261027)
+and [current source/test/install return](evidence/execution-edge-v1_2/EPG10-08/EDGE_RESEARCH_READER_APPROVED_IMPLEMENTATION_2026-10-27.md)
+pin PMfb9a7ce7 (successor c2668cfa):139focused,86full-Timescale PG15 and77strict
+legacy casesPASS. Exact existing52-object Timescale metadata SELECT exception
+is explicitly pinned; actual-source guard PASS, no shared-ACL change or new
+metadata grant. Core installed the approved two roles/private accessor using
+the retained backup and NEW_SELECTED binding; Edge independently verified the
+exact grants/function/old catalogue. Retained observation hash/tuple/source
+matches: ACTIVE mapping, zero scoped Paper heads/receipts, not an entitlement.
+No duplicate install or new business observation. Secure PM→Edge→Core discovery
+composition/trust remains uncommissioned; actual new trust pins/custody and
+reviewed local/encrypted DB transport are next. Native membership/original
+gates READ, not zero-head discovery. Full08/read09 remainNOT_MET. Core source
+f50c4ea72; actual pins/evidence/next owners in the linked current return.
+
+**24Oct Original06 worker materialization — ISOLATED_QUALIFIED, NOT_DEPLOYED:**
+[same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-worker-oom-follow-through-20261024)
+records confirmed old-image cgroup OOM/die137 and streaming of both Manager-only
+SQL loaders without retaining redundant full SQL row populations. Same locks,
+query ordering, row validation, sentinel refusal and digest/custody semantics;
+decoded full-epoch entities remain necessary. Actual gates/cleanup in journal.
+No operational OOM-remedy or capacity claim, budget/default change or restart.
+
+**23Oct executable scoped assembly — source-only:**
+[current04/05/06/08/09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-entrypoint-assembly-20261023)
+tracks the private router/serving entrypoints, asynchronous current-policy/custody
+port, shared PG/cache/notification lifecycle and owning financial worker. Actual
+provider/proof commissioning is not inferred from native ACKs or signed claims.
+Existing binary new routes explicitly unavailable until that actual binding;
+legacy paths and operational runtime unchanged. Exact tests/pins/cleanup in journal.
+
+**23Oct business backend — source composition, not runtime commissioning:**
+[current04/05/06/07/09 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-backend-composition-20261023)
+tracks financial HTTP→validated atomic PG→authorized typed reads, native P16
+retained observations/checkpoints, callable Core command ingress/full outcome
+and Manager cadence/lease/config-drift fixes. Explicit governed resource
+factory refuses legacy mixing; existing legacy workers are NOT newly governed.
+Only eight PM capital shapes, not64CLI/nine N12. Current provider/router and
+source commissioning remain owned connected assembly; do not claim a flag-only
+activation or new connected PASS. Exact tests/cleanup/pins remain in the journal.
+
+**20Oct23:16ICT — four-input Portal handoff, documentation-only:**
+[current owner packet](evidence/execution-edge-v1_2/EPG10-08/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md)
+and [same-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0807030106--consolidated-portal-owner-handoff-20oct2316ict)
+coordinate Core009→08/read09, PM07, TS03 and target/bounds01/06 separately.
+Edge source bc4b8fe1 is published/isolated-qualified, not newly deployed.
+Claude implements Portal backend per canonical Core§10.13; Core integrator
+owns reviewed landing/release. Delivery is not ACK or connected acceptance.
+No peer source/DB/runtime/identity/command authority change is authorized here.
+
+**Original06 Manager materialization,20Oct — ISOLATED_QUALIFIED, source-only:**
+[same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original06--manager-worker-materialization-follow-through-20oct1440utc)
+tracks immutable shared feed cache and optional explicit record/retained/working
+source-fact JSON limits. No production default, runtime/config/DB change or OOM
+remedy is asserted. Preserve legacy compatibility, business/state parity and
+post-durable-commit cache installation. Actual impact113PASS (26new), fmt,
+affected all-target check, strict Clippy and451 immutable inputs PASS;
+failed test-compile predecessor retained, corrected without production derives.
+Normal-hook/publication/cleanup receipts are recorded in the same-phase journal.
+Builder/digest/SQL/page/allocator/RSS populations remain outside these specific
+logical counters. Full01/06 capacity and08connected remain NOT_MET.
+
+**Original08 installed intake/finite lifecycle,20Oct — IN_PROGRESS:**
+[current journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+supersedes the historical source-only Core blocker:0087818d563 is installed,
+new1df9adad transfer verified. Edge closure/provider lifecycle now has30+9
+distinct isolated PASS, published1380ab9d/normal hook PASS. Actual
+[source return](integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
+now proves identity COMMIT/Core ACK, independent receipt/mapping/role retirement
+and Core logout, finite native READ preflight/observer and4mTLS transport cases.
+The [finite closeout](integration/execution-native-read-v1/research-identity-intake/finite-source-closeout.json)
+records early graceful drain04:26:57UTC, current revision2 revokedtrue and exact
+container/image cleanup.4040cae8 published the real source evidence with normal
+hook130contracts/717API/build/restore PASS. Core009 READ/STREAM composition
+remains; retired revision1 must not be reused as authority.
+See [qualification](integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json).
+Other phase dependencies
+do not block this owned work. Full08NOT_MET/09connectedNOT_STARTED; imported
+public source qualification is not business READ/STREAM or capacity acceptance. Older
+dated tracking below is provenance, not the current goal/installation status.
+
+**Original08 current operator publication/binding,19Oct/20Oct — ISOLATED_QUALIFIED:**
+[current packet](integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
+pins operator e108a0a7/tests a9ea6d20 and67PASS (65 overlap+2 new real loopback
+TLS lifecycle cases; SDK/Core/DB callbacks TEST_ONLY). [Main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)
+tracks exact canonical mirror/ordinary-hook/feature publication, separately
+from actual installed Core008/009 binding. Reuse existing READY → original
+COMMIT/Core ACK → drain/retire/logout machinery. No operational identity,
+business READ/STREAM, connected revoke/cache/cursor/SSE or full08 acceptance
+follows from isolated tests/source-only Core returns. Full08NOT_MET;
+09connectedNOT_STARTED; provider28445/stable/old native roles untouched.
+
+**Original08 pre-ENTER recovery,19Oct — IMPLEMENTED / ISOLATED_QUALIFIED:**
+[approved helper/test slice](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-pre-enter-identity-window-recovery--2026-10-19-asiasaigon)
+repairs OPEN followed by expiry/cancellation before SDK ENTER. Same original
+attempt, physical ROLLED_BACK and Core ACK; never fake finished/ENTER. New tests
+use explicit Core models, not connected qualification. Core owns matching
+protocol/schema134/reverse/session; HK owns helper/test/publication only.
+Persistent goal not resumed; full08NOT_MET/09connectedNOT_STARTED.
+Final17new +72distinct regression/baseline =89PASS,0FAIL/SKIP; the shared18case
+baseline is counted once. No new image/cache, own test cells/network/lease gone,
+41runtime tuples unchanged. Core ACKs are modeled, not connected evidence.
+
+**Original08 authoritative handoff entrypoint,19Oct — CURRENT:**
+[start here](integration/execution-native-read-v1/README.md#current-entrypoint--19oct-asiasaigon),
+not the historical e19 patch instructions. Core source adoption DONEd0789674;
+identity/ACL source44ee6c18 published and its bounded return now records exact
+source pins,130contract/717API normal gate and completed hook cleanup. No need
+to rerun unchanged72focused cases or recreate receipt schema/role/provider.
+Core's genuine Research composition/private session is still pending, not
+another generic approval; full08NOT_MET/09connected NOT_STARTED. [Journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-current-handoff-entrypoint-reconciliation--2026-10-19-asiasaigon).
+Old packet/owner-return openings are now explicitly historical, never active
+instructions to retarget dev/stable or overwrite current Core WIP.
+
+**Original08 finite identity-role window,19Oct14:40Asia/Saigon — CURRENT:**
+[operator/SDK packet](integration/execution-native-read-v1/research-identity-intake/README.md#finite-identity-role-window--independently-implemented19oct)
+now includes one-shot exact ACL/SCRAM/pool lifecycle,40real-PG15 cases +18baseline
+and14regression PASS. Real Core ACKs are NOT claimed: test endpoints use explicit
+TEST_ONLY keys. UNKNOWN/lost ACK retain recovery; only matching terminal receipt+
+ACK+drained pool can restore NOLOGIN/password NULL/exact grants. Effective-ACL
+pin handles PostgreSQL implicit→explicit owner ACLs without modifying catalogues
+or weakening old SDK pins. No actual activation: pinned TS readback still shows
+NOLOGIN/no-writer/0receipts, native role caps2/2/1 unchanged. Test cells/network/
+lease gone,0newimages/cache,41runtime tuples unchanged. [Original08 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-acl-window--2026-10-19-asiasaigon).
+Core reviewed composition/private session remains exact binding input; full08
+NOT_MET/09connected NOT_STARTED. No stable/peer/financial/command changes.
+
+**Original08 exact Research identity prerequisite,19Oct — CURRENT:**
+[private operator packet](integration/execution-native-read-v1/research-identity-intake/README.md)
+reuses the official PM SDK;14wrapper tests and18fresh-PG15 cases PASS.
+Actual source-role READ ONLY lookup on TS system7674585245102796834 returned
+NO_ACTIVE_EXACT_MAPPING, not permission to seed/reactivate a TS user.
+Bobby approved exactly one immutable receipt schema + isolated identity role;
+actual preparation COMMITTED14:13Asia/Saigon: NOLOGIN/no-grants,0receipt rows;
+preserve original native hash and transaction-before/after registry ACLs, and
+provider28445. Registry preservation is NOT authority. Real Core reverse/session+
+finite ACL window still precede actual
+identity creation; no preview/fake grant. [Main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-research-identity-intake-preparation--2026-10-19-asiasaigon)
+records install outcome/cleanup separately. Full08NOT_MET;09connected not started.
+
+**Original08 owner target correction,19Oct Asia/Saigon — CURRENT:** main/stable
+`portal.primusspark.com` is the genuine Cloudflare/Zero Trust security target;
+`dev-portal` is preview, NOT the native consumer. Execution v2 consumes from
+`research-portal` -> live nginx8095 -> `portal-research-preview`, source
+`/home/bobby/portal-research`, `docs/research-loop-plan@d0789674`. Our earlier
+c43/dev target selection was wrong and is superseded, not an owner setup gap.
+Research has its own127-ledger DB7688673963308855330 and different Bobby ID;
+Stan/Thanh absent from exact lookup. Its public auto-login/dev-auth exception
+does not certify genuine native authority. Main6no-cookie/forged-header checks
+all redirect to Access; this is front-door-only proof, not revoke/SSE acceptance.
+[Corrected target and next action](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-owner-target-correction--2026-10-19-asiasaigon).
+No deploy/migration/auth/session/grant changes. Source adoption is DONE; actual
+Research release/schema/identity/policy assembly remains, not a dev Access ask.
+ee664f2e tracking publication normal gate130contract/717API PASS/build/restore,
+exact new test image removed/0new cache/41runtime tuples unchanged. Full08
+NOT_MET,09connected not started. Dated older entries below are history.
+
+**Original08 resumed19Oct12:54Asia/Saigon:** exact HK1175file/20.63MB specimen
+and SGP2source-cache IDs/16KiB teardown COMPLETE,41HK/51SGP runtime tuples
+unchanged; active/rollback/private artifacts retained. Core independently
+landed d0789674 with actual terminal1118contract/8102API PASS,3SKIP, build/
+restore PASS. This closes source adoption/current-dependency qualification,
+not actual provider/human auth or integration rollout. Preserve its new WIP;
+do not reapply22patch or inherit the result for changed bytes. [Latest original08
+journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-resumed-integration-commissioning-and-exact-cleanup--2026-10-19-1254-asiasaigon)
+tracks exact target/auth/schema/serving refs and the five-path normal-hook
+publication transaction. Stable unchanged; full08NOT_MET/09connected not started.
+
+**Original08 integration source published19Oct09:51Asia/Saigon:** SGP
+feat/execution-native-read-integration@b87f73db is on awesome-portal, clean,
+25paths/+1982/-99, exact22qualified source outputs. Normal hook:1087contracts
+PASS; API8060PASS/7SKIP,0FAIL; restore PASS. [Adoption/skip/cleanup details](integration/execution-native-read-v1/current-core-reconciliation/README.md#current-owner-direction--integration-first).
+All51original operational tuples unchanged; raw drift flag retains2foreign
+test additions, no capacity proof. Own cells/network/lease and exact test image
+removed;2cache records/16KiB and HK specimen/journal hook wait for real quiet. Stable/current service,
+DB/auth/PKI/rollback/dev/main unchanged; source publication is not owner ACK or
+connected08. Next: Core review/adopt candidate, commission matching integration
+Access/auth/private refs/schema/window, then real-user08 drill;09not started.
+Later Core35953e07 changes6qualified query/operational dependencies, not our22
+paths; readonly patch-check PASS/writes0. The same handoff names the exact
+matched-release qualification action; no silent pin refresh or421peer/UI merge.
+Read-only10:39Asia/Saigon recheck: source b87clean; exact2cache IDs still
+present, foreign SGP npm/Node jobs active. HK window remains until11:57:58;
+five-path journal/receipt publication and exact source teardown still pending.
+
+**Original08 resumed19Oct08:18Asia/Saigon:** Bobby's later choice is Core
+integration first, stable unchanged; official IdP login is user-completed.
+Actual integrationc43/8400439b is not qualified e19+22delta and has dev auth;
+the [same handoff](integration/execution-native-read-v1/current-core-reconciliation/README.md#current-owner-direction--integration-first)
+now pins release/DB/auth boundaries. No blind patch, key/grant copy, production
+rollout or genuine-user acceptance inferred. HK foreign window now ends
+09:14:46Asia/Saigon; owned cleanup/hook remain pending,08NOT_MET/09not started.
+Source progress08:30–08:43Asia/Saigon: exact5f433 fetched, e19preflight22PASS;
+separate SGP feat/execution-native-read-integration now has exact22source+
+3tracking paths staged, verifier PASS. Both peer checkouts and51runtime tuples
+unchanged. Normal hook/commit/publication still pending; not Core-owner ACK.
+
+**Original08 current e19/stable39 factory,19Oct00:07UTC:** the existing genuine
+factory now runs on exact current e19+22delta: strict PASS and7PASS/0FAIL/ERROR/
+SKIP, unchanged independent schema golden and39-ledger. See the
+[focused receipt](integration/execution-native-read-v1/current-core-reconciliation/stable39-qualification.json).
+This is not actual PM/human/connected acceptance.41HK runtime tuples unchanged;
+owned cells/network/lease/tmpfs keys removed, one disposable source specimen
+awaits exact quiet teardown. HK foreign window still prevents its hook/cleanup;
+SGP source delivery/adoption preparation has progressed independently above.
+No actual Core schema/policy/session/runtime or auth change. Full08NOT_MET;
+09connected NOT_STARTED. Exact production adoption/window/recovery and genuine
+Cloudflare/Portal caller remain separate before connected commissioning.
+Actual00:26 release audit corrects the blast radius: stablee4fd→e19 differs
+in987Control-API paths, not the1715291→e19 slice. Four SGP Core services have
+no native config; three use dev auth. The00:33 read-only volume audit confirms
+four different physical DBs: only stable matches the commissioned target;
+preview has a different Bobby ID and integration/probe have Stan INVITED.
+Whole-release compatibility is unqualified, not a regression inferred from a
+file count. Core-owner matched release/adoption is required; no whole-image
+promotion, full migrations or alternate dev-principal shortcut was performed.
+SGP read-only remote visibility at00:43UTC confirms Edge feature5f433f8c is
+readable; actual08:30fetch/08:43candidate apply are recorded above, not inferred
+from visibility. Consumer ACK and matching genuine caller remain outstanding.
+
+**Original08 current Core reconciliation23:35UTC:** the
+[e19 source delta](integration/execution-native-read-v1/current-core-reconciliation/README.md)
+is SOURCE_QUALIFIED, not installed or connected acceptance. Core
+e19ad906 commits the previously captured WIP with zero1168-path source drift.
+Keep current self-eligibility/current-grants/metadata-only journal and qualified
+HTTP/SSE same-coordinator mount/drain;22-file delta includes a strictly typed
+synthetic projection-fixture repair. First expanded-spec strict has11fixture
+diagnostics; fixture repaired and fresh21-spec strict PASS.931behavior executions
+(393+534+4) PASS/0FAIL/ERROR/SKIP, no historical/failed-run credit. Exact
+patch/output/wrong-preimage rehearsal3PASS; production strict precedes only one
+EOF-newline removal, not a logic change. No peer/runtime/DB/secret transfer.
+Core e19 is local/committed but not yet in the checked remote line; preserve
+owner publication authority. Full08NOT_MET,09connected NOT_STARTED; see original08
+journal for cleanup, runtime and the actual Core mounting action.
+
+**Original08 actual Core inputs22:50UTC:** the
+[same native commissioning packet](integration/execution-native-read-v1/native-db-commissioning/README.md#current-core-private-inputs--2026-10-182250utc)
+now records six actual same-RR/READONLY observations, genuine Core DB/39-ledger/
+identity/workspace pins and inactive root0600 configuration for six selections/
+two offline owner intakes. Six actual-file offline cases PASS,0FAIL/SKIP;
+first runner-startup failure retained, no DB/source request, grant install or
+secret transfer.41runtime tuples unchanged, helper/lease cleanup complete.
+Current Core WIP differs in17of43authored paths;14match qualified bytes,
+6match base and6are missing. Preserve active peer tests/source/index and
+reconcile/qualify those actual bytes before mounting. This is owned08integration,
+not connected acceptance or a reason to replace genuine current authority.
+
+**Original08 actual native producer22:25UTC:** the
+[actual commissioning packet](integration/execution-native-read-v1/native-db-commissioning/README.md)
+now supersedes older uninstalled-native statements for the exact TS target:
+GUARDED schema/3new identity mappings/3roles and6genuine Bobby/Stan READ
+acceptances across paper/sandbox/live. Actual source/control observation and
+SCRAM/ACL checks PASS. One new stable service binds WireGuard10.70.0.2:28445,
+5actual TLS/deny probes PASS; no admin credential/CA private key in serving.
+Old715relation metadata/40services unchanged; disposable tests cleaned.
+This closes native source preparation/installation/producer mounting only:
+current Core consumer and connected revoke/cache/cursor/SSE remain unfinished
+original08work, full08NOT_MET,09connected NOT_STARTED. No positive business
+delivery, command/capital or production-capacity qualification is inferred.
+
+**2026-10-18 current original08 continuation:** Bobby approved qualified source
+publication, actual current-Core consumer/provider binding and the existing
+07/03/01/06→09connected→10→11 completion sequence. The
+[complete qualified source handoff](integration/execution-native-read-v1/README.md)
+is source-only: original26delta/213receipts preserved; additive30-file complete
+profile repairs four missing prerequisites and reproduces all697qualified hashes
+against667unchanged0d5dependencies. Full apply/hash/no-op/reverse round-trip and
+14publication-guard units PASS. Historicalff83production/seven-spec strict PASS
+does not qualify the latest current-Core5291a80f integration. Its three overlaps
+are reconciled, preserving pending-recall and the legacy qualification guard;
+the32-file [current source profile](integration/execution-native-read-v1/current-core-profile/README.md)
+now has fresh production/seven-spec strict gates and233unique cases PASS,
+0FAIL/ERROR/SKIP on5291. Prior229's227PASS/2FAIL remain recorded; no historical
+PASS inherited. Source preflight remains a separate mandatory check, not
+connected/provider acceptance. Original08 remains owned
+implementation IN_PROGRESS/NOT_MET, not an external blanket wait or connected
+release. The newer [current-Core SSE/runtime source profile](integration/execution-native-read-v1/current-core-runtime-profile/README.md)
+freezes43authored files/full1154app-source closure against the SAME5291base.
+Fresh production/14-spec strict gates and389unique regression/unit plus4separate
+actual-PG rollback cases PASS, zeroFAIL/ERROR/SKIP;393distinct across two runs,
+not one393run. This includes all360finite/SSE cases on the fuller source, no
+historical233or tainted SGP191942credit. The original SGP raw360PASS remains
+TAINTED by an unowned Playwright job. The still-unstarted narrow retake is
+explicitly superseded only after the stronger profile/preimage roundtrip is
+verified; retain terminal proof and exact source/public cleanup, not a fake
+result. No guard/timeout/target assertion is weakened.
+SSE reuses the existing coordinator/Hub and joins actual late completion.
+Optional private runtime refs select the genuine same-pool/trust/mutation
+composition; loader units mock filesystem/composition, not actual factory
+commissioning. PG15reference is independently exported from exact9source files,
+but permissions/identities/runtime are NOT installed. Current32finite profile
+stays frozen. No deploy/shared-cache edit/operational DB mutation follows.
+Actual provider/schema/identity/current-Core mount and connected revoke/cache/
+cursor/SSE remain owned08work, not a new phase. See the
+[campaign main journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md)
+for current source/runtime/cleanup and scoped next actions; historical tracking
+below does not supersede this continuation.
+
+**Publication/cleanup verified21:07UTC:** source commit9d9d0950 is pushed and
+ls-remote verified on awesome-portal/feat/execution-edge-upgrade-v1_2.
+Normal hook PASS includes this worktree's717Control API cases and restore,
+not another393-case run. Five obsolete HK copies121659211logicalB, exact SGP
+source/public copy293925322B and redundant HK public tar141824000B removed;
+bounded receipts/pins retained. Own unreferenced hook-test image index removed,
+428shared BuildKit records retained/new own IDs0, no broad prune.40HK/51SGP
+runtime tuples unchanged. Original SGP retake was deliberately retired before
+starting, never reported as a test PASS/failure. Full08 remains NOT_MET;
+actual provider/schema/identities/factory and connected drills are unfinished
+owned work. Main journal records exact targets, hashes, disk and current
+parallel-source/release/runtime pins; no operational activation occurred.
+
+**Original08 factory continuation21:34UTC:** actual filesystem/private references,
+genuine composition and actual AppModule factory now PASS seven focused cases
+on a fresh PG specimen with exact39stable migrations plus132/134/Candidate;
+strict compile PASS. Initial old finite-golden setup failure is retained;
+new current-SSE reference was independently exported/reviewed in another
+specimen (one export case PASS). See the [factory qualification](integration/execution-native-read-v1/current-core-runtime-factory/README.md).
+No production source was changed and no production DB/policy/identity/provider
+installed. Exact redundant1163-file/20410651B test copy removed,40runtime
+tuples unchanged,0own containers/networks/lease. Actual provider/Core runtime
+commissioning and connected revoke/cache/cursor/SSE remain OWNED08work;
+full08NOT_MET,09connected NOT_STARTED. This does not recertify393or717tests.
+
+- **Original08 acceptance runner,20Oct — ISOLATED_QUALIFIED:**
+  [current same-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08--active-sse-observation-and-independent-stream-revoke-preparation-20oct)
+  and [owner packet](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md).
+  Same bounded GET-only runner now holds active SSE for observation and binds
+  independent STREAM-only official revoke while preserving READ/native.
+  66unit PASS (40previous+26new), no mutation or final-egress claim.
+  Core009 revision3 producer corrections are received; actual PG qualification
+  and real installation remain separate gates; full08NOT_MET,
+  09connectedNOT_STARTED. Exact hook/publication/cleanup lives in main journal.
+
+- **Original01/06 offline host-lock alignment,20Oct:**
+  [same-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--offline-preparation-and-current-host-lock-class-alignment-20oct)
+  applies root34b to preparation/current-lock classification only. Historical
+  recorded-run taint/ownership and all source/budget gates remain strict;
+  no benchmark, production-capacity proof or runtime mutation follows.
+
+- **Original01/06 shared governed composition,20Oct — ISOLATED_QUALIFIED:**
+  [same-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--shared-governed-pgcachefanout-composition--20oct1305utc)
+  composes existing governed PG/cache/fanout with the same resource envelope,
+  finite TEST_ONLY fault/recovery/lifetime cases and bounded runner receipt.
+  Runner119PASS (12new); selectedRust316PASS (3new), actual disposable PG,
+  fmt/strict all-target Clippy/449input immutability PASS. Staged impact retake
+  preserves failed timeout/count-input/lint predecessors, not an uninterrupted
+  full-run PASS. Cleanup and ordinary-hook evidence linked from the journal. No
+  production metrics service, numeric budget, deployment or capacity acceptance.
+
+- **Original04 bounded report HTTPS preparation,20Oct — ISOLATED_QUALIFIED:**
+  [same-phase scope and journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original04--bounded-selected-report-https-exchange--20oct1215utc)
+  adds a separate fixed-origin TLS1.3/mTLS delivery client for the exact sealed
+  report POST bytes; externally issued request-bound assertion, bounded active
+  plus queued admission and total deadline, no proxy/redirect/application retry.
+  Responses stay UNTRUSTED; no source proof/apply/ACK, route or runtime change.
+  Offline fmt/full63tests (26new)/strict all-target Clippy PASS. Exact cleanup
+  and ordinary-hook/publication closeout remain linked from the journal. The paired
+  capacity descriptor now distinguishes historical errors from DLv2.2.5's
+  current source scope;60existing offline preparation cases PASS, no benchmark.
+
+- **Original03–11 runnable-first correctness preparation,20Oct:**
+  [same approved-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
+  pins159focused PASS (27new), nonexclusive own activity lifecycle, bounded
+  inode/payload verification/cleanup, one-core native-driver Cargo and `--rm`
+  disposable PG. Peer correctness/measurement activity no longer blocks these
+  correctness drivers. Absolute observer measurements remain exclusive and
+  correctness receipts cannot prove capacity. Core009 revision3 focused
+  qualification is terminal89PASS (3actualPG+86fixtures), build/restore PASS,
+  separate from ordinary fullR3, installation and genuine08 acceptance.
+  Additive original04 PM selected-report wire now37/37PASS (31new), fmt/strict
+  all-target Clippy PASS; [bounded proof](evidence/execution-edge-v1_2/EPG10-04/report-publication-wire-qualification.json).
+  Pure UNTRUSTED AS_PUBLISHED report parsing/request bytes only; no new runtime,
+  auth, source proof, projection ACK or native connected acceptance.
+
+- **Execution Edge v1.2 / EPG10-00 (2026-10-15):**
+  [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
+  is `EPG10-00_COMPLETED_INVENTORY_ONLY`, on
+  `feat/execution-edge-upgrade-v1_2` from current `origin/dev` at
+  `533162635f56584d630e3d971d77d50860595f15`. Four supplied guides retained
+  byte-identically. Six offline metadata cases PASS; 14 source pins, 39 guide
+  families, 15 decisions and current image/config/TLS metadata recorded. Manager
+  issuer/facade leafs expired; N03/P16 external publication and PM full export
+  remain unqualified. These are owned affected-path dependencies, not runtime
+  certification. No product code/build, DB/service change or activation.
+  **EPG10-01 approved/in progress, available-source continuation delivered:**
+  both-host120s passive observations, bounded real retained reads and exact
+  isolated replay target measured/cleaned.53offline tests+six00metadata PASS;
+  two existing+two isolated repository runs,20subcases PASS; native migration
+  idempotency/six-table3,623row byte parity PASS. Narrow numeric proposals recorded,
+  not production defaults. Formal T01:0PASS/3PARTIAL/2NOT_RUN/1BLOCKED; **exit not
+  met**, no whole-stack B0/B1/B2/6k/9k or approved14-group production budgets.
+  See §23.10.1 and current inventory §7 for exact owners/next actions. New
+  candidate02/03/04 work and TS/PM publication/TLS dependencies are separate.
+  **EPG10-02 completed, contract-only (2026-10-16):**42logical families with
+  source/owner/history/gap metadata; unchanged mirrored Research ELP2 foundation;
+  additive Rust exact metadata/cursor/pagination primitives, metric dependencies
+  and PM-R2/Archive/Regime fixtures.11formal cases,36Rust+12Python PASS;
+  57shared FX vectors match, fmt/clippy PASS. See §23.11 and02receipt. No runtime
+  activation/DB mutation; owned602MB compile fixture/cache/target removed.
+  **EPG10-03 approved/in progress (§23.12):**6native Rust real-PG tests,
+  12runner safety and12catalogue regressions PASS; formal T03:4PASS/1BLOCKED,
+  **exit NOT_MET**. Reproduced TS generic publisher-generation fence gap;
+  single TS/PM return packet linked in03. No all-writer or external N03/runtime
+  acceptance; exact owned1.315GB temporary test/build/cache cleaned.
+  **04 approved/in progress (§23.13), owned implementation tested/source-dark:**
+  scoped Rust bootstrap/delta, atomic projection/checkpoints/generation pointer;
+  99automated PASS,0FAIL/skip, fmt/strict clippy PASS;8formal cases PASS isolated.
+  Full connected exit NOT_MET for existing03publication +01capacity/permissions,
+  no owned defect waived. Own1.909GB source/target/cache and test PG/lock cleaned;
+  12HK+5SGP runtime tuples unchanged/restarts0.
+  **05 approved/in progress, owned implementation tested/source-dark (§23.14):**
+  scoped read/history/export/cache and notification-only fanout;191automated PASS,
+  0FAIL/skip, fmt/strict clippy PASS,8formal families PASS isolated. Connected exit
+  NOT_MET for04source +06budgets +08read-security/TLS +partner BFF receipts;0owned
+  debt. Own2.266GB private build/cache/test source removed;12HK+5SGP protected
+  tuples unchanged/restarts0. No BFF route/source activation.
+  **06 approved/in progress (§23.15):** shared logical resource envelope,
+  reserved04/05 pre-pool admission, aggregate cache/fanout registration and
+  Manager recurrence/mixed-cadence correctness + bounded hot-path work; isolated
+  qualification317PASS/0FAIL/skip, fmt/strict zero-warning Clippy PASS.
+  Owned package qualified/source-dark; full06exit NOT_MET for01numeric budgets,
+  03publication, fresh paired measurements and Research returns. Own5.863GB test
+  source/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0. No runtime/source
+  mutation or capacity claim; §23.15 links exact evidence and consolidated actions.
+  **Owner clarification:** independently runnable approved work must execute
+  immediately, not wait behind unrelated blockers or move into07; budgets/
+  instrumentation/target preparation stay owned work. Canonical rule10a and
+  Portal `AGENTS.md` closeout rule apply; locks and activation gates unchanged.
+  **06 preparation continuation verified:**70offline helper/observer PASS,
+  0FAIL/error/skip +2actual CLI checks; explicit logical sizing/pool/all-copy
+  sheet, all14collector mappings and12-cell B0/B1/B2 descriptor implemented.
+  Descriptor is not a deployed stack or capacity receipt; unknown memory/source
+  pins remain explicit. Full06 NOT_MET; connected runtime/measurement work stays
+  in06. Evidence/reproduction and cleanup are in §23.15, not deferred to07.
+  **07 approved/in progress (§23.16):** bounded durable command relay, Portal PG
+  correlation/receipt CAS and independent human/status versus service recovery
+  seams qualified source-dark; final416automated PASS/0FAIL/skip, fmt/strict
+  zero-warning Clippy PASS. Full07 exit NOT_MET: actual command wire/current
+  providers/publication and connected Edge binding are absent. Own7.365GB test
+  copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0. Evidence and
+  one same-phase owner return are linked in §23.16; no runtime activation.
+  **08 approved/in progress (§23.17): independent round complete, three integration
+  debt items OPEN for round2;09 independent round COMPLETE in§23.18:
+  606PASS, fmt/strict Clippy PASS, no runnable owned work left; full connected
+  gate NOT_MET with four scoped integration-return groups.** [09 evidence/owner return](evidence/execution-edge-v1_2/EPG10-09/E2E_AND_OWNER_RETURN.md)
+  maps all21cases/11XLC without upgrading isolated tests to connected acceptance.
+  Own8,386,752,512B test artifacts removed,23protected runtime tuples unchanged.
+  **10 independent round COMPLETE/full connected NOT_MET (§23.19):** additive Rust held-shadow/CAS/
+  read-rollback/status and source-dark release template/runbook implemented;
+  final519tests/fmt/strict Clippy PASS;8,416,370,688B private test artifacts
+  removed,23protected tuples unchanged. Single [10 packet](evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md)
+  records six scoped round2 returns; no runnable owned work left in10. **11 independent
+  operational handoff COMPLETE (§23.20):535PASS/fmt/strict Clippy;8,619,655,168B
+  disposable artifacts removed,23protected tuples unchanged.** [11 handoff](evidence/execution-edge-v1_2/EPG10-11/OPERATIONS_HANDOFF_AND_ACCEPTANCE.md)
+  records5scoped acceptance cases and current source/retention/alerts/restore
+  limits; no owned runnable work left. Full connected10/11 NOT_MET under the
+  original six returns, no duplicate generic approval. No actual connected cutover,
+  authority/route/runtime activation.
+  Current-scope provider adapter over05,
+  checked bounded JWT/JWKS, legacy SSE expiry fix, explicitCA-only TLS1.3,
+  selected-payload secret defense qualified source-dark: final490automated PASS,
+  0FAIL/ignored/skip, fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for
+  actual providers, TS commit/business proof and researcher field implementation.
+  [Original10/11 round2 intake](evidence/execution-edge-v1_2/EPG10-11/round2-intake.json)
+  consumes PM current-human candidate0e7059cc (23 peer TEST_ONLY PASS) and the
+  owner-accepted r1 field matrix; neither is installed runtime authority.
+  Research retry landed clean`d92efc0e`/normal-hook PASS; the earlier exit124 is
+  historical, not a current blocker or connected acceptance. PM financial/
+  composition source now965pytest PASS/25offline separate, committed84456381;
+  provider-publication evidence is consumed, not pending WIP publication. No
+  runtime certification. Actual authenticated current provider/export/mapping
+  remain unbound.
+  Latest original-round2 follow-through: PM HTTP1009PASS/owning outcomes/private
+  composition now consumed; Edge pure PM source codec75PASS/strict Clippy/fmt and
+  scoped cleanup COMPLETE. Full10/11 NOT_MET. Next08 real trust commissioning,
+  separately07 mounted transport/08-command COMMIT; then connected09→10→11.
+  No12/new approval; codec receipt linked from main plan§23.20.2. Fresh
+  commissioning intake§23.20.3 pins PM5f0d60b2/Research9a3a27c8: concrete
+  workload/app/field producer and source-backed verifiedHumanMapping are still
+  missing implementations, not merely deployment flags. Existing human TLS/
+  session/read wrappers are implemented; do not rewrite them or invent grants.
+  See [current08 intake](evidence/execution-edge-v1_2/EPG10-08/commissioning-intake.json)
+  and its single owner packet for exact callbacks and split read/command work.
+  Bobby now assigns producer implementation itself (main plan§23.20.4): preserve
+  PM accepted-current-source WIP, implement existing-only TS identity lookup on
+  its private listener plus Research authenticated client/AccessTrust composition.
+  [Wire boundary](evidence/execution-edge-v1_2/EPG10-08/existing-identity-mapping-contract.json)
+  is preflight only, never user creation/business permission/COMMIT proof.
+  [Producer qualification](evidence/execution-edge-v1_2/EPG10-08/producer-qualification.json):
+  PM mappingf9b5b32c61freshPASS; Research103fresh focusPASS including admission/
+  installation-expiry fixes; Research8ba33de3 normal hook exit0 with691contracts
+  PASS/4463API PASS/3SKIP, source build and PG restore. Whole-source monitor
+  NOT_PASS retained for two concurrent peer files; exact own source/test/journal
+  pins match. No immutable whole-branch/runtime acceptance. PM74474c96
+  current source/importer has separate owner292functional/25offline receipt.
+  Actual stable identity/trust/source installation still unqualified; actual08
+  not accepted, no connected09. PM stored BUSINESS report66743c88 is now
+  source-qualified (416ownerPASS); restricted-r1 projection remains PM-owned.
+  Concrete current-relations producer is also still missing: PM per-scope
+  native receipts have no agreed normalization to Core's one membership tuple.
+  This is producer contract/implementation work, not config-only debt. Existing
+  Historical integration-only intake found one invited user; do not treat it as
+  stable status. [Volume-resolved audit](evidence/execution-edge-v1_2/EPG10-08/database-volume-audit.json)
+  /main§23.20.5 confirms stable bobby/stan/thanhvuong all ACTIVE, distinct dev and
+  Research volumes (preview Bobby ID differs), actual TS volume trading_system_pgdata.
+  Existing Manager target has none of seven requested new identity/authority
+  relations in bounded catalogue read; do not repurpose it as the PM target.
+  No new stable invitation/duplicate identity/grants. PMd95bf36a now supplies
+  native correspondence proposal/oracle263owner PASS, not a Core-compatible
+  authenticated producer or installed authority. Restricted-r1 source c7c3997f
+  is qualified, not unfinished code/missing approval; actual source installation
+  remains open. Preserve current peer source/index and active correctness windows.
+  New [original08 continuation§23.20.6](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23206-original08--resource-scoped-authority-completion-and-reviewed-installation)
+  has final135focused PASS (72new+63legacy), compatible per-resource/environment
+  current proof and original full-fact digest; PM source-only review agrees.
+  Research commitd483357a landed through its normal hook:715contractsPASS,
+  4825API PASS/3SKIP, build and scoped-access PostgreSQL restore PASS. The
+  enclosing whole-worktree guard remains NOT_PASS:17peer code/test/doc paths
+  changed concurrently; all11owned source/test paths still match qualified pins.
+  Earlier failures/refusals are retained separately, not erased or summed.
+  See [bounded receipt](evidence/execution-edge-v1_2/EPG10-08/current-correspondence-qualification.json).
+  Owner has resolved governance: Bobby protected OWNER full authority, Stan may
+  manage subordinate grants inside Bobby's ceiling, never Bobby/self-elevation.
+  This is not command/financial activation. Native SELECT-only observer private
+  run130PASS; final canonical source148PASS includes18owner-policy cases,
+  committed on PM branch as003d08d4. Separate private/uninstalled fence58PASS
+  is an experiment, not canonical product/complete writer/capacity qualification;
+  observations/component tests are not held/runtime authority.
+  Native authenticated producer/census/held fence and reviewed bootstrap/runtime
+  installation remain incomplete, not config-only external debt. Full08 NOT_MET,
+  no connected09/authority activation or repeated general phase approval.
+  Latest [source/runtime/cleanup reconciliation](evidence/execution-edge-v1_2/EPG10-08/current-correspondence-runtime.json)
+  records18HK+10SGP unchanged tuples,2,262,040B HK and2,128,920B SGP terminal
+  source/archive cleanup; no new image/build/cache or operational change.
+  Actual connected08→09→10→11 NOT_MET; no runtime mutation.18HK+8SGP protected
+  tuples unchanged; exact test cells/lease cleaned and49,616,770B source copies
+  removed. Shared Docker/cache pruning deferred under active peer jobs.
+  Historical08 completion round after the earlier PM deferral recorded
+  PM`c401a023` still explicitly NOT_PUBLISHED for runtime authority/COMMIT proof;
+  Research`169195ca` has no production provider and UNMAPPED identity. The single
+  owner packet names RG03/RG08 read-provider/mapping returns and separate
+  researcher/command decisions; manager read does not wait for all PM13/P184.
+  Do not fake grants or edit peer WIP.12:55UTC read-only audit matches18HK+5SGP
+  post-repair image/config/restart tuples; no new runtime mutation or tests.
+  Exact6Manager+3Proxy TLS repair is connected-qualified:6TLS/12positive/
+  12denial PASS, final46helper tests PASS; valid same-identity fallback loaded.
+  Eight formal families have limited isolated proof;
+  T08-03 business model remains partial. Own8.388GB artifacts removed;
+  Additional212,992B test targets removed; all23images/configs unchanged,
+  only6approved Manager start times/counters changed; no Edge/DB restart.
+  First incorrect method assertion and safe containment/recovery retained in
+  §23.17/TLS continuation. No authority activation or peer changes; historical
+  phase approval status is superseded above (10 approved,11 not started).
+  01capacity exit remains unmet, not waived.
+  No operational runtime/source/credential change, push or merge. Only owned
+  test containers/private fixture/tempfiles removed; no image build/pull/prune.
+
 **Delivered since the runway note above** (commits on
 `chore/v1.1-roadmap-taskboard`):
 

@@ -18,6 +18,7 @@ const MAX_CURRENCY_PARTITIONS: usize = 64;
 const MAX_CORRELATION_ALPHAS: usize = 20;
 const CURRENT_SOURCE_HISTORY_GAP: &str = "N25_CURRENT_SOURCE_HISTORY_NOT_INCREMENTAL";
 const CURRENT_SOURCE_SESSIONS_GAP: &str = "N25_CURRENT_SOURCE_SESSIONS_NOT_INCREMENTAL";
+const POPULATION_UNPROVEN: &str = "N25_SOURCE_POPULATION_UNPROVEN";
 type DailyDecimalSnapshots = BTreeMap<chrono::NaiveDate, (DateTime<Utc>, Decimal)>;
 type StrategyCurrencySnapshots = BTreeMap<(String, String), DailyDecimalSnapshots>;
 type AlphaDailySnapshots = BTreeMap<String, DailyDecimalSnapshots>;
@@ -196,7 +197,7 @@ pub fn build_manager_query_analytics(
         validate_chart_batch(&chart_series)?;
     }
     chart_series.sort_by(|left, right| left.series_id.cmp(&right.series_id));
-    let replay = replay(&input.facts)?;
+    let mut replay = replay(&input.facts)?;
     let drawdown_overlap = drawdown_overlap(&input.facts)?;
     let mut correlation = manager_correlation(&input.facts)?;
     if !historical_series_source_present {
@@ -241,7 +242,7 @@ pub fn build_manager_query_analytics(
     } else {
         AnalyticsCapabilityState::Empty
     };
-    let capabilities = vec![
+    let mut capabilities = vec![
         capability(
             "exact-query",
             AnalyticsCapabilityState::Available,
@@ -361,6 +362,37 @@ pub fn build_manager_query_analytics(
             Some("N28_TWIN_PROFILE_JOIN_NOT_ACTIVATED"),
         ),
     ];
+
+    if input.completeness != PopulationCompleteness::Complete {
+        for capability in &mut capabilities {
+            match capability.state {
+                AnalyticsCapabilityState::Available => {
+                    capability.state = if input.facts.is_empty() {
+                        AnalyticsCapabilityState::Unavailable
+                    } else {
+                        AnalyticsCapabilityState::Partial
+                    };
+                    capability.reason_code = Some(POPULATION_UNPROVEN.to_owned());
+                }
+                AnalyticsCapabilityState::Empty => {
+                    capability.state = AnalyticsCapabilityState::Unavailable;
+                    capability.reason_code = Some(POPULATION_UNPROVEN.to_owned());
+                }
+                AnalyticsCapabilityState::Partial | AnalyticsCapabilityState::Unavailable => {}
+            }
+        }
+        if replay.state == AnalyticsCapabilityState::Empty {
+            replay.state = AnalyticsCapabilityState::Unavailable;
+            replay.reason_code = Some(POPULATION_UNPROVEN.to_owned());
+        }
+        if correlation.state == AnalyticsCapabilityState::Available {
+            correlation.state = AnalyticsCapabilityState::Partial;
+            correlation.reason_code = Some(POPULATION_UNPROVEN.to_owned());
+        } else if correlation.state == AnalyticsCapabilityState::Empty {
+            correlation.state = AnalyticsCapabilityState::Unavailable;
+            correlation.reason_code = Some(POPULATION_UNPROVEN.to_owned());
+        }
+    }
 
     Ok(ManagerQueryAnalytics {
         schema_version: "execution.query-analytics.v1".to_owned(),
@@ -1160,6 +1192,55 @@ mod tests {
                 && capability.reason_code.as_deref()
                     == Some("N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED")
         }));
+    }
+
+    #[test]
+    fn incomplete_population_never_claims_empty_or_fully_available() {
+        let mut source = input();
+        source.facts.clear();
+        source.completeness = PopulationCompleteness::Unknown;
+        let empty = build_manager_query_analytics(&source).unwrap();
+        assert_eq!(empty.completeness, PopulationCompleteness::Unknown);
+        for id in [
+            "exact-query",
+            "position-exposure",
+            "order-funnel",
+            "replay-journal",
+        ] {
+            let capability = empty
+                .capabilities
+                .iter()
+                .find(|item| item.capability_id == id)
+                .unwrap();
+            assert_eq!(capability.state, AnalyticsCapabilityState::Unavailable);
+            assert_eq!(capability.reason_code.as_deref(), Some(POPULATION_UNPROVEN));
+        }
+        assert_eq!(empty.replay.state, AnalyticsCapabilityState::Unavailable);
+        source = input();
+        source.completeness = PopulationCompleteness::Partial;
+        let partial = build_manager_query_analytics(&source).unwrap();
+        assert_eq!(partial.order_funnel.total_orders, 1);
+        for id in ["exact-query", "position-exposure", "order-funnel"] {
+            let capability = partial
+                .capabilities
+                .iter()
+                .find(|item| item.capability_id == id)
+                .unwrap();
+            assert_eq!(capability.state, AnalyticsCapabilityState::Partial);
+            assert_eq!(capability.reason_code.as_deref(), Some(POPULATION_UNPROVEN));
+        }
+        assert_eq!(partial.replay.state, AnalyticsCapabilityState::Partial);
+        source.completeness = PopulationCompleteness::Complete;
+        let complete = build_manager_query_analytics(&source).unwrap();
+        assert_eq!(
+            complete
+                .capabilities
+                .iter()
+                .find(|item| item.capability_id == "order-funnel")
+                .unwrap()
+                .state,
+            AnalyticsCapabilityState::Available
+        );
     }
 
     #[test]

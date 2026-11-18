@@ -1,0 +1,158 @@
+{
+  "schema_version": "execution-edge.native-business-root-recovery-qualification.v1",
+  "phase": "EPG10-08",
+  "recorded_status": "NATIVE_BUSINESS_READ_RECOVERY_SOURCE_QUALIFIED_UNMOUNTED_FULL08_NOT_MET",
+  "provenance": "TEST_ONLY_ISOLATED_POSTGRESQL_COMPONENT_NOT_INSTALLED_AUTHORITY_OR_CAPACITY",
+  "source": {
+    "portal_branch": "feat/execution-edge-upgrade-v1_2",
+    "portal_entry_commit": "ffedd862db74a2cdb204d03afc853f8e848df966",
+    "pm_branch": "feat/portfolio-account-v1_1-parallel",
+    "pm_entry_commit": "7ea79f91f9f4c0e1a24c1f978a9268ff7a4f7346",
+    "pm_source_commit": "db95be4cfb732438d5e062148512e3f018b13de2",
+    "prepared_target": "/tmp/epg10-08-recovery-HK-NafwU29b",
+    "source_count": 37,
+    "logical_bytes": 475598,
+    "prior_35_source_snapshot_unchanged": true,
+    "source_pins": {
+      "contracts/baseline/portfolio-account-v1_1/pma11-04-membership-candidate.sql": "43dbebc8d776ba12a990127ac7d3e6a0c74059c8e374d9256718c52f6afe53ef",
+      "contracts/baseline/portfolio-account-v1_1/pma11-business-root-fence-candidate.sql": "5692f7ad6fa918f6a3f0511b02ec2b8969e0047e109e3b577d3cde8757c3f269",
+      "contracts/baseline/portfolio-account-v1_1/pma11-business-root-guards-candidate.sql": "c1cd273561d198f5e52664592f0284c0f2feca4255b99a3ed4bcad0080f2d57a",
+      "contracts/baseline/portfolio-account-v1_1/pma11-business-root-read-candidate.sql": "74a5ee6e1e9732882b6d3ac8da75adebedd11afcf32aad2ad17d33d9f65173fe",
+      "init-db/05-trading-core-v2.sql": "0788a9766623f39c5fcc1be2f1abdf864fbc33c7323e20777710bcbd6fd719f7",
+      "init-db/11-portfolio-management.sql": "2a1f02f9ecd99d6123a3bd463ded23ee26212633611c662d53031033b4ab7fcb",
+      "init-db/99-pma11-verified-user-identity.sql": "80514c246e40fe26ef0d43f311fbc9c39bf3b57f354ca2cbff4e4f5ca2ef7752",
+      "scripts/pma11_migration_controller.py": "dc7c585407d30f88cd0108033026116afe802efd960e782d9413fdcc38f629b4",
+      "scripts/pma11_migration_rehearsal.py": "78026c9df0dc18034a11a65e33113096c0493dc44c6d919984eab34b726d02a4",
+      "services/portal_execution_owner/__init__.py": "6b08776bb2a25c856f424b348e21e1aeaf5c3cef5012fd64b50757520ad02d9b",
+      "services/portal_execution_owner/identity/__init__.py": "bdbcd135596777825a8bf5726a12877f8e7f7690fc2d43f1b62f1cb028940461",
+      "services/portal_execution_owner/identity/manager.py": "510f780020c1ea5cf4513ca723c433fea0fef1cc78971a8e81af0d392417bb7e",
+      "services/portal_execution_owner/identity/policy.py": "bafdd1bd87e0d04eca69ac7488b56ac486f24e4ac3aee0def2be9dcee1bf111a",
+      "services/portal_execution_owner/identity/users.py": "3662621feec536ce6f09886acc01c5c72199c0a6ad59d43acf852e080085a8e0",
+      "services/portal_execution_owner/query/__init__.py": "c0e0a6ecd6fa01d31a7126300fe3d30c4aafa99fa7a7a51b398229f69a570da0",
+      "services/portal_execution_owner/query/adapter.py": "c5de4ad9fa72bcee4798fe0106917c0ae64b6725161c42a56bb160a9c63ba464",
+      "services/portfolio_management/__init__.py": "53c1012837d74fcc1dc479b6181da3acbcd5b2c71c4cdddeceec61963f816e0b",
+      "services/portfolio_management/business_root_held.py": "0b2b4b9163c14b4c452ab184d6ed56c751d35a8f9ba39071d30bfe38ce4e11b3",
+      "services/portfolio_management/business_root_read.py": "2606c1976fdc7382977ad36ba9b64cd748be538d7c768e388c49a7e982a50d66",
+      "services/portfolio_management/membership_contract.py": "4217d65f364186b45a83da49b76a3d05fadae2a7d05c66fcef5e947ad94328f6",
+      "services/portfolio_management/membership_repository.py": "6ef83d4b503fd9366566d15c07069b5e3376bb52e9b188804fddddffdde0c2b1",
+      "services/portfolio_management/native_fence.py": "75bf3db97d0c6d8283cd222dec8394635d335b0d68d47d1a51a968b41f287e12",
+      "services/portfolio_management/native_relations.py": "219ea61d295ca9e5efcf88ab78ddae593de473c126e0d478fc51f0a8aa787c7c",
+      "tests/__init__.py": "37f29f971ac8d2ecd7ee967f424be4b51a1eba34bc7faeaad2fc96c33a2e654f",
+      "tests/integration/conftest.py": "cfb433773938b401561fd73eda79fabfcfa51c07944043b0a935853153f4f3af",
+      "tests/integration/test_pma11_business_root_held_pg.py": "e26f72aa922e61543a588743a4472030f7406c8676d834950af43a0843fceeef",
+      "tests/integration/test_pma11_business_root_read_repository.py": "efa720c82747e1b1e63feb51606fd0e05a756eac5d93728360abf7b1364a8733",
+      "tests/integration/test_pma11_business_root_recovery_pg.py": "e4e4ffdb5adbdfea0dca1d60a2e34de802fdeac2629e1b861358c551ce8d6254",
+      "tests/integration/test_pma11_membership_repository.py": "484580390c01f7b948f0eefb8ce9baacc9ee057b955c935e5ec5412bf724858e",
+      "tests/integration/test_pma11_native_relations_repository.py": "3de805c523e9c135ab6cd04d3071ae7d21fda6d119570cf3a9fabdb278ff2a54",
+      "tests/unit/__init__.py": "62c2f766eca3639d54d1d6a927eed64cf8193e8779e737708a2c192d1210abb6",
+      "tests/unit/test_pma11_business_root_held.py": "17eff09da41582d585a2ea2cfc1261ad8825fcdf8b2f870bcbda7415d64d20f4",
+      "tests/unit/test_pma11_business_root_read.py": "5e52137bf6ea29b1cddc6852fa9c08758e7e8ee210e1252e27e31b30e543f17b",
+      "tests/unit/test_pma11_business_root_recovery.py": "91b25832c25e8a692cf7615bbade04faf59dcff935fa66efd7a1939cc0c57b92",
+      "tests/unit/test_pma11_membership_contract.py": "1309fe49890919a46831d8133ae563bc3862f2c58821da115a72766a436e7b17",
+      "tests/unit/test_pma11_native_observation_dependencies.py": "e38c6d440aa08f110f3863ffbb6319781f919e91b24b5b98f1c867359102c459",
+      "tests/unit/test_pma11_native_relations.py": "c058b80a4a86d8a83f3ed8e699f04ae951286888585d3189ee65a715d6da56d7"
+    },
+    "private_recovery_outputs": {
+      "patch_sha256": "15be6f6221d7c039ef2dd2b66c52fbee197e487a964721b684ab7ff981193101",
+      "unit_sha256": "4a92d42c8ea75bba0598ce07fab7ec8e5766270c512d0fda4ce91d8f1b153f8d",
+      "pg_sha256": "50e3a259b3e6b939bafe68b86b90fdefbf15bb214d5ff3821f29660e3609d8c0"
+    }
+  },
+  "test": {
+    "result": "PASS",
+    "counts": {
+      "tests": 93,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "prior_regression": 68,
+    "new_unit": 15,
+    "new_actual_postgresql": 10,
+    "started_utc": "2026-10-17T12:48:01.700452+00:00",
+    "ended_utc": "2026-10-17T12:48:38.455199+00:00",
+    "elapsed_seconds": 36.86,
+    "selected_tests": [
+      "tests/unit/test_pma11_business_root_held.py::BridgeTests",
+      "tests/integration/test_pma11_business_root_held_pg.py::BusinessRootHeldPgTests",
+      "tests/unit/test_pma11_business_root_read.py",
+      "tests/unit/test_pma11_business_root_recovery.py::RecoveryUnitTests",
+      "tests/integration/test_pma11_business_root_recovery_pg.py::RecoveryPgTests"
+    ],
+    "raw_receipt": "/tmp/epg10-08-recovery-HK-NafwU29b/attempt-124801/receipt.json",
+    "receipt_sha256": "25bbdfa49197c25c4bbe15b899009a34c48c5ca0871436d717ad638fa4fc2b09",
+    "junit_sha256": "fc72d1e247bed2effaf49299e5634248ef80120ab1aae51b6849ffcfcde73c29",
+    "claim_scope": [
+      "same-RR four-table native READ closure and epoch CAS",
+      "explicit immutable global unresolved and retained admission across connections and restart",
+      "same-key serialized absent cancellation tombstone prevents late issue",
+      "physical source COMMIT followed by injected driver ACK loss; not real network outage",
+      "recorded terminal verification from actual DB source digest without reconstructed READ handle",
+      "expiry/UNKNOWN quarantine and unaffected-scope controls",
+      "wrong binding, signer, source fingerprint, catalogue and role fail closed"
+    ],
+    "test_only_limits": {
+      "maximum_unresolved": 128,
+      "maximum_retained": 512,
+      "production_default": false
+    }
+  },
+  "runtime": {
+    "mutated": false,
+    "protected_operational_tuples": 40,
+    "before_sha256": "2c59eba4efea1de3b3adc55fe0e91bfc3a7fa7807e9588d2c08c5c906ab1045e",
+    "after_sha256": "2c59eba4efea1de3b3adc55fe0e91bfc3a7fa7807e9588d2c08c5c906ab1045e",
+    "unchanged": true
+  },
+  "cleanup": {
+    "complete": true,
+    "owned_resources_removed": {
+      "network": "39143532b1d302748a36ea62a28f7631b73ce50310bd7b1ec7f1a3414083b68f",
+      "db": "f9bb76572413f4013ca2d91cc6839339b684628f9a2af4a14b7949e5e8c3183e",
+      "worker": "ae95b7648c497b89583087c56b321718daec08c1c6b3c03222c87bd30163dfa8"
+    },
+    "measurement_lease_removed": true,
+    "free_before_bytes": 236759433216,
+    "free_after_bytes": 236636110848,
+    "shared_host_delta_not_exclusive": true,
+    "new_images_build_cache": 0,
+    "shared_cleanup": "INTENTIONALLY_NOT_PRUNED_ACTIVE_PEER_AND_NAMED_ROLLBACK_RETAINED",
+    "retained": "active private source/harness and bounded receipts pending coherent promotion/provider composition"
+  },
+  "remaining_owned_work": [
+    "authenticated native provider and actual Core client",
+    "genuine native/Core Manager-domain grants and stable identity installation",
+    "current human/app/native authority through owning COMMIT and finite final send/frame",
+    "durable actual sender quiescence/recovery; TTL/absence is not terminal",
+    "reviewed minimal installer/configuration and connected revoke/cache/cursor/SSE drills"
+  ],
+  "non_certifications": [
+    "full EPG10-08",
+    "connected09",
+    "installed/native production authority",
+    "real user/session grant",
+    "full entity ROOT census or fabricated portfolio mapping",
+    "financial/command permission",
+    "production capacity or independent failure domain"
+  ],
+  "previous_attempt": {
+    "result": "PASS",
+    "counts": {
+      "tests": 93,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "receipt_sha256": "59e7b03a5b9a3fbbf75c0770b91031c6e352d6ccfb78356d4c3a40a721e54aa3",
+    "junit_sha256": "1528445cdbff5b3c9c1bc004ede1d465de6c476128c2c0bf2bd50db55d5bb3cf",
+    "started_utc": "2026-10-17T12:43:57.526450+00:00",
+    "ended_utc": "2026-10-17T12:44:33.030157+00:00",
+    "elapsed_seconds": 35.605,
+    "source_logical_bytes": 475600,
+    "provenance": "93PASS before final newline-only normalization; retained, no product failure",
+    "free_before_bytes": 236836282368,
+    "free_after_bytes": 236727173120,
+    "cleanup_complete": true,
+    "runtime_unchanged": true
+  }
+}

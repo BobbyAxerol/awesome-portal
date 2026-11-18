@@ -1,0 +1,1286 @@
+{
+  "schema": "epg10.source-authority-inventory.v1",
+  "phase": "EPG10-00",
+  "evidence_class": "READ_ONLY_METADATA_NOT_RUNTIME_ACCEPTANCE",
+  "capture_scope": "Point-in-time source interface inventory; own feature-base commit precedes this inventory commit. Re-attest affected source/runtime before subsequent phase. Local cached refs are not a remote release claim.",
+  "scope": {
+    "approved_by": "Bobby",
+    "approved_on": "2026-10-15",
+    "design_profiles": [
+      "paper",
+      "sandbox",
+      "live"
+    ],
+    "canary": "Explicit native profile only; not invented as a fourth environment enum.",
+    "runtime_activation_authorized": false,
+    "all_scope_ready": false,
+    "source_db_writes": 0,
+    "source_endpoint_reads": 0,
+    "service_restarts": 0,
+    "credential_changes": 0,
+    "pushed": false,
+    "merged": false
+  },
+  "repositories": [
+    {
+      "id": "edge_upgrade",
+      "host": "AWS_HK",
+      "path": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+      "branch": "feat/execution-edge-upgrade-v1_2",
+      "commit": "ca13617ff273af4b4ad68453b944e83c30a5a19e",
+      "observed_commit": "ca13617ff273af4b4ad68453b944e83c30a5a19e",
+      "observed_at": "2026-10-15T16:31:07+00:00",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "03962002365ea47f4c3a7107fbbda4252b9bf3206a718a8d41e93c039efd16e2",
+      "untracked_paths_sha256": "e3e36b97cda8347d4a7f07af3c1f5ad945f76036a527926154f30bac5477642a",
+      "untracked_count": 1,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 1,
+      "exclusion_reason": "Only explicitly supplied upgrade guides content-hashed; current phase outputs and unrelated/private/generated paths excluded. Point-in-time observation, not a clean-tree assertion.",
+      "tracked_change_paths": [
+        "upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md"
+      ]
+    },
+    {
+      "id": "portal_hk_canonical",
+      "host": "AWS_HK",
+      "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+      "branch": "feat/manager-v2-paper-read",
+      "commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+      "observed_commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+      "observed_at": "2026-10-15T16:31:07+00:00",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "51ffb84753145825dbfd449cfa77440dd156af83e34fc40fd6400b82663e75a4",
+      "untracked_count": 4,
+      "relevant_untracked": [
+        {
+          "path": "upgrade/upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md",
+          "sha256": "9047f765f7878f7284363bc6322ff14f3feb5fff4913cc7d4b9a328afd591985"
+        },
+        {
+          "path": "upgrade/upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md",
+          "sha256": "af6d53725d58aca4dfefb0fb212272c2df281b7d605a1f7bca5e54ced9b2eeb0"
+        },
+        {
+          "path": "upgrade/upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md",
+          "sha256": "0a266334f26d02bc4be858017d44e980e4ab5a4a5a4a007dad6827f565f06b86"
+        },
+        {
+          "path": "upgrade/upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md",
+          "sha256": "d77a05fc0c6b481114c0d4055a2ff0c09f6b7a3cc0ca1447f691d92f139adbad"
+        }
+      ],
+      "excluded_untracked_count": 0,
+      "exclusion_reason": "Only explicitly supplied upgrade guides content-hashed; current phase outputs and unrelated/private/generated paths excluded. Point-in-time observation, not a clean-tree assertion.",
+      "tracked_change_paths": []
+    },
+    {
+      "id": "ts_next",
+      "host": "AWS_HK",
+      "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "branch": "feat/v2-rust-first-okx-demo",
+      "commit": "4e9c5f29313019714bd82aa1b7b491d2689630ca",
+      "observed_commit": "4e9c5f29313019714bd82aa1b7b491d2689630ca",
+      "observed_at": "2026-10-15T16:31:07+00:00",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2",
+      "untracked_count": 1,
+      "relevant_untracked": [
+        {
+          "path": "upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md",
+          "sha256": "1ac56bff4e5728650cdb91df0544a8f3e17c5103d56ad49d3549f4b7e864b6e3"
+        }
+      ],
+      "excluded_untracked_count": 0,
+      "exclusion_reason": "Only explicitly supplied upgrade guides content-hashed; current phase outputs and unrelated/private/generated paths excluded. Point-in-time observation, not a clean-tree assertion.",
+      "tracked_change_paths": []
+    },
+    {
+      "id": "ts_alternate",
+      "host": "AWS_HK",
+      "path": "/home/bobby/.worktrees/trading-system-next-upgrade-claude",
+      "branch": "feat/v2-rust-first-okx-demo-claude",
+      "commit": "1137413a11e562f2591563145ad3b858ff4ce091",
+      "observed_commit": "1137413a11e562f2591563145ad3b858ff4ce091",
+      "observed_at": "2026-10-15T16:31:07+00:00",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "exclusion_reason": "Only explicitly supplied upgrade guides content-hashed; current phase outputs and unrelated/private/generated paths excluded. Point-in-time observation, not a clean-tree assertion.",
+      "tracked_change_paths": []
+    },
+    {
+      "id": "ts_pm",
+      "host": "AWS_HK",
+      "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "commit": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+      "observed_commit": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+      "observed_at": "2026-10-15T16:31:07+00:00",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "exclusion_reason": "Only explicitly supplied upgrade guides content-hashed; current phase outputs and unrelated/private/generated paths excluded. Point-in-time observation, not a clean-tree assertion.",
+      "tracked_change_paths": []
+    },
+    {
+      "id": "dl_closure",
+      "host": "AWS_HK",
+      "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+      "branch": "fix/p184-dl-closure",
+      "commit": "864774d5df6b9cfe8c9163272847619c20ff3b9f",
+      "observed_commit": "864774d5df6b9cfe8c9163272847619c20ff3b9f",
+      "observed_at": "2026-10-15T16:31:07+00:00",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "exclusion_reason": "Only explicitly supplied upgrade guides content-hashed; current phase outputs and unrelated/private/generated paths excluded. Point-in-time observation, not a clean-tree assertion.",
+      "tracked_change_paths": []
+    },
+    {
+      "id": "ts_canonical",
+      "host": "AWS_HK",
+      "path": "/home/bobby/trading_system",
+      "branch": "fix/dev-consumer-recovery-integration",
+      "commit": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+      "observed_commit": "668e10320c0bf5a9089e33b72f317d8d7c7215c3",
+      "observed_at": "2026-10-15T16:31:07+00:00",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "bb7d1723d941253ab8dde387606ac9e33c3074a25df6eecb7f623e71ddbdda6b",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "exclusion_reason": "Only explicitly supplied upgrade guides content-hashed; current phase outputs and unrelated/private/generated paths excluded. Point-in-time observation, not a clean-tree assertion.",
+      "tracked_change_paths": [
+        "docker-compose.yml",
+        "shared/symbols.json"
+      ]
+    },
+    {
+      "id": "dl_canonical",
+      "host": "AWS_HK",
+      "path": "/home/bobby/data_layer",
+      "branch": "main",
+      "commit": "5bf5cd540498b82959342c7cfb2ebeaac3007426",
+      "observed_commit": "5bf5cd540498b82959342c7cfb2ebeaac3007426",
+      "observed_at": "2026-10-15T16:31:07+00:00",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "b8adf709d8bff7d0fb745146592f9c118b3574efbde37568d9e26c9702d0ecb1",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "exclusion_reason": "Only explicitly supplied upgrade guides content-hashed; current phase outputs and unrelated/private/generated paths excluded. Point-in-time observation, not a clean-tree assertion.",
+      "tracked_change_paths": [
+        "DATA_LAYER_UNIFIED_IMPLEMENTATION_PLAN.md"
+      ]
+    },
+    {
+      "id": "portal_canonical",
+      "host": "SGP",
+      "path": "/home/bobby/portal",
+      "branch": "fix/stan-context-password-change-origin",
+      "commit": "87d9d98c3a80400a72de759e63dfc50af70e0436",
+      "observed_commit": "87d9d98c3a80400a72de759e63dfc50af70e0436",
+      "observed_at": "2026-10-15T16:31:35Z",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "2640224e72538e1ec6082dc12c59b67c046f66c4d3abd7882cf52021001268fa",
+      "untracked_count": 347,
+      "relevant_untracked": [
+        {
+          "path": "upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/D4_PORTAL_SOURCE_HANDOFF.md",
+          "sha256": "6150c47394ba5849e5833aa8e9785253a5d1bdf979a5c961cd737fdcd0b6a4bc"
+        }
+      ],
+      "excluded_untracked_count": 346,
+      "tracked_change_paths": [],
+      "exclusion_reason": "Agent internals/generated dist-preview/screenshots excluded from content hashing; full raw NUL-separated path-set digest retained."
+    },
+    {
+      "id": "research_be",
+      "host": "SGP",
+      "path": "/home/bobby/portal-research-be",
+      "branch": "codex/be-gaps",
+      "commit": "d5d31cbd7adf3db658508b3cc9aedb280c1be2f1",
+      "observed_commit": "d5d31cbd7adf3db658508b3cc9aedb280c1be2f1",
+      "observed_at": "2026-10-15T16:31:35Z",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "tracked_change_paths": []
+    },
+    {
+      "id": "research_fe",
+      "host": "SGP",
+      "path": "/home/bobby/portal-research-fe",
+      "branch": "claude/fe-parity",
+      "commit": "5f3f23327367438b8fe3ab048a7ad3ce5ae9a728",
+      "observed_commit": "5f3f23327367438b8fe3ab048a7ad3ce5ae9a728",
+      "observed_at": "2026-10-15T16:31:35Z",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "fe25895791d004568b8bdb4445a031f4fbd3fa4b35f69752a2bde0eb8b9d0866",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "tracked_change_paths": [
+        "apps/portal/frontend/e2e/execution-fixtures.spec.ts-snapshots/execution-phase-2-gate-r1-review-states-only-laptop-chromium-linux.png",
+        "apps/portal/frontend/e2e/execution-fixtures.spec.ts-snapshots/execution-phase-3-gate-r2-review-states-only-laptop-chromium-linux.png",
+        "apps/portal/frontend/e2e/execution-fixtures.spec.ts-snapshots/execution-wired-flow-list-detail-plan-apply-poll-laptop-chromium-linux.png"
+      ]
+    },
+    {
+      "id": "research_docs",
+      "host": "SGP",
+      "path": "/home/bobby/portal-research",
+      "branch": "docs/research-loop-plan",
+      "commit": "5f3f23327367438b8fe3ab048a7ad3ce5ae9a728",
+      "observed_commit": "5f3f23327367438b8fe3ab048a7ad3ce5ae9a728",
+      "observed_at": "2026-10-15T16:31:35Z",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "f84f0dcffe7b0ba17502d1ff68d6f1b33b3ebfb3dc951c0981a9ec4c155e9fc6",
+      "untracked_count": 5,
+      "relevant_untracked": [
+        {
+          "path": "upgrade/execution_loop/EXECUTION_LOOP_MANAGER_UX_DESIGN_GUIDE_v1.1_VI.md",
+          "sha256": "0858d989350a8fef34599609ab6585a28f263715ca862cb29bdc352680e464a2"
+        },
+        {
+          "path": "upgrade/execution_loop/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md",
+          "sha256": "9047f765f7878f7284363bc6322ff14f3feb5fff4913cc7d4b9a328afd591985"
+        },
+        {
+          "path": "upgrade/execution_loop/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md",
+          "sha256": "af6d53725d58aca4dfefb0fb212272c2df281b7d605a1f7bca5e54ced9b2eeb0"
+        },
+        {
+          "path": "upgrade/execution_loop/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md",
+          "sha256": "0a266334f26d02bc4be858017d44e980e4ab5a4a5a4a007dad6827f565f06b86"
+        },
+        {
+          "path": "upgrade/execution_loop/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md",
+          "sha256": "d77a05fc0c6b481114c0d4055a2ff0c09f6b7a3cc0ca1447f691d92f139adbad"
+        }
+      ],
+      "excluded_untracked_count": 0,
+      "tracked_change_paths": [],
+      "note": "Concurrent source upload: four files byte-identical to approved local guides. UX now discoverable remotely, not reviewed/adopted for phase00."
+    },
+    {
+      "id": "portal_stable",
+      "host": "SGP",
+      "path": "/home/bobby/portal-main-release",
+      "branch": "main",
+      "commit": "533162635f56584d630e3d971d77d50860595f15",
+      "observed_commit": "533162635f56584d630e3d971d77d50860595f15",
+      "observed_at": "2026-10-15T16:31:35Z",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "tracked_change_paths": []
+    },
+    {
+      "id": "portal_integration",
+      "host": "SGP",
+      "path": "/home/bobby/portal-integration",
+      "branch": "docs/consolidation-closeout-20260919",
+      "commit": "c43ee0317a439b4566decd5fddfc8be839db239e",
+      "observed_commit": "c43ee0317a439b4566decd5fddfc8be839db239e",
+      "observed_at": "2026-10-15T16:31:35Z",
+      "staged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "relevant_untracked": [],
+      "excluded_untracked_count": 0,
+      "tracked_change_paths": []
+    }
+  ],
+  "source_files": [
+    {
+      "repository": "edge_upgrade",
+      "path": "upgrade/upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md",
+      "sha256": "af6d53725d58aca4dfefb0fb212272c2df281b7d605a1f7bca5e54ced9b2eeb0"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "upgrade/upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md",
+      "sha256": "9047f765f7878f7284363bc6322ff14f3feb5fff4913cc7d4b9a328afd591985"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "upgrade/upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md",
+      "sha256": "0a266334f26d02bc4be858017d44e980e4ab5a4a5a4a007dad6827f565f06b86"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "upgrade/upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md",
+      "sha256": "d77a05fc0c6b481114c0d4055a2ff0c09f6b7a3cc0ca1447f691d92f139adbad"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "services/portal-execution-edge-rs/crates/edge-service/src/main.rs",
+      "sha256": "ecb2ce7c33261f7e89610c4e5765d7f1313a1726725cae30f70f82f1c90bbb2c"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "services/portal-execution-edge-rs/crates/authoritative-event-core/src/lib.rs",
+      "sha256": "87244cb40f2294e7e86f972dce4742e7817a85b9c8eb42fe138613b68dd4feb9"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "services/portal-execution-edge-rs/crates/projection-store-pg/src/lib.rs",
+      "sha256": "604c032c5e7c3555ea0309b0e0924dc52891809738de761cb8e5092ed655d2c6"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "services/portal-execution-edge-rs/crates/manager-v2-client/src/lib.rs",
+      "sha256": "c3b32855a592cfe142e333e53b0d6f83d35d40e8e3f6bd50d2db77bbef821f9f"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "services/portal-execution-edge-rs/crates/command-relay/src/lib.rs",
+      "sha256": "b7132db6e9fa6413ec7f94e515eec64b1261800b4be3f97c598568c391cda578"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "apps/control-api/src/manager-lists/manager-lists.service.ts",
+      "sha256": "20ade02bd37f7900cb9d7dd138d5cea51b6509a34f8d3dc4cd7d5a3175d783ec"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "apps/control-api/src/manager-lists/manager-lists.repository.ts",
+      "sha256": "3e8ffa414bc8de89e134f95412634ac9681bbfc22e033b4cbf1e60fb3ab05516"
+    },
+    {
+      "repository": "edge_upgrade",
+      "path": "apps/control-api/src/execution/profile-projection.worker.ts",
+      "sha256": "88673cf4f360d0c49dac76e79f57607d5c657b7a6ca3d60e556fa316916ce28d"
+    },
+    {
+      "repository": "ts_next",
+      "path": "TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md",
+      "sha256": "38898e3cd81402680e2563df50aeb81e5a4b8f8dd7e92694b33e89cdf2e1adc2"
+    },
+    {
+      "repository": "ts_next",
+      "path": "domain/source_journal_coverage.py",
+      "sha256": "59f9017f6bad4094c87eaf893dd7e35a7264716c45876945286d98a1245404d9"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/source_change_journal/read_source.py",
+      "sha256": "258746849106db79d57990efe6fb2337ef4a628bd8c3bbf0e72e7f0eb8087a2d"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/source_change_journal/publication_repository.py",
+      "sha256": "f10bfc9a0e194987b23e0db04b08430de6412b191196ef3f82dbb0264755ddcd"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/source_change_journal/consumer_repository.py",
+      "sha256": "854db0c11184c1e52dcfb24d67300ae7c24e2e569792a83f055656c674368df9"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/source_change_journal/writer.py",
+      "sha256": "fc7525229f81df42893e0021da54a70ed3438a0f4f070a5f696314fc7c5fbcd8"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/paper_execution/repository.py",
+      "sha256": "201e938f7daafe265dc41bbb6811b76529cb0efb4d085070c5dde3824cd47a2b"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/economics/repository.py",
+      "sha256": "141e3cf4e2463bfeb15d16b25f897111c47a6d9454ea42b40c85d8c0424517c2"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/private_events/repository.py",
+      "sha256": "97aec288c5ac678de31dbc9f7f5b038940e27dffd90343a2e62569c792018123"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/portfolio_management/repository.py",
+      "sha256": "2d48b60485b76d01492dc0b80dcaa36853a91477b65e29e10b09c798042889bb"
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/portal_execution_owner/manager_facade.py",
+      "sha256": "244315bf26c71ef74a131cac727f1d7d30e09ed25aa634f0f894f2de32a0d628"
+    },
+    {
+      "repository": "ts_next",
+      "path": "rust/crates/trading-runtime/src/publication.rs",
+      "sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05"
+    },
+    {
+      "repository": "ts_next",
+      "path": "rust/crates/trading-runtime/src/logical_replication.rs",
+      "sha256": "9991c191c06ac988526489ab0d9447881627e6f933cec636714d933cd6e6ae82"
+    },
+    {
+      "repository": "ts_next",
+      "path": "init-db/48-v2-source-change-journal.sql",
+      "sha256": "b35a4f05020c4518bfe752c6ad71bdbc32a3e09624763d2ebe23cea04b5e33d4"
+    },
+    {
+      "repository": "ts_next",
+      "path": "init-db/59-v2-source-commit-order-replay.sql",
+      "sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96"
+    },
+    {
+      "repository": "ts_next",
+      "path": "init-db/60-v2-source-journal-paper-reader.sql",
+      "sha256": "e6d37838552bcb2d67531666956377faf3940e4930ceef9c6d733d31696ab9c2"
+    },
+    {
+      "repository": "ts_next",
+      "path": "init-db/67-v2-p16-consumer-publication-controls.sql",
+      "sha256": "7ada53a992661723eab1f701821fa1aba0ef983f978ffc245d4651e9bcd84e87"
+    },
+    {
+      "repository": "ts_next",
+      "path": "contracts/portal-execution-owner/ts-oc-02/n03-source-implementation/owner-implementation.manifest.json",
+      "sha256": "f3a496034abbb9fc3e29789d147b8040825015ed700113725717dd460d414872"
+    },
+    {
+      "repository": "ts_next",
+      "path": "contracts/baseline/rust-first-v2/p16/consumer-publication-contract.json",
+      "sha256": "342b3bce1fdbc3b74f94227be27ca226fe758d3b20e2392f63d9136fff590189"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md",
+      "sha256": "7d79d8de84eab19d0d2de3dce2b4c9278a691277b0b8b4379a7db0000dfc8945"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "TRADING_SYSTEM_UNIFIED_IMPLEMENTATION_PLAN.md",
+      "sha256": "96ee825d90a33f3cab614b8c7053408fc34b6ae965db867e6efc33ef769735fd"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portal_execution_owner/identity/human.py",
+      "sha256": "abea7c04ba789226b8c0f069b7243014cbb0262e3f7a0f058350731b1343f01c"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/membership_repository.py",
+      "sha256": "0f9e4a5514c305b1089e155e120a450b4e6907962552dab615259cb7061cfa71"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/instance_repository.py",
+      "sha256": "16fac06f8253c84e7a67729bd245681f7d5717744853bd440f87e080fb936f74"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/binding_repository.py",
+      "sha256": "f1c8eef0a73b43aecc38cc9e4ba63cf304043c63b517bee0cdff0aff903ca48a"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/operator_reports_repository.py",
+      "sha256": "0dd378a565090f5312ebf8ea4f8d86fb6de6d3310903a90ac84c9c04f74dd76d"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/report_delivery.py",
+      "sha256": "03cdac9be4f8e9176c5d6045d3cf3b7dfa9133ddbfc487fb78e3e7e818304d13"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/report_wire.py",
+      "sha256": "add29f554b4a67393140b4978c86ed95aec25cd0a3c7b0b211d54c2eb32a657e"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/operator_runtime.py",
+      "sha256": "a8231a07c8acb780e933608845e0e93307642737ffe80a3db8b9899c7ffb9a5e"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/profile_attempts.py",
+      "sha256": "0d1c6832e43b4352744a341f388a0cd6843196f5fca40c0525b86fbc6f185d3d"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/risk_pool/capital_repository.py",
+      "sha256": "6077d5309edf1396f745732c3d86079dc5246eed89783d38431c308fc9bf404f"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/risk_pool/recall_repository.py",
+      "sha256": "6185e0ab03dbf46dcec276e366d49e4adb56d9144da941f9312be6d02198dfbb"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/risk_pool/lock_reallocation_repository.py",
+      "sha256": "ec0a518a0c015f3716198846596966994deefe183e13da2cbba4c1c9115044e9"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/risk_pool/admission_repository.py",
+      "sha256": "d868fec52e9a4c49ec45990118d3d9c6feb9ad664a96932e1a8160ee6fc25817"
+    },
+    {
+      "repository": "ts_pm",
+      "path": "contracts/baseline/portfolio-account-v1_1/pma11-13-report-catalogue.json",
+      "sha256": "ef60d8db492b7b8d6d496fa88566c4a03a1134cb57f95f6c84c2ba2cf690facf"
+    },
+    {
+      "repository": "dl_closure",
+      "path": "DATA_LAYER_UNIFIED_IMPLEMENTATION_PLAN.md",
+      "sha256": "c93db136e6784133c2307a528d0b9f2488ab0e7ad7aca24bb20e914454e996d6"
+    },
+    {
+      "repository": "dl_closure",
+      "path": "DATA_LAYER_SERVICE_ACCESS_GUIDE.md",
+      "sha256": "ef9aec518b33579a8556d88cd1e8a02909f9977e2fcdb37dc44d4140bd0513e8"
+    },
+    {
+      "repository": "research_be",
+      "path": "apps/control-api/src/manager-lists/manager-lists.service.ts",
+      "sha256": "543ac808479eefdc0a2ff2f1a66af87ca2e212971933574be7876017169b4fa8"
+    },
+    {
+      "repository": "research_be",
+      "path": "apps/control-api/src/manager-lists/manager-lists.repository.ts",
+      "sha256": "20d164d505dc34d860987dea75f5fab7361ac58fce5020d10039d77a62d65159"
+    },
+    {
+      "repository": "research_be",
+      "path": "services/portal-execution-edge-rs/crates/edge-service/src/main.rs",
+      "sha256": "ecb2ce7c33261f7e89610c4e5765d7f1313a1726725cae30f70f82f1c90bbb2c"
+    },
+    {
+      "repository": "research_be",
+      "path": "apps/control-api/src/execution/profile-projection.worker.ts",
+      "sha256": "2c572a2051619e0876170ba2a02ecdf3cda437e110fec4215b11e3c631681a1c"
+    },
+    {
+      "repository": "research_be",
+      "path": "apps/control-api/src/execution/maximum-data-continuation.repository.ts",
+      "sha256": "a89b052023069f53c5710edb5e2a0c536fce82b5a2c9a6f4ec3642a4580c5cfe"
+    }
+  ],
+  "source_map": "SOURCE_AUTHORITY_AND_SCOPE.md",
+  "source_map_family_count": 39,
+  "applied_schema": {
+    "status": "UNKNOWN",
+    "owner": "TS/platform target DB owner",
+    "blocker": "Source migrations48/59/60/67 present, but target applied-ledger/catalogue receipt not collected. Foreign measurement window, no source DB scans or credential reads.",
+    "target_ref": "Existing Manager mounted DB target reference; value not read or copied.",
+    "dependent_gate": "EPG10-03 real source/capture/barrier DB acceptance"
+  },
+  "human_membership": {
+    "verified": false,
+    "owner": "TS identity/PM + Portal trust",
+    "basis": "WORKLOAD_TRUST_IS_NOT_BUSINESS_MEMBERSHIP",
+    "blocker": "PM current human/business lease providers and source exporter not mounted/qualified."
+  },
+  "publication": [
+    {
+      "id": "N03_P16_EXTERNAL",
+      "pending": true,
+      "owner_accepted": false,
+      "runtime_certified": false,
+      "new_live_activation": false,
+      "status": "SOURCE_DARK_OWNER_INTENT_NOT_ACTIVATED",
+      "owner": "TS publication",
+      "read_port_source_profile": "paper only",
+      "runtime_receipt_sha256": null
+    },
+    {
+      "id": "PM_FULL_EXPORT",
+      "pending": true,
+      "owner_accepted": false,
+      "runtime_certified": false,
+      "new_live_activation": false,
+      "status": "COMPONENTS_ISOLATED_REPORT_TRANSPORT_EXISTS_EXPORT_UNQUALIFIED",
+      "owner": "TS PM",
+      "catalogue_unavailable_datasets": 12,
+      "consumer_applied_checkpoint": null
+    },
+    {
+      "id": "LEGACY_MANAGER_CURRENT",
+      "pending": true,
+      "owner_accepted": false,
+      "runtime_certified": false,
+      "new_live_activation": false,
+      "status": "EXISTING_PAPER_SANDBOX_LIVE_CONTAINERS_OBSERVED_UPSTREAM_TLS_EXPIRED",
+      "owner": "TS Manager/runtime PKI",
+      "note": "No route/handshake qualification, no promotion of historical96relation mapping."
+    }
+  ],
+  "gates": {
+    "P184_PERFORMANCE_G2": {
+      "meaning": "performance_latency_500ms",
+      "owner": "TS/DL measurement owner",
+      "status": "RUNNING",
+      "disposition": "Current stage100#2 at16:23:52Z RUNNING; prior13:46-14:23 FAIL retained, no promoted scorecard."
+    },
+    "P19_MAINNET_G2": {
+      "meaning": "optional_explicit_mainnet_request",
+      "owner": "TS/Bobby release owner",
+      "status": "NOT_RUN",
+      "disposition": "No mainnet request/qualification in EPG10-00; not performance G2."
+    },
+    "N1_F1": {
+      "meaning": "native_consumer_failure_recovery",
+      "owner": "TS/DL native owner",
+      "status": "SCOPED_JOURNAL_ONLY",
+      "disposition": "R2C TEST corekill passed; B12/B14 writer and rc22/stream production roll supersede old not-deployed narrative. Full production gate not inherited."
+    },
+    "P16_ISOLATED": {
+      "meaning": "isolated_source_publication",
+      "owner": "TS publication owner",
+      "status": "SCOPED_JOURNAL_ONLY",
+      "disposition": "SOURCE_ISOLATED_PASS; external N03 unverified."
+    },
+    "P16_FULL_DB": {
+      "meaning": "full_target_database_publication",
+      "owner": "TS/platform owner",
+      "status": "UNVERIFIED",
+      "disposition": "No target DB metadata/ledger/runtime publication receipt in this inventory."
+    },
+    "P_LANES": {
+      "meaning": "dataset_scoped_partner_acceptance",
+      "owner": "TS PM/Edge/Research owners",
+      "status": "NOT_RUN",
+      "disposition": "Candidate PM, isolated report HTTP and current page cache not full P lanes."
+    },
+    "XLC": {
+      "meaning": "cross_guide_acceptance",
+      "owner": "Edge/PM/Research owners",
+      "status": "NOT_RUN",
+      "disposition": "No new XLC acceptance campaign run."
+    }
+  },
+  "decisions": [
+    {
+      "id": "DEC-E01",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E02",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E03",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E04",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E05",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E06",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E07",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E08",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E09",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E10",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E11",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E12",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E13",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E14",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    },
+    {
+      "id": "DEC-E15",
+      "status": "INVENTORY_DISPOSITION_RECORDED_NOT_ACTIVATION_APPROVAL",
+      "reference": "SOURCE_AUTHORITY_AND_SCOPE.md#decisions-and-dependencies-dec-e01e15"
+    }
+  ],
+  "permissions": {
+    "allowed": [
+      "source_git_metadata",
+      "approved_interface_source_reads",
+      "strict_pinned_existing_SSH_read_only",
+      "escalated_Docker_metadata",
+      "public_certificate_metadata",
+      "offline_stdlib_assertions"
+    ],
+    "not_authorized": [
+      "source_DB_Redis_writes",
+      "migration",
+      "source_hot_path_change",
+      "credential_rotation",
+      "restart_rollout_cutover",
+      "load_build_heavy_tests",
+      "push_merge"
+    ],
+    "host_lock": {
+      "owner": "claude-n1-opt-20261013",
+      "until_utc": "2026-10-15T17:42:27+00:00",
+      "disposition": "No cargo/pytest/build/load/container start; read-only metadata and low-cost offline assertions only."
+    }
+  },
+  "runtime": [
+    {
+      "host": "AWS_HK",
+      "observed_at": "2026-10-15T16:31:41+00:00",
+      "services": [
+        {
+          "name": "portal-execution-edge-live-execution-edge-1",
+          "service": "execution-edge",
+          "project": "portal-execution-edge-live",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-source-proxy.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.216153683Z",
+          "flags": {
+            "EDGE_SOURCE_PROBES_ENABLED": "false",
+            "EDGE_MANAGER_EVENT_LEDGER_ENABLED": "false",
+            "EDGE_SHADOW_QUERY_ENABLED": "false",
+            "EDGE_PAPER_WORKBENCH_SHADOW_ENABLED": "false",
+            "EDGE_REALTIME_SSE_ENABLED": "true",
+            "EDGE_MANAGER_PROJECTION_ENABLED": "false",
+            "EDGE_ANALYTICS_QUERY_ENABLED": "true",
+            "EDGE_COMMAND_RELAY_ENABLED": "false",
+            "EDGE_PROJECTION_INGESTION_ENABLED": "false",
+            "EDGE_MANAGER_V2_READ_ENABLED": "true"
+          }
+        },
+        {
+          "name": "portal-execution-edge-live-source-proxy-1",
+          "service": "source-proxy",
+          "project": "portal-execution-edge-live",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "9bb20c8894a71aa620bce6a62828f66336618526a0f8e6fcb4a1f46449d6384c",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-source-proxy.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.200743474Z",
+          "flags": {}
+        },
+        {
+          "name": "portal-execution-edge-live-manager-projection-worker-1",
+          "service": "manager-projection-worker",
+          "project": "portal-execution-edge-live",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "1582b40cffaa5fb00350fa79da5f32519d03271fdb6f6dc59e719bc73ca68d53",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-source-proxy.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": null,
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.216377234Z",
+          "flags": {
+            "EDGE_PROJECTION_INGESTION_ENABLED": "false",
+            "EDGE_MANAGER_PROJECTION_ENABLED": "true",
+            "EDGE_REALTIME_SSE_ENABLED": "false",
+            "EDGE_COMMAND_RELAY_ENABLED": "false",
+            "EDGE_SHADOW_QUERY_ENABLED": "false",
+            "EDGE_ANALYTICS_QUERY_ENABLED": "false",
+            "EDGE_MANAGER_V2_READ_ENABLED": "true",
+            "EDGE_PAPER_WORKBENCH_SHADOW_ENABLED": "false"
+          }
+        },
+        {
+          "name": "portal-execution-edge-sandbox-execution-edge-1",
+          "service": "execution-edge",
+          "project": "portal-execution-edge-sandbox",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-source-proxy.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.220112038Z",
+          "flags": {
+            "EDGE_PROJECTION_INGESTION_ENABLED": "false",
+            "EDGE_MANAGER_EVENT_LEDGER_ENABLED": "false",
+            "EDGE_MANAGER_V2_READ_ENABLED": "true",
+            "EDGE_REALTIME_SSE_ENABLED": "true",
+            "EDGE_ANALYTICS_QUERY_ENABLED": "true",
+            "EDGE_PAPER_WORKBENCH_SHADOW_ENABLED": "false",
+            "EDGE_SOURCE_PROBES_ENABLED": "false",
+            "EDGE_COMMAND_RELAY_ENABLED": "false",
+            "EDGE_MANAGER_PROJECTION_ENABLED": "false",
+            "EDGE_SHADOW_QUERY_ENABLED": "false"
+          }
+        },
+        {
+          "name": "portal-execution-edge-sandbox-source-proxy-1",
+          "service": "source-proxy",
+          "project": "portal-execution-edge-sandbox",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "da4b44c00580f3e4dfa42b77fd160f72c79300d6ab3f226e595ec42ee7f26b77",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-source-proxy.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.163786113Z",
+          "flags": {}
+        },
+        {
+          "name": "portal-execution-edge-sandbox-manager-projection-worker-1",
+          "service": "manager-projection-worker",
+          "project": "portal-execution-edge-sandbox",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "12294191799e7d112a3c8c8eff86f32dce1531fc40ec87062d87b13b53b23caa",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.profile-source-proxy.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": null,
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.210734102Z",
+          "flags": {
+            "EDGE_COMMAND_RELAY_ENABLED": "false",
+            "EDGE_MANAGER_PROJECTION_ENABLED": "true",
+            "EDGE_PAPER_WORKBENCH_SHADOW_ENABLED": "false",
+            "EDGE_MANAGER_V2_READ_ENABLED": "true",
+            "EDGE_SHADOW_QUERY_ENABLED": "false",
+            "EDGE_PROJECTION_INGESTION_ENABLED": "false",
+            "EDGE_ANALYTICS_QUERY_ENABLED": "false",
+            "EDGE_REALTIME_SSE_ENABLED": "false"
+          }
+        },
+        {
+          "name": "portal-execution-edge-execution-edge-1",
+          "service": "execution-edge",
+          "project": "portal-execution-edge",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.paper-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.222432627Z",
+          "flags": {
+            "EDGE_SOURCE_PROBES_ENABLED": "false",
+            "EDGE_PAPER_WORKBENCH_SHADOW_ENABLED": "false",
+            "EDGE_MANAGER_EVENT_LEDGER_ENABLED": "false",
+            "EDGE_SHADOW_QUERY_ENABLED": "false",
+            "EDGE_REALTIME_SSE_ENABLED": "true",
+            "EDGE_PROJECTION_INGESTION_ENABLED": "false",
+            "EDGE_MANAGER_PROJECTION_ENABLED": "false",
+            "EDGE_ANALYTICS_QUERY_ENABLED": "true",
+            "EDGE_MANAGER_V2_READ_ENABLED": "true",
+            "EDGE_COMMAND_RELAY_ENABLED": "false"
+          }
+        },
+        {
+          "name": "portal-execution-edge-source-proxy-1",
+          "service": "source-proxy",
+          "project": "portal-execution-edge",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "21786bb09a2c5e94481b457a19a262c0cb2bf3fc6edb86629b053247ca329de8",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.paper-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.153396054Z",
+          "flags": {}
+        },
+        {
+          "name": "portal-execution-edge-manager-projection-worker-1",
+          "service": "manager-projection-worker",
+          "project": "portal-execution-edge",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "oci_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+          "config_sha256": "95e96a9b2c547f91b6175a0055de71aaee7197db3b37ed48012509cacee73801",
+          "config_files": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.paper-read.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": null,
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.212450549Z",
+          "flags": {
+            "EDGE_SHADOW_QUERY_ENABLED": "false",
+            "EDGE_ANALYTICS_QUERY_ENABLED": "false",
+            "EDGE_PROJECTION_INGESTION_ENABLED": "false",
+            "EDGE_COMMAND_RELAY_ENABLED": "false",
+            "EDGE_MANAGER_V2_READ_ENABLED": "true",
+            "EDGE_REALTIME_SSE_ENABLED": "false",
+            "EDGE_PAPER_WORKBENCH_SHADOW_ENABLED": "false",
+            "EDGE_MANAGER_PROJECTION_ENABLED": "true"
+          }
+        },
+        {
+          "name": "portal-execution-edge-live-projection-postgres-1",
+          "service": "projection-postgres",
+          "project": "portal-execution-edge-live",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "oci_revision": null,
+          "config_sha256": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "config_files": "/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.profile-read.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.profile-source-proxy.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.196296887Z",
+          "flags": {}
+        },
+        {
+          "name": "portal-execution-edge-sandbox-projection-postgres-1",
+          "service": "projection-postgres",
+          "project": "portal-execution-edge-sandbox",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "oci_revision": null,
+          "config_sha256": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "config_files": "/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-d1/compose.dark.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.profile-read.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.profile-source-proxy.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.durable-projection.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.analytics.yaml,/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy/execution-manager-v2/compose.realtime.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.134189771Z",
+          "flags": {}
+        },
+        {
+          "name": "portal-manager-read-paper-v2-portal_manager_read-1",
+          "service": "portal_manager_read",
+          "project": "portal-manager-read-paper-v2",
+          "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+          "oci_revision": null,
+          "config_sha256": "225db7755ea8ca9317e18af8febf06c7f3a4f92892a57f344a626126c98bf889",
+          "config_files": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2/docker-compose.portal-manager-read.yml",
+          "state": "running",
+          "health": null,
+          "restarts": 3,
+          "started_at": "2026-09-15T04:32:03.552777833Z",
+          "flags": {}
+        },
+        {
+          "name": "portal-manager-read-paper-v2-portal_manager_issuer-1",
+          "service": "portal_manager_issuer",
+          "project": "portal-manager-read-paper-v2",
+          "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+          "oci_revision": null,
+          "config_sha256": "7710fc8e206a9812eb2abea7d7d222a1c568217a2f7ee6d8b122ed0009043342",
+          "config_files": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2/docker-compose.portal-manager-read.yml",
+          "state": "running",
+          "health": null,
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.191486379Z",
+          "flags": {}
+        },
+        {
+          "name": "trading-system-manager-read-live-portal_manager_read-1",
+          "service": "portal_manager_read",
+          "project": "trading-system-manager-read-live",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "oci_revision": null,
+          "config_sha256": "976ebe89ed6839c23119c4ed7b927a6465de0cd333941c93fcbe077d740f8111",
+          "config_files": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2/docker-compose.portal-manager-read.yml",
+          "state": "running",
+          "health": null,
+          "restarts": 4,
+          "started_at": "2026-09-15T04:32:05.66963468Z",
+          "flags": {}
+        },
+        {
+          "name": "trading-system-manager-read-live-portal_manager_issuer-1",
+          "service": "portal_manager_issuer",
+          "project": "trading-system-manager-read-live",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "oci_revision": null,
+          "config_sha256": "e68c442990013c2c22a55a0816d62124823aa5d0aabfc95ad27278a2d76664ba",
+          "config_files": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2/docker-compose.portal-manager-read.yml",
+          "state": "running",
+          "health": null,
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.050424722Z",
+          "flags": {}
+        },
+        {
+          "name": "trading-system-manager-read-sandbox-portal_manager_issuer-1",
+          "service": "portal_manager_issuer",
+          "project": "trading-system-manager-read-sandbox",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "oci_revision": null,
+          "config_sha256": "a97d6be022ee4c9c11e61539980aa80a15a96d77f18d2af94b057cae1d89c4df",
+          "config_files": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2/docker-compose.portal-manager-read.yml",
+          "state": "running",
+          "health": null,
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.042209541Z",
+          "flags": {}
+        },
+        {
+          "name": "trading-system-manager-read-sandbox-portal_manager_read-1",
+          "service": "portal_manager_read",
+          "project": "trading-system-manager-read-sandbox",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "oci_revision": null,
+          "config_sha256": "453f59be45d1935795155c1aa2e44ceb7c6e10d636878f54f7319e4fa831a5bd",
+          "config_files": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2/docker-compose.portal-manager-read.yml",
+          "state": "running",
+          "health": null,
+          "restarts": 4,
+          "started_at": "2026-09-15T04:32:05.420318911Z",
+          "flags": {}
+        },
+        {
+          "name": "portal-execution-edge-projection-postgres-1",
+          "service": "projection-postgres",
+          "project": "portal-execution-edge",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "oci_revision": null,
+          "config_sha256": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "config_files": "/srv/primus/portal/releases/501d27a3702f82cc8d7792ffa6e870485a5dbc09/deploy/compose.execution-edge.yaml,/srv/primus/portal/releases/501d27a3702f82cc8d7792ffa6e870485a5dbc09/deploy/execution-d1/compose.dark.yaml",
+          "state": "running",
+          "health": "healthy",
+          "restarts": 0,
+          "started_at": "2026-09-15T04:31:56.1391836Z",
+          "flags": {}
+        }
+      ],
+      "image_count": 125
+    },
+    {
+      "host": "SGP",
+      "observed_at": "2026-10-15T16:26:40Z",
+      "release_directory": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose",
+      "services": [
+        {
+        "name": "portal-stable-v1-0-1-control-api-1",
+          "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+          "oci_revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+          "config_sha256": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+          "health": "healthy",
+          "restarts": 0
+        },
+        {
+        "name": "portal-stable-v1-0-1-portal-web-1",
+          "image": "sha256:e237aabba580445fd43ae839b057e2cdc001b0ab7f1be120e5056c199173cadc",
+          "oci_revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+          "config_sha256": "4326852fe0f34ccf15ae7c22b9a7897be24f15bbc50ccef5ebcd9971130bf187",
+          "health": "healthy",
+          "restarts": 0
+        }
+      ],
+      "stable_flags": {
+        "Edge": true,
+        "current_paper": true,
+        "current_sandbox": true,
+        "current_live": true,
+        "local_projection": true,
+        "analytics": true,
+        "SSE": true,
+        "command_relay": false,
+        "durable_mirror": false,
+        "durable_mirror_reads": false,
+        "market_context": false
+      },
+      "source_runtime_distinct": true,
+      "rollback_qualified": "UNKNOWN_NOT_ENUMERATED",
+      "no_source_requests": true
+    }
+  ],
+  "public_certificates": [
+    {
+      "reference": "/home/bobby/secure/portal-manager-read-v2/runtime/issuer-server-cert.pem",
+      "not_after_utc": "2026-09-27T03:40:51Z",
+      "sha256_fingerprint": "dfb13901665e2b34b84467a50d72fbc57e24190ffa65e488a59ced8d31bec0e2",
+      "status": "EXPIRED",
+      "owner": "HK Manager PKI/runtime",
+      "affected_profiles": [
+        "paper",
+        "sandbox",
+        "live"
+      ]
+    },
+    {
+      "reference": "/home/bobby/secure/portal-manager-read-v2/runtime/facade-server-cert.pem",
+      "not_after_utc": "2026-09-27T03:40:51Z",
+      "sha256_fingerprint": "d1a8d54e391626a8cfbb10ddd9c3e0266afb094d3cb961f6ed97b4cead8c25bf",
+      "status": "EXPIRED",
+      "owner": "HK Manager PKI/runtime",
+      "affected_profiles": [
+        "paper",
+        "sandbox",
+        "live"
+      ]
+    },
+    {
+      "reference": "/srv/primus/portal/execution-edge/edge-server.crt",
+      "not_after_utc": "2027-02-20T05:34:40Z",
+      "sha256_fingerprint": "ccd65b3196200a4c410dce729b850f0367701629374200bf90472f1e166aea9b",
+      "status": "EXPIRY_METADATA_ONLY"
+    },
+    {
+      "reference": "SGP:/srv/primus/portal/control-api/sgp-client.crt",
+      "not_after_utc": "2027-02-20T05:34:41Z",
+      "sha256_fingerprint": "49260efaba45c8320747c8d6165e9fde0f908eb830d67d30f54298c24a966691",
+      "status": "EXPIRY_METADATA_ONLY"
+    }
+  ],
+  "source_runtime_reproducibility": {
+    "manager_compose_worktree": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+    "exists": false,
+    "oci_revision": null,
+    "owner": "TS Manager runtime release owner",
+    "disposition": "Do not recreate historical worktree or infer image source; obtain immutable build/release provenance before future rollout."
+  },
+  "drift_observed": [
+    {
+      "source": "dl_closure",
+      "from": "f7ea80919dce8cc4cc86808962fba046a6b03ebc",
+      "to": "864774d5df6b9cfe8c9163272847619c20ff3b9f",
+      "effect": "Re-read latest journal; final stage100#2 running, no new acceptance."
+    },
+    {
+      "source": "research_fe/research_docs",
+      "from": "92713bd112d0b04f8d8f876c1cb626f495fa3d3f",
+      "to": "5f3f23327367438b8fe3ab048a7ad3ce5ae9a728",
+      "effect": "End source repinned; later FE screenshots dirty, docs5untracked guide uploads hashed. No reset/checkout on peer trees."
+    }
+  ],
+  "cleanup": {
+    "created_runtime_resources": 0,
+    "removed_resources": 0,
+    "phase_owned_images": [],
+    "phase_owned_build_cache": [],
+    "pre_available_bytes": 194088599552,
+    "post_available_bytes": 191712604160,
+    "disk_delta_interpretation": "No cleanup/reclaim executed; shared disk changed during foreign measurement; not attributed to this phase.",
+    "host_images_observed": 125,
+    "BuildKit": {
+      "total": "27.91GB",
+      "reclaimable": "20.37GB",
+      "shared": "21.55GB",
+      "private": "6.363GB"
+    },
+    "disposition": "NO_ACTION_NEEDED_FOR_PHASE_CREATED_RESOURCES; retain all shared active/operational/rollback artifacts during foreign production measurement. No prune/volume/network/image deletion. Existing shared historical image cleanup is not silently authorized.",
+    "rollback_retention": "Existing operational rollback artifacts unchanged; qualified rollback enumeration not established by phase00."
+  },
+  "end_round_recheck": {
+    "HK": {
+      "result": "PASS",
+      "observed_at": "2026-10-15T16:40:23+00:00",
+      "services_compared": 18,
+      "images_configs_restart_counters_unchanged": true,
+      "tuple_set_sha256": "7a567fe1805882b2ddc49b5c37b9a3c080a6e308605f7991a8df129dd3d03923"
+    },
+    "SGP": {
+      "observed_at": "2026-10-15T16:38:01+00:00",
+      "source_commits_staged_untracked_path_digests_unchanged": true,
+      "FE_unstaged_digest_changed_to": "c9066acfd9575833eca7ef2b51de8dc90481f3ee22e3e606287819f64c67c2df",
+      "FE_scope": "Subsequent changed-path read16:38:34Z listed screenshot PNGs only; continuing frontend worker. Earlier16:31 manifest is a timestamped snapshot, not assertion peer tree remains frozen.",
+      "stable_images_configs_restart_counters_unchanged": true
+    }
+  },
+  "active_portal_worktrees": [
+    {
+      "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+      "branch": "feat/manager-v2-paper-read",
+      "base_commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+      "disposition": "Active/source-owned tree retained; no merge/abandonment verification or removal authorized in EPG10-00."
+    },
+    {
+      "path": "/home/bobby/.worktrees/portal-eds-current-bff",
+      "branch": "feat/eds-current-bff",
+      "base_commit": "bab79402be7ca65adb529080865a4fe1a7d5a0bb",
+      "disposition": "Active/source-owned tree retained; no merge/abandonment verification or removal authorized in EPG10-00."
+    },
+    {
+      "path": "/home/bobby/.worktrees/portal-eds09-owner-return-handoff",
+      "branch": "docs/eds09-ts-owner-return-handoff",
+      "base_commit": "ec97c4835acd1d68e9b58dd8b68015ceecd96864",
+      "disposition": "Active/source-owned tree retained; no merge/abandonment verification or removal authorized in EPG10-00."
+    },
+    {
+      "path": "/home/bobby/.worktrees/portal-execution-data-activation",
+      "branch": "feat/execution-data-activation",
+      "base_commit": "6f6503ea21327bc39946f48c697b4287c673f12c",
+      "disposition": "Active/source-owned tree retained; no merge/abandonment verification or removal authorized in EPG10-00."
+    },
+    {
+      "path": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+      "branch": "feat/execution-edge-upgrade-v1_2",
+      "base_commit": "ca13617ff273af4b4ad68453b944e83c30a5a19e",
+      "disposition": "Active/source-owned tree retained; no merge/abandonment verification or removal authorized in EPG10-00."
+    },
+    {
+      "path": "/home/bobby/.worktrees/portal-r4r5-activation",
+      "branch": "deploy/r4r5-activation",
+      "base_commit": "d63a650112eca3b2b17f4df1faedd1a0ab06ceaa",
+      "disposition": "Active/source-owned tree retained; no merge/abandonment verification or removal authorized in EPG10-00."
+    }
+  ],
+  "source_lines": {
+    "observation": "Local refs, not remote fetch/release verification in this phase",
+    "portal_origin_dev": "533162635f56584d630e3d971d77d50860595f15",
+    "portal_origin_main": "533162635f56584d630e3d971d77d50860595f15",
+    "portal_stable_release_commit": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+    "TS_main": "f669313e3d6c8b1d92839c41e34ef591ff6a44f9",
+    "TS_dev": "6ddc008855cd30305e341f9c30e29628d7d9f970",
+    "DL_main": "5bf5cd540498b82959342c7cfb2ebeaac3007426",
+    "DL_dev": "f012cac635dcf3d4d2afd6f568417890d88df950"
+  }
+}

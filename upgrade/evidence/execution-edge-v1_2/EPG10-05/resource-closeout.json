@@ -1,0 +1,26 @@
+{
+  "schema": "epg10.resource-closeout.v1",
+  "hosts": {
+    "HK": {
+      "runner_services": [],
+      "lock": {
+        "owner": "claude-p184-quote-probe",
+        "purpose": "P18.4 QUOTE probe fix: cargo tests + release build of market-data-writer (TEST_ONLY, --rm container, no production mutation)",
+        "started_utc": "2026-10-16T06:06:14+00:00",
+        "until_utc": "2026-10-16T07:36:14+00:00"
+      },
+      "own_tmp_absent": true,
+      "owned_test_containers": []
+    },
+    "SGP": {
+      "runner_services": [
+        "portal-gh-deploy-runner.service                loaded    active   running GitHub Actions Portal production deployment runner"
+      ],
+      "lock": null,
+      "own_tmp_absent": true,
+      "owned_test_containers": []
+    }
+  },
+  "mutations": 0,
+  "action": "NO_SHARED_DOCKER_OR_RUNNER_ACTION_NEEDED"
+}

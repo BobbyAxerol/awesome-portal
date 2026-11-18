@@ -1,5 +1,75 @@
 # Unified Implementation Plan — QuantBT Portal v0.4
 
+> **Execution Edge v1.2 upgrade (2026-10-15):** the active detailed phase plan is
+> [Execution Loop unified plan §23 — EPG10-00…11](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12).
+> EPG10-00 completed as inventory only: six offline metadata cases PASS; source,
+> authority and owned runtime unknowns are recorded. EPG10-01 is approved/in
+> progress: available-source continuation delivered (53offline+six metadata PASS),
+> both-host passive observations, real retained reads and isolated replay target
+> tested/cleaned.20repository subcases plus native schema/parity PASS, not whole
+> T01 acceptance:0PASS/3PARTIAL/2NOT_RUN/1BLOCKED, exit NOT_MET.14production budget
+> groups UNDECIDED; scoped numeric proposals recorded. See §23.10.1 and current
+> inventory §7.**02 completed contract-only:**42logical families, exact shared
+> Research schema/mapping and Rust compatibility primitives;11formal cases,
+> 36Rust+12Python PASS,57shared vectors agree; fmt/clippy PASS. See §23.11 and
+> 02receipt. No new exporter active; owned test artifacts cleaned.**03 approved/in
+> progress (§23.12):**6native Rust +12runner safety +12catalogue PASS; formal
+> T03:4PASS/1producer-fence BLOCKED, **exit NOT_MET**. Actual same-scope stale
+> publisher counterexample and TS/PM return packet recorded. Isolated proof is
+> not external N03/all-writer/runtime acceptance; owned1.315GB target/cache/test
+> source removed.**04 approved/in progress (§23.13), owned implementation tested/source-dark:**
+> scoped Rust bootstrap/delta/atomic projection;99automated PASS,0FAIL/skip,
+> fmt/strict clippy PASS;8formal cases PASS isolated. Full connected exit NOT_MET
+> for existing03publication +01capacity/permissions. Own1.909GB private test
+> build/cache/source removed;12HK+5SGP runtime tuples unchanged/restarts0.
+> No source-connected acceptance or runtime activation.**05 approved/in progress,
+> owned implementation tested/source-dark (§23.14):** scoped query/history/cache,
+> exact bounded export and notification-only fanout;191automated PASS,0FAIL/skip,
+> fmt/strict clippy PASS,8formal families PASS isolated. Full connected exit NOT_MET
+> for04source +06budgets +08read-security/TLS +partner BFF receipts;0owned debt.
+> Own2.266GB private test/build/cache cleaned;12HK+5SGP protected tuples unchanged,
+> restarts0. No BFF route/source activation.**06 approved/in progress (§23.15):**
+> shared resource envelopes,04/05 pre-pool admission and Manager recurrence/
+> mixed-cadence hot-path correction;317automated PASS,0FAIL/skip; fmt/strict
+> zero-warning Clippy PASS. Owned isolated package qualified/source-dark; full
+>06 exit NOT_MET (01numeric budgets/03publication, fresh paired measurements and
+> Research returns). Own5.863GB test source/cache/logs cleaned;12HK+5SGP tuples
+> unchanged/restarts0. No runtime/source mutation or capacity claim.
+> **06 preparation continuation:**70offline helper/observer PASS,0FAIL/error/skip
+> +2CLI checks; numeric logical sizing, replica/pool/all-copy worksheets,
+> 14collector mappings and original12-cell B0/B1/B2 descriptor implemented.
+> Not a deployed stack/production budget/capacity receipt; full06 remains NOT_MET.
+> **07 approved/in progress (§23.16):** bounded Rust command relay with additive
+> Portal PG durable correlation/full receipts, one-send CAS and status-only
+> ambiguity recovery; final416automated PASS/0FAIL/skip, fmt/strict zero-warning
+> Clippy PASS. Owned package qualified source-dark; full07 exit NOT_MET for source
+> wire/providers/publication and dependent Edge binding/connected qualification.
+> Own7.365GB test copies/cache/logs cleaned;12HK+5SGP tuples unchanged/restarts0.
+> No actual TS effects or command runtime activation; single owner return in §23.16.
+> **08 approved/in progress (§23.17): independent round complete, three integration
+> debts OPEN for round2; recommend09 independent implementation after approval,
+> not waiting for full08.** Current read-policy adapter, bounded JWT/JWKS,
+> legacy SSE expiry, explicitCA TLS1.3 and selected-payload security
+> guards qualified source-dark: final490automated PASS,0FAIL/ignored/skip,
+> fmt/strict zero-warning Clippy PASS. Full08 NOT_MET for actual current providers,
+> TS commit/business proof and researcher field matrix.
+> Latest request resumes08 after earlier PM deferral; fresh PM`c401a023` explicitly
+> NOT_PUBLISHED for actual runtime authority/COMMIT proof, Research`169195ca` still
+> no production provider/UNMAPPED. Single owner packet names exact RG03/RG08 read
+> provider/mapping and separate restricted/command returns; no whole-PM13/P184
+> dependency.12:55UTC audit matches18HK+5SGP post-repair tuples with no mutation
+> or new tests. Exact6Manager+3Proxy TLS repair is connected-qualified:
+> 6TLS/12positive/12denial PASS;46helper tests PASS; valid fallback loaded. Initial
+> wrong method expectation and containment/recovery retained, no policy weakening.
+> Own8.388GB +212,992B test artifacts removed; all23runtime images/configs unchanged,
+> only6Manager approved restart timestamps/counters changed; Edge/DB untouched.
+> No mounted authority or runtime activation inferred.09…11 await named approval. Evidence/action packets
+> linked in §23.15/§23.16/§23.17.
+> 01capacity is still pending;
+> logical02 closure does not waive it.
+> No current-authority activation. Four owner-supplied guides
+> are linked and pinned there; earlier acceptance is not new upgrade evidence.
+
 > **Trạng thái:** Draft để owner review và chốt thứ tự triển khai<br>
 > **Cập nhật:** 2026-08-15<br>
 > **Nguồn kiến trúc:** [QuantBT Portal Architecture & UI/UX Final v0.4](./quantbt_portal_architecture_uiux_final_v0.4_vi.md)<br>

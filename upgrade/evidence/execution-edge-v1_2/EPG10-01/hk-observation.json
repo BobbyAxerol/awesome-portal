@@ -1,0 +1,1770 @@
+{
+  "captured_at": "2026-10-15T18:26:03.189114+00:00",
+  "duration_seconds": 119.997724,
+  "groups": [
+    {
+      "anonymous_max_bytes": 587059200,
+      "average_cores": 0.363145,
+      "cpu_core_seconds": 43.576572,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 40960,
+        "wios": 10
+      },
+      "memory_end_bytes": 612651008,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 612855808,
+      "name": "data_layer_service",
+      "network_delta": {
+        "rx_bytes": 40816047,
+        "tx_bytes": 157562639
+      },
+      "pids_max": 39,
+      "sampled_memory_max_bytes": 613617664,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 13201408,
+      "average_cores": 0.006855,
+      "cpu_core_seconds": 0.822551,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 81920,
+        "wios": 9
+      },
+      "memory_end_bytes": 696029184,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 696008704,
+      "name": "live_data_executor",
+      "network_delta": {
+        "rx_bytes": 12720,
+        "tx_bytes": 19084
+      },
+      "pids_max": 11,
+      "sampled_memory_max_bytes": 697073664,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 543178752,
+      "average_cores": 1.08615,
+      "cpu_core_seconds": 130.335527,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 495951872,
+        "wios": 21477
+      },
+      "memory_end_bytes": 739688448,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 734674944,
+      "name": "market_data_service_p184w",
+      "network_delta": {
+        "rx_bytes": 341803249,
+        "tx_bytes": 492915521
+      },
+      "pids_max": 123,
+      "sampled_memory_max_bytes": 741326848,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 15917056,
+      "average_cores": 0.015338,
+      "cpu_core_seconds": 1.840555,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 17563648,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 17555456,
+      "name": "portal-execution-edge-execution-edge-1",
+      "network_delta": {
+        "rx_bytes": 2075530,
+        "tx_bytes": 2301172
+      },
+      "pids_max": 4,
+      "sampled_memory_max_bytes": 17821696,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 10964992,
+      "average_cores": 0.013423,
+      "cpu_core_seconds": 1.610759,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 13402112,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 13402112,
+      "name": "portal-execution-edge-live-execution-edge-1",
+      "network_delta": {
+        "rx_bytes": 1816801,
+        "tx_bytes": 2076960
+      },
+      "pids_max": 4,
+      "sampled_memory_max_bytes": 14188544,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 11522048,
+      "average_cores": 0.000189,
+      "cpu_core_seconds": 0.022704,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 12263424,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 12263424,
+      "name": "portal-execution-edge-live-manager-projection-worker-1",
+      "network_delta": {
+        "rx_bytes": 26843,
+        "tx_bytes": 24976
+      },
+      "pids_max": 4,
+      "sampled_memory_max_bytes": 12263424,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 14753792,
+      "average_cores": 0.031457,
+      "cpu_core_seconds": 3.774729,
+      "io_delta": {
+        "rbytes": 8192,
+        "rios": 2,
+        "wbytes": 3035136,
+        "wios": 345
+      },
+      "memory_end_bytes": 78049280,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 77991936,
+      "name": "portal-execution-edge-live-projection-postgres-1",
+      "network_delta": {
+        "rx_bytes": 1607168,
+        "tx_bytes": 1157131
+      },
+      "pids_max": 11,
+      "sampled_memory_max_bytes": 78884864,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 3207168,
+      "average_cores": 0.010093,
+      "cpu_core_seconds": 1.21114,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 4952064,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 4952064,
+      "name": "portal-execution-edge-live-source-proxy-1",
+      "network_delta": {
+        "rx_bytes": 2352493923,
+        "tx_bytes": 2420200886
+      },
+      "pids_max": 3,
+      "sampled_memory_max_bytes": 5947392,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 852946944,
+      "average_cores": 0.00019,
+      "cpu_core_seconds": 0.022856,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 859222016,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 859222016,
+      "name": "portal-execution-edge-manager-projection-worker-1",
+      "network_delta": {
+        "rx_bytes": 26919,
+        "tx_bytes": 24936
+      },
+      "pids_max": 4,
+      "sampled_memory_max_bytes": 859222016,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 14852096,
+      "average_cores": 0.106959,
+      "cpu_core_seconds": 12.834782,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 3563520,
+        "wios": 412
+      },
+      "memory_end_bytes": 206606336,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 206577664,
+      "name": "portal-execution-edge-projection-postgres-1",
+      "network_delta": {
+        "rx_bytes": 1703272,
+        "tx_bytes": 1238360
+      },
+      "pids_max": 12,
+      "sampled_memory_max_bytes": 209944576,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 10215424,
+      "average_cores": 0.013129,
+      "cpu_core_seconds": 1.575483,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 12369920,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 12369920,
+      "name": "portal-execution-edge-sandbox-execution-edge-1",
+      "network_delta": {
+        "rx_bytes": 1711818,
+        "tx_bytes": 1961720
+      },
+      "pids_max": 5,
+      "sampled_memory_max_bytes": 13160448,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 44703744,
+      "average_cores": 0.000182,
+      "cpu_core_seconds": 0.021897,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 49057792,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 49057792,
+      "name": "portal-execution-edge-sandbox-manager-projection-worker-1",
+      "network_delta": {
+        "rx_bytes": 26995,
+        "tx_bytes": 24740
+      },
+      "pids_max": 4,
+      "sampled_memory_max_bytes": 49057792,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 16470016,
+      "average_cores": 0.093977,
+      "cpu_core_seconds": 11.276974,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 2576384,
+        "wios": 303
+      },
+      "memory_end_bytes": 204021760,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 203862016,
+      "name": "portal-execution-edge-sandbox-projection-postgres-1",
+      "network_delta": {
+        "rx_bytes": 1548548,
+        "tx_bytes": 1130841
+      },
+      "pids_max": 16,
+      "sampled_memory_max_bytes": 209735680,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 3211264,
+      "average_cores": 0.009133,
+      "cpu_core_seconds": 1.09589,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 6787072,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 6787072,
+      "name": "portal-execution-edge-sandbox-source-proxy-1",
+      "network_delta": {
+        "rx_bytes": 2352559288,
+        "tx_bytes": 2420271815
+      },
+      "pids_max": 3,
+      "sampled_memory_max_bytes": 7122944,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 3301376,
+      "average_cores": 0.011625,
+      "cpu_core_seconds": 1.394944,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 7081984,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 7081984,
+      "name": "portal-execution-edge-source-proxy-1",
+      "network_delta": {
+        "rx_bytes": 2352547793,
+        "tx_bytes": 2420260144
+      },
+      "pids_max": 3,
+      "sampled_memory_max_bytes": 7557120,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 97841152,
+      "average_cores": 0.00329,
+      "cpu_core_seconds": 0.394851,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 101675008,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 101675008,
+      "name": "portal-manager-read-paper-v2-portal_manager_issuer-1",
+      "network_delta": {
+        "rx_bytes": 508818,
+        "tx_bytes": 504303
+      },
+      "pids_max": 1,
+      "sampled_memory_max_bytes": 101933056,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 299008000,
+      "average_cores": 0,
+      "cpu_core_seconds": 0,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 303869952,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 303869952,
+      "name": "portal-manager-read-paper-v2-portal_manager_read-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 2,
+      "sampled_memory_max_bytes": 303869952,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 249806848,
+      "average_cores": 0.017613,
+      "cpu_core_seconds": 2.11352,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 114688,
+        "wios": 4
+      },
+      "memory_end_bytes": 263938048,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 264126464,
+      "name": "qdl_v2_stable_candidate-binance_bar_edge-1",
+      "network_delta": {
+        "rx_bytes": 435134,
+        "tx_bytes": 574690
+      },
+      "pids_max": 78,
+      "sampled_memory_max_bytes": 264130560,
+      "throttled_usec": 310877
+    },
+    {
+      "anonymous_max_bytes": 15765504,
+      "average_cores": 0.086626,
+      "cpu_core_seconds": 10.394875,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 2301952,
+        "wios": 562
+      },
+      "memory_end_bytes": 20230144,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 19173376,
+      "name": "qdl_v2_stable_candidate-ingestor_binance_usdm-1",
+      "network_delta": {
+        "rx_bytes": 25890532,
+        "tx_bytes": 20149257
+      },
+      "pids_max": 22,
+      "sampled_memory_max_bytes": 20451328,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 15478784,
+      "average_cores": 0.09288,
+      "cpu_core_seconds": 11.145438,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 2547712,
+        "wios": 622
+      },
+      "memory_end_bytes": 25284608,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 26050560,
+      "name": "qdl_v2_stable_candidate-ingestor_okx_swap-1",
+      "network_delta": {
+        "rx_bytes": 19107999,
+        "tx_bytes": 25439470
+      },
+      "pids_max": 19,
+      "sampled_memory_max_bytes": 26574848,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 948551680,
+      "average_cores": 0.800967,
+      "cpu_core_seconds": 96.11423,
+      "io_delta": {
+        "rbytes": 167936,
+        "rios": 33,
+        "wbytes": 146677760,
+        "wios": 3318
+      },
+      "memory_end_bytes": 1610039296,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 403,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 1574203392,
+      "name": "qdl_v2_stable_candidate-kafka1-1",
+      "network_delta": {
+        "rx_bytes": 263081883,
+        "tx_bytes": 262829264
+      },
+      "pids_max": 111,
+      "sampled_memory_max_bytes": 1610571776,
+      "throttled_usec": 15874
+    },
+    {
+      "anonymous_max_bytes": 864210944,
+      "average_cores": 0.982935,
+      "cpu_core_seconds": 117.949994,
+      "io_delta": {
+        "rbytes": 45056,
+        "rios": 11,
+        "wbytes": 152993792,
+        "wios": 3964
+      },
+      "memory_end_bytes": 2147336192,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 396,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 2143789056,
+      "name": "qdl_v2_stable_candidate-kafka2-1",
+      "network_delta": {
+        "rx_bytes": 270272530,
+        "tx_bytes": 321751691
+      },
+      "pids_max": 111,
+      "sampled_memory_max_bytes": 2147401728,
+      "throttled_usec": 434742
+    },
+    {
+      "anonymous_max_bytes": 985522176,
+      "average_cores": 1.071639,
+      "cpu_core_seconds": 128.594257,
+      "io_delta": {
+        "rbytes": 348160,
+        "rios": 85,
+        "wbytes": 152395776,
+        "wios": 3963
+      },
+      "memory_end_bytes": 1609793536,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 540,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 1610526720,
+      "name": "qdl_v2_stable_candidate-kafka3-1",
+      "network_delta": {
+        "rx_bytes": 271833328,
+        "tx_bytes": 334160741
+      },
+      "pids_max": 114,
+      "sampled_memory_max_bytes": 1610604544,
+      "throttled_usec": 1209308
+    },
+    {
+      "anonymous_max_bytes": 1221640192,
+      "average_cores": 0.068573,
+      "cpu_core_seconds": 8.228547,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 1225355264,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 1225183232,
+      "name": "qdl_v2_stable_candidate-market_cache-1",
+      "network_delta": {
+        "rx_bytes": 97903256,
+        "tx_bytes": 16908366
+      },
+      "pids_max": 6,
+      "sampled_memory_max_bytes": 1226215424,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 69308416,
+      "average_cores": 0.184555,
+      "cpu_core_seconds": 22.146134,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 98304,
+        "wios": 24
+      },
+      "memory_end_bytes": 78127104,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 77344768,
+      "name": "qdl_v2_stable_candidate-market_projector_1-1",
+      "network_delta": {
+        "rx_bytes": 103480346,
+        "tx_bytes": 133939961
+      },
+      "pids_max": 63,
+      "sampled_memory_max_bytes": 79679488,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 112062464,
+      "average_cores": 0.082952,
+      "cpu_core_seconds": 9.95402,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 98304,
+        "wios": 24
+      },
+      "memory_end_bytes": 115535872,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 115798016,
+      "name": "qdl_v2_stable_candidate-market_projector_2-1",
+      "network_delta": {
+        "rx_bytes": 24089195,
+        "tx_bytes": 21104088
+      },
+      "pids_max": 63,
+      "sampled_memory_max_bytes": 116842496,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 318865408,
+      "average_cores": 0.178262,
+      "cpu_core_seconds": 21.391012,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 320155648,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 320221184,
+      "name": "qdl_v2_stable_candidate-query_kn_1-1",
+      "network_delta": {
+        "rx_bytes": 6242436,
+        "tx_bytes": 9083320
+      },
+      "pids_max": 74,
+      "sampled_memory_max_bytes": 333508608,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 517455872,
+      "average_cores": 0.182476,
+      "cpu_core_seconds": 21.896709,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 517070848,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 514248704,
+      "name": "qdl_v2_stable_candidate-query_kn_2-1",
+      "network_delta": {
+        "rx_bytes": 7791319,
+        "tx_bytes": 9243326
+      },
+      "pids_max": 73,
+      "sampled_memory_max_bytes": 529281024,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 46448640,
+      "average_cores": 0.106092,
+      "cpu_core_seconds": 12.730845,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 49348608,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 49860608,
+      "name": "qdl_v2_stable_candidate-rust_core-1",
+      "network_delta": {
+        "rx_bytes": 16922537,
+        "tx_bytes": 22975056
+      },
+      "pids_max": 22,
+      "sampled_memory_max_bytes": 50663424,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 94662656,
+      "average_cores": 0.158531,
+      "cpu_core_seconds": 19.023383,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 96264192,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 96264192,
+      "name": "qdl_v2_stable_candidate-rust_core_2-1",
+      "network_delta": {
+        "rx_bytes": 21885772,
+        "tx_bytes": 36634501
+      },
+      "pids_max": 17,
+      "sampled_memory_max_bytes": 97312768,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 52523008,
+      "average_cores": 0.099525,
+      "cpu_core_seconds": 11.942815,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 53972992,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 53972992,
+      "name": "qdl_v2_stable_candidate-rust_core_3-1",
+      "network_delta": {
+        "rx_bytes": 16001131,
+        "tx_bytes": 19780800
+      },
+      "pids_max": 17,
+      "sampled_memory_max_bytes": 55271424,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 8364032,
+      "average_cores": 0.02073,
+      "cpu_core_seconds": 2.487531,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 8400896,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 8417280,
+      "name": "qdl_v2_stable_candidate-stable_redis-1",
+      "network_delta": {
+        "rx_bytes": 2010969,
+        "tx_bytes": 528301
+      },
+      "pids_max": 11,
+      "sampled_memory_max_bytes": 14168064,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 238161920,
+      "average_cores": 0.127464,
+      "cpu_core_seconds": 15.295394,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 242552832,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 242282496,
+      "name": "qdl_v2_stable_candidate-stream_kn_1-1",
+      "network_delta": {
+        "rx_bytes": 78666353,
+        "tx_bytes": 103196598
+      },
+      "pids_max": 51,
+      "sampled_memory_max_bytes": 242556928,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 161112064,
+      "average_cores": 0.081808,
+      "cpu_core_seconds": 9.816737,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 163594240,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 164376576,
+      "name": "qdl_v2_stable_candidate-stream_kn_2-1",
+      "network_delta": {
+        "rx_bytes": 75377821,
+        "tx_bytes": 30385284
+      },
+      "pids_max": 17,
+      "sampled_memory_max_bytes": 164638720,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 15433728,
+      "average_cores": 0.114548,
+      "cpu_core_seconds": 13.745521,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 18997248,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 20275200,
+      "name": "redis_marketdata",
+      "network_delta": {
+        "rx_bytes": 637845502,
+        "tx_bytes": 241780823
+      },
+      "pids_max": 6,
+      "sampled_memory_max_bytes": 23379968,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 30449664,
+      "average_cores": 0.00535,
+      "cpu_core_seconds": 0.64203,
+      "io_delta": {
+        "rbytes": 65536,
+        "rios": 16,
+        "wbytes": 77824,
+        "wios": 19
+      },
+      "memory_end_bytes": 33218560,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 33214464,
+      "name": "redis_service",
+      "network_delta": {
+        "rx_bytes": 9398,
+        "tx_bytes": 590
+      },
+      "pids_max": 7,
+      "sampled_memory_max_bytes": 33476608,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 161574912,
+      "average_cores": 0.002704,
+      "cpu_core_seconds": 0.324419,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 166510592,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 166510592,
+      "name": "trading-system-manager-read-live-portal_manager_issuer-1",
+      "network_delta": {
+        "rx_bytes": 404286,
+        "tx_bytes": 401077
+      },
+      "pids_max": 1,
+      "sampled_memory_max_bytes": 166772736,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 712310784,
+      "average_cores": 0,
+      "cpu_core_seconds": 0,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 715440128,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 715440128,
+      "name": "trading-system-manager-read-live-portal_manager_read-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 2,
+      "sampled_memory_max_bytes": 715440128,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 153006080,
+      "average_cores": 0.002356,
+      "cpu_core_seconds": 0.282675,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 157233152,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 157233152,
+      "name": "trading-system-manager-read-sandbox-portal_manager_issuer-1",
+      "network_delta": {
+        "rx_bytes": 357504,
+        "tx_bytes": 354199
+      },
+      "pids_max": 1,
+      "sampled_memory_max_bytes": 157757440,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 844800000,
+      "average_cores": 0,
+      "cpu_core_seconds": 0,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 848072704,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+      },
+      "memory_start_bytes": 848072704,
+      "name": "trading-system-manager-read-sandbox-portal_manager_read-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 2,
+      "sampled_memory_max_bytes": 848072704,
+      "throttled_usec": 0
+    }
+  ],
+  "host_capacity": {
+    "logical_cpu_count": 16,
+    "physical_memory_bytes": 32903782400
+  },
+  "host_summary": {
+    "cpu_busy_fraction": 0.421563,
+    "cpu_iowait_fraction": 0.087283,
+    "load_one_minute_max": 14.51904296875,
+    "load_one_minute_min": 11.48681640625,
+    "memory_available_max_bytes": 17254993920,
+    "memory_available_min_bytes": 16740528128
+  },
+  "limitations": [
+    "PASS means stable observation only, not capacity/latency acceptance",
+    "sampled memory maximum is not true transient peak or per-process RSS",
+    "network counters are per namespace; do not sum shared namespaces",
+    "no DB query/WAL/lock/allocations/business freshness counter in this observation",
+    "host clocks not calibrated by local wall-vs-monotonic drift",
+    "not controlled W-IDLE, B0/B1/B2 or performance G2"
+  ],
+  "lock": {
+    "owner": "codex-epg10-01-hk-observation-20261015T1825Z",
+    "purpose": "EPG10-01 passive observation; no generator/source requests",
+    "started_utc": "2026-10-15T18:24:03.014844+00:00",
+    "until_utc": "2026-10-15T18:27:33.014863+00:00"
+  },
+  "maximum_sampling_gap_seconds": 1.007499,
+  "observer_cpu_seconds": 3.088115,
+  "observer_max_rss_kib": 33372,
+  "raw_sha256": "1c59f428fb5b4bf5602b4c5f11ac186331191c6c412d61921b767a2f8082ec8e",
+  "roster": [
+    {
+      "cgroup": "/system.slice/docker-f8720c83ea3ad80be61c19ea49e8610aa4d282fd647572ebb2afc225cf3bb49e.scope",
+      "config_sha256": "17bd6d723ce159f7e60cc2771a77ccae7fef948bca56c5b5c5fa238834026197",
+      "container_id": "f8720c83ea3ad80be61c19ea49e8610aa4d282fd647572ebb2afc225cf3bb49e",
+      "image": "sha256:dbfb57844977513ae7ec0a4782e04da0213028a789753c6b991f26043b615d65",
+      "name": "data_layer_service",
+      "network_namespace": "net:[4026532835]",
+      "pid": 2263,
+      "project": "data_layer",
+      "restarts": 0,
+      "revision": "2b0dcf74454c9f87c352d3c47389955aeb955804",
+      "start_ticks": 1714
+    },
+    {
+      "cgroup": "/system.slice/docker-08df6d6d79e3eef7a3981d57bb6e0979a36a42ff050d9883eda851dff1867feb.scope",
+      "config_sha256": "d04bc81f0e8d9f274ed7f723f4853b6ffd7bfc858b9f45831b7895842415fcc7",
+      "container_id": "08df6d6d79e3eef7a3981d57bb6e0979a36a42ff050d9883eda851dff1867feb",
+      "image": "sha256:6343bdc87ca132c6b53acb26113a6bad1821d188fa39975a745f32ddd9757634",
+      "name": "live_data_executor",
+      "network_namespace": "net:[4026533613]",
+      "pid": 3196,
+      "project": "trading_system",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1734
+    },
+    {
+      "cgroup": "/system.slice/docker-41d3935ad445d191539ac0d4a2d5fec513626dab1819dad1067aa0801209d399.scope",
+      "config_sha256": "827825fecabd1ce3c14b788458b567bb85d1fc7b3724971105586d85e32aea2a",
+      "container_id": "41d3935ad445d191539ac0d4a2d5fec513626dab1819dad1067aa0801209d399",
+      "image": "sha256:41b77d04c06f4cd23022d0ab434526ac66fc01981824a26915a13e015b502c2c",
+      "name": "market_data_service_p184w",
+      "network_namespace": "net:[4026534435]",
+      "pid": 1901979,
+      "project": "trading-system-market-data",
+      "restarts": 0,
+      "revision": "212d0c708d9aad028b6bd92d84f9416f66687ea1",
+      "start_ticks": 263668759
+    },
+    {
+      "cgroup": "/system.slice/docker-131c8c7ef16dfa512dc388c47a52f1c7e5e0305de7d046ba2014174e9fdce4c1.scope",
+      "config_sha256": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+      "container_id": "131c8c7ef16dfa512dc388c47a52f1c7e5e0305de7d046ba2014174e9fdce4c1",
+      "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+      "name": "portal-execution-edge-execution-edge-1",
+      "network_namespace": "net:[4026533674]",
+      "pid": 3197,
+      "project": "portal-execution-edge",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1734
+    },
+    {
+      "cgroup": "/system.slice/docker-73cd3e85723776aa7b1445ecc62d8b981253ad72ad54973d884ef4cf9fb2768f.scope",
+      "config_sha256": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f",
+      "container_id": "73cd3e85723776aa7b1445ecc62d8b981253ad72ad54973d884ef4cf9fb2768f",
+      "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+      "name": "portal-execution-edge-live-execution-edge-1",
+      "network_namespace": "net:[4026533991]",
+      "pid": 3246,
+      "project": "portal-execution-edge-live",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1735
+    },
+    {
+      "cgroup": "/system.slice/docker-510a0fa25669cddb5bf0b2d3d508176c9bd84631340e270ef401f49edf16b3fe.scope",
+      "config_sha256": "1582b40cffaa5fb00350fa79da5f32519d03271fdb6f6dc59e719bc73ca68d53",
+      "container_id": "510a0fa25669cddb5bf0b2d3d508176c9bd84631340e270ef401f49edf16b3fe",
+      "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+      "name": "portal-execution-edge-live-manager-projection-worker-1",
+      "network_namespace": "net:[4026533920]",
+      "pid": 3231,
+      "project": "portal-execution-edge-live",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1735
+    },
+    {
+      "cgroup": "/system.slice/docker-ed97b30e4ed355d3ee1359a7441fdbca45467dad5b83b8e224b1ec319f4d64c6.scope",
+      "config_sha256": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+      "container_id": "ed97b30e4ed355d3ee1359a7441fdbca45467dad5b83b8e224b1ec319f4d64c6",
+      "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "name": "portal-execution-edge-live-projection-postgres-1",
+      "network_namespace": "net:[4026534251]",
+      "pid": 3342,
+      "project": "portal-execution-edge-live",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1740
+    },
+    {
+      "cgroup": "/system.slice/docker-e5895351de60e4ae25a2d8375c55c2f606f5cbce6aa919fcf20e3a91b9482dbf.scope",
+      "config_sha256": "9bb20c8894a71aa620bce6a62828f66336618526a0f8e6fcb4a1f46449d6384c",
+      "container_id": "e5895351de60e4ae25a2d8375c55c2f606f5cbce6aa919fcf20e3a91b9482dbf",
+      "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+      "name": "portal-execution-edge-live-source-proxy-1",
+      "network_namespace": "net:[4026531833]",
+      "pid": 3278,
+      "project": "portal-execution-edge-live",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1736
+    },
+    {
+      "cgroup": "/system.slice/docker-8113bdc737f1085fd41e123a956c942e54dd6452bc1c15c42191efd2136fbde4.scope",
+      "config_sha256": "95e96a9b2c547f91b6175a0055de71aaee7197db3b37ed48012509cacee73801",
+      "container_id": "8113bdc737f1085fd41e123a956c942e54dd6452bc1c15c42191efd2136fbde4",
+      "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+      "name": "portal-execution-edge-manager-projection-worker-1",
+      "network_namespace": "net:[4026534118]",
+      "pid": 3256,
+      "project": "portal-execution-edge",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1735
+    },
+    {
+      "cgroup": "/system.slice/docker-8c7913cc1e393e4c6165570459dd60b4ab091a5aaaa69cfffeb69f23f899d3fb.scope",
+      "config_sha256": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+      "container_id": "8c7913cc1e393e4c6165570459dd60b4ab091a5aaaa69cfffeb69f23f899d3fb",
+      "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "name": "portal-execution-edge-projection-postgres-1",
+      "network_namespace": "net:[4026533150]",
+      "pid": 2537,
+      "project": "portal-execution-edge",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1718
+    },
+    {
+      "cgroup": "/system.slice/docker-cfbd5942298e66cdabf53cbd00329b9bd4da9f584a09bfd407fcdc17996ab569.scope",
+      "config_sha256": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+      "container_id": "cfbd5942298e66cdabf53cbd00329b9bd4da9f584a09bfd407fcdc17996ab569",
+      "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+      "name": "portal-execution-edge-sandbox-execution-edge-1",
+      "network_namespace": "net:[4026534312]",
+      "pid": 3344,
+      "project": "portal-execution-edge-sandbox",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1740
+    },
+    {
+      "cgroup": "/system.slice/docker-9a222eec68a10e3fa46a06b394d69634d28c2e61ce47d6643485966bd04f28f7.scope",
+      "config_sha256": "12294191799e7d112a3c8c8eff86f32dce1531fc40ec87062d87b13b53b23caa",
+      "container_id": "9a222eec68a10e3fa46a06b394d69634d28c2e61ce47d6643485966bd04f28f7",
+      "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+      "name": "portal-execution-edge-sandbox-manager-projection-worker-1",
+      "network_namespace": "net:[4026534182]",
+      "pid": 3275,
+      "project": "portal-execution-edge-sandbox",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1736
+    },
+    {
+      "cgroup": "/system.slice/docker-1f2f7796c26de7c81b32bb5a3995fef6f16b9f69b9c2fe1552c863d642a1696f.scope",
+      "config_sha256": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+      "container_id": "1f2f7796c26de7c81b32bb5a3995fef6f16b9f69b9c2fe1552c863d642a1696f",
+      "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "name": "portal-execution-edge-sandbox-projection-postgres-1",
+      "network_namespace": "net:[4026533087]",
+      "pid": 2522,
+      "project": "portal-execution-edge-sandbox",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1718
+    },
+    {
+      "cgroup": "/system.slice/docker-dadf1c61f7b883af2250f66d608f2ede8bedfd81caeeaf13ea48581cf0e41186.scope",
+      "config_sha256": "da4b44c00580f3e4dfa42b77fd160f72c79300d6ab3f226e595ec42ee7f26b77",
+      "container_id": "dadf1c61f7b883af2250f66d608f2ede8bedfd81caeeaf13ea48581cf0e41186",
+      "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+      "name": "portal-execution-edge-sandbox-source-proxy-1",
+      "network_namespace": "net:[4026531833]",
+      "pid": 2784,
+      "project": "portal-execution-edge-sandbox",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1722
+    },
+    {
+      "cgroup": "/system.slice/docker-ffdcbdebe71def456c83809d1382daeaac04f60815c37e78c1f4355c1668f098.scope",
+      "config_sha256": "21786bb09a2c5e94481b457a19a262c0cb2bf3fc6edb86629b053247ca329de8",
+      "container_id": "ffdcbdebe71def456c83809d1382daeaac04f60815c37e78c1f4355c1668f098",
+      "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+      "name": "portal-execution-edge-source-proxy-1",
+      "network_namespace": "net:[4026531833]",
+      "pid": 2834,
+      "project": "portal-execution-edge",
+      "restarts": 0,
+      "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+      "start_ticks": 1723
+    },
+    {
+      "cgroup": "/system.slice/docker-30c3a81dddfa5a88aa6585626843db52ba78d72b07a535e400d2536594c63952.scope",
+      "config_sha256": "7710fc8e206a9812eb2abea7d7d222a1c568217a2f7ee6d8b122ed0009043342",
+      "container_id": "30c3a81dddfa5a88aa6585626843db52ba78d72b07a535e400d2536594c63952",
+      "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+      "name": "portal-manager-read-paper-v2-portal_manager_issuer-1",
+      "network_namespace": "net:[4026533735]",
+      "pid": 3199,
+      "project": "portal-manager-read-paper-v2",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1734
+    },
+    {
+      "cgroup": "/system.slice/docker-2a87918c7fd17bc0ef28fd5328414da3c1c0e9d15440ca214f245688dc8cd22f.scope",
+      "config_sha256": "225db7755ea8ca9317e18af8febf06c7f3a4f92892a57f344a626126c98bf889",
+      "container_id": "2a87918c7fd17bc0ef28fd5328414da3c1c0e9d15440ca214f245688dc8cd22f",
+      "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+      "name": "portal-manager-read-paper-v2-portal_manager_read-1",
+      "network_namespace": "net:[4026532903]",
+      "pid": 8300,
+      "project": "portal-manager-read-paper-v2",
+      "restarts": 3,
+      "revision": null,
+      "start_ticks": 2299
+    },
+    {
+      "cgroup": "/system.slice/docker-83640a8945206717ddbada37867aef55edce45f51dd922ef489d6edf88772163.scope",
+      "config_sha256": "9b33a2a379a511e4aecb92e75c76249f2c5b9fb5195540480abb986df75feb6c",
+      "container_id": "83640a8945206717ddbada37867aef55edce45f51dd922ef489d6edf88772163",
+      "image": "sha256:08f356a84151c6e865fbdc4a2efe6924df9336d15353254c2b2da684261794f5",
+      "name": "qdl_v2_stable_candidate-binance_bar_edge-1",
+      "network_namespace": "net:[4026532474]",
+      "pid": 1867946,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "a388537c897de909257c7f45db44c9ac44a62ccc",
+      "start_ticks": 233431121
+    },
+    {
+      "cgroup": "/system.slice/docker-aebb8325e2b9a7adb70b62e7d152042d396933bf72cd48b3473aaa1e37187f63.scope",
+      "config_sha256": "c6d925e408f6bc59b330290a3eb24c1dfb3e47a0425d7c870e2f451ea31203f1",
+      "container_id": "aebb8325e2b9a7adb70b62e7d152042d396933bf72cd48b3473aaa1e37187f63",
+      "image": "sha256:7fba25779f72a3adffc88f195935a316ac94acbfcb362996fafbff89f62c9103",
+      "name": "qdl_v2_stable_candidate-ingestor_binance_usdm-1",
+      "network_namespace": "net:[4026534563]",
+      "pid": 1654698,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "cdbf28bfd99ac5b9e9d3ae402262e6889cf6fa96",
+      "start_ticks": 263325588
+    },
+    {
+      "cgroup": "/system.slice/docker-decee9ad6d739914399cfe150df476edb9d2602dad599a269175bce0bd787c93.scope",
+      "config_sha256": "6aedfc6c9dc814cb0edac35fcd190d17827f20aa53a03e29770b4281c3f71501",
+      "container_id": "decee9ad6d739914399cfe150df476edb9d2602dad599a269175bce0bd787c93",
+      "image": "sha256:7fba25779f72a3adffc88f195935a316ac94acbfcb362996fafbff89f62c9103",
+      "name": "qdl_v2_stable_candidate-ingestor_okx_swap-1",
+      "network_namespace": "net:[4026534537]",
+      "pid": 2566505,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "cdbf28bfd99ac5b9e9d3ae402262e6889cf6fa96",
+      "start_ticks": 252805897
+    },
+    {
+      "cgroup": "/system.slice/docker-36498e7e4a736260e213fc18d8998ab09f0f00dab2929db072aab52774e4d4b9.scope",
+      "config_sha256": "4785afb8f4c2df6ad02a69dd48fec6e48ac040880bec1003f96eb23775f197da",
+      "container_id": "36498e7e4a736260e213fc18d8998ab09f0f00dab2929db072aab52774e4d4b9",
+      "image": "sha256:9516fb7634bad307d17c33b589fde9023003b0cb761374f500002b980a3149b9",
+      "name": "qdl_v2_stable_candidate-kafka1-1",
+      "network_namespace": "net:[4026532741]",
+      "pid": 3592065,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 202991333
+    },
+    {
+      "cgroup": "/system.slice/docker-1168e31f4823b6587737e03a3f67ac1ed4edfecc37e0a6a4861584aa4f33f23b.scope",
+      "config_sha256": "ff043626cc3909ac42a1b42a724fb90ad3cad8d990570693f57a89981cda253e",
+      "container_id": "1168e31f4823b6587737e03a3f67ac1ed4edfecc37e0a6a4861584aa4f33f23b",
+      "image": "sha256:9516fb7634bad307d17c33b589fde9023003b0cb761374f500002b980a3149b9",
+      "name": "qdl_v2_stable_candidate-kafka2-1",
+      "network_namespace": "net:[4026532945]",
+      "pid": 3592206,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 202991354
+    },
+    {
+      "cgroup": "/system.slice/docker-d8a2c138f252a658582fcb16fc8c86c75bf343d145dec65f9aad88156e9d2b02.scope",
+      "config_sha256": "fe6ef4f062ddaed48385b7ca3440c3f7b54b44cb2c401f8311384edc1fe0f352",
+      "container_id": "d8a2c138f252a658582fcb16fc8c86c75bf343d145dec65f9aad88156e9d2b02",
+      "image": "sha256:9516fb7634bad307d17c33b589fde9023003b0cb761374f500002b980a3149b9",
+      "name": "qdl_v2_stable_candidate-kafka3-1",
+      "network_namespace": "net:[4026533245]",
+      "pid": 3592656,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 202991375
+    },
+    {
+      "cgroup": "/system.slice/docker-bac2c14d80d5ac0ce631aa58bbf4e64ab17c705a47dfe6fb8871f66ee8857c48.scope",
+      "config_sha256": "4e9a2dedd29ddf982219bfd564dd82fd974eb9ce3fb3b119897b1b283337dd30",
+      "container_id": "bac2c14d80d5ac0ce631aa58bbf4e64ab17c705a47dfe6fb8871f66ee8857c48",
+      "image": "sha256:dfa18828cbc07b3ae6a95ec7343f6c214fdee2d836197b4be8e9904420762cd8",
+      "name": "qdl_v2_stable_candidate-market_cache-1",
+      "network_namespace": "net:[4026535998]",
+      "pid": 1222217,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 104029744
+    },
+    {
+      "cgroup": "/system.slice/docker-c77d99e32e4ebdcc871c8b25dde5fd99b399a5be95a5f32fc31eae2c651bb8ae.scope",
+      "config_sha256": "b36990b249d45ae2f3b7d36d3c9451db66397aa0869598ab0b63d7c901059120",
+      "container_id": "c77d99e32e4ebdcc871c8b25dde5fd99b399a5be95a5f32fc31eae2c651bb8ae",
+      "image": "sha256:ce629061a8c180ae7e6cf88e32ebaddcf965ffe3924c88a3f1b942fc1623d4f9",
+      "name": "qdl_v2_stable_candidate-market_projector_1-1",
+      "network_namespace": "net:[4026533565]",
+      "pid": 1868726,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "a388537c897de909257c7f45db44c9ac44a62ccc",
+      "start_ticks": 233431911
+    },
+    {
+      "cgroup": "/system.slice/docker-20550cd0417c8795368d52bce5c177369cbbc958753f6eeec4215b3b7adf096c.scope",
+      "config_sha256": "bacd309ad62e8eacf44ab8a85f2d8bebf5f42e292dac14fe7d16de7cb6bd8ba0",
+      "container_id": "20550cd0417c8795368d52bce5c177369cbbc958753f6eeec4215b3b7adf096c",
+      "image": "sha256:ce629061a8c180ae7e6cf88e32ebaddcf965ffe3924c88a3f1b942fc1623d4f9",
+      "name": "qdl_v2_stable_candidate-market_projector_2-1",
+      "network_namespace": "net:[4026533822]",
+      "pid": 1870834,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "a388537c897de909257c7f45db44c9ac44a62ccc",
+      "start_ticks": 233435083
+    },
+    {
+      "cgroup": "/system.slice/docker-fea8bf2e0c8221c08c79ea20f5315b1ff93d4d50b1d9c9ca4d35d675ceed4b95.scope",
+      "config_sha256": "46d5fae4682018d7acbe0bfd1a7576fc7205a5975391446c216a5cab84175694",
+      "container_id": "fea8bf2e0c8221c08c79ea20f5315b1ff93d4d50b1d9c9ca4d35d675ceed4b95",
+      "image": "sha256:b9ca6c36fb0ad003b77e47bb3a777c3e565944d59cb3a2e9bc5dfb68e3448481",
+      "name": "qdl_v2_stable_candidate-query_kn_1-1",
+      "network_namespace": "net:[4026532308]",
+      "pid": 3734594,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "4d3476c5b6944eba557d00ee71f351f150a5b752",
+      "start_ticks": 260362343
+    },
+    {
+      "cgroup": "/system.slice/docker-51ee6b45ace781b9c9dde5d4c40fa9b59e4ad07d47861d133ea9e2ca34ef40cc.scope",
+      "config_sha256": "6de52daefbeb0a1192fbcad44c85abb5cc73ee4739f922c50e2be25b71528b67",
+      "container_id": "51ee6b45ace781b9c9dde5d4c40fa9b59e4ad07d47861d133ea9e2ca34ef40cc",
+      "image": "sha256:b9ca6c36fb0ad003b77e47bb3a777c3e565944d59cb3a2e9bc5dfb68e3448481",
+      "name": "qdl_v2_stable_candidate-query_kn_2-1",
+      "network_namespace": "net:[4026532953]",
+      "pid": 3755529,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "4d3476c5b6944eba557d00ee71f351f150a5b752",
+      "start_ticks": 260395660
+    },
+    {
+      "cgroup": "/system.slice/docker-2a60f79227ac905cf86057ca8a72df310b267832162a441cac59cffa85ba28b0.scope",
+      "config_sha256": "4cab5e03b1d7307988f3bc22085748179c7c29c09fcdfd6ec890c799e50920db",
+      "container_id": "2a60f79227ac905cf86057ca8a72df310b267832162a441cac59cffa85ba28b0",
+      "image": "sha256:7c848aadcb0dd28178bc6dc2b58c42df6c2c235de6d4bfd6602ef7c19fa64bfb",
+      "name": "qdl_v2_stable_candidate-rust_core-1",
+      "network_namespace": "net:[4026532398]",
+      "pid": 1041379,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "a4e7b3b82475b2c4359a27c0fa1144e4f3a2805e",
+      "start_ticks": 262448112
+    },
+    {
+      "cgroup": "/system.slice/docker-3a9ca9b6da02ab7866710617df56dcfa7209b8200a4f11262ec02cb2620c961a.scope",
+      "config_sha256": "c968d3481934b322a48f96fdef6ad85d2657e09fd7c2721c8050860769b03fbe",
+      "container_id": "3a9ca9b6da02ab7866710617df56dcfa7209b8200a4f11262ec02cb2620c961a",
+      "image": "sha256:7c848aadcb0dd28178bc6dc2b58c42df6c2c235de6d4bfd6602ef7c19fa64bfb",
+      "name": "qdl_v2_stable_candidate-rust_core_2-1",
+      "network_namespace": "net:[4026533418]",
+      "pid": 1041468,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "a4e7b3b82475b2c4359a27c0fa1144e4f3a2805e",
+      "start_ticks": 262448120
+    },
+    {
+      "cgroup": "/system.slice/docker-21b9dffde9c326c7ae462886ea81ca5bd2a8718dbe1d811b94a7e8e9f7a7f776.scope",
+      "config_sha256": "0fb460fe4ae64a23130b5d9be829971fd6021764c4f9f6c6d6cb1ad4fadaab6b",
+      "container_id": "21b9dffde9c326c7ae462886ea81ca5bd2a8718dbe1d811b94a7e8e9f7a7f776",
+      "image": "sha256:7c848aadcb0dd28178bc6dc2b58c42df6c2c235de6d4bfd6602ef7c19fa64bfb",
+      "name": "qdl_v2_stable_candidate-rust_core_3-1",
+      "network_namespace": "net:[4026533482]",
+      "pid": 1041508,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "a4e7b3b82475b2c4359a27c0fa1144e4f3a2805e",
+      "start_ticks": 262448123
+    },
+    {
+      "cgroup": "/system.slice/docker-cd2c41218285c86c75b83634036097655ba29f88c0be85a89c7b240bd5531c0d.scope",
+      "config_sha256": "e59a11bb32196260412bd03795babaa112b404258f87acf948b96a9bcdbc6e3e",
+      "container_id": "cd2c41218285c86c75b83634036097655ba29f88c0be85a89c7b240bd5531c0d",
+      "image": "sha256:dfa18828cbc07b3ae6a95ec7343f6c214fdee2d836197b4be8e9904420762cd8",
+      "name": "qdl_v2_stable_candidate-stable_redis-1",
+      "network_namespace": "net:[4026535061]",
+      "pid": 1582718,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 9403501
+    },
+    {
+      "cgroup": "/system.slice/docker-cacd4e91f5b79257259a9e695f789ae26526cfdb482ba68df0bb05c407097174.scope",
+      "config_sha256": "592fdd7f2adec1b0c78b4203a2227b4a3c41032807be88f875c2bed33433a552",
+      "container_id": "cacd4e91f5b79257259a9e695f789ae26526cfdb482ba68df0bb05c407097174",
+      "image": "sha256:b095b18e209494a87e698856a316f8d6ef75e6eae059d0540f4d5e9c28878719",
+      "name": "qdl_v2_stable_candidate-stream_kn_1-1",
+      "network_namespace": "net:[4026533904]",
+      "pid": 1730548,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "e3b55528e23b2daceb8983f3ef831749029929a7",
+      "start_ticks": 263443019
+    },
+    {
+      "cgroup": "/system.slice/docker-d88f4b1e932f900d7a1133cbb66b7a875cfc2f12b8035bc4876b5c96352c04f2.scope",
+      "config_sha256": "0e061355c22a4e3ab7fc8f903ce74a0052e300424561373017250029d5caef8f",
+      "container_id": "d88f4b1e932f900d7a1133cbb66b7a875cfc2f12b8035bc4876b5c96352c04f2",
+      "image": "sha256:b095b18e209494a87e698856a316f8d6ef75e6eae059d0540f4d5e9c28878719",
+      "name": "qdl_v2_stable_candidate-stream_kn_2-1",
+      "network_namespace": "net:[4026534104]",
+      "pid": 1733000,
+      "project": "qdl_v2_stable_candidate",
+      "restarts": 0,
+      "revision": "e3b55528e23b2daceb8983f3ef831749029929a7",
+      "start_ticks": 263446467
+    },
+    {
+      "cgroup": "/system.slice/docker-792a1732d3e541d627516b7bd80441a1f5d213972f41182be440d9b65005e69b.scope",
+      "config_sha256": "c34ed6a4831c999f607165a8eee521ea88005c239ba2fbbe95ea3fdd1e21d971",
+      "container_id": "792a1732d3e541d627516b7bd80441a1f5d213972f41182be440d9b65005e69b",
+      "image": "sha256:05a97a479bc73de66f087dc05b569010772880f778cc8671fa6b8aadee32e5c6",
+      "name": "redis_marketdata",
+      "network_namespace": "net:[4026532646]",
+      "pid": 2211,
+      "project": "data_layer",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1713
+    },
+    {
+      "cgroup": "/system.slice/docker-a6624b3127f86dc110a662c1bcad3f59827f5a11cb849313dcbf08e3f17cd094.scope",
+      "config_sha256": "22be755a04640969b6e03c8d6d0ca5f057d05b1afedfc357b40c8dbbb40665f2",
+      "container_id": "a6624b3127f86dc110a662c1bcad3f59827f5a11cb849313dcbf08e3f17cd094",
+      "image": "sha256:05a97a479bc73de66f087dc05b569010772880f778cc8671fa6b8aadee32e5c6",
+      "name": "redis_service",
+      "network_namespace": "net:[4026532961]",
+      "pid": 2329,
+      "project": "trading_system",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1715
+    },
+    {
+      "cgroup": "/system.slice/docker-5577af90835f3c21710afe3d7ff9654991426aa46a3914e8a14eb7279c5c29c2.scope",
+      "config_sha256": "e68c442990013c2c22a55a0816d62124823aa5d0aabfc95ad27278a2d76664ba",
+      "container_id": "5577af90835f3c21710afe3d7ff9654991426aa46a3914e8a14eb7279c5c29c2",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "name": "trading-system-manager-read-live-portal_manager_issuer-1",
+      "network_namespace": "net:[4026532583]",
+      "pid": 2198,
+      "project": "trading-system-manager-read-live",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1713
+    },
+    {
+      "cgroup": "/system.slice/docker-cc975621909254caa701977735cfd1543032afb6e8fdaeb85eba04d13a8357dc.scope",
+      "config_sha256": "976ebe89ed6839c23119c4ed7b927a6465de0cd333941c93fcbe077d740f8111",
+      "container_id": "cc975621909254caa701977735cfd1543032afb6e8fdaeb85eba04d13a8357dc",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "name": "trading-system-manager-read-live-portal_manager_read-1",
+      "network_namespace": "net:[4026532918]",
+      "pid": 9413,
+      "project": "trading-system-manager-read-live",
+      "restarts": 4,
+      "revision": null,
+      "start_ticks": 2509
+    },
+    {
+      "cgroup": "/system.slice/docker-3b15396a2c4520a53abd283a65c3cda98bff119e3993a0430d86b1ea1cd60565.scope",
+      "config_sha256": "a97d6be022ee4c9c11e61539980aa80a15a96d77f18d2af94b057cae1d89c4df",
+      "container_id": "3b15396a2c4520a53abd283a65c3cda98bff119e3993a0430d86b1ea1cd60565",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "name": "trading-system-manager-read-sandbox-portal_manager_issuer-1",
+      "network_namespace": "net:[4026532520]",
+      "pid": 2185,
+      "project": "trading-system-manager-read-sandbox",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 1712
+    },
+    {
+      "cgroup": "/system.slice/docker-fb2107bd7021de57ed42648d53ff719345f4b4e9360f4edc71ed7308b232f91a.scope",
+      "config_sha256": "453f59be45d1935795155c1aa2e44ceb7c6e10d636878f54f7319e4fa831a5bd",
+      "container_id": "fb2107bd7021de57ed42648d53ff719345f4b4e9360f4edc71ed7308b232f91a",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "name": "trading-system-manager-read-sandbox-portal_manager_read-1",
+      "network_namespace": "net:[4026532404]",
+      "pid": 9319,
+      "project": "trading-system-manager-read-sandbox",
+      "restarts": 4,
+      "revision": null,
+      "start_ticks": 2484
+    }
+  ],
+  "runtime_acceptance": false,
+  "runtime_changes": 0,
+  "sample_count": 121,
+  "schema": "epg10.passive-observation.v1",
+  "source_requests": 0,
+  "status": "PASS_OBSERVATION_ONLY",
+  "wall_vs_monotonic_drift_ms": -0.00043,
+  "review_notes": [
+    "One 120s existing-workload observation, not controlled W-IDLE or paired B0.",
+    "Pre-window foreign temporary job exited; owned lock held through sampling; subsequent foreign lock began after this receipt.",
+    "Kafka memory.max pressure events are observed source-runtime facts, not an Edge regression or a passing capacity gate."
+  ]
+}

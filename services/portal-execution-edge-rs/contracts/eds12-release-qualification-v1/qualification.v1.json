@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:ebfda302c54ebf57efca3d65f3ef9551a471f3e1f42d28c7219e738b54498ae7"
+      "sha256": "sha256:b8640208f0bd301401c153c0a0cead1dbd5f90b41c8ae63bac8e6af2b92fea46"
     },
     {
       "id": "n29_debt",
@@ -145,17 +145,17 @@
     {
       "id": "manager_v2_contract_decoder",
       "file": "services/portal-execution-edge-rs/crates/manager-v2-contract/src/lib.rs",
-      "sha256": "sha256:1d9a526294be46a6861abcd8333d7aff8714954b432b0d4bbbdac2a3515777c6"
+      "sha256": "sha256:b7e60b66d9d8a53afa8f3cbbc86f1098db381e40262a6f9701f42413158fdc90"
     },
     {
       "id": "market_context_rust_adapter",
       "file": "services/portal-execution-edge-rs/crates/manager-extension-contract/src/lib.rs",
-      "sha256": "sha256:f53352c2bd254ff7c3202193ebcf89035c9aa51dc2e92e1799e6d64d212d1d39"
+      "sha256": "sha256:a95bce3da952419c5fc724f1869324053541beb4dbcae7ef0ac74a38739113c8"
     },
     {
       "id": "manager_projection",
       "file": "services/portal-execution-edge-rs/crates/manager-projection/src/lib.rs",
-      "sha256": "sha256:98d81e750fb289962e3c937b5c644304d00cc170828dfe60fee7a8731238f657"
+      "sha256": "sha256:c8c1a47d3ccfc704ba5277d0c8b521dc0187757cca48b95ad9ae4673c9e6453c"
     },
     {
       "id": "frontend_execution_route",

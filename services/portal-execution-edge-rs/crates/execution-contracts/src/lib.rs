@@ -1,6 +1,8 @@
 #![forbid(unsafe_code)]
 
+pub mod catalogue_v1;
 mod events;
+pub mod strict_json;
 
 pub use events::{
     AccountUpdatedPayload, BrokerBindingUpdatedPayload, ExecutionEvent, ExecutionEventEnvelope,

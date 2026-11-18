@@ -1,0 +1,118 @@
+{
+  "schema": "epg10.manager-materialization-qualification.v1",
+  "status": "ISOLATED_QUALIFIED_NOT_DEPLOYED_OR_CAPACITY",
+  "phase": "EPG10-06_OWNED_SOURCE_FACT_MATERIALIZATION",
+  "full_phase_acceptance": "NOT_MET",
+  "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+  "source": {
+    "repository": "BobbyAxerol/awesome-portal",
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "parent_commit": "85c6cfd8bfa51f80402cb113839ae7889a7488ac",
+    "owned_input_sha256": {
+      "services/portal-execution-edge-rs/crates/edge-service/src/main.rs": "f9d7ed71ca4c2061a61d8d058f80fd14b42699c67b0693bdb1d3b76e13ad3e2b",
+      "services/portal-execution-edge-rs/crates/edge-service/src/manager_projection_command.rs": "d447d8e92b523ec4654ce9f9e19e8b41478caae575477d1b5994fe433dadc8fe",
+      "services/portal-execution-edge-rs/crates/manager-projection/src/lib.rs": "8ea182bda1b027e97b67addc5018505ad7e25a864966385df58c80c79e3e5485",
+      "services/portal-execution-edge-rs/crates/manager-projection/src/materialization.rs": "e0ecf16ed25cf59f2a2107d32be4b8ae8554c170265ccc605a026cfdfcfd9b8a"
+    },
+    "qualification_manifest_sha256": "697effdec4816aad79bcb7e05f1fdedd1563034d67a75f522f5c8c8ab9516739",
+    "source_packet_sha256": "fa1e2c5515e8472df45806784ef827444f73c5aa43bdfbadced8966c0ed38373",
+    "compiled_test_identity_manifest_sha256": "a02231fa9215d2a9522a7944f7984adf86bd45eb0ea86e3b81bbc3499bff8df8",
+    "qualification_receipt_sha256": "61ca7cf146a3ed370f0d636a8b69b84d5baf101edf6b449825cfccddb5d56d96",
+    "all_451_inputs_unchanged_during_rust_qualification": true,
+    "later_generated_metadata_only_delta": {
+      "files": ["services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/qualification.v1.json", "services/portal-execution-edge-rs/contracts/eds12-release-qualification-v1/MANIFEST.sha256"],
+      "changed_field": "manager_projection input digest and enclosing manifest hash only",
+      "all_other_qualification_properties_and_inputs_unchanged": true,
+      "three_qualified_binary_dependency_graphs_unchanged": true,
+      "static_refresher_check": "PASS",
+      "eds12_python_fail_closed_mutation_cases_passed": 11,
+      "historical_executed_evidence_rewritten": false,
+      "operations_qualified": false,
+      "product_active": false,
+      "runtime_effect": "NONE"
+    },
+    "peer_wip_excluded_from_commit": true
+  },
+  "actual_gates": {
+    "terminal_exit_code": 0,
+    "rustfmt": "PASS",
+    "affected_packages_all_target_check": "PASS",
+    "mapper_lib": {"passed": 29, "failed": 0, "ignored": 0, "filtered": 0},
+    "edge_binary": {"passed": 73, "failed": 0, "ignored": 0, "filtered": 0},
+    "actual_postgresql_manager": {"passed": 11, "failed": 0, "ignored": 0, "filtered": 0},
+    "distinct_selected_rust_passed": 113,
+    "new_test_methods": 26,
+    "strict_affected_all_target_clippy": {"status": "PASS", "owned_warnings": 0, "upstream_warnings": 0},
+    "unaffected_suites_rerun_for_counts": false,
+    "qualification_receipt_seconds_observational": 613.065,
+    "outer_supervisor_seconds_observational": 614.607,
+    "timings_are_performance_gates": false
+  },
+  "failed_predecessor": {
+    "status": "FAILED_TEST_COMPILE_NO_TESTS_EXECUTED",
+    "receipt_sha256": "18867366a136259cac5362b8272f0f73948b23ac46e4dd745f33f009e5022425",
+    "error": "E0277: new parity test attempted Serialize on ProjectionSnapshot",
+    "correction": "Test compares every explicit snapshot metadata field and observations; production serialization contract unchanged. Cycle and state digest assertions retained.",
+    "prelaunch_transfer_hash_guard": "REFUSED_BEFORE_JOB_THEN_TRANSFER_TERMINAL_AND_ALL_INPUTS_REVERIFIED"
+  },
+  "implementation": {
+    "immutable_feed_arc_sharing": true,
+    "complete_cycle_still_returns_owned_facts": true,
+    "cache_installation_only_after_durable_commit": true,
+    "limits": "ALL_OR_NONE_OPT_IN_NO_PRODUCTION_DEFAULTS",
+    "logical_populations": ["source_record_fields_json", "candidate_cache_full_fact_json", "distinct_old_plus_refreshed_plus_owned_cycle_fact_json"],
+    "excluded_populations": ["feed_and_container_metadata", "parsed_source_pages", "builder_observation_and_digest_scratch", "sql_current_maps", "allocator_overhead", "total_process_rss"],
+    "legacy_absent_configuration_preserved": true,
+    "oversize_refusal_does_not_truncate_or_publish_partial_complete": true,
+    "business_state_digest_and_decimal_profile_parity": "TESTED"
+  },
+  "execution_bounds": {
+    "class": "correctness_nonexclusive",
+    "cargo_cpu_affinity": [0],
+    "cargo_jobs": 1,
+    "cargo_memory_bytes": 2147483648,
+    "cargo_swap_bytes": 0,
+    "cargo_tasks_max": 256,
+    "pg_cpus": 0.5,
+    "pg_memory_bytes": 805306368,
+    "pg_tmpfs_bytes": 536870912,
+    "pg_max_connections": 24,
+    "qualification_wall_seconds": 1500,
+    "private_cell_max_bytes": 8589934592,
+    "free_disk_floor_bytes": 107374182400
+  },
+  "private_evidence": {
+    "hk": "/home/bobby/secure/epg10-06-manager-MfOTWWOO",
+    "sgp": "/home/bobby/secure/epg10-06-manager-tGxHxCRi-evidence",
+    "normal_commit_hook_terminal_log": "/home/bobby/secure/epg10-06-manager-MfOTWWOO/hk_hook/normal-hook.log",
+    "normal_commit_hook_required": true,
+    "normal_commit_hook_bypass": false,
+    "normal_commit_hook_failed_predecessor_sha256": "da069da8b09eca89dd1593500d96591f8b9355a19ae667e4aaf149562406993c",
+    "post_terminal_hk_cleanup_receipt": "/home/bobby/secure/epg10-06-manager-MfOTWWOO/hk_hook/closeout.json"
+  },
+  "cleanup": {
+    "qualification_scope_inactive": true,
+    "owned_postgresql_removed": true,
+    "sampler_and_correctness_activity_finished": true,
+    "qualification_cleanup_errors": [],
+    "qualification_images_built_or_pulled": 0,
+    "qualification_volumes_created_or_removed": 0,
+    "sgp_exact_cell_removed": true,
+    "sgp_removed_logical_bytes": 4532699474,
+    "sgp_free_before_bytes": 138625589248,
+    "sgp_free_after_bytes": 143018156032,
+    "shared_host_disk_delta_not_exclusive_attribution": true,
+    "sgp_cleanup_window_runtime_images_and_buildkit_unchanged": true,
+    "sgp_cleanup_receipt_sha256": "7c98a506ff32d957c1d9d3abecfd7b3d066136fc30392dafe5dc1191c143d8e6",
+    "source_copy_and_hook_image_closeout": "EXACT_POST_TERMINAL_RECEIPTS_IN_SAME_PHASE_JOURNAL_NO_SHARED_PRUNE"
+  },
+  "observed_old_runtime": {
+    "worker_source_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+    "historical_oom_and_exit_137_observed": true,
+    "allocation_cause_established": false,
+    "candidate_deployed_or_asserted_as_oom_fix": false
+  },
+  "operational_runtime_config_database_auth_or_route_mutations": false,
+  "production_capacity_or_connected_acceptance_claimed": false,
+  "tainted_for_absolute_capacity": true
+}

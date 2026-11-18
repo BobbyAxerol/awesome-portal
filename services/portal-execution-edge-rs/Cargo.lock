@@ -95,10 +95,12 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 name = "authoritative-event-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "execution-contracts",
  "projection-core",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
  "uuid",
 ]
@@ -375,6 +377,7 @@ dependencies = [
 name = "command-relay"
 version = "0.1.0"
 dependencies = [
+ "projection-core",
  "serde",
  "serde_json",
  "sha2",
@@ -542,6 +545,7 @@ dependencies = [
  "manager-projection",
  "manager-v2-client",
  "manager-v2-contract",
+ "maximum-data-adapter",
  "paper-source-ingestor",
  "paper-source-runner",
  "paper-source-transport",
@@ -556,7 +560,9 @@ dependencies = [
  "rustls-pemfile",
  "serde",
  "serde_json",
+ "sha2",
  "source-qualification",
+ "sqlx",
  "thiserror",
  "time",
  "tokio",
@@ -1235,6 +1241,7 @@ name = "manager-extension-contract"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "execution-contracts",
  "serde",
  "serde_json",
  "thiserror",
@@ -1263,8 +1270,12 @@ dependencies = [
  "manager-extension-contract",
  "manager-v2-contract",
  "reqwest",
+ "rustls",
+ "rustls-pemfile",
  "thiserror",
  "tokio",
+ "ts-adapter-v1",
+ "ts-transport",
  "url",
  "uuid",
 ]
@@ -1274,6 +1285,7 @@ name = "manager-v2-contract"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "execution-contracts",
  "serde",
  "serde_json",
  "sha2",
@@ -1706,11 +1718,15 @@ dependencies = [
  "analytics",
  "authoritative-event-core",
  "chrono",
+ "command-relay",
  "execution-contracts",
+ "futures-util",
  "hex",
  "home",
+ "manager-projection",
  "projection-core",
  "query-api",
+ "realtime-sse",
  "serde",
  "serde_json",
  "sha2",
@@ -1751,10 +1767,12 @@ dependencies = [
  "execution-contracts",
  "hex",
  "hmac",
+ "projection-core",
  "serde",
  "serde_json",
  "sha2",
  "thiserror",
+ "tokio",
  "uuid",
 ]
 
@@ -1911,6 +1929,7 @@ dependencies = [
  "chrono",
  "execution-contracts",
  "projection-core",
+ "query-api",
  "serde",
  "serde_json",
  "thiserror",
@@ -2969,13 +2988,19 @@ dependencies = [
 name = "ts-transport"
 version = "0.1.0"
 dependencies = [
+ "authoritative-event-core",
+ "axum",
+ "axum-server",
  "chrono",
  "execution-contracts",
  "futures-util",
  "hex",
  "idna",
  "idna_adapter",
+ "rcgen",
  "reqwest",
+ "rustls",
+ "rustls-pemfile",
  "serde",
  "serde_json",
  "sha2",

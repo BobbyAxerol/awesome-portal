@@ -1,0 +1,222 @@
+{
+  "schema_version": "execution-edge.original08.business-root-egress-qualification.v1",
+  "recorded_status": "COMPONENTS_QUALIFIED_UNMOUNTED_FULL08_NOT_MET",
+  "canonical_plan": "upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#23207-original08--actual-provider-owning-boundary-and-connected-acceptance",
+  "source_target": "/tmp/epg10-08-business-root-L7CwneYt",
+  "business_root": {
+    "source_pins": {
+      "contracts/baseline/portfolio-account-v1_1/pma11-04-membership-candidate.sql": "43dbebc8d776ba12a990127ac7d3e6a0c74059c8e374d9256718c52f6afe53ef",
+      "contracts/baseline/portfolio-account-v1_1/pma11-business-root-read-candidate.sql": "74a5ee6e1e9732882b6d3ac8da75adebedd11afcf32aad2ad17d33d9f65173fe",
+      "init-db/05-trading-core-v2.sql": "0788a9766623f39c5fcc1be2f1abdf864fbc33c7323e20777710bcbd6fd719f7",
+      "init-db/11-portfolio-management.sql": "2a1f02f9ecd99d6123a3bd463ded23ee26212633611c662d53031033b4ab7fcb",
+      "init-db/99-pma11-verified-user-identity.sql": "80514c246e40fe26ef0d43f311fbc9c39bf3b57f354ca2cbff4e4f5ca2ef7752",
+      "scripts/pma11_migration_controller.py": "dc7c585407d30f88cd0108033026116afe802efd960e782d9413fdcc38f629b4",
+      "scripts/pma11_migration_rehearsal.py": "78026c9df0dc18034a11a65e33113096c0493dc44c6d919984eab34b726d02a4",
+      "services/portal_execution_owner/__init__.py": "6b08776bb2a25c856f424b348e21e1aeaf5c3cef5012fd64b50757520ad02d9b",
+      "services/portal_execution_owner/identity/__init__.py": "bdbcd135596777825a8bf5726a12877f8e7f7690fc2d43f1b62f1cb028940461",
+      "services/portal_execution_owner/identity/manager.py": "510f780020c1ea5cf4513ca723c433fea0fef1cc78971a8e81af0d392417bb7e",
+      "services/portal_execution_owner/identity/policy.py": "bafdd1bd87e0d04eca69ac7488b56ac486f24e4ac3aee0def2be9dcee1bf111a",
+      "services/portal_execution_owner/identity/users.py": "3662621feec536ce6f09886acc01c5c72199c0a6ad59d43acf852e080085a8e0",
+      "services/portal_execution_owner/query/__init__.py": "c0e0a6ecd6fa01d31a7126300fe3d30c4aafa99fa7a7a51b398229f69a570da0",
+      "services/portal_execution_owner/query/adapter.py": "c5de4ad9fa72bcee4798fe0106917c0ae64b6725161c42a56bb160a9c63ba464",
+      "services/portfolio_management/__init__.py": "53c1012837d74fcc1dc479b6181da3acbcd5b2c71c4cdddeceec61963f816e0b",
+      "services/portfolio_management/business_root_read.py": "2606c1976fdc7382977ad36ba9b64cd748be538d7c768e388c49a7e982a50d66",
+      "services/portfolio_management/membership_contract.py": "4217d65f364186b45a83da49b76a3d05fadae2a7d05c66fcef5e947ad94328f6",
+      "services/portfolio_management/membership_repository.py": "6ef83d4b503fd9366566d15c07069b5e3376bb52e9b188804fddddffdde0c2b1",
+      "services/portfolio_management/native_relations.py": "219ea61d295ca9e5efcf88ab78ddae593de473c126e0d478fc51f0a8aa787c7c",
+      "tests/__init__.py": "37f29f971ac8d2ecd7ee967f424be4b51a1eba34bc7faeaad2fc96c33a2e654f",
+      "tests/integration/conftest.py": "cfb433773938b401561fd73eda79fabfcfa51c07944043b0a935853153f4f3af",
+      "tests/integration/test_pma11_business_root_read_repository.py": "efa720c82747e1b1e63feb51606fd0e05a756eac5d93728360abf7b1364a8733",
+      "tests/integration/test_pma11_membership_repository.py": "484580390c01f7b948f0eefb8ce9baacc9ee057b955c935e5ec5412bf724858e",
+      "tests/integration/test_pma11_native_relations_repository.py": "3de805c523e9c135ab6cd04d3071ae7d21fda6d119570cf3a9fabdb278ff2a54",
+      "tests/unit/__init__.py": "62c2f766eca3639d54d1d6a927eed64cf8193e8779e737708a2c192d1210abb6",
+      "tests/unit/test_pma11_business_root_read.py": "5e52137bf6ea29b1cddc6852fa9c08758e7e8ee210e1252e27e31b30e543f17b",
+      "tests/unit/test_pma11_membership_contract.py": "1309fe49890919a46831d8133ae563bc3862f2c58821da115a72766a436e7b17",
+      "tests/unit/test_pma11_native_observation_dependencies.py": "e38c6d440aa08f110f3863ffbb6319781f919e91b24b5b98f1c867359102c459",
+      "tests/unit/test_pma11_native_relations.py": "c058b80a4a86d8a83f3ed8e699f04ae951286888585d3189ee65a715d6da56d7"
+    },
+    "final_tests": {
+      "tests": 221,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "finite_egress": {
+    "source_pins": {
+      "package.json": "a90fc33418afa2b9cbf4768524b021135b965ecdf993457505bfae3ac44a8428",
+      "scripts/pma11_migration_controller.py": "dc7c585407d30f88cd0108033026116afe802efd960e782d9413fdcc38f629b4",
+      "scripts/pma11_migration_rehearsal.py": "78026c9df0dc18034a11a65e33113096c0493dc44c6d919984eab34b726d02a4",
+      "src/execution-v2/native-read-egress.ts": "319c40e4828a708d888818d42a3cccf34082de389764aa91f869261a0a12dcd6",
+      "test/native-read-egress.spec.ts": "0bfd4974f1dfb948a0ea910d48318f55a919b3e2913d7df579f0b3e4b8b2cdcd"
+    },
+    "final_tests": {
+      "tests": 35,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "semantics": "LOCAL_CORE_HTTP_EGRESS_ONLY_NOT_BROWSER_ACK",
+    "permit_provenance": "TEST_ONLY_STAND_IN_NOT_NATIVE_HELD_AUTHORITY",
+    "binding": "one-shot actual ServerResponse/permit/dispatcher; body digest and currentness",
+    "unknown": "Unconfirmed closure retains capacity; only genuine late transport quiescence releases local slot, never source authority",
+    "limits": {
+      "maximum_bytes": 1048576,
+      "maximum_inflight": 128,
+      "maximum_total_deadline_ms": 60000
+    },
+    "test_envelope": {
+      "worker_cpus": 1,
+      "worker_memory_mib": 512,
+      "network": "none / in-container localhost",
+      "maximum_window_seconds": 300,
+      "new_images": 0,
+      "host_ports": 0,
+      "persistent_volumes": 0
+    }
+  },
+  "attempts": [
+    {
+      "attempt": "attempt-111012",
+      "result": "NOT_PASS",
+      "tests": {
+        "tests": 221,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "started": "2026-10-17T11:10:12.834419+00:00",
+      "ended": "2026-10-17T11:10:29.018146+00:00",
+      "elapsed_seconds": 16.196,
+      "cleanup_complete": true,
+      "protected_runtime_unchanged": true,
+      "free_before": 166827941888,
+      "free_after": 166825938944,
+      "hashes": {
+        "receipt.json": "b734dbb5c59cd3de62f44cfedc09abb78c9e07a72c4f45901519f4a127e2bcb9",
+        "tests.xml": "6265cb9e38c041110e027f4ba1d06e0b6e7d5df8eab0a1030a9dd446e8a25bb7"
+      },
+      "protected_runtime_count": 10,
+      "runtime_tuple_sha256": "0a10f4802e489c0a0eaa61f359a2a7ac709db08ce1e044b82b07a5571f7af0a8"
+    },
+    {
+      "attempt": "attempt-113858",
+      "result": "PASS",
+      "tests": {
+        "tests": 221,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "started": "2026-10-17T11:38:58.452509+00:00",
+      "ended": "2026-10-17T11:39:15.341964+00:00",
+      "elapsed_seconds": 16.902,
+      "cleanup_complete": true,
+      "protected_runtime_unchanged": true,
+      "free_before": 166759116800,
+      "free_after": 166758952960,
+      "hashes": {
+        "receipt.json": "65ddf8e0c5e473a9d0e6da21e0cea487f769a6bd06b24501c73ce7607168a681",
+        "tests.xml": "0ed37d168f11cf44ba011aea734e39d2a7179e06528a6618855769221dda4a14"
+      },
+      "protected_runtime_count": 10,
+      "runtime_tuple_sha256": "0a10f4802e489c0a0eaa61f359a2a7ac709db08ce1e044b82b07a5571f7af0a8"
+    },
+    {
+      "attempt": "egress/attempt-113915",
+      "result": "NOT_PASS",
+      "tests": {
+        "tests": 35,
+        "failures": 3,
+        "errors": 0,
+        "skipped": 0
+      },
+      "started": "2026-10-17T11:39:15.454905+00:00",
+      "ended": "2026-10-17T11:39:33.848970+00:00",
+      "elapsed_seconds": 18.409,
+      "cleanup_complete": true,
+      "protected_runtime_unchanged": true,
+      "free_before": 166758920192,
+      "free_after": 166758768640,
+      "hashes": {
+        "receipt.json": "45c56ff895a69b87e68174ab832aecb248cb0b15ce78af9b3f1df0ef7dc470cb",
+        "tests.xml": "637d1dc5009783ad3426eb908c3e5e9dabdf3af268fb09e98a521abc1f97ccbf"
+      },
+      "protected_runtime_count": 10,
+      "runtime_tuple_sha256": "0a10f4802e489c0a0eaa61f359a2a7ac709db08ce1e044b82b07a5571f7af0a8"
+    },
+    {
+      "attempt": "egress/attempt-114214",
+      "result": "NOT_PASS",
+      "tests": {
+        "tests": 35,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0
+      },
+      "started": "2026-10-17T11:42:14.781686+00:00",
+      "ended": "2026-10-17T11:42:19.747596+00:00",
+      "elapsed_seconds": 4.978,
+      "cleanup_complete": true,
+      "protected_runtime_unchanged": true,
+      "free_before": 166748086272,
+      "free_after": 166747914240,
+      "hashes": {
+        "receipt.json": "3efa8263742f1e27ce39f81e0b56b74e79c280645cf7585cb4bbce541db57b5b",
+        "tests.xml": "701897c1d8125f841137b9ef73a70dcd2d0c2d51086e634d476a9665b017796d"
+      },
+      "protected_runtime_count": 10,
+      "runtime_tuple_sha256": "0a10f4802e489c0a0eaa61f359a2a7ac709db08ce1e044b82b07a5571f7af0a8"
+    },
+    {
+      "attempt": "egress/attempt-114338",
+      "result": "PASS",
+      "tests": {
+        "tests": 35,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "started": "2026-10-17T11:43:38.658812+00:00",
+      "ended": "2026-10-17T11:43:42.484504+00:00",
+      "elapsed_seconds": 3.837,
+      "cleanup_complete": true,
+      "protected_runtime_unchanged": true,
+      "free_before": 166741073920,
+      "free_after": 166740369408,
+      "hashes": {
+        "receipt.json": "8984ae043f8261322f79c29f9e255eb76382205429e069855f9ae3c35d319559",
+        "tests.xml": "d2e6260b97632ffc8b405eb52aedabd82d589cd3c62362c105b15d8311e27dcc"
+      },
+      "protected_runtime_count": 10,
+      "runtime_tuple_sha256": "0a10f4802e489c0a0eaa61f359a2a7ac709db08ce1e044b82b07a5571f7af0a8"
+    }
+  ],
+  "repairs": [
+    "Fixture environment invalidation after baseline, product decoder unchanged",
+    "Exact native Buffer.equals at 1MiB instead of expensive JS property comparison",
+    "Observe owned socket read-end during backpressure",
+    "Require captured socket queue empty as well as writableFinished; injected finish is not completion",
+    "Injected detach with live old socket expects UNKNOWN and retained slot; exact test socket close proves later local quiescence"
+  ],
+  "runtime_changes": 0,
+  "full08_exit": "NOT_MET",
+  "connected09": "NOT_STARTED",
+  "cleanup": {
+    "workers_pg_networks_removed": true,
+    "protected_sgp_runtime_tuples": 10,
+    "source_copies": "SGP_40_APPROVED_COPY_FILES_REMOVED_HK_4_COMMITTED_DRAFT_DUPLICATES_REMOVED",
+    "sgp_logical_bytes_removed": 494267,
+    "sgp_free_before": 166724554752,
+    "sgp_free_after": 166724562944,
+    "hk_logical_bytes_removed": 60363,
+    "hk_free_before": 239209070592,
+    "hk_free_after": 239300710400,
+    "disk_interpretation": "SHARED_HOST_OBSERVATIONS_NOT_EXCLUSIVE_RECLAIM",
+    "hk_protected_runtime_tuples": 18,
+    "protected_runtime_unchanged": true,
+    "sgp_image_inventory_sha256": "b3f0a36a7fdc1fd2285fa4a815fed6afea305f4a54925db9a3cd1bd8593d22d3",
+    "sgp_buildkit_inventory_sha256": "89929a1c5cbefacc3619099cf5f2aea2f673c7a1db58a6f0ae220263b04ec60e",
+    "shared_images_cache": "NO_NEW_ARTIFACTS_NO_SHARED_PRUNE"
+  }
+}

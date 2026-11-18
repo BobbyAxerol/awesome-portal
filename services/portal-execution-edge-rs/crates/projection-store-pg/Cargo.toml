@@ -10,11 +10,15 @@ repository.workspace = true
 analytics = { path = "../analytics" }
 authoritative-event-core = { path = "../authoritative-event-core" }
 chrono.workspace = true
+command-relay = { path = "../command-relay" }
 execution-contracts = { path = "../execution-contracts" }
+futures-util.workspace = true
 hex.workspace = true
 home.workspace = true
+manager-projection = { path = "../manager-projection" }
 projection-core = { path = "../projection-core" }
 query-api = { path = "../query-api" }
+realtime-sse = { path = "../realtime-sse" }
 source-qualification = { path = "../source-qualification" }
 serde.workspace = true
 serde_json.workspace = true
@@ -22,10 +26,8 @@ sha2.workspace = true
 shared-consumer-core = { path = "../shared-consumer-core" }
 sqlx.workspace = true
 thiserror.workspace = true
-uuid.workspace = true
-
-[dev-dependencies]
 tokio.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true

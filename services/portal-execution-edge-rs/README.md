@@ -31,12 +31,19 @@ EX-BE-01 locked its contracts. EX-BE-02 adds the deployable, read-only boundary:
   rollback drills. It cannot mount `/ops/emergency/*`, bind an origin or send a
   source command.
 
-The workspace has no Trading System database/Redis client, broker code or
-Trading System command method. Its SQLx driver can access only the separately
-credentialed Portal-owned projection schema. Transport accepts only the seven
-proven GET blueprints; it cannot call an arbitrary path or mutate Trading
-System. The optional Trading System API key is attached only to alpha-scoped
-reads and is loaded from a file.
+The workspace has no Trading System database/Redis client or broker code. Its
+SQLx driver accesses only the separately credentialed Portal-owned projection
+schema. The existing V1 `ts-transport` accepts only its proven GET blueprints;
+its optional API key is attached only to alpha-scoped reads from a private file.
+
+EPG10-07 separately adds the source-only `edge-service::pm_command_port`: exactly
+two PM-owned POST submit/status paths, TLS1.3 mTLS with server-leaf verification
+before HTTP, bounded exact-byte human assertions and original-outcome custody.
+It does not reuse/widen V1 transport, install a signer/listener or enable commands.
+Real operation/profile publication, current authority, retained original binding
+and trusted context must be commissioned before runtime binding; human status
+does not supply service-only recovery after logout. See the
+[current07 owner return](../../upgrade/evidence/execution-edge-v1_2/EPG10-07/COMMAND_RELAY_AND_OWNER_RETURN.md).
 
 The immutable discovery evidence lives under
 `upgrade/.../trading_system_portal_contract_pack`. `contract-pack.lock.json`

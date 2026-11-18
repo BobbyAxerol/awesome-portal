@@ -1,0 +1,1529 @@
+{
+  "api_image": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+  "capture_bytes": 15133438,
+  "capture_sha256": "05d41ce74a73e854ebc8c1b49c19d000ae999adbd2833eaf679297ca55dcaa97",
+  "cleanup": {
+    "image_builds": 0,
+    "image_pulls": 0,
+    "private_capture_and_tmpdir_removed_on_exit": true,
+    "removed_owned_containers": [
+      "epg10-01-retained-pg-20261015"
+    ],
+    "retained_images": [
+      "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d"
+    ],
+    "volume_deletions": 0
+  },
+  "controlled_idle": {
+    "business_mutations": 0,
+    "health_queries": 10,
+    "metrics": {
+      "duration_seconds": 10.105635,
+      "groups": [
+        {
+          "anonymous_max_bytes": 13594624,
+          "average_cores": 0.05841,
+          "cpu_core_seconds": 0.590271,
+          "io_delta": {
+            "rbytes": 0,
+            "rios": 0,
+            "wbytes": 0,
+            "wios": 0
+          },
+          "memory_end_bytes": 108068864,
+          "memory_events_delta": {
+            "high": 0,
+            "low": 0,
+            "max": 0,
+            "oom": 0,
+            "oom_kill": 0
+          },
+          "memory_start_bytes": 107237376,
+          "name": "epg10-01-retained-pg-20261015",
+          "network_delta": {
+            "rx_bytes": 0,
+            "tx_bytes": 0
+          },
+          "pids_max": 8,
+          "sampled_memory_max_bytes": 117866496,
+          "throttled_usec": 252793
+        }
+      ],
+      "host_summary": {
+        "cpu_busy_fraction": 0.215529,
+        "cpu_iowait_fraction": 0.000626,
+        "load_one_minute_max": 1.61328125,
+        "load_one_minute_min": 1.36474609375,
+        "memory_available_max_bytes": 12492955648,
+        "memory_available_min_bytes": 12452954112
+      },
+      "limitations": [
+        "PASS means stable observation only, not capacity/latency acceptance",
+        "sampled memory maximum is not true transient peak or per-process RSS",
+        "network counters are per namespace; do not sum shared namespaces",
+        "no DB query/WAL/lock/allocations/business freshness counter in this observation",
+        "host clocks not calibrated by local wall-vs-monotonic drift",
+        "not controlled W-IDLE, B0/B1/B2 or performance G2"
+      ],
+      "maximum_sampling_gap_seconds": 1.075203,
+      "roster": [
+        {
+          "cgroup": "/system.slice/docker-1aad570b40a9c98bed884849f05157966e7129800e62b34ecce3d439288a8515.scope",
+          "config_sha256": null,
+          "container_id": "1aad570b40a9c98bed884849f05157966e7129800e62b34ecce3d439288a8515",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "name": "epg10-01-retained-pg-20261015",
+          "network_namespace": "net:[4026536292]",
+          "pid": 1138887,
+          "project": null,
+          "restarts": 0,
+          "revision": null,
+          "start_ticks": 556558710
+        }
+      ],
+      "runtime_acceptance": false,
+      "sample_count": 11,
+      "schema": "epg10.passive-observation.v1",
+      "wall_vs_monotonic_drift_ms": -0.0001
+    }
+  },
+  "core_credentials": 0,
+  "disk_available_after_bytes": 169368662016,
+  "disk_available_before_bytes": 169369038848,
+  "limitations": [
+    "Captured one retained profile snapshot/entity scope and narrow history, not live TS/broker truth",
+    "Unix socket/local tmpfs DB, not network latency or durable-disk/DR evidence",
+    "Repository only: no HTTP/auth/browser/shared analytics or exact P184 workloads",
+    "PG memory sampled at1Hz; not true transient peak or full capacity acceptance",
+    "Controlled idle covers owned retained PG only, not full Edge/TS/BFF W-IDLE"
+  ],
+  "network": "none",
+  "owner": "codex-epg10-01-retained-cell-20261015",
+  "persistent_volumes": 0,
+  "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+  "pg_metrics": {
+    "duration_seconds": 32.509799,
+    "groups": [
+      {
+        "anonymous_max_bytes": 68395008,
+        "average_cores": 0.104349,
+        "cpu_core_seconds": 3.392355,
+        "io_delta": {
+          "rbytes": 0,
+          "rios": 0,
+          "wbytes": 0,
+          "wios": 0
+        },
+        "memory_end_bytes": 108068864,
+        "memory_events_delta": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "memory_start_bytes": 68726784,
+        "name": "epg10-01-retained-pg-20261015",
+        "network_delta": {
+          "rx_bytes": 0,
+          "tx_bytes": 0
+        },
+        "pids_max": 7,
+        "sampled_memory_max_bytes": 170172416,
+        "throttled_usec": 2153773
+      }
+    ],
+    "host_summary": {
+      "cpu_busy_fraction": 0.216998,
+      "cpu_iowait_fraction": 0.000893,
+      "load_one_minute_max": 1.83984375,
+      "load_one_minute_min": 1.36474609375,
+      "memory_available_max_bytes": 12483571712,
+      "memory_available_min_bytes": 12214198272
+    },
+    "limitations": [
+      "PASS means stable observation only, not capacity/latency acceptance",
+      "sampled memory maximum is not true transient peak or per-process RSS",
+      "network counters are per namespace; do not sum shared namespaces",
+      "no DB query/WAL/lock/allocations/business freshness counter in this observation",
+      "host clocks not calibrated by local wall-vs-monotonic drift",
+      "not controlled W-IDLE, B0/B1/B2 or performance G2"
+    ],
+    "maximum_sampling_gap_seconds": 1.002708,
+    "roster": [
+      {
+        "cgroup": "/system.slice/docker-1aad570b40a9c98bed884849f05157966e7129800e62b34ecce3d439288a8515.scope",
+        "config_sha256": null,
+        "container_id": "1aad570b40a9c98bed884849f05157966e7129800e62b34ecce3d439288a8515",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "name": "epg10-01-retained-pg-20261015",
+        "network_namespace": "net:[4026536292]",
+        "pid": 1138887,
+        "project": null,
+        "restarts": 0,
+        "revision": null,
+        "start_ticks": 556558710
+      }
+    ],
+    "runtime_acceptance": false,
+    "sample_count": 34,
+    "schema": "epg10.passive-observation.v1",
+    "wall_vs_monotonic_drift_ms": -0.000399
+  },
+  "production_restarts": 0,
+  "production_writes": 0,
+  "published_ports": 0,
+  "results": [
+    {
+      "assertions": 10,
+      "database_calls": 0,
+      "status": "PASS_TEST_ONLY"
+    },
+    {
+      "isolated_fixture_writes": 3623,
+      "migration_idempotency": true,
+      "no_core_tables": true,
+      "production_writes": 0,
+      "schema_sha256": "be5fd2dfbd537f582e3135b7edadf1fce0ead8ac7852ad18f5e0c5b617341347",
+      "source_target_parity": [
+        {
+          "rows": 1,
+          "sha256": "b7e02fa132f670df3f20ff80a55fd0e7e600511203de802e4982d128c914f9d1",
+          "table": "execution_workspace_references"
+        },
+        {
+          "rows": 42,
+          "sha256": "75a0947dac71bdf19b6611f0a6024cf745bf75709aba3ce8c4e9b701259ebc7c",
+          "table": "execution_durable_mirror_batches"
+        },
+        {
+          "rows": 3,
+          "sha256": "cbc67122841984bfd3514eedff665ec348bec94f9c471b9bfe6fe5c25b0358ca",
+          "table": "execution_durable_mirror_revisions"
+        },
+        {
+          "rows": 3569,
+          "sha256": "ea6337e9e509d72c573832ca2e715d3dd02376ef76aa0840a2712553370ed737",
+          "table": "execution_durable_mirror_current_entities"
+        },
+        {
+          "rows": 1,
+          "sha256": "e2b182fefe5938e1bffc799277b3279b0cf251cc79a3bb94e971dfba09f14e4d",
+          "table": "execution_profile_projection_snapshots"
+        },
+        {
+          "rows": 7,
+          "sha256": "f7bf6e51376a3dc25255ca5a4005e9a1152dadd67b374b4383e818f66334ab6a",
+          "table": "execution_timeseries_history"
+        }
+      ],
+      "status": "PASS_ISOLATED_SEED"
+    },
+    {
+      "auth_session_writes": 0,
+      "business_writes": 0,
+      "elapsed_ms": 8180.705733000001,
+      "ended_utc": "2026-10-15T18:44:03.474Z",
+      "explain_calls": 9,
+      "explain_mode": "ANALYZE_BUFFERS_WAL_ISOLATED_ONLY",
+      "history_census": {
+        "bytes": "7623",
+        "rows": 7
+      },
+      "identity": {
+        "database": "epg10_retained_cell",
+        "read_only": "on",
+        "role": "exec_runtime",
+        "statement_timeout": "250ms"
+      },
+      "instrumented_fixed_read_calls": 111,
+      "isolated_db_counters": {
+        "database_bytes": "17472535",
+        "wal_bytes": "19392190",
+        "wal_records": "51694"
+      },
+      "limitations": [
+        "Internal repository only, not HTTP/mTLS/RBAC or browser acceptance",
+        "One private retained Paper scope, not current TS truth or all profiles",
+        "No source polling/transport cost or TS/DL trading latency measured",
+        "100 reads are not a sustained/concurrent capacity claim",
+        "Plans actually execute once before timings; DB/OS cache warm, not cold-disk proof",
+        "Freshly instantiated cache is separate from existing service cache; no production cache reset"
+      ],
+      "max_rss_kib": 146236,
+      "module_sha256": "404655342042f85d431790a9ce4419ea0d66537a6e2be45a956e59d0f81f760c",
+      "observer_cpu_ms": 1146.831,
+      "plans": [
+        {
+          "full_plan_sha256": "af83672c7109e56c22755f1017c97bdb9c87964c0bf82a5181da7b6740d25b7b",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 0.091,
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1,
+                "Actual Total Time": 0.089,
+                "Index Name": "execution_timeseries_history_range_idx",
+                "Node Type": "Index Scan",
+                "Plan Rows": 1,
+                "Relation Name": "execution_timeseries_history",
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 2,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.18,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 2,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.18,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "1b2f652b13127cd4b44e892d4f948c3eec38be1f950f9fdbfe0f3a02de5972cf"
+        },
+        {
+          "full_plan_sha256": "dc021713ece459d5f06b95abfe8adad6d64f4bfdc1f26057fd581162fe1a0d94",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 0.092,
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 7,
+                "Actual Total Time": 0.032,
+                "Node Type": "Limit",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 7,
+                    "Actual Total Time": 0.03,
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_timeseries_history",
+                    "Rows Removed by Filter": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 3,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.18,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 3,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.18,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 3,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.21,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "653a9abc4b0836ee6e3d6adb5d7fdd43937e70c5f55ea860940c27269b2e4250"
+        },
+        {
+          "full_plan_sha256": "4627ad8a7ca24f56397b4e92a70b14884420a07f22e440299d119d0bf5a3f622",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 7,
+            "Actual Total Time": 0.102,
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 7,
+                "Actual Total Time": 0.1,
+                "Node Type": "Sort",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 7,
+                    "Actual Total Time": 0.043,
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_timeseries_history",
+                    "Rows Removed by Filter": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 3,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.19,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 6,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Sort Method": "quicksort",
+                "Sort Space Type": "Memory",
+                "Sort Space Used": 39,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.2,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 6,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.2,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "d4195a9367d8e3027e7643c48d2e8454f04920e9d7a9543f8b5c60a5cd8ff5e1"
+        },
+        {
+          "full_plan_sha256": "a054fe2ba5dc77b821fbe2fd51a8e3c4b6098ec1e23b7d4a27f93f5fe3eeaca6",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 0.1,
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 7,
+                "Actual Total Time": 0.07,
+                "Index Name": "execution_timeseries_history_range_idx",
+                "Node Type": "Index Scan",
+                "Plan Rows": 1,
+                "Relation Name": "execution_timeseries_history",
+                "Rows Removed by Filter": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 3,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.19,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 3,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.23,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "6ede2c2f2e337760edc8320082581e3db90c67d890ac2e26aa455f7b4517672f"
+        },
+        {
+          "full_plan_sha256": "87910198915e4c79336ce6cd4ef1a1b9380b2dc9ca54737fb1de8715cacba0ef",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 7,
+            "Actual Total Time": 0.095,
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 7,
+                "Actual Total Time": 0.092,
+                "Node Type": "Sort",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 7,
+                    "Actual Total Time": 0.059,
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_timeseries_history",
+                    "Rows Removed by Filter": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 3,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.19,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 3,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Sort Method": "quicksort",
+                "Sort Space Type": "Memory",
+                "Sort Space Used": 39,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.2,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 3,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.2,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "19038c1c7152feb4a6c7964b1e2a755d6622c4bc6bc99d91cc5b66c973611cdb"
+        },
+        {
+          "full_plan_sha256": "77bb58664c61b9dffbf157000d3f0d43922665156bdd374a3f763786b7ec7cba",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 27.327,
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 3569,
+                "Actual Total Time": 6.314,
+                "Node Type": "Limit",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 3569,
+                    "Actual Total Time": 5.861,
+                    "Index Name": "execution_durable_mirror_current_entities_page_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_durable_mirror_current_entities",
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 788,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.43,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 788,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.43,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 788,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.46,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "d1b1945e1f87d53cc6ae603073213b757ec422ade4ea4493c83902b8d37ad50c"
+        },
+        {
+          "full_plan_sha256": "4be6d8cc5b8318e30910c344a7b88d501836db4e55342e23324c3fff291b5a40",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 217.571,
+            "Index Name": "execution_profile_projection_freshness_idx",
+            "Node Type": "Index Scan",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1,
+                "Actual Total Time": 185.169,
+                "Node Type": "Aggregate",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 3569,
+                    "Actual Total Time": 54.587,
+                    "Node Type": "Subquery Scan",
+                    "Plan Rows": 1,
+                    "Plans": [
+                      {
+                        "Actual Loops": 1,
+                        "Actual Rows": 3569,
+                        "Actual Total Time": 52.558,
+                        "Node Type": "Limit",
+                        "Plan Rows": 1,
+                        "Plans": [
+                          {
+                            "Actual Loops": 1,
+                            "Actual Rows": 3569,
+                            "Actual Total Time": 52.051,
+                            "Node Type": "Nested Loop",
+                            "Plan Rows": 1,
+                            "Plans": [
+                              {
+                                "Actual Loops": 1,
+                                "Actual Rows": 3569,
+                                "Actual Total Time": 3.52,
+                                "Index Name": "execution_durable_mirror_current_entities_page_idx",
+                                "Node Type": "Index Scan",
+                                "Plan Rows": 1,
+                                "Relation Name": "execution_durable_mirror_current_entities",
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Hit Blocks": 788,
+                                "Shared Read Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0,
+                                "Total Cost": 8.43,
+                                "WAL Bytes": 0,
+                                "WAL Records": 0
+                              },
+                              {
+                                "Actual Loops": 3569,
+                                "Actual Rows": 3,
+                                "Actual Total Time": 0.012,
+                                "Index Name": "execution_durable_mirror_batches_profile_created_idx",
+                                "Node Type": "Index Scan",
+                                "Plan Rows": 1,
+                                "Relation Name": "execution_durable_mirror_batches",
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Hit Blocks": 9808,
+                                "Shared Read Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0,
+                                "Total Cost": 8.17,
+                                "WAL Bytes": 0,
+                                "WAL Records": 0
+                              }
+                            ],
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Hit Blocks": 10596,
+                            "Shared Read Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Total Cost": 16.61,
+                            "WAL Bytes": 0,
+                            "WAL Records": 0
+                          }
+                        ],
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Hit Blocks": 10596,
+                        "Shared Read Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Total Cost": 16.61,
+                        "WAL Bytes": 0,
+                        "WAL Records": 0
+                      }
+                    ],
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 10596,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 16.62,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 10596,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 16.64,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Relation Name": "execution_profile_projection_snapshots",
+            "Rows Removed by Filter": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 10598,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 24.82,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "2d9ee4dd64c93af36103979d76c1daacd161af3426a6d642fdd22850b02242ed"
+        },
+        {
+          "full_plan_sha256": "58eb8abfb980f3e48fceb1e5c342c47b7297de84d9f8fe9edd4aa236f7f06d74",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 0.027,
+            "Index Name": "execution_profile_projection_freshness_idx",
+            "Node Type": "Index Scan",
+            "Plan Rows": 1,
+            "Relation Name": "execution_profile_projection_snapshots",
+            "Rows Removed by Filter": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 2,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.18,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "01c58f7872dc4f2f6ae299cc26bac93f37df240e62630dc690318d87e2533727"
+        },
+        {
+          "full_plan_sha256": "89a9ac448e4f21aec949dc9a726e6c831ba8cdc2f37f31b10db1ba3f38d22a13",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 3569,
+            "Actual Total Time": 32.743,
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 3569,
+                "Actual Total Time": 32.42,
+                "Node Type": "Nested Loop",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 3569,
+                    "Actual Total Time": 2.124,
+                    "Index Name": "execution_durable_mirror_current_entities_page_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_durable_mirror_current_entities",
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 788,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.43,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  },
+                  {
+                    "Actual Loops": 3569,
+                    "Actual Rows": 3,
+                    "Actual Total Time": 0.008,
+                    "Index Name": "execution_durable_mirror_batches_profile_created_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_durable_mirror_batches",
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 9808,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.17,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 10596,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 16.61,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 10596,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 16.61,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "db4900f09ca59e6f117c4f49acca43c542f7ac1101d4b194eeca25d823f8205c"
+        }
+      ],
+      "provenance": "PORTAL_SGP_HISTORY_MIRROR_PARTIAL_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_TS_HISTORY",
+      "range_seconds": 3600,
+      "relation": "manager.performance:account_equity_snapshots",
+      "results": [
+        {
+          "bytes": 7712,
+          "case": "real_repository_history_100_sequential",
+          "db_calls": 100,
+          "has_more": false,
+          "max_ms": 3.0268059999998513,
+          "method": "FULL_WINDOW_NEAREST_RANK",
+          "n": 100,
+          "p50_ms": 1.4288069999997788,
+          "p95_ms": 1.762391000000207,
+          "p99_ms": 1.9977979999998752,
+          "rows": 7,
+          "sha256": "38d6a6a7297f2c5774c2618d7545d5bf6dfc850278613f5829b273ee46ea3ed8",
+          "status": "PASS"
+        },
+        {
+          "callers": 16,
+          "case": "real_repository_16_same_query_inflight",
+          "db_calls": 1,
+          "elapsed_ms": 4.79738400000042,
+          "status": "PASS"
+        },
+        {
+          "bytes": 7729,
+          "case": "real_repository_narrow_chart",
+          "downsample": null,
+          "output_rows": 7,
+          "sha256": "b7b86b1a392971c792e52c8c0e5640a89cd0c1b12d9a07c26b16c22b44dbdf32",
+          "source_rows": 7,
+          "status": "PASS"
+        },
+        {
+          "bytes": 11184215,
+          "case": "real_repository_snapshot_cold_then16_cache_reads",
+          "cold_db_calls": 4,
+          "cold_ms": 1823.6348419999995,
+          "sha256": "0da8ba3a1d987eac562da3edc2df8ff8018395a8cd030f91705785e9d72fcf6a",
+          "status": "PASS",
+          "warm_db_calls": 0,
+          "warm_elapsed_ms": 0.47353599999951257
+        },
+        {
+          "case": "own_read_session_statement_timeout_then_recovery",
+          "sqlstate": "57014",
+          "status": "PASS",
+          "timeout_ms": 250
+        }
+      ],
+      "runtime_changes": 0,
+      "schema": "epg10.retained-probe.v1",
+      "scope_sha256": "66931d6569b97c2e81f9cd3d650129f4bc7639285ef72d0fee2d54121b417d81",
+      "snapshot_input_bytes": 10858138,
+      "source_http_calls": 0,
+      "started_utc": "2026-10-15T18:43:55.294Z",
+      "status": "PASS_SCOPED_REPOSITORY_PROBE",
+      "target": "DISPOSABLE_UNIX_SOCKET_CAPTURE_REPLAY"
+    },
+    {
+      "auth_session_writes": 0,
+      "business_writes": 0,
+      "elapsed_ms": 8155.685753000001,
+      "ended_utc": "2026-10-15T18:44:12.443Z",
+      "explain_calls": 9,
+      "explain_mode": "ANALYZE_BUFFERS_WAL_ISOLATED_ONLY",
+      "history_census": {
+        "bytes": "7623",
+        "rows": 7
+      },
+      "identity": {
+        "database": "epg10_retained_cell",
+        "read_only": "on",
+        "role": "exec_runtime",
+        "statement_timeout": "250ms"
+      },
+      "instrumented_fixed_read_calls": 111,
+      "isolated_db_counters": {
+        "database_bytes": "17472535",
+        "wal_bytes": "19392240",
+        "wal_records": "51695"
+      },
+      "limitations": [
+        "Internal repository only, not HTTP/mTLS/RBAC or browser acceptance",
+        "One private retained Paper scope, not current TS truth or all profiles",
+        "No source polling/transport cost or TS/DL trading latency measured",
+        "100 reads are not a sustained/concurrent capacity claim",
+        "Plans actually execute once before timings; DB/OS cache warm, not cold-disk proof",
+        "Freshly instantiated cache is separate from existing service cache; no production cache reset"
+      ],
+      "max_rss_kib": 146212,
+      "module_sha256": "404655342042f85d431790a9ce4419ea0d66537a6e2be45a956e59d0f81f760c",
+      "observer_cpu_ms": 1142.021,
+      "plans": [
+        {
+          "full_plan_sha256": "299049356347e7a80e607e4f99e891f51a2ceb55f568f2d25fd89c1aa3a0c9d4",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 0.09,
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1,
+                "Actual Total Time": 0.088,
+                "Index Name": "execution_timeseries_history_range_idx",
+                "Node Type": "Index Scan",
+                "Plan Rows": 1,
+                "Relation Name": "execution_timeseries_history",
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 2,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.18,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 2,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.18,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "1b2f652b13127cd4b44e892d4f948c3eec38be1f950f9fdbfe0f3a02de5972cf"
+        },
+        {
+          "full_plan_sha256": "e52edfe61c3aa0d5589a7bb804bbb755701eb863791cd58b207011eac4e45a8a",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 0.09,
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 7,
+                "Actual Total Time": 0.028,
+                "Node Type": "Limit",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 7,
+                    "Actual Total Time": 0.026,
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_timeseries_history",
+                    "Rows Removed by Filter": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 3,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.18,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 3,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.18,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 3,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.21,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "653a9abc4b0836ee6e3d6adb5d7fdd43937e70c5f55ea860940c27269b2e4250"
+        },
+        {
+          "full_plan_sha256": "853a8152999ebafc2e1ad05eb1b1bddd86c15ff000b1764f08e0ada20f12ae63",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 7,
+            "Actual Total Time": 0.094,
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 7,
+                "Actual Total Time": 0.092,
+                "Node Type": "Sort",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 7,
+                    "Actual Total Time": 0.039,
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_timeseries_history",
+                    "Rows Removed by Filter": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 3,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.19,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 6,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Sort Method": "quicksort",
+                "Sort Space Type": "Memory",
+                "Sort Space Used": 39,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.2,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 6,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.2,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "d4195a9367d8e3027e7643c48d2e8454f04920e9d7a9543f8b5c60a5cd8ff5e1"
+        },
+        {
+          "full_plan_sha256": "7686b4d72f65efdcbfdb6ef186a4611ddf58ec23fa5cc9df3f35e1a330e8e256",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 0.07,
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 7,
+                "Actual Total Time": 0.048,
+                "Index Name": "execution_timeseries_history_range_idx",
+                "Node Type": "Index Scan",
+                "Plan Rows": 1,
+                "Relation Name": "execution_timeseries_history",
+                "Rows Removed by Filter": 0,
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 3,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.19,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 3,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.23,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "6ede2c2f2e337760edc8320082581e3db90c67d890ac2e26aa455f7b4517672f"
+        },
+        {
+          "full_plan_sha256": "2ae3bcef2e2b56a29b4fa940e4ccff7bdf4cf8699afc925d5b0de79aa1109687",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 7,
+            "Actual Total Time": 0.058,
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 7,
+                "Actual Total Time": 0.056,
+                "Node Type": "Sort",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 7,
+                    "Actual Total Time": 0.033,
+                    "Index Name": "execution_timeseries_history_range_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_timeseries_history",
+                    "Rows Removed by Filter": 0,
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 3,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.19,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 3,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Sort Method": "quicksort",
+                "Sort Space Type": "Memory",
+                "Sort Space Used": 39,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.2,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 3,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.2,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "19038c1c7152feb4a6c7964b1e2a755d6622c4bc6bc99d91cc5b66c973611cdb"
+        },
+        {
+          "full_plan_sha256": "6c12968fe125cc08fc199ef979f6de07800b226fa6dfc2b4050eab876da8b128",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 16.435,
+            "Node Type": "Aggregate",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 3569,
+                "Actual Total Time": 3.629,
+                "Node Type": "Limit",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 3569,
+                    "Actual Total Time": 3.337,
+                    "Index Name": "execution_durable_mirror_current_entities_page_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_durable_mirror_current_entities",
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 788,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.43,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 788,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 8.43,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 788,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.46,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "d1b1945e1f87d53cc6ae603073213b757ec422ade4ea4493c83902b8d37ad50c"
+        },
+        {
+          "full_plan_sha256": "603c1dcc9a24328dc7429339f59a98b95c81c9ef646d63f2288d8004efe9bd65",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 142.649,
+            "Index Name": "execution_profile_projection_freshness_idx",
+            "Node Type": "Index Scan",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 1,
+                "Actual Total Time": 60.2,
+                "Node Type": "Aggregate",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 3569,
+                    "Actual Total Time": 37.738,
+                    "Node Type": "Subquery Scan",
+                    "Plan Rows": 1,
+                    "Plans": [
+                      {
+                        "Actual Loops": 1,
+                        "Actual Rows": 3569,
+                        "Actual Total Time": 36.195,
+                        "Node Type": "Limit",
+                        "Plan Rows": 1,
+                        "Plans": [
+                          {
+                            "Actual Loops": 1,
+                            "Actual Rows": 3569,
+                            "Actual Total Time": 35.868,
+                            "Node Type": "Nested Loop",
+                            "Plan Rows": 1,
+                            "Plans": [
+                              {
+                                "Actual Loops": 1,
+                                "Actual Rows": 3569,
+                                "Actual Total Time": 2.851,
+                                "Index Name": "execution_durable_mirror_current_entities_page_idx",
+                                "Node Type": "Index Scan",
+                                "Plan Rows": 1,
+                                "Relation Name": "execution_durable_mirror_current_entities",
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Hit Blocks": 788,
+                                "Shared Read Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0,
+                                "Total Cost": 8.43,
+                                "WAL Bytes": 0,
+                                "WAL Records": 0
+                              },
+                              {
+                                "Actual Loops": 3569,
+                                "Actual Rows": 3,
+                                "Actual Total Time": 0.008,
+                                "Index Name": "execution_durable_mirror_batches_profile_created_idx",
+                                "Node Type": "Index Scan",
+                                "Plan Rows": 1,
+                                "Relation Name": "execution_durable_mirror_batches",
+                                "Shared Dirtied Blocks": 0,
+                                "Shared Hit Blocks": 9808,
+                                "Shared Read Blocks": 0,
+                                "Shared Written Blocks": 0,
+                                "Temp Read Blocks": 0,
+                                "Temp Written Blocks": 0,
+                                "Total Cost": 8.17,
+                                "WAL Bytes": 0,
+                                "WAL Records": 0
+                              }
+                            ],
+                            "Shared Dirtied Blocks": 0,
+                            "Shared Hit Blocks": 10596,
+                            "Shared Read Blocks": 0,
+                            "Shared Written Blocks": 0,
+                            "Temp Read Blocks": 0,
+                            "Temp Written Blocks": 0,
+                            "Total Cost": 16.61,
+                            "WAL Bytes": 0,
+                            "WAL Records": 0
+                          }
+                        ],
+                        "Shared Dirtied Blocks": 0,
+                        "Shared Hit Blocks": 10596,
+                        "Shared Read Blocks": 0,
+                        "Shared Written Blocks": 0,
+                        "Temp Read Blocks": 0,
+                        "Temp Written Blocks": 0,
+                        "Total Cost": 16.61,
+                        "WAL Bytes": 0,
+                        "WAL Records": 0
+                      }
+                    ],
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 10596,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 16.62,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 10596,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 16.64,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Relation Name": "execution_profile_projection_snapshots",
+            "Rows Removed by Filter": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 10598,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 24.82,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "2d9ee4dd64c93af36103979d76c1daacd161af3426a6d642fdd22850b02242ed"
+        },
+        {
+          "full_plan_sha256": "5c21f82662f6c00cfd27eac41b7e7f08bcbe9ae052289e0d52ef92a526bf74fb",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 1,
+            "Actual Total Time": 0.025,
+            "Index Name": "execution_profile_projection_freshness_idx",
+            "Node Type": "Index Scan",
+            "Plan Rows": 1,
+            "Relation Name": "execution_profile_projection_snapshots",
+            "Rows Removed by Filter": 0,
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 2,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 8.18,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "01c58f7872dc4f2f6ae299cc26bac93f37df240e62630dc690318d87e2533727"
+        },
+        {
+          "full_plan_sha256": "2a2ebc5fd4410676aa203be4883af96eb076f5171090e3e49b4ad261abe1a2aa",
+          "plan": {
+            "Actual Loops": 1,
+            "Actual Rows": 3569,
+            "Actual Total Time": 32.664,
+            "Node Type": "Limit",
+            "Plan Rows": 1,
+            "Plans": [
+              {
+                "Actual Loops": 1,
+                "Actual Rows": 3569,
+                "Actual Total Time": 32.343,
+                "Node Type": "Nested Loop",
+                "Plan Rows": 1,
+                "Plans": [
+                  {
+                    "Actual Loops": 1,
+                    "Actual Rows": 3569,
+                    "Actual Total Time": 2.1,
+                    "Index Name": "execution_durable_mirror_current_entities_page_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_durable_mirror_current_entities",
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 788,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.43,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  },
+                  {
+                    "Actual Loops": 3569,
+                    "Actual Rows": 3,
+                    "Actual Total Time": 0.008,
+                    "Index Name": "execution_durable_mirror_batches_profile_created_idx",
+                    "Node Type": "Index Scan",
+                    "Plan Rows": 1,
+                    "Relation Name": "execution_durable_mirror_batches",
+                    "Shared Dirtied Blocks": 0,
+                    "Shared Hit Blocks": 9808,
+                    "Shared Read Blocks": 0,
+                    "Shared Written Blocks": 0,
+                    "Temp Read Blocks": 0,
+                    "Temp Written Blocks": 0,
+                    "Total Cost": 8.17,
+                    "WAL Bytes": 0,
+                    "WAL Records": 0
+                  }
+                ],
+                "Shared Dirtied Blocks": 0,
+                "Shared Hit Blocks": 10596,
+                "Shared Read Blocks": 0,
+                "Shared Written Blocks": 0,
+                "Temp Read Blocks": 0,
+                "Temp Written Blocks": 0,
+                "Total Cost": 16.61,
+                "WAL Bytes": 0,
+                "WAL Records": 0
+              }
+            ],
+            "Shared Dirtied Blocks": 0,
+            "Shared Hit Blocks": 10596,
+            "Shared Read Blocks": 0,
+            "Shared Written Blocks": 0,
+            "Temp Read Blocks": 0,
+            "Temp Written Blocks": 0,
+            "Total Cost": 16.61,
+            "WAL Bytes": 0,
+            "WAL Records": 0
+          },
+          "sql_sha256": "db4900f09ca59e6f117c4f49acca43c542f7ac1101d4b194eeca25d823f8205c"
+        }
+      ],
+      "provenance": "PORTAL_SGP_HISTORY_MIRROR_PARTIAL_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_TS_HISTORY",
+      "range_seconds": 3600,
+      "relation": "manager.performance:account_equity_snapshots",
+      "results": [
+        {
+          "bytes": 7712,
+          "case": "real_repository_history_100_sequential",
+          "db_calls": 100,
+          "has_more": false,
+          "max_ms": 2.9264220000000023,
+          "method": "FULL_WINDOW_NEAREST_RANK",
+          "n": 100,
+          "p50_ms": 1.4011059999997997,
+          "p95_ms": 1.803927000000158,
+          "p99_ms": 2.382087999999385,
+          "rows": 7,
+          "sha256": "38d6a6a7297f2c5774c2618d7545d5bf6dfc850278613f5829b273ee46ea3ed8",
+          "status": "PASS"
+        },
+        {
+          "callers": 16,
+          "case": "real_repository_16_same_query_inflight",
+          "db_calls": 1,
+          "elapsed_ms": 4.0106880000003,
+          "status": "PASS"
+        },
+        {
+          "bytes": 7729,
+          "case": "real_repository_narrow_chart",
+          "downsample": null,
+          "output_rows": 7,
+          "sha256": "b7b86b1a392971c792e52c8c0e5640a89cd0c1b12d9a07c26b16c22b44dbdf32",
+          "source_rows": 7,
+          "status": "PASS"
+        },
+        {
+          "bytes": 11184215,
+          "case": "real_repository_snapshot_cold_then16_cache_reads",
+          "cold_db_calls": 4,
+          "cold_ms": 1825.4894080000004,
+          "sha256": "0da8ba3a1d987eac562da3edc2df8ff8018395a8cd030f91705785e9d72fcf6a",
+          "status": "PASS",
+          "warm_db_calls": 0,
+          "warm_elapsed_ms": 0.37970900000073016
+        },
+        {
+          "case": "own_read_session_statement_timeout_then_recovery",
+          "sqlstate": "57014",
+          "status": "PASS",
+          "timeout_ms": 250
+        }
+      ],
+      "runtime_changes": 0,
+      "schema": "epg10.retained-probe.v1",
+      "scope_sha256": "66931d6569b97c2e81f9cd3d650129f4bc7639285ef72d0fee2d54121b417d81",
+      "snapshot_input_bytes": 10858138,
+      "source_http_calls": 0,
+      "started_utc": "2026-10-15T18:44:04.287Z",
+      "status": "PASS_SCOPED_REPOSITORY_PROBE",
+      "target": "DISPOSABLE_UNIX_SOCKET_CAPTURE_REPLAY"
+    }
+  ],
+  "schema": "epg10.isolated-retained-cell.v1",
+  "source_capture_sessions": 1,
+  "status": "PASS_SCOPED_ISOLATED_RETAINED_CELL"
+}

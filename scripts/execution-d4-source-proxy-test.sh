@@ -111,10 +111,11 @@ if grep -Eq 'published: "(5432|8011|8444)"|EDGE_D4_SOURCE_API_KEY|X-Portal-Paper
   printf 'D4 Compose unexpectedly published a source or database port.\n' >&2
   exit 1
 fi
-image='portal-source-proxy-d4-offline:test'
+image="portal-source-proxy-d4-offline:test-${BASHPID}"
 "${docker_cli[@]}" build --tag "${image}" \
   --file "${root_dir}/deploy/images/source-proxy.Dockerfile" "${root_dir}" >/dev/null
 "${docker_cli[@]}" run --rm \
+  --cpus 1 --memory 128m --memory-swap 128m \
   --read-only --cap-drop ALL --security-opt no-new-privileges:true \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777 \
   --tmpfs /var/cache/nginx:rw,noexec,nosuid,nodev,size=8m,mode=0750,uid=101,gid=101 \

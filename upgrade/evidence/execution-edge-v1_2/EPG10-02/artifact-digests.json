@@ -1,0 +1,79 @@
+{
+  "schema_version": "epg10.contract-artifact-digests.v1",
+  "phase": "EPG10-02",
+  "scope": "source and frozen contract inputs only; excludes self/plan/receipt to avoid recursive hashes",
+  "files": [
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/README.md",
+      "sha256": "f84e468c1bc79ffe7208f02fea02ff0470db46e7c910210ed5aa739b4a8ce7ef"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/catalogue.v1.schema.json",
+      "sha256": "f5716fdc0725eeb65b9ab832efd8be22d155bcb8cd44b465f3e4e0a5c625e2a5"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/field-dictionary.json",
+      "sha256": "aca5c54cce66becbf47ef32d30799e9dfe75a4f3d51df4e3ade0e89c53cbec7e"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/golden.json",
+      "sha256": "da068f67325b4ae673884433557ce1924048011ab7d90d5fa228e0ba75faea75"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/mapping-golden.json",
+      "sha256": "20b05095107461b1dd92d47191659246e4a788aac76bbe01dbc30dec22e4044c"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/metric-dependencies.json",
+      "sha256": "9c945880e821ecec4b5f56f85c5de15d506817cb07984300b824b4f5390c5a31"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/pm-controls-map.json",
+      "sha256": "c5d8f22199380b102516a6aa166bebcf30a9b6c80b45a6bb9b638dc6eb51d8bd"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/registry.json",
+      "sha256": "9257ebb0a3935bf58e6fe4858298bf4536cca2081e61f9c4543a82645a4f8c67"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/shared/execution-v2-foundation.synthetic.valid.json",
+      "sha256": "7b3044c2f4c990633a4550ab2c521f0fdf0108f9e70027bcbc1c2df02643cb75"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/contracts/execution-catalogue-v1/shared/execution-v2-foundation.v1.schema.json",
+      "sha256": "7a28e0545005789da1a54d304dbf242a2413d464aa905b83d5641e40821c4828"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/crates/execution-contracts/src/catalogue_v1.rs",
+      "sha256": "8be2c6f093e0ef49c82b16af138e308733303541d469b50bf507c48b79eae59d"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/crates/execution-contracts/src/catalogue_v1/tests.rs",
+      "sha256": "f1370a857d78b0fda9d040c7fcffec21682ef8b78a1167d4a36557c59b437fc0"
+    },
+    {
+      "path": "services/portal-execution-edge-rs/crates/execution-contracts/src/lib.rs",
+      "sha256": "81f7c6a76199ab1bbde4a7cd40afc4656a43212549e500ac5876b8e7e200f1c0"
+    },
+    {
+      "path": "scripts/test_execution_edge_catalogue.py",
+      "sha256": "c49a19597fdb9a15ab906b73a260bbb0d3eb5e119a405e5f0b3eaee2fb5f1b1c"
+    },
+    {
+      "path": "upgrade/upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md",
+      "sha256": "9047f765f7878f7284363bc6322ff14f3feb5fff4913cc7d4b9a328afd591985"
+    },
+    {
+      "path": "upgrade/upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md",
+      "sha256": "af6d53725d58aca4dfefb0fb212272c2df281b7d605a1f7bca5e54ced9b2eeb0"
+    },
+    {
+      "path": "upgrade/upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md",
+      "sha256": "0a266334f26d02bc4be858017d44e980e4ab5a4a5a4a007dad6827f565f06b86"
+    },
+    {
+      "path": "upgrade/upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md",
+      "sha256": "d77a05fc0c6b481114c0d4055a2ff0c09f6b7a3cc0ca1447f691d92f139adbad"
+    }
+  ]
+}

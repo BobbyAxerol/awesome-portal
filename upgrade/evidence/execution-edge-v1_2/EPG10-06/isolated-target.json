@@ -1,0 +1,98 @@
+{
+  "schema": "epg10-06-target/v1",
+  "provenance": "TEST_ONLY",
+  "scope": "Prepared governed 04/05 isolated target; not deployed, not a complete TS/DL/Research composition. No Manager, legacy transport, broker or commands instantiated by this descriptor.",
+  "replicas": 1,
+  "memory_group_id": "governed-edge-instance",
+  "required_memory_groups": ["governed-edge-instance", "isolated-postgresql", "test-observer"],
+  "envelope": {
+    "max_active": 3, "foreground_reserved_active": 1,
+    "max_entries": 8192, "foreground_reserved_entries": 2048,
+    "max_bytes": 134217728, "foreground_reserved_bytes": 41943040
+  },
+  "work": {
+    "group_bytes": 8388608, "group_events": 1000,
+    "manifest_bytes": 1048576, "manifest_datasets": 256,
+    "query_bytes": 1048576, "query_rows": 200,
+    "page_bytes": 1048576, "page_rows": 200
+  },
+  "cache": {"max_entries": 128, "max_flights": 1, "max_bytes": 4194304},
+  "fanout": {"clients": 16, "queue_entries": 8, "notice_bytes": 2048, "client_queue_bytes": 65536, "total_queue_bytes": 1048576},
+  "pool": {"per_replica": 3, "other_connections": 2, "isolated_database_max_connections": 24},
+  "memory_groups": [
+    {
+      "id": "governed-edge-instance", "owner": "Execution Edge", "replicas": 1,
+      "bytes": {"queues": null, "inflight_copies": null, "decompressed": null, "cache": null, "pool_tasks": null, "runtime": null, "allocator_reserve": null},
+      "unknown_reasons": {
+        "queues": "Logical queue charges are not socket/SSE/output-retention heap measurements.",
+        "inflight_copies": "3x/4x logical charge does not measure all caller-owned DTO/SQLx/encoded copies.",
+        "decompressed": "No current reqwest codec; exact future composed process and all input paths must still be pinned.",
+        "cache": "4 MiB logical payload limit excludes allocator overhead and caller-retained Arc values after eviction.",
+        "pool_tasks": "Pool3 enforced in governed tests; SQLx buffers, waiting tasks and thread stacks need process measurement.",
+        "runtime": "Exact producer process image/composition and runtime baseline not yet bound.",
+        "allocator_reserve": "No measured allocator fragmentation/high-water reserve for this composition."
+      }
+    },
+    {
+      "id": "isolated-postgresql", "owner": "Execution Edge isolated test", "replicas": 1,
+      "bytes": {"queues": null, "inflight_copies": null, "decompressed": null, "cache": null, "pool_tasks": null, "runtime": null, "allocator_reserve": null},
+      "unknown_reasons": {
+        "queues": "Connection/query and WAL buffers need exact composed PG measurement.",
+        "inflight_copies": "PG row/TOAST/copy and index build overhead unknown for connected cardinalities.",
+        "decompressed": "Stored-value decompression and workload distribution not measured.",
+        "cache": "Shared buffers/pagecache/tmpfs must be separated without duplicating cgroup memory.",
+        "pool_tasks": "Backend process memory per active/idle connection needs measurement.",
+        "runtime": "768 MiB inclusive cgroup hard ceiling is known, not measured per-part allocation.",
+        "allocator_reserve": "No PG backend fragmentation/high-water reserve measured for this composition."
+      }
+    },
+    {
+      "id": "test-observer", "owner": "Execution Edge measurement operator", "replicas": 1,
+      "bytes": {"queues": null, "inflight_copies": null, "decompressed": null, "cache": null, "pool_tasks": null, "runtime": null, "allocator_reserve": null},
+      "unknown_reasons": {
+        "queues": "Bounded samples/log buffers are not a measured allocator peak.",
+        "inflight_copies": "JSON encoding and aggregation copies need measurement.",
+        "decompressed": "Exact measurement composition not yet pinned; do not assume absent paths.",
+        "cache": "Interpreter/module retained allocations not partitioned.",
+        "pool_tasks": "Observer subprocess/task stacks not yet measured for the full campaign.",
+        "runtime": "Observer steady/peak RSS for the connected sampler composition unknown.",
+        "allocator_reserve": "Full measurement-process high-water reserve unknown."
+      }
+    }
+  ],
+  "database_capacity_note": "PG test hard cap768 MiB includes its512 MiB tmpfs; do not add tmpfs twice. Isolated max_connections24 is not permission or a cap on the shared TS database. Other2 covers test observer/admin only; no migration/Manager pool admitted.",
+  "pins": {
+    "fixture_sha256": null, "source_set_sha256": null, "common_config_sha256": null,
+    "hardware_sha256": null, "coverage_sha256": null,
+    "cache_regime": "COLD_APPLICATION_CACHE_WARM_DATABASE_SEPARATE_FROM_WARM_RUNS",
+    "seed": 110, "duration_tolerance_seconds": "1"
+  },
+  "stage_artifacts": {
+    "B0": {"image_sha256": null, "config_sha256": null, "composition_ref": null},
+    "B1": {"image_sha256": null, "config_sha256": null, "composition_ref": null},
+    "B2": {"image_sha256": null, "config_sha256": null, "composition_ref": null}
+  },
+  "stage_protocol": {
+    "B0": "Pinned TS+DL, candidate disabled; retain approved reads and safety functions.",
+    "B1": "Identical source fixture/hardware/coverage plus minimal producer and Research durable projection, zero browsers.",
+    "B2": "B1 plus representative dashboard/history/shared score/regime/Archive workload. No heavy analytics in TS producer.",
+    "workload_units": "6000/9000 canonical TRADE events per second,600 seconds,2 independent repeats per stage; not orders/users/API QPS.",
+    "bounds": "These are prepared isolated logical limits, not measured RSS or approved production SLOs. Prepare even when source/budgets/host window are unavailable. Runtime binding and14-budget preflight remain mandatory."
+  },
+  "budget_collectors": [
+    {"id": "B-TS-CPU", "collector": "TS native PID/cgroup sampler; cpu.stat usage_usec delta and throttle counters", "population": "Same pinned TS processes/full monotonic window/all replicas", "availability": "Existing native collector; no connected B0/B1/B2 receipt", "missing": "Paired baseline and approved absolute/delta tripwire"},
+    {"id": "B-TS-RAM", "collector": "TS cgroup memory.current/peak plus process RSS and per-copy sheet", "population": "All TS replicas, same window; separate host available-memory reserve", "availability": "Cgroup metadata measurable; allocator/retained-copy upper bound unknown", "missing": "Observed full-process peaks and allocator reserve, approved bounds"},
+    {"id": "B-TS-DB", "collector": "Scoped query counters/plan digest, pool and lock-wait histograms; no global reset", "population": "Exact TS application identity/query shapes; sampled rows not business payload", "availability": "Governed test pool counters available; shared DB attribution not qualified", "missing": "Exact read identity/queries and paired scoped DB populations"},
+    {"id": "B-TS-IO", "collector": "Native cgroup io.stat/network; isolated PG WAL deltas; host device latency separately", "population": "Each named byte/ops/latency counter, identical interval", "availability": "Existing sampler and isolated WAL receipt; tmpfs writes are not device IOPS", "missing": "Shared-host attribution and device latency bounds"},
+    {"id": "B-TRADE", "collector": "TS owner admission/trading latency populations and critical errors", "population": "Exact safety-critical TS paths, full windows with n and p95/p99/max", "availability": "TS-owned; no Edge candidate connected receipt", "missing": "Published populations and numeric nonregression bounds; no inferred health-only PASS"},
+    {"id": "B-RS", "collector": "Research PID/cgroup sampler, all-instance RSS and DB/IO/storage counters", "population": "Producer/projector/BFF/analytics plus other Research workloads and reserve", "availability": "Research native collector exists; exact new composition unbound", "missing": "Research target image/config, all-replica pool/copy sizing and bounds"},
+    {"id": "B-FRESH", "collector": "Source commit to durable projection to API/fanout timestamps with monotonic local spans", "population": "Per dataset/path, clock offset/error and full-window n", "availability": "05 projection/fanout correctness tests only", "missing": "03 authoritative source, current producer composition and calibrated cross-host clocks"},
+    {"id": "B-REVOKE", "collector": "05 scope-denial/exposure invalidation assertions and boundary latencies", "population": "Queued reads/cache/stream, zero unauthorized exposure", "availability": "Isolated security regression available", "missing": "Connected identity/policy refresh path and revocation latency bound"},
+    {"id": "B-RECOVERY", "collector": "Cursor/backlog age/bytes, retained floor, replay/production rates and filesystem/WAL growth", "population": "Approved outage duration, steady/fault/recovery separately", "availability": "Offline backlog/catchup formulas and isolated recovery tests available", "missing": "Measured storage amplification, durable source retention, outage objective and sustained replay rate"},
+    {"id": "B-CMD", "collector": "TS command accepted/status/terminal/unknown timestamps and idempotency assertions", "population": "Each published operation/state, no false terminal success", "availability": "Not instantiated by this read-only target", "missing": "Command owner target and lifecycle populations; not represented by a zero"},
+    {"id": "B-HISTORY", "collector": "05 scoped keyset query/page counters, full latency histogram and memory high-water", "population": "Pinned subjects/history span/cardinality; full continuation not decimated chart output", "availability": "04/05 isolated correctness plus01 narrow7-row/1h measured proposal", "missing": "Representative connected history, concurrent subjects and accepted numeric bounds"},
+    {"id": "B-DL", "collector": "DL native P184 G2 latency/throughput/lag/error and cgroup reserve sampler", "population": "Original per-feed populations;6k/9k600s2repeats preserved", "availability": "Native apparatus exists; latest B16 amendment1 is4/5 clean, not whole PASS", "missing": "Owner accepted source run and paired coexistence; no borrowed historical capacity claim"},
+    {"id": "B-EDGE", "collector": "ResourceStats active/entries/bytes/background/peaks/denials/storage_pressure plus cgroup CPU/RSS and scoped source calls", "population": "Single shared governed envelope per instance; all replicas and producer paths separately", "availability": "Rust06 stats and fail-fast envelope qualified in isolated tests", "missing": "Runtime instantiation/storage observer, allocator/transport copies and producer CPU/query bounds"},
+    {"id": "B-ANALYTICS", "collector": "Research job queue/running/cancel counters, subject/horizon recomputation CPU and cache/spill", "population": "Shared score/regime/Archive workloads, no delta/live starvation", "availability": "Research-owned quota/cancel path, not a TS producer feature", "missing": "Representative exact analytical workload, fairness/cadence/cancellation and resource bounds"}
+  ]
+}

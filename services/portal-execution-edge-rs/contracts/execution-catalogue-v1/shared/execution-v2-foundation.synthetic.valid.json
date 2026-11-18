@@ -1,0 +1,3216 @@
+{
+  "schema_version": "execution.v2-foundation-fixtures.v1",
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "production_config": false,
+  "authority_schema": "https://schemas.primusspark.com/portal/execution-v2-foundation.v1.schema.json",
+  "cases": [
+    {
+      "id": "FX-01",
+      "title": "Identity and delegation",
+      "facts": [
+        {
+          "type": "HumanIdentity",
+          "value": {
+            "user_id": "test:researcher",
+            "issuer": "test:issuer",
+            "subject": "stable-subject",
+            "mapping_state": "VERIFIED",
+            "ts_user_id": "test:ts-user",
+            "researcher_user_id": "test:researcher"
+          },
+          "valid": true
+        },
+        {
+          "type": "DelegationCeiling",
+          "value": {
+            "subject_user_id": "test:manager",
+            "resource": {
+              "kind": "PORTFOLIO",
+              "id": "P1"
+            },
+            "environment": "sandbox",
+            "capabilities": [
+              "business.read",
+              "budget.manage"
+            ],
+            "delegable": [
+              "budget.manage"
+            ],
+            "policy_revision": "policy:test-only",
+            "approval_state": "TEST_ONLY",
+            "expires_at_ms": null
+          },
+          "valid": true
+        },
+        {
+          "type": "HumanIdentity",
+          "value": {
+            "user_id": "test:researcher",
+            "issuer": "test:issuer",
+            "subject": "stable-subject",
+            "mapping_state": "VERIFIED",
+            "ts_user_id": "test:ts-user",
+            "researcher_user_id": "test:researcher",
+            "actor": "spoof"
+          },
+          "valid": false
+        }
+      ],
+      "invariants": [
+        "Manager read is not mutation/delegation authority",
+        "Synthetic ceiling is not a grant to Stan",
+        "Researcher owner differs from deployer"
+      ]
+    },
+    {
+      "id": "FX-02",
+      "title": "Shared alpha, separate version/portfolio grain",
+      "facts": [
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P1",
+            "deployment_id": "D1",
+            "internal_account_id": "C1",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "live",
+            "financial_stage": "CANARY",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL"
+          },
+          "valid": true
+        },
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P2",
+            "deployment_id": "D2",
+            "internal_account_id": "C2",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "live",
+            "financial_stage": "CANARY",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Fleet key is alpha_id + alpha_version_id + portfolio_id",
+        "Linked discovery is not peer-finance permission"
+      ]
+    },
+    {
+      "id": "FX-03",
+      "title": "Shared physical pool, distinct economic accounts",
+      "facts": [
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P1",
+            "deployment_id": "D1",
+            "internal_account_id": "C1",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "live",
+            "financial_stage": "CANARY",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL"
+          },
+          "valid": true
+        },
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P1",
+            "deployment_id": "D3",
+            "internal_account_id": "C3",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "live",
+            "financial_stage": "CANARY",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Pool membership does not grant physical-custody disclosure",
+        "Dedupe economic source identity, never numeric equality"
+      ]
+    },
+    {
+      "id": "FX-04",
+      "title": "Economic backing vs budget",
+      "facts": [
+        {
+          "type": "MetricCapsule",
+          "value": {
+            "metric_id": "economic_backing",
+            "value": "1000",
+            "unit": "MONEY",
+            "currency": "USDT",
+            "economic_domain": "ACTUAL",
+            "basis": "INTERNAL_ACCOUNT_BALANCE",
+            "denominator": null,
+            "denominator_kind": "NOT_APPLICABLE",
+            "denominator_reason_code": "ABSOLUTE_METRIC",
+            "methodology_revision": "test:nav-v1",
+            "policy_revision": "p1",
+            "domain_proof": {
+              "kind": "VERIFIED_NATIVE_PROFILE",
+              "ref": "test:profile-proof"
+            },
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "availability": {
+              "state": "PARTIAL",
+              "reason_code": "PARTIAL_COVERAGE"
+            },
+            "calculation_revision": "test:r1",
+            "provenance_ref": "test:postings"
+          },
+          "valid": true
+        },
+        {
+          "type": "MetricCapsule",
+          "value": {
+            "metric_id": "risk_budget",
+            "value": "800",
+            "unit": "MONEY",
+            "currency": "USDT",
+            "economic_domain": "ACTUAL",
+            "basis": "INTERNAL_ACCOUNT_BALANCE",
+            "denominator": null,
+            "denominator_kind": "NOT_APPLICABLE",
+            "denominator_reason_code": "ABSOLUTE_METRIC",
+            "methodology_revision": "test:nav-v1",
+            "policy_revision": "p1",
+            "domain_proof": {
+              "kind": "VERIFIED_NATIVE_PROFILE",
+              "ref": "test:profile-proof"
+            },
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "availability": {
+              "state": "PARTIAL",
+              "reason_code": "PARTIAL_COVERAGE"
+            },
+            "calculation_revision": "test:r1",
+            "provenance_ref": "test:postings"
+          },
+          "valid": true
+        },
+        {
+          "type": "PmaCapitalCommand",
+          "value": {
+            "schema_version": "pma.capital-command.v1.1",
+            "operation": "TOP_UP",
+            "idempotency_key": "test:same-intent",
+            "recipient_kind": "DEPLOYMENT_ACCOUNT",
+            "currency": "USDT",
+            "expected_versions": {
+              "budget": "9223372036854775807",
+              "source": "0",
+              "parent": "17"
+            },
+            "reason": "Synthetic contract test, never submitted",
+            "recipient_account_id": "C1",
+            "recipient_deployment_id": "D1",
+            "amount": "500.00"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Budget is not an economic cash transfer",
+        "No universal 1x exposure rule"
+      ]
+    },
+    {
+      "id": "FX-05",
+      "title": "Partial recall and exact partition",
+      "facts": [
+        {
+          "type": "AmountPartition",
+          "value": {
+            "requested": "500",
+            "applied": "200.01",
+            "pending": "299.99",
+            "cancelled": "0",
+            "rejected": "0"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Exact requested = applied + pending + cancelled + rejected",
+        "Unknown obligations never imply flat"
+      ]
+    },
+    {
+      "id": "FX-06",
+      "title": "Ownership intervals and late obligation",
+      "facts": [
+        {
+          "type": "OwnershipInterval",
+          "value": {
+            "resource": {
+              "kind": "DEPLOYMENT",
+              "id": "D1"
+            },
+            "owner_user_id": "test:old-owner",
+            "effective_from_ms": 1704067200000,
+            "effective_to_ms": 1704500000000,
+            "binding_revision": "b1",
+            "original_obligation_ref": "original:order1"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Late fill retains original causal binding",
+        "Historical owner alone does not grant current read"
+      ]
+    },
+    {
+      "id": "FX-07",
+      "title": "Duplicate intent/transport ACK",
+      "facts": [
+        {
+          "type": "PmaCapitalCommand",
+          "value": {
+            "schema_version": "pma.capital-command.v1.1",
+            "operation": "TOP_UP",
+            "idempotency_key": "test:same-intent",
+            "recipient_kind": "DEPLOYMENT_ACCOUNT",
+            "currency": "USDT",
+            "expected_versions": {
+              "budget": "9223372036854775807",
+              "source": "0",
+              "parent": "17"
+            },
+            "reason": "Synthetic contract test, never submitted",
+            "recipient_account_id": "C1",
+            "recipient_deployment_id": "D1",
+            "amount": "500.00"
+          },
+          "valid": true
+        },
+        {
+          "type": "GrantProposal",
+          "value": {
+            "proposal_id": "proposal1",
+            "subject_user_id": "test:researcher",
+            "resource": {
+              "kind": "PORTFOLIO",
+              "id": "P1"
+            },
+            "environment": "live",
+            "policy_revision": "p1",
+            "app_state": "APPLIED",
+            "ts_state": "PENDING",
+            "accepted_receipt_ref": null
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Same intent uses same idempotency key",
+        "Delivery ACK is not TS APPLIED",
+        "ACK follows durable commit"
+      ]
+    },
+    {
+      "id": "FX-08",
+      "title": "Continuity and projection generations",
+      "facts": [
+        {
+          "type": "StreamEnvelope",
+          "value": {
+            "contract_version": "edge.v1",
+            "source_continuity_epoch": "source:epoch1",
+            "projection_generation": "edge:gen7",
+            "event_id": "opaque:event1",
+            "event_kind": "UPSERT",
+            "continuation": "opaque:bound-to-relation-policy",
+            "emitted_at_ms": 1704672000000,
+            "as_of_ms": 1704672000000,
+            "source_observed_at_ms": null,
+            "coverage_watermark": "opaque:authenticated-scope-watermark",
+            "policy_revision": "policy:r1",
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "entity_key": "opaque:entity1",
+            "entity_revision": "source:r1",
+            "replacement_ref": "test:replacement1"
+          },
+          "valid": true
+        },
+        {
+          "type": "StreamEnvelope",
+          "value": {
+            "contract_version": "edge.v1",
+            "source_continuity_epoch": "epoch2",
+            "projection_generation": "edge:gen7",
+            "event_id": "opaque:event1",
+            "event_kind": "RESYNC_REQUIRED",
+            "continuation": "opaque:bound-to-relation-policy",
+            "emitted_at_ms": 1704672000000,
+            "as_of_ms": 1704672000000,
+            "source_observed_at_ms": null,
+            "coverage_watermark": "opaque:authenticated-scope-watermark",
+            "policy_revision": "policy:r1",
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "entity_key": null,
+            "entity_revision": null,
+            "replacement_ref": null
+          },
+          "valid": true
+        },
+        {
+          "type": "StreamEnvelope",
+          "value": {
+            "contract_version": "edge.v1",
+            "source_continuity_epoch": "source:epoch1",
+            "projection_generation": "edge:gen7",
+            "event_id": "opaque:event1",
+            "event_kind": "TOMBSTONE",
+            "continuation": "opaque:bound-to-relation-policy",
+            "emitted_at_ms": 1704672000000,
+            "as_of_ms": 1704672000000,
+            "source_observed_at_ms": null,
+            "coverage_watermark": "opaque:authenticated-scope-watermark",
+            "policy_revision": "policy:r1",
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "entity_key": "opaque:entity1",
+            "entity_revision": "source:r1",
+            "replacement_ref": null
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Epoch is not projection generation",
+        "Opaque cursor is not global ordering",
+        "Missing source interval requires resync"
+      ]
+    },
+    {
+      "id": "FX-09",
+      "title": "Revoke across surfaces",
+      "facts": [
+        {
+          "type": "Availability",
+          "value": {
+            "state": "DENIED",
+            "reason_code": "CURRENT_GRANT_REVOKED"
+          },
+          "valid": true
+        },
+        {
+          "type": "GrantProposal",
+          "value": {
+            "proposal_id": "proposal2",
+            "subject_user_id": "test:researcher",
+            "resource": {
+              "kind": "PORTFOLIO",
+              "id": "P1"
+            },
+            "environment": "live",
+            "policy_revision": "p2",
+            "app_state": "APPLIED",
+            "ts_state": "UNKNOWN",
+            "accepted_receipt_ref": null
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Recheck before query, cache result, export and commit",
+        "Committed obligations and late facts remain retained"
+      ]
+    },
+    {
+      "id": "FX-10",
+      "title": "Flows are not PnL",
+      "facts": [
+        {
+          "type": "CashflowPosting",
+          "value": {
+            "posting_id": "o",
+            "source_id": "o",
+            "internal_account_id": "C1",
+            "currency": "USDT",
+            "kind": "OPENING",
+            "amount": "1000",
+            "observed_at_ms": 1704067200000
+          },
+          "valid": true
+        },
+        {
+          "type": "CashflowPosting",
+          "value": {
+            "posting_id": "d",
+            "source_id": "d",
+            "internal_account_id": "C1",
+            "currency": "USDT",
+            "kind": "DEPOSIT",
+            "amount": "200",
+            "observed_at_ms": 1704067200000
+          },
+          "valid": true
+        },
+        {
+          "type": "CashflowPosting",
+          "value": {
+            "posting_id": "w",
+            "source_id": "w",
+            "internal_account_id": "C1",
+            "currency": "USDT",
+            "kind": "WITHDRAWAL",
+            "amount": "300",
+            "observed_at_ms": 1704067200000
+          },
+          "valid": true
+        },
+        {
+          "type": "CashflowPosting",
+          "value": {
+            "posting_id": "p",
+            "source_id": "p",
+            "internal_account_id": "C1",
+            "currency": "USDT",
+            "kind": "TRADING_PNL",
+            "amount": "0",
+            "observed_at_ms": 1704067200000
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Net balance 900 with PnL exactly zero",
+        "Flow-adjusted return requires its own methodology"
+      ]
+    },
+    {
+      "id": "FX-11",
+      "title": "Decimals and equal amount dedupe",
+      "facts": [
+        {
+          "type": "CashflowPosting",
+          "value": {
+            "posting_id": "d1",
+            "source_id": "d1",
+            "internal_account_id": "C1",
+            "currency": "USDT",
+            "kind": "DEPOSIT",
+            "amount": "100",
+            "observed_at_ms": 1704067200000
+          },
+          "valid": true
+        },
+        {
+          "type": "CashflowPosting",
+          "value": {
+            "posting_id": "d2",
+            "source_id": "d2",
+            "internal_account_id": "C1",
+            "currency": "USDT",
+            "kind": "DEPOSIT",
+            "amount": "100",
+            "observed_at_ms": 1704067200000
+          },
+          "valid": true
+        },
+        {
+          "type": "MetricCapsule",
+          "value": {
+            "metric_id": "nav",
+            "value": "9007199254740993.000000000000000001",
+            "unit": "MONEY",
+            "currency": "USDT",
+            "economic_domain": "ACTUAL",
+            "basis": "INTERNAL_ACCOUNT_BALANCE",
+            "denominator": null,
+            "denominator_kind": "NOT_APPLICABLE",
+            "denominator_reason_code": "ABSOLUTE_METRIC",
+            "methodology_revision": "test:nav-v1",
+            "policy_revision": "p1",
+            "domain_proof": {
+              "kind": "VERIFIED_NATIVE_PROFILE",
+              "ref": "test:profile-proof"
+            },
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "availability": {
+              "state": "PARTIAL",
+              "reason_code": "PARTIAL_COVERAGE"
+            },
+            "calculation_revision": "test:r1",
+            "provenance_ref": "test:postings"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Two distinct source postings of 100 total 200",
+        "Duplicate source posting counts once",
+        "No float coercion or currency merging"
+      ]
+    },
+    {
+      "id": "FX-12",
+      "title": "Resource profile is not measurement",
+      "facts": [
+        {
+          "type": "ResourceMeasurement",
+          "value": {
+            "profile_ref": "test:bounded-profile",
+            "state": "NOT_MEASURED",
+            "cpu_cores": null,
+            "rss_bytes": null,
+            "receipt_ref": null,
+            "runtime_config_approved": false
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Fixture limits are not production budgets",
+        "Performance receipt remains NOT_RUN"
+      ]
+    },
+    {
+      "id": "FX-13",
+      "title": "Full business manager, limited mutation",
+      "facts": [
+        {
+          "type": "DelegationCeiling",
+          "value": {
+            "subject_user_id": "test:manager",
+            "resource": {
+              "kind": "PORTFOLIO",
+              "id": "P1"
+            },
+            "environment": "sandbox",
+            "capabilities": [
+              "business.read",
+              "budget.manage"
+            ],
+            "delegable": [
+              "budget.manage"
+            ],
+            "policy_revision": "policy:test-only",
+            "approval_state": "TEST_ONLY",
+            "expires_at_ms": null
+          },
+          "valid": true
+        },
+        {
+          "type": "ManagerPortfolio",
+          "value": {
+            "schema_version": "execution.manager-portfolio.v2",
+            "portfolio_id": "P1",
+            "financial_stages": [
+              "CANARY",
+              "LIVE"
+            ],
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL",
+            "nav": {
+              "metric_id": "nav",
+              "value": "1000.000000000000000001",
+              "unit": "MONEY",
+              "currency": "USDT",
+              "economic_domain": "ACTUAL",
+              "basis": "INTERNAL_ACCOUNT_BALANCE",
+              "denominator": null,
+              "denominator_kind": "NOT_APPLICABLE",
+              "denominator_reason_code": "ABSOLUTE_METRIC",
+              "methodology_revision": "test:nav-v1",
+              "policy_revision": "p1",
+              "domain_proof": {
+                "kind": "VERIFIED_NATIVE_PROFILE",
+                "ref": "test:profile-proof"
+              },
+              "requested_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "effective_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "quality": {
+                "completeness": "PARTIAL",
+                "freshness": "STALE",
+                "coverage": "AUTHORIZED_ONLY",
+                "source_as_of_ms": null,
+                "portal_observed_at_ms": 1704672000000,
+                "source_set_ref": "test:source-set",
+                "confidence": "PROVISIONAL",
+                "reasons": [
+                  "TEST_ONLY_PARTIAL_COVERAGE"
+                ]
+              },
+              "availability": {
+                "state": "PARTIAL",
+                "reason_code": "PARTIAL_COVERAGE"
+              },
+              "calculation_revision": "test:r1",
+              "provenance_ref": "test:postings"
+            },
+            "raw_alpha_scores": [
+              {
+                "model_revision": "qbts_prb_v1_1",
+                "band_revision": "quality_bands_v1_1",
+                "kind": "RAW_ALPHA",
+                "status": "policy_pending",
+                "value": null,
+                "quality_band": null,
+                "comparable_basis_id": "test:7d-basis",
+                "evidence_ref": "test:raw-observations",
+                "requested_window": {
+                  "start_ms": 1704067200000,
+                  "end_exclusive_ms": 1704672000000
+                },
+                "effective_window": {
+                  "start_ms": 1704067200000,
+                  "end_exclusive_ms": 1704672000000
+                },
+                "economic_subject_ref": "A1:V1:P1",
+                "research_binding_ref": "test:binding",
+                "config_ref": null,
+                "reason_code": "SCORE_CONFIG_NOT_APPROVED",
+                "availability": {
+                  "state": "UNAVAILABLE",
+                  "reason_code": "SCORE_CONFIG_NOT_APPROVED"
+                },
+                "subject_type": "alpha",
+                "reason_codes": [
+                  "SCORE_CONFIG_NOT_APPROVED"
+                ],
+                "policy_version": "test:policy1",
+                "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "approved_policy_id": null,
+                "components": {
+                  "P": "80",
+                  "R": "70",
+                  "B": "65.2",
+                  "atomic": {
+                    "net_excess_twr": {
+                      "raw": "0.06",
+                      "normalized": "80",
+                      "contribution": "25.2",
+                      "reason_code": null
+                    },
+                    "sharpe_period": {
+                      "raw": "0.12",
+                      "normalized": "80",
+                      "contribution": "10.8",
+                      "reason_code": null
+                    },
+                    "mdd": {
+                      "raw": "0.03",
+                      "normalized": "70",
+                      "contribution": "12.6",
+                      "reason_code": null
+                    },
+                    "add": {
+                      "raw": "0.012",
+                      "normalized": "70",
+                      "contribution": "8.4",
+                      "reason_code": null
+                    },
+                    "positive_block_ratio": {
+                      "raw": "0.652",
+                      "normalized": "65.2",
+                      "contribution": "8.15",
+                      "reason_code": null
+                    },
+                    "stress_excess_twr": {
+                      "raw": "0.0452",
+                      "normalized": "65.2",
+                      "contribution": "8.15",
+                      "reason_code": null
+                    }
+                  }
+                },
+                "bounds": null,
+                "evidence_status": "limited",
+                "sample_count": 168,
+                "complete_block_count": 250,
+                "trade_count": null,
+                "observed_duration_ms": 604800000,
+                "actual_duration_ms": 604800000,
+                "as_of_ms": 1704672000000,
+                "knowledge_cutoff_ms": 1704672000000,
+                "computed_at_ms": 1704672000000,
+                "subject_binding_id": "test:subject-binding",
+                "data_snapshot_id": "test:snapshot1",
+                "revision": "score:r1",
+                "supersedes_revision": null,
+                "stage_breakdown": [
+                  {
+                    "financial_stage": "CANARY",
+                    "duration_ms": 604800000
+                  }
+                ],
+                "series_kind": "ECONOMIC_NAV",
+                "economic_domain": "ACTUAL",
+                "cost_coverage": {
+                  "state": "COMPLETE",
+                  "source_ref": "test:costs",
+                  "reason_code": null
+                },
+                "stress_policy_id": "test:stress",
+                "allocation_weight": null,
+                "raw_score_ref": null,
+                "allocation_snapshot_id": null,
+                "score_coverage_allocated": null,
+                "provisional_allocated_weight": null,
+                "allocation_coverage_nav": null,
+                "return_source_snapshot_id": "test:returns",
+                "consolidation_manifest_id": "test:consolidation",
+                "preview": null
+              }
+            ],
+            "composition": {
+              "model_revision": "qbts_prb_v1_1",
+              "band_revision": "quality_bands_v1_1",
+              "kind": "COMPOSITION",
+              "status": "policy_pending",
+              "value": null,
+              "quality_band": null,
+              "comparable_basis_id": "test:7d-basis",
+              "evidence_ref": "test:raw-observations",
+              "requested_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "effective_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "economic_subject_ref": "A1:V1:P1",
+              "research_binding_ref": "test:binding",
+              "config_ref": null,
+              "reason_code": "SCORE_CONFIG_NOT_APPROVED",
+              "availability": {
+                "state": "UNAVAILABLE",
+                "reason_code": "SCORE_CONFIG_NOT_APPROVED"
+              },
+              "subject_type": "alpha",
+              "reason_codes": [
+                "SCORE_CONFIG_NOT_APPROVED"
+              ],
+              "policy_version": "test:policy1",
+              "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "approved_policy_id": null,
+              "components": {
+                "P": "80",
+                "R": "70",
+                "B": "65.2",
+                "atomic": {
+                  "net_excess_twr": {
+                    "raw": "0.06",
+                    "normalized": "80",
+                    "contribution": "25.2",
+                    "reason_code": null
+                  },
+                  "sharpe_period": {
+                    "raw": "0.12",
+                    "normalized": "80",
+                    "contribution": "10.8",
+                    "reason_code": null
+                  },
+                  "mdd": {
+                    "raw": "0.03",
+                    "normalized": "70",
+                    "contribution": "12.6",
+                    "reason_code": null
+                  },
+                  "add": {
+                    "raw": "0.012",
+                    "normalized": "70",
+                    "contribution": "8.4",
+                    "reason_code": null
+                  },
+                  "positive_block_ratio": {
+                    "raw": "0.652",
+                    "normalized": "65.2",
+                    "contribution": "8.15",
+                    "reason_code": null
+                  },
+                  "stress_excess_twr": {
+                    "raw": "0.0452",
+                    "normalized": "65.2",
+                    "contribution": "8.15",
+                    "reason_code": null
+                  }
+                }
+              },
+              "bounds": null,
+              "evidence_status": "limited",
+              "sample_count": 168,
+              "complete_block_count": 250,
+              "trade_count": null,
+              "observed_duration_ms": 604800000,
+              "actual_duration_ms": 604800000,
+              "as_of_ms": 1704672000000,
+              "knowledge_cutoff_ms": 1704672000000,
+              "computed_at_ms": 1704672000000,
+              "subject_binding_id": "test:subject-binding",
+              "data_snapshot_id": "test:snapshot1",
+              "revision": "score:r1",
+              "supersedes_revision": null,
+              "stage_breakdown": [
+                {
+                  "financial_stage": "CANARY",
+                  "duration_ms": 604800000
+                }
+              ],
+              "series_kind": "ECONOMIC_NAV",
+              "economic_domain": "ACTUAL",
+              "cost_coverage": {
+                "state": "COMPLETE",
+                "source_ref": "test:costs",
+                "reason_code": null
+              },
+              "stress_policy_id": "test:stress",
+              "allocation_weight": null,
+              "raw_score_ref": null,
+              "allocation_snapshot_id": null,
+              "score_coverage_allocated": null,
+              "provisional_allocated_weight": null,
+              "allocation_coverage_nav": null,
+              "return_source_snapshot_id": "test:returns",
+              "consolidation_manifest_id": "test:consolidation",
+              "preview": null
+            },
+            "direct_nav_score": {
+              "model_revision": "qbts_prb_v1_1",
+              "band_revision": "quality_bands_v1_1",
+              "kind": "DIRECT_NAV",
+              "status": "provisional",
+              "value": "73.3",
+              "quality_band": "fair",
+              "comparable_basis_id": "test:7d-basis",
+              "evidence_ref": "test:raw-observations",
+              "requested_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "effective_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "economic_subject_ref": "A1:V1:P1",
+              "research_binding_ref": null,
+              "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "reason_code": null,
+              "availability": {
+                "state": "AVAILABLE",
+                "reason_code": null
+              },
+              "subject_type": "portfolio",
+              "reason_codes": [],
+              "policy_version": "test:policy1",
+              "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+              "components": {
+                "P": "80",
+                "R": "70",
+                "B": "65.2",
+                "atomic": {
+                  "net_excess_twr": {
+                    "raw": "0.06",
+                    "normalized": "80",
+                    "contribution": "25.2",
+                    "reason_code": null
+                  },
+                  "sharpe_period": {
+                    "raw": "0.12",
+                    "normalized": "80",
+                    "contribution": "10.8",
+                    "reason_code": null
+                  },
+                  "mdd": {
+                    "raw": "0.03",
+                    "normalized": "70",
+                    "contribution": "12.6",
+                    "reason_code": null
+                  },
+                  "add": {
+                    "raw": "0.012",
+                    "normalized": "70",
+                    "contribution": "8.4",
+                    "reason_code": null
+                  },
+                  "positive_block_ratio": {
+                    "raw": "0.652",
+                    "normalized": "65.2",
+                    "contribution": "8.15",
+                    "reason_code": null
+                  },
+                  "stress_excess_twr": {
+                    "raw": "0.0452",
+                    "normalized": "65.2",
+                    "contribution": "8.15",
+                    "reason_code": null
+                  }
+                }
+              },
+              "bounds": null,
+              "evidence_status": "limited",
+              "sample_count": 168,
+              "complete_block_count": 250,
+              "trade_count": null,
+              "observed_duration_ms": 604800000,
+              "actual_duration_ms": 604800000,
+              "as_of_ms": 1704672000000,
+              "knowledge_cutoff_ms": 1704672000000,
+              "computed_at_ms": 1704672000000,
+              "subject_binding_id": "test:subject-binding",
+              "data_snapshot_id": "test:snapshot1",
+              "revision": "score:r1",
+              "supersedes_revision": null,
+              "stage_breakdown": [
+                {
+                  "financial_stage": "CANARY",
+                  "duration_ms": 604800000
+                }
+              ],
+              "series_kind": "ECONOMIC_NAV",
+              "economic_domain": "ACTUAL",
+              "cost_coverage": {
+                "state": "COMPLETE",
+                "source_ref": "test:costs",
+                "reason_code": null
+              },
+              "stress_policy_id": "test:stress",
+              "allocation_weight": null,
+              "raw_score_ref": null,
+              "allocation_snapshot_id": null,
+              "score_coverage_allocated": null,
+              "provisional_allocated_weight": null,
+              "allocation_coverage_nav": null,
+              "return_source_snapshot_id": "test:returns",
+              "consolidation_manifest_id": "test:consolidation",
+              "preview": null
+            },
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "policy_revision": "policy:r1"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Business read all is independent of technical secrets and delegation ceiling",
+        "No display-name authorization"
+      ]
+    },
+    {
+      "id": "FX-14",
+      "title": "Restricted researcher schema",
+      "facts": [
+        {
+          "type": "RestrictedPortfolio",
+          "value": {
+            "schema_version": "execution.restricted-portfolio.v2",
+            "portfolio_id": "P1",
+            "display_label": "Linked portfolio P1",
+            "linked_alpha_ids": [
+              "A1"
+            ],
+            "disclosure_state": "FIELD_POLICY_PENDING",
+            "policy_revision": "policy:r1"
+          },
+          "valid": true
+        },
+        {
+          "type": "RestrictedPortfolio",
+          "value": {
+            "schema_version": "execution.restricted-portfolio.v2",
+            "portfolio_id": "P1",
+            "display_label": "Linked portfolio P1",
+            "linked_alpha_ids": [
+              "A1"
+            ],
+            "disclosure_state": "FIELD_POLICY_PENDING",
+            "policy_revision": "policy:r1",
+            "nav": {
+              "metric_id": "nav",
+              "value": "1000.000000000000000001",
+              "unit": "MONEY",
+              "currency": "USDT",
+              "economic_domain": "ACTUAL",
+              "basis": "INTERNAL_ACCOUNT_BALANCE",
+              "denominator": null,
+              "denominator_kind": "NOT_APPLICABLE",
+              "denominator_reason_code": "ABSOLUTE_METRIC",
+              "methodology_revision": "test:nav-v1",
+              "policy_revision": "p1",
+              "domain_proof": {
+                "kind": "VERIFIED_NATIVE_PROFILE",
+                "ref": "test:profile-proof"
+              },
+              "requested_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "effective_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "quality": {
+                "completeness": "PARTIAL",
+                "freshness": "STALE",
+                "coverage": "AUTHORIZED_ONLY",
+                "source_as_of_ms": null,
+                "portal_observed_at_ms": 1704672000000,
+                "source_set_ref": "test:source-set",
+                "confidence": "PROVISIONAL",
+                "reasons": [
+                  "TEST_ONLY_PARTIAL_COVERAGE"
+                ]
+              },
+              "availability": {
+                "state": "PARTIAL",
+                "reason_code": "PARTIAL_COVERAGE"
+              },
+              "calculation_revision": "test:r1",
+              "provenance_ref": "test:postings"
+            }
+          },
+          "valid": false
+        },
+        {
+          "type": "RestrictedPortfolio",
+          "value": {
+            "schema_version": "execution.restricted-portfolio.v2",
+            "portfolio_id": "P1",
+            "display_label": "Linked portfolio P1",
+            "linked_alpha_ids": [
+              "A1"
+            ],
+            "disclosure_state": "FIELD_POLICY_PENDING",
+            "policy_revision": "policy:r1",
+            "total_portfolio_count": 99
+          },
+          "valid": false
+        }
+      ],
+      "invariants": [
+        "No hidden totals, peers, finance sort or inferred denominator",
+        "Current verified owner links only"
+      ]
+    },
+    {
+      "id": "FX-15",
+      "title": "Fleet currency/stage semantics",
+      "facts": [
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P1",
+            "deployment_id": "D1",
+            "internal_account_id": "C1",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "live",
+            "financial_stage": "CANARY",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL"
+          },
+          "valid": true
+        },
+        {
+          "type": "MetricCapsule",
+          "value": {
+            "metric_id": "nav",
+            "value": null,
+            "unit": "MONEY",
+            "currency": "USDT",
+            "economic_domain": "MIXED",
+            "basis": "INTERNAL_ACCOUNT_BALANCE",
+            "denominator": null,
+            "denominator_kind": "NOT_APPLICABLE",
+            "denominator_reason_code": "ABSOLUTE_METRIC",
+            "methodology_revision": "test:nav-v1",
+            "policy_revision": "p1",
+            "domain_proof": {
+              "kind": "VERIFIED_NATIVE_PROFILE",
+              "ref": "test:profile-proof"
+            },
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "availability": {
+              "state": "UNAVAILABLE",
+              "reason_code": "MIXED_ECONOMIC_DOMAINS"
+            },
+            "calculation_revision": "test:r1",
+            "provenance_ref": "test:postings"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "All is navigation, never a financial stage",
+        "No mixed-domain NAV aggregate",
+        "Snapshot and policy bind paging"
+      ]
+    },
+    {
+      "id": "FX-16",
+      "title": "Archive without liquidation",
+      "facts": [
+        {
+          "type": "ArchiveDisposition",
+          "value": {
+            "resource": {
+              "kind": "DEPLOYMENT",
+              "id": "D1"
+            },
+            "lifecycle": "ARCHIVE_REQUESTED",
+            "financial_stage": "LIVE",
+            "open_obligations": null,
+            "automatic_liquidation": false,
+            "paper_clone_resource": null,
+            "lineage_ref": null,
+            "clone_lineage": null
+          },
+          "valid": true
+        },
+        {
+          "type": "ArchiveDisposition",
+          "value": {
+            "resource": {
+              "kind": "DEPLOYMENT",
+              "id": "D1"
+            },
+            "lifecycle": "ARCHIVED",
+            "financial_stage": "LIVE",
+            "open_obligations": 0,
+            "automatic_liquidation": false,
+            "paper_clone_resource": {
+              "kind": "DEPLOYMENT",
+              "id": "PAPER_CLONE"
+            },
+            "lineage_ref": "test:clone",
+            "clone_lineage": {
+              "origin_deployment_id": "D1",
+              "origin_alpha_version_id": "V1",
+              "clone_reason": "ARCHIVE_MONITOR",
+              "effective_at_ms": 1704672000000,
+              "approved_config_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Archive is lifecycle, not financial stage",
+        "Paper clone is a separate deployment with approved lineage/quota"
+      ]
+    },
+    {
+      "id": "FX-17",
+      "title": "Funding buckets",
+      "facts": [
+        {
+          "type": "CashflowPosting",
+          "value": {
+            "posting_id": "initial",
+            "source_id": "initial",
+            "internal_account_id": "C1",
+            "currency": "USDT",
+            "kind": "OPENING",
+            "amount": "1000",
+            "observed_at_ms": 1704067200000
+          },
+          "valid": true
+        },
+        {
+          "type": "CashflowPosting",
+          "value": {
+            "posting_id": "added",
+            "source_id": "added",
+            "internal_account_id": "C1",
+            "currency": "USDT",
+            "kind": "DEPOSIT",
+            "amount": "200",
+            "observed_at_ms": 1704067200000
+          },
+          "valid": true
+        },
+        {
+          "type": "Availability",
+          "value": {
+            "state": "UNAVAILABLE",
+            "reason_code": "COHORT_PNL_METHODOLOGY_NOT_PUBLISHED"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Initial/added/returned funds are flows",
+        "Do not invent lot PnL or turnover"
+      ]
+    },
+    {
+      "id": "FX-18",
+      "title": "Raw vs contribution vs direct score",
+      "facts": [
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "RAW_ALPHA",
+            "status": "provisional",
+            "value": "73.3",
+            "quality_band": "fair",
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:raw-observations",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A1:V1:P1",
+            "research_binding_ref": "test:binding",
+            "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "reason_code": null,
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "subject_type": "alpha",
+            "reason_codes": [],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": null,
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": null,
+            "raw_score_ref": null,
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": null,
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": true
+        },
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "CONTRIBUTION",
+            "status": "provisional",
+            "value": "18.325",
+            "quality_band": null,
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:raw-observations",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A1:V1:P1",
+            "research_binding_ref": "test:binding",
+            "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "reason_code": null,
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "subject_type": "alpha",
+            "reason_codes": [],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": null,
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": "0.25",
+            "raw_score_ref": "test:raw-q-r1",
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": null,
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": true
+        },
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "DIRECT_NAV",
+            "status": "provisional",
+            "value": "73.3",
+            "quality_band": "fair",
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:raw-observations",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A1:V1:P1",
+            "research_binding_ref": null,
+            "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "reason_code": null,
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "subject_type": "portfolio",
+            "reason_codes": [],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": null,
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": null,
+            "raw_score_ref": null,
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": null,
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "73.3 fair provisional is a synthetic numerical example",
+        "18.325 contribution has no quality band",
+        "Direct NAV score is not an average of child q"
+      ]
+    },
+    {
+      "id": "FX-19",
+      "title": "Correction of original source",
+      "facts": [
+        {
+          "type": "StreamEnvelope",
+          "value": {
+            "contract_version": "edge.v1",
+            "source_continuity_epoch": "source:epoch1",
+            "projection_generation": "portal:gen8",
+            "event_id": "source:correction1",
+            "event_kind": "CORRECTION",
+            "continuation": "opaque:bound-to-relation-policy",
+            "emitted_at_ms": 1704672000000,
+            "as_of_ms": 1704672000000,
+            "source_observed_at_ms": null,
+            "coverage_watermark": "opaque:authenticated-scope-watermark",
+            "policy_revision": "policy:r1",
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "entity_key": "opaque:entity1",
+            "entity_revision": "source:r1",
+            "replacement_ref": "test:replacement1"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Restatement creates a new calculation revision",
+        "Bounded recomputation outside TS hot path"
+      ]
+    },
+    {
+      "id": "FX-20",
+      "title": "Actual versus virtual and Canary/Live",
+      "facts": [
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P1",
+            "deployment_id": "D1",
+            "internal_account_id": "C1",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "live",
+            "financial_stage": "CANARY",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL"
+          },
+          "valid": true
+        },
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P1",
+            "deployment_id": "D1",
+            "internal_account_id": "C1",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "live",
+            "financial_stage": "LIVE",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL"
+          },
+          "valid": true
+        },
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P1",
+            "deployment_id": "D1",
+            "internal_account_id": "C_PAPER",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "paper",
+            "financial_stage": "PAPER",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "PAPER_SIMULATION"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Canary/Live on same actual account counted once",
+        "Paper/Sandbox NAV never added to actual"
+      ]
+    },
+    {
+      "id": "FX-21",
+      "title": "Same-basis provisional windows",
+      "facts": [
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "RAW_ALPHA",
+            "status": "provisional",
+            "value": "73.3",
+            "quality_band": "fair",
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:raw-observations",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A1:V1:P1",
+            "research_binding_ref": "test:binding",
+            "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "reason_code": null,
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "subject_type": "alpha",
+            "reason_codes": [],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": null,
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": null,
+            "raw_score_ref": null,
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": null,
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": true
+        },
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "RAW_ALPHA",
+            "status": "provisional",
+            "value": "73.3",
+            "quality_band": "fair",
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:other-inputs",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A2:V2:P1",
+            "research_binding_ref": "test:binding",
+            "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "reason_code": null,
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "subject_type": "alpha",
+            "reason_codes": [],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": null,
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": null,
+            "raw_score_ref": null,
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": null,
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Same comparable_basis_id does not require same subject evidence ref",
+        "Short history cannot pretend to be 30 days",
+        "Maturity policy still requires config"
+      ]
+    },
+    {
+      "id": "FX-22",
+      "title": "Missing constituent, available direct NAV",
+      "facts": [
+        {
+          "type": "ManagerPortfolio",
+          "value": {
+            "schema_version": "execution.manager-portfolio.v2",
+            "portfolio_id": "P1",
+            "financial_stages": [
+              "CANARY",
+              "LIVE"
+            ],
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL",
+            "nav": {
+              "metric_id": "nav",
+              "value": "1000.000000000000000001",
+              "unit": "MONEY",
+              "currency": "USDT",
+              "economic_domain": "ACTUAL",
+              "basis": "INTERNAL_ACCOUNT_BALANCE",
+              "denominator": null,
+              "denominator_kind": "NOT_APPLICABLE",
+              "denominator_reason_code": "ABSOLUTE_METRIC",
+              "methodology_revision": "test:nav-v1",
+              "policy_revision": "p1",
+              "domain_proof": {
+                "kind": "VERIFIED_NATIVE_PROFILE",
+                "ref": "test:profile-proof"
+              },
+              "requested_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "effective_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "quality": {
+                "completeness": "PARTIAL",
+                "freshness": "STALE",
+                "coverage": "AUTHORIZED_ONLY",
+                "source_as_of_ms": null,
+                "portal_observed_at_ms": 1704672000000,
+                "source_set_ref": "test:source-set",
+                "confidence": "PROVISIONAL",
+                "reasons": [
+                  "TEST_ONLY_PARTIAL_COVERAGE"
+                ]
+              },
+              "availability": {
+                "state": "PARTIAL",
+                "reason_code": "PARTIAL_COVERAGE"
+              },
+              "calculation_revision": "test:r1",
+              "provenance_ref": "test:postings"
+            },
+            "raw_alpha_scores": [
+              {
+                "model_revision": "qbts_prb_v1_1",
+                "band_revision": "quality_bands_v1_1",
+                "kind": "RAW_ALPHA",
+                "status": "policy_pending",
+                "value": null,
+                "quality_band": null,
+                "comparable_basis_id": "test:7d-basis",
+                "evidence_ref": "test:raw-observations",
+                "requested_window": {
+                  "start_ms": 1704067200000,
+                  "end_exclusive_ms": 1704672000000
+                },
+                "effective_window": {
+                  "start_ms": 1704067200000,
+                  "end_exclusive_ms": 1704672000000
+                },
+                "economic_subject_ref": "A1:V1:P1",
+                "research_binding_ref": "test:binding",
+                "config_ref": null,
+                "reason_code": "SCORE_CONFIG_NOT_APPROVED",
+                "availability": {
+                  "state": "UNAVAILABLE",
+                  "reason_code": "SCORE_CONFIG_NOT_APPROVED"
+                },
+                "subject_type": "alpha",
+                "reason_codes": [
+                  "SCORE_CONFIG_NOT_APPROVED"
+                ],
+                "policy_version": "test:policy1",
+                "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "approved_policy_id": null,
+                "components": {
+                  "P": "80",
+                  "R": "70",
+                  "B": "65.2",
+                  "atomic": {
+                    "net_excess_twr": {
+                      "raw": "0.06",
+                      "normalized": "80",
+                      "contribution": "25.2",
+                      "reason_code": null
+                    },
+                    "sharpe_period": {
+                      "raw": "0.12",
+                      "normalized": "80",
+                      "contribution": "10.8",
+                      "reason_code": null
+                    },
+                    "mdd": {
+                      "raw": "0.03",
+                      "normalized": "70",
+                      "contribution": "12.6",
+                      "reason_code": null
+                    },
+                    "add": {
+                      "raw": "0.012",
+                      "normalized": "70",
+                      "contribution": "8.4",
+                      "reason_code": null
+                    },
+                    "positive_block_ratio": {
+                      "raw": "0.652",
+                      "normalized": "65.2",
+                      "contribution": "8.15",
+                      "reason_code": null
+                    },
+                    "stress_excess_twr": {
+                      "raw": "0.0452",
+                      "normalized": "65.2",
+                      "contribution": "8.15",
+                      "reason_code": null
+                    }
+                  }
+                },
+                "bounds": null,
+                "evidence_status": "limited",
+                "sample_count": 168,
+                "complete_block_count": 250,
+                "trade_count": null,
+                "observed_duration_ms": 604800000,
+                "actual_duration_ms": 604800000,
+                "as_of_ms": 1704672000000,
+                "knowledge_cutoff_ms": 1704672000000,
+                "computed_at_ms": 1704672000000,
+                "subject_binding_id": "test:subject-binding",
+                "data_snapshot_id": "test:snapshot1",
+                "revision": "score:r1",
+                "supersedes_revision": null,
+                "stage_breakdown": [
+                  {
+                    "financial_stage": "CANARY",
+                    "duration_ms": 604800000
+                  }
+                ],
+                "series_kind": "ECONOMIC_NAV",
+                "economic_domain": "ACTUAL",
+                "cost_coverage": {
+                  "state": "COMPLETE",
+                  "source_ref": "test:costs",
+                  "reason_code": null
+                },
+                "stress_policy_id": "test:stress",
+                "allocation_weight": null,
+                "raw_score_ref": null,
+                "allocation_snapshot_id": null,
+                "score_coverage_allocated": null,
+                "provisional_allocated_weight": null,
+                "allocation_coverage_nav": null,
+                "return_source_snapshot_id": "test:returns",
+                "consolidation_manifest_id": "test:consolidation",
+                "preview": null
+              }
+            ],
+            "composition": {
+              "model_revision": "qbts_prb_v1_1",
+              "band_revision": "quality_bands_v1_1",
+              "kind": "COMPOSITION",
+              "status": "policy_pending",
+              "value": null,
+              "quality_band": null,
+              "comparable_basis_id": "test:7d-basis",
+              "evidence_ref": "test:raw-observations",
+              "requested_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "effective_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "economic_subject_ref": "A1:V1:P1",
+              "research_binding_ref": "test:binding",
+              "config_ref": null,
+              "reason_code": "SCORE_CONFIG_NOT_APPROVED",
+              "availability": {
+                "state": "UNAVAILABLE",
+                "reason_code": "SCORE_CONFIG_NOT_APPROVED"
+              },
+              "subject_type": "alpha",
+              "reason_codes": [
+                "SCORE_CONFIG_NOT_APPROVED"
+              ],
+              "policy_version": "test:policy1",
+              "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "approved_policy_id": null,
+              "components": {
+                "P": "80",
+                "R": "70",
+                "B": "65.2",
+                "atomic": {
+                  "net_excess_twr": {
+                    "raw": "0.06",
+                    "normalized": "80",
+                    "contribution": "25.2",
+                    "reason_code": null
+                  },
+                  "sharpe_period": {
+                    "raw": "0.12",
+                    "normalized": "80",
+                    "contribution": "10.8",
+                    "reason_code": null
+                  },
+                  "mdd": {
+                    "raw": "0.03",
+                    "normalized": "70",
+                    "contribution": "12.6",
+                    "reason_code": null
+                  },
+                  "add": {
+                    "raw": "0.012",
+                    "normalized": "70",
+                    "contribution": "8.4",
+                    "reason_code": null
+                  },
+                  "positive_block_ratio": {
+                    "raw": "0.652",
+                    "normalized": "65.2",
+                    "contribution": "8.15",
+                    "reason_code": null
+                  },
+                  "stress_excess_twr": {
+                    "raw": "0.0452",
+                    "normalized": "65.2",
+                    "contribution": "8.15",
+                    "reason_code": null
+                  }
+                }
+              },
+              "bounds": null,
+              "evidence_status": "limited",
+              "sample_count": 168,
+              "complete_block_count": 250,
+              "trade_count": null,
+              "observed_duration_ms": 604800000,
+              "actual_duration_ms": 604800000,
+              "as_of_ms": 1704672000000,
+              "knowledge_cutoff_ms": 1704672000000,
+              "computed_at_ms": 1704672000000,
+              "subject_binding_id": "test:subject-binding",
+              "data_snapshot_id": "test:snapshot1",
+              "revision": "score:r1",
+              "supersedes_revision": null,
+              "stage_breakdown": [
+                {
+                  "financial_stage": "CANARY",
+                  "duration_ms": 604800000
+                }
+              ],
+              "series_kind": "ECONOMIC_NAV",
+              "economic_domain": "ACTUAL",
+              "cost_coverage": {
+                "state": "COMPLETE",
+                "source_ref": "test:costs",
+                "reason_code": null
+              },
+              "stress_policy_id": "test:stress",
+              "allocation_weight": null,
+              "raw_score_ref": null,
+              "allocation_snapshot_id": null,
+              "score_coverage_allocated": null,
+              "provisional_allocated_weight": null,
+              "allocation_coverage_nav": null,
+              "return_source_snapshot_id": "test:returns",
+              "consolidation_manifest_id": "test:consolidation",
+              "preview": null
+            },
+            "direct_nav_score": {
+              "model_revision": "qbts_prb_v1_1",
+              "band_revision": "quality_bands_v1_1",
+              "kind": "DIRECT_NAV",
+              "status": "provisional",
+              "value": "73.3",
+              "quality_band": "fair",
+              "comparable_basis_id": "test:7d-basis",
+              "evidence_ref": "test:raw-observations",
+              "requested_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "effective_window": {
+                "start_ms": 1704067200000,
+                "end_exclusive_ms": 1704672000000
+              },
+              "economic_subject_ref": "A1:V1:P1",
+              "research_binding_ref": null,
+              "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "reason_code": null,
+              "availability": {
+                "state": "AVAILABLE",
+                "reason_code": null
+              },
+              "subject_type": "portfolio",
+              "reason_codes": [],
+              "policy_version": "test:policy1",
+              "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+              "components": {
+                "P": "80",
+                "R": "70",
+                "B": "65.2",
+                "atomic": {
+                  "net_excess_twr": {
+                    "raw": "0.06",
+                    "normalized": "80",
+                    "contribution": "25.2",
+                    "reason_code": null
+                  },
+                  "sharpe_period": {
+                    "raw": "0.12",
+                    "normalized": "80",
+                    "contribution": "10.8",
+                    "reason_code": null
+                  },
+                  "mdd": {
+                    "raw": "0.03",
+                    "normalized": "70",
+                    "contribution": "12.6",
+                    "reason_code": null
+                  },
+                  "add": {
+                    "raw": "0.012",
+                    "normalized": "70",
+                    "contribution": "8.4",
+                    "reason_code": null
+                  },
+                  "positive_block_ratio": {
+                    "raw": "0.652",
+                    "normalized": "65.2",
+                    "contribution": "8.15",
+                    "reason_code": null
+                  },
+                  "stress_excess_twr": {
+                    "raw": "0.0452",
+                    "normalized": "65.2",
+                    "contribution": "8.15",
+                    "reason_code": null
+                  }
+                }
+              },
+              "bounds": null,
+              "evidence_status": "limited",
+              "sample_count": 168,
+              "complete_block_count": 250,
+              "trade_count": null,
+              "observed_duration_ms": 604800000,
+              "actual_duration_ms": 604800000,
+              "as_of_ms": 1704672000000,
+              "knowledge_cutoff_ms": 1704672000000,
+              "computed_at_ms": 1704672000000,
+              "subject_binding_id": "test:subject-binding",
+              "data_snapshot_id": "test:snapshot1",
+              "revision": "score:r1",
+              "supersedes_revision": null,
+              "stage_breakdown": [
+                {
+                  "financial_stage": "CANARY",
+                  "duration_ms": 604800000
+                }
+              ],
+              "series_kind": "ECONOMIC_NAV",
+              "economic_domain": "ACTUAL",
+              "cost_coverage": {
+                "state": "COMPLETE",
+                "source_ref": "test:costs",
+                "reason_code": null
+              },
+              "stress_policy_id": "test:stress",
+              "allocation_weight": null,
+              "raw_score_ref": null,
+              "allocation_snapshot_id": null,
+              "score_coverage_allocated": null,
+              "provisional_allocated_weight": null,
+              "allocation_coverage_nav": null,
+              "return_source_snapshot_id": "test:returns",
+              "consolidation_manifest_id": "test:consolidation",
+              "preview": null
+            },
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "policy_revision": "policy:r1"
+          },
+          "valid": true
+        },
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "COMPOSITION",
+            "status": "partial_coverage",
+            "value": null,
+            "quality_band": null,
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:raw-observations",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A1:V1:P1",
+            "research_binding_ref": "test:binding",
+            "config_ref": null,
+            "reason_code": "RAW_Q_MISSING",
+            "availability": {
+              "state": "PARTIAL",
+              "reason_code": "RAW_Q_MISSING"
+            },
+            "subject_type": "alpha",
+            "reason_codes": [
+              "SCORE_CONFIG_NOT_APPROVED"
+            ],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": null,
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": {
+              "lower": "67.5",
+              "upper": "92.5",
+              "reason_code": "RAW_Q_MISSING"
+            },
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": null,
+            "raw_score_ref": null,
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": "0.75",
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Missing 25% q gives composition bounds [67.5,92.5], not a fabricated point",
+        "Direct NAV remains independently available",
+        "No substitution of composition for direct NAV"
+      ]
+    },
+    {
+      "id": "FX-23",
+      "title": "Stress/cost absence and known zero",
+      "facts": [
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "RAW_ALPHA",
+            "status": "partial_costs",
+            "value": null,
+            "quality_band": null,
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:raw-observations",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A1:V1:P1",
+            "research_binding_ref": "test:binding",
+            "config_ref": null,
+            "reason_code": "REQUIRED_FEES_MISSING",
+            "availability": {
+              "state": "PARTIAL",
+              "reason_code": "REQUIRED_FEES_MISSING"
+            },
+            "subject_type": "alpha",
+            "reason_codes": [
+              "SCORE_CONFIG_NOT_APPROVED"
+            ],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": null,
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": null,
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": null,
+            "raw_score_ref": null,
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": null,
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": true
+        },
+        {
+          "type": "MetricCapsule",
+          "value": {
+            "metric_id": "turnover",
+            "value": "0",
+            "unit": "MONEY",
+            "currency": "USDT",
+            "economic_domain": "ACTUAL",
+            "basis": "INTERNAL_ACCOUNT_BALANCE",
+            "denominator": null,
+            "denominator_kind": "NOT_APPLICABLE",
+            "denominator_reason_code": "ABSOLUTE_METRIC",
+            "methodology_revision": "test:nav-v1",
+            "policy_revision": "p1",
+            "domain_proof": {
+              "kind": "VERIFIED_NATIVE_PROFILE",
+              "ref": "test:profile-proof"
+            },
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "availability": {
+              "state": "PARTIAL",
+              "reason_code": "PARTIAL_COVERAGE"
+            },
+            "calculation_revision": "test:r1",
+            "provenance_ref": "test:postings"
+          },
+          "valid": true
+        },
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "RAW_ALPHA",
+            "status": "partial_components",
+            "value": null,
+            "quality_band": null,
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:raw-observations",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A1:V1:P1",
+            "research_binding_ref": "test:binding",
+            "config_ref": null,
+            "reason_code": "STRESS_NOTIONAL_MISSING",
+            "availability": {
+              "state": "PARTIAL",
+              "reason_code": "STRESS_NOTIONAL_MISSING"
+            },
+            "subject_type": "alpha",
+            "reason_codes": [
+              "SCORE_CONFIG_NOT_APPROVED"
+            ],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": null,
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": {
+              "lower": "65.175",
+              "upper": "77.675",
+              "reason_code": "STRESS_NOTIONAL_MISSING"
+            },
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": null,
+            "raw_score_ref": null,
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": null,
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Missing stress bounds [65.175,77.675] do not license a numeric total",
+        "Known zero differs from missing cost/notional",
+        "No weight renormalization"
+      ]
+    },
+    {
+      "id": "FX-24",
+      "title": "Forward diagnostic versus actual duration",
+      "facts": [
+        {
+          "type": "Binding",
+          "value": {
+            "alpha_id": "A1",
+            "alpha_version_id": "V1",
+            "portfolio_id": "P1",
+            "deployment_id": "D1",
+            "internal_account_id": "C1",
+            "physical_pool_id": "POOL1",
+            "binding_revision": "binding:r1",
+            "owner_user_id": "test:researcher",
+            "deploy_actor_user_id": "test:deployer",
+            "environment": "live",
+            "financial_stage": "LIVE",
+            "lifecycle": "ACTIVE",
+            "economic_domain": "ACTUAL"
+          },
+          "valid": true
+        },
+        {
+          "type": "MetricCapsule",
+          "value": {
+            "metric_id": "actual_observation_days",
+            "value": "10",
+            "unit": "DAYS",
+            "currency": null,
+            "economic_domain": "ACTUAL",
+            "basis": "INTERNAL_ACCOUNT_BALANCE",
+            "denominator": null,
+            "denominator_kind": "NOT_APPLICABLE",
+            "denominator_reason_code": "ABSOLUTE_METRIC",
+            "methodology_revision": "test:nav-v1",
+            "policy_revision": "p1",
+            "domain_proof": {
+              "kind": "VERIFIED_NATIVE_PROFILE",
+              "ref": "test:profile-proof"
+            },
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "quality": {
+              "completeness": "PARTIAL",
+              "freshness": "STALE",
+              "coverage": "AUTHORIZED_ONLY",
+              "source_as_of_ms": null,
+              "portal_observed_at_ms": 1704672000000,
+              "source_set_ref": "test:source-set",
+              "confidence": "PROVISIONAL",
+              "reasons": [
+                "TEST_ONLY_PARTIAL_COVERAGE"
+              ]
+            },
+            "availability": {
+              "state": "PARTIAL",
+              "reason_code": "PARTIAL_COVERAGE"
+            },
+            "calculation_revision": "test:r1",
+            "provenance_ref": "test:postings"
+          },
+          "valid": true
+        }
+      ],
+      "invariants": [
+        "Paper40+Sandbox20+actual10 may describe70 days but actual duration remains10",
+        "Version/overlap/cashflow gaps invalidate combined basis"
+      ]
+    },
+    {
+      "id": "FX-25",
+      "title": "Fixed bands and independent model outputs",
+      "facts": [
+        {
+          "type": "ScorePolicy",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "weights": {
+              "P": "0.45",
+              "R": "0.30",
+              "B": "0.25"
+            },
+            "atomic_weights": {
+              "twr_excess": "0.315",
+              "period_sr": "0.135",
+              "mdd": "0.180",
+              "add": "0.120",
+              "positive_blocks": "0.125",
+              "stress_twr_excess": "0.125"
+            },
+            "bands": [
+              {
+                "name": "weak",
+                "lower": "0",
+                "upper": "40",
+                "upper_inclusive": false
+              },
+              {
+                "name": "neutral",
+                "lower": "40",
+                "upper": "60",
+                "upper_inclusive": false
+              },
+              {
+                "name": "fair",
+                "lower": "60",
+                "upper": "75",
+                "upper_inclusive": false
+              },
+              {
+                "name": "good",
+                "lower": "75",
+                "upper": "90",
+                "upper_inclusive": false
+              },
+              {
+                "name": "very_good",
+                "lower": "90",
+                "upper": "100",
+                "upper_inclusive": true
+              }
+            ],
+            "runtime_config_state": "policy_pending",
+            "runtime_config_ref": null,
+            "manager_book_kind": "ANALYTICS_ONLY_NOT_ECONOMIC_ENTITY"
+          },
+          "valid": true
+        },
+        {
+          "type": "ScoreCapsule",
+          "value": {
+            "model_revision": "qbts_prb_v1_1",
+            "band_revision": "quality_bands_v1_1",
+            "kind": "CONTRIBUTION",
+            "status": "provisional",
+            "value": "18.325",
+            "quality_band": "fair",
+            "comparable_basis_id": "test:7d-basis",
+            "evidence_ref": "test:raw-observations",
+            "requested_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "effective_window": {
+              "start_ms": 1704067200000,
+              "end_exclusive_ms": 1704672000000
+            },
+            "economic_subject_ref": "A1:V1:P1",
+            "research_binding_ref": "test:binding",
+            "config_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "reason_code": null,
+            "availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "subject_type": "alpha",
+            "reason_codes": [],
+            "policy_version": "test:policy1",
+            "formula_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "policy_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "approved_policy_id": "TEST_ONLY_NOT_OWNER_APPROVAL",
+            "components": {
+              "P": "80",
+              "R": "70",
+              "B": "65.2",
+              "atomic": {
+                "net_excess_twr": {
+                  "raw": "0.06",
+                  "normalized": "80",
+                  "contribution": "25.2",
+                  "reason_code": null
+                },
+                "sharpe_period": {
+                  "raw": "0.12",
+                  "normalized": "80",
+                  "contribution": "10.8",
+                  "reason_code": null
+                },
+                "mdd": {
+                  "raw": "0.03",
+                  "normalized": "70",
+                  "contribution": "12.6",
+                  "reason_code": null
+                },
+                "add": {
+                  "raw": "0.012",
+                  "normalized": "70",
+                  "contribution": "8.4",
+                  "reason_code": null
+                },
+                "positive_block_ratio": {
+                  "raw": "0.652",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                },
+                "stress_excess_twr": {
+                  "raw": "0.0452",
+                  "normalized": "65.2",
+                  "contribution": "8.15",
+                  "reason_code": null
+                }
+              }
+            },
+            "bounds": null,
+            "evidence_status": "limited",
+            "sample_count": 168,
+            "complete_block_count": 250,
+            "trade_count": null,
+            "observed_duration_ms": 604800000,
+            "actual_duration_ms": 604800000,
+            "as_of_ms": 1704672000000,
+            "knowledge_cutoff_ms": 1704672000000,
+            "computed_at_ms": 1704672000000,
+            "subject_binding_id": "test:subject-binding",
+            "data_snapshot_id": "test:snapshot1",
+            "revision": "score:r1",
+            "supersedes_revision": null,
+            "stage_breakdown": [
+              {
+                "financial_stage": "CANARY",
+                "duration_ms": 604800000
+              }
+            ],
+            "series_kind": "ECONOMIC_NAV",
+            "economic_domain": "ACTUAL",
+            "cost_coverage": {
+              "state": "COMPLETE",
+              "source_ref": "test:costs",
+              "reason_code": null
+            },
+            "stress_policy_id": "test:stress",
+            "allocation_weight": "0.25",
+            "raw_score_ref": "test:raw-q-r1",
+            "allocation_snapshot_id": null,
+            "score_coverage_allocated": null,
+            "provisional_allocated_weight": null,
+            "allocation_coverage_nav": null,
+            "return_source_snapshot_id": "test:returns",
+            "consolidation_manifest_id": "test:consolidation",
+            "preview": null
+          },
+          "valid": false
+        }
+      ],
+      "invariants": [
+        "Band uses unrounded canonical value",
+        "Contribution never gets a quality band",
+        "No legacy HHI penalty or average-child fallback"
+      ]
+    }
+  ]
+}

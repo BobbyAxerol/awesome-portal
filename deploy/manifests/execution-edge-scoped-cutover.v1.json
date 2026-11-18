@@ -1,0 +1,42 @@
+{
+  "schema_version": "portal.execution-edge-scoped-cutover.v1",
+  "status": "SOURCE_DARK_TEMPLATE_NOT_A_RELEASE_APPROVAL",
+  "implementation_phase": "EPG10-10",
+  "runbook": "deploy/runbooks/execution-edge-scoped-cutover-and-rollback.md",
+  "runtime_activation": false,
+  "source_export_activation": false,
+  "command_sends_enabled": false,
+  "scope": {
+    "bindings": [],
+    "profiles": [],
+    "datasets": [],
+    "command_operations": []
+  },
+  "required_private_release_inputs": [
+    "exact09_connected_scope_receipt_sha256",
+    "current_source_publication_fence_and_retention_receipt_sha256",
+    "current_authority_identity_field_matrix_receipt_sha256",
+    "current_connected_budget_measurement_receipt_sha256",
+    "candidate_and_reader_only_rollback_image_digests",
+    "versioned_runtime_config_and_change_window_reference",
+    "operator_revocation_rollback_owner_reference",
+    "verified_backup_restore_and_checkpoint_reference"
+  ],
+  "schema": {
+    "expand": "0022_bootstrap_rollout.sql",
+    "destructive_contract": false,
+    "default_bootstrap_mode": "AUTO",
+    "manual_candidate_mode": "SHADOW",
+    "read_cutover_requires": "SAME_BINDING_BARRIER_CHECKPOINT_EXACT_ROWS_AND_FACTS",
+    "rollback": "READ_POINTER_ONLY_CANDIDATE_REMAINS_WRITER",
+    "down_migration": false
+  },
+  "compatibility": {
+    "v1_manager_d4_routes_changed": false,
+    "score_calculator_on_edge": false,
+    "score_original_restated_versions_preserved": true,
+    "command_activation_separate_per_operation_profile": true,
+    "old_writer_binary_on_manual_candidate": "PROHIBITED",
+    "rollback_reader_requires_current_authorization": true
+  }
+}

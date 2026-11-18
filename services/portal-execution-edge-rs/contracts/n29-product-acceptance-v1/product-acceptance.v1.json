@@ -6,9 +6,9 @@
   "runtime_effect": "NONE",
   "accepted_scope": {
     "relations": {
-      "total": 96,
+      "total": 109,
       "screen_bound": 54,
-      "projection_input": 16,
+      "projection_input": 29,
       "audit_evidence": 13,
       "intentionally_internal": 13
     },
@@ -64,8 +64,8 @@
     }
   },
   "evidence": {
-    "n18_census_sha256": "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3",
-    "n28_registry_sha256": "sha256:93b6e3f4cae8709b4e7ed0c2f34d798076802a3026c155acc90e0f03437010b8",
+    "n18_census_sha256": "sha256:cab031d8495c61b8d319bb84b5a7506840011daa263e08d3ee06b5f2cf48516c",
+    "n28_registry_sha256": "sha256:f655a6a5decc6be04e03cff7d3d42160d4743bbe25bc896240dfc150b8f9ec6b",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
     "screen_bff_catalogue_sha256": "sha256:8cf2a5f0a6f6c8d5c9ceb264dbf4a0a111a1c38e8189d491d364b80c32362e3e",
     "frontend_product_route_sha256": "sha256:930ac0b0c514aa46a531d35c9a7fd56c2e3eac8df278f294ecb72711482268ed",

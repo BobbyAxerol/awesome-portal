@@ -16,9 +16,13 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use serde::{de::DeserializeOwned, ser::SerializeMap, Deserialize, Serialize, Serializer};
+use serde::{
+    de::DeserializeOwned, ser::SerializeMap, Deserialize, Deserializer, Serialize, Serializer,
+};
 use serde_json::Value;
 use thiserror::Error;
+
+pub mod s1;
 
 include!(concat!(env!("OUT_DIR"), "/contract_identity.rs"));
 
@@ -448,12 +452,69 @@ pub struct ManagerCatalogue {
     catalogue_revision: CatalogueDigest,
     relation_count: usize,
     relations: Vec<CataloguedRelation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_identity: Option<SourceIdentity>,
+}
+
+/// Whether the Manager could read its migration ledger when it started.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum LedgerStatus {
+    Readable,
+    NotReadable,
+}
+
+/// Database identity a Manager reports for its source. Public values only:
+/// the database OID travels as the SHA-256 of its decimal text (64 lowercase
+/// hex, no prefix), never raw. Absent on a legacy Manager; the Edge decides
+/// whether that is acceptable from its own pin, never from this value.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct SourceIdentity {
+    database_name: String,
+    database_oid_sha256: String,
+    schema_ledger_rows: Option<u64>,
+    latest_ledger_version: Option<String>,
+    ledger_status: LedgerStatus,
+}
+
+impl SourceIdentity {
+    #[must_use]
+    pub fn database_name(&self) -> &str {
+        &self.database_name
+    }
+
+    #[must_use]
+    pub fn database_oid_sha256(&self) -> &str {
+        &self.database_oid_sha256
+    }
+
+    /// Row count of the migration ledger; `None` exactly when it was not readable.
+    #[must_use]
+    pub const fn schema_ledger_rows(&self) -> Option<u64> {
+        self.schema_ledger_rows
+    }
+
+    #[must_use]
+    pub fn latest_ledger_version(&self) -> Option<&str> {
+        self.latest_ledger_version.as_deref()
+    }
+
+    #[must_use]
+    pub const fn ledger_status(&self) -> LedgerStatus {
+        self.ledger_status
+    }
 }
 
 impl ManagerCatalogue {
     #[must_use]
     pub fn catalogue_revision(&self) -> &CatalogueDigest {
         &self.catalogue_revision
+    }
+
+    /// The Manager-reported source database identity, when the Manager sends one.
+    #[must_use]
+    pub fn source_identity(&self) -> Option<&SourceIdentity> {
+        self.source_identity.as_ref()
     }
 
     #[must_use]
@@ -518,9 +579,15 @@ pub struct ManagerMeta {
     completeness: Completeness,
     trace_id: String,
     as_of: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    source_snapshot: Option<s1::SourceSnapshot>,
 }
 
 impl ManagerMeta {
+    #[must_use]
+    pub fn source_snapshot(&self) -> Option<&s1::SourceSnapshot> {
+        self.source_snapshot.as_ref()
+    }
     #[must_use]
     pub const fn contract_version(&self) -> &'static str {
         self.contract_version
@@ -1244,6 +1311,12 @@ fn parse_envelope<T: DeserializeOwned>(
     }
     validate_trace_id(&wire.trace_id)?;
     let as_of = parse_utc_timestamp(&wire.as_of)?;
+    if let Some(snapshot) = &wire.source_snapshot {
+        snapshot.validate(as_of)?;
+        if (snapshot.status == "COMPLETE") != (wire.completeness == Completeness::Complete) {
+            return Err(ContractError::EnvelopeIdentityMismatch);
+        }
+    }
     Ok((
         ManagerMeta {
             contract_version: RUNTIME_CONTRACT_REVISION,
@@ -1255,6 +1328,7 @@ fn parse_envelope<T: DeserializeOwned>(
             completeness: wire.completeness,
             trace_id: wire.trace_id,
             as_of,
+            source_snapshot: wire.source_snapshot,
         },
         wire.data,
     ))
@@ -1322,10 +1396,41 @@ fn decode_catalogue(
         });
     }
     relations.sort_by(|left, right| left.id.cmp(&right.id));
+    let source_identity = match wire.source_identity {
+        Some(identity) => Some(decode_source_identity(identity)?),
+        None => None,
+    };
     Ok(ManagerCatalogue {
         catalogue_revision: revision,
         relation_count: wire.relation_count,
         relations,
+        source_identity,
+    })
+}
+
+fn decode_source_identity(wire: SourceIdentityWire) -> Result<SourceIdentity, ContractError> {
+    validate_bounded_text(&wire.database_name, 63)?;
+    let readable = wire.ledger_status == LedgerStatus::Readable;
+    if wire.database_oid_sha256.len() != 64
+        || !wire
+            .database_oid_sha256
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        || wire.schema_ledger_rows.is_some() != readable
+        || (!readable && wire.latest_ledger_version.is_some())
+    {
+        return Err(ContractError::InvalidCatalogue);
+    }
+    if let Some(version) = &wire.latest_ledger_version {
+        // The Manager truncates to 256 characters; allow 4 bytes per character.
+        validate_bounded_text(version, 1024)?;
+    }
+    Ok(SourceIdentity {
+        database_name: wire.database_name,
+        database_oid_sha256: wire.database_oid_sha256,
+        schema_ledger_rows: wire.schema_ledger_rows,
+        latest_ledger_version: wire.latest_ledger_version,
+        ledger_status: wire.ledger_status,
     })
 }
 
@@ -1705,7 +1810,7 @@ fn is_exact_decimal(value: &str) -> bool {
 }
 
 fn parse_json<T: DeserializeOwned>(body: &[u8]) -> Result<T, ContractError> {
-    serde_json::from_slice(body).map_err(|_| ContractError::InvalidJsonSchema)
+    execution_contracts::strict_json::from_slice(body).map_err(|_| ContractError::InvalidJsonSchema)
 }
 
 #[derive(Deserialize)]
@@ -1720,6 +1825,8 @@ struct ManagerEnvelopeWire<T> {
     completeness: Completeness,
     trace_id: String,
     as_of: String,
+    #[serde(default)]
+    source_snapshot: Option<s1::SourceSnapshot>,
     data: T,
 }
 
@@ -1741,6 +1848,30 @@ struct ManagerCatalogueWire {
     catalogue_revision: String,
     relation_count: usize,
     relations: Vec<RelationSchemaWire>,
+    #[serde(default)]
+    source_identity: Option<SourceIdentityWire>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SourceIdentityWire {
+    database_name: String,
+    database_oid_sha256: String,
+    #[serde(deserialize_with = "required_nullable")]
+    schema_ledger_rows: Option<u64>,
+    #[serde(deserialize_with = "required_nullable")]
+    latest_ledger_version: Option<String>,
+    ledger_status: LedgerStatus,
+}
+
+/// A nullable member that must still be present: serde would otherwise read a
+/// missing `Option` as `None`.
+fn required_nullable<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(deserializer)
 }
 
 #[derive(Deserialize)]

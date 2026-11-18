@@ -1,0 +1,351 @@
+{
+  "schema_version": "execution.metric-dependencies.v1",
+  "formula_approved": true,
+  "runtime_config_approved": false,
+  "policy_state": "policy_pending",
+  "shared_score_policy_ref": "shared/execution-v2-foundation.v1.schema.json#/$defs/ScorePolicy",
+  "basis_rule": "comparable_basis_id and individual subject_binding_id are distinct; Research run required only if evidence is Research-derived",
+  "dependencies": {
+    "raw_alpha_score": [
+      "canonical_nav",
+      "external_flow_grid",
+      "cost_coverage",
+      "fx_policy",
+      "stress_policy",
+      "compatible_watermarks",
+      "approved_runtime_config"
+    ],
+    "contribution": [
+      "raw_alpha_score",
+      "allocation_snapshot"
+    ],
+    "manager_alpha_score": [
+      "raw_alpha_score",
+      "allocation_snapshot",
+      "full_economic_denominator",
+      "allocation_coverage"
+    ],
+    "portfolio_score": [
+      "consolidated_nav",
+      "unique_economic_facts",
+      "external_flow_grid",
+      "cost_coverage",
+      "fx_policy",
+      "stress_policy",
+      "compatible_watermarks",
+      "approved_runtime_config",
+      "consolidation_manifest"
+    ],
+    "regime_fit": [
+      "exact_research_run_binding",
+      "feature_cutoff",
+      "reference_snapshot",
+      "no_lookahead_policy"
+    ],
+    "archive_paper_watch": [
+      "approved_watch_policy",
+      "origin_lineage",
+      "source_set",
+      "paper_clone_disposition"
+    ]
+  },
+  "atoms": [
+    {
+      "id": "net_excess_twr",
+      "policy_weight_key": "twr_excess",
+      "source": [
+        "canonical_nav",
+        "external_flow_grid",
+        "risk_free_curve",
+        "cost_coverage"
+      ],
+      "proof": "segmented NAV before/after external flows; never cashflow-adjusted endpoint shortcut"
+    },
+    {
+      "id": "sharpe_period",
+      "policy_weight_key": "period_sr",
+      "source": [
+        "period_return_grid",
+        "risk_free_curve",
+        "calendar_policy"
+      ],
+      "proof": "sample excess-return std on locked same-frequency grid, n>=2/std>0; no annualization of score inputs"
+    },
+    {
+      "id": "mdd",
+      "policy_weight_key": "mdd",
+      "source": [
+        "canonical_nav",
+        "external_flow_grid"
+      ],
+      "proof": "flow-neutral return path"
+    },
+    {
+      "id": "add",
+      "policy_weight_key": "add",
+      "source": [
+        "period_return_grid",
+        "canonical_nav",
+        "calendar_policy"
+      ],
+      "proof": "arithmetic mean DD_t on locked complete regular observation grid including DD=0; E0 excluded; no episode/duration weighting"
+    },
+    {
+      "id": "positive_block_ratio",
+      "policy_weight_key": "positive_blocks",
+      "source": [
+        "complete_block_grid"
+      ],
+      "proof": "minimum complete-block evidence"
+    },
+    {
+      "id": "stress_excess_twr",
+      "policy_weight_key": "stress_twr_excess",
+      "source": [
+        "stress_policy",
+        "fill_notional",
+        "opening_capital",
+        "fx_policy",
+        "cashflow_free_subperiod_returns",
+        "risk_free_curve",
+        "cost_coverage"
+      ],
+      "proof": "ONE fixed-path additional-cost scenario delta_bps/10000*gross executed notional/opening capital per cash-flow-free subperiod; no duplicate baseline cost; compound then subtract cash cumulative TWR"
+    }
+  ],
+  "source_proofs": [
+    {
+      "id": "canonical_nav",
+      "owner": "TS economics/valuation",
+      "source": "services/performance/repository.py:_insert_account_snapshot; services/performance/native_owner.py",
+      "required": "account_equity_snapshots.{equity,currency,mode,venue,ts,state_digest,valuation_proof}; point-in-time equity only NOT a flow-adjusted NAV/return series; flow/grid producer still required",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "external_flow_grid",
+      "owner": "TS PM/economics",
+      "source": "services/risk_pool/capital_repository.py",
+      "required": "FUND/RETURN_CAPITAL external to subject; internal transfers dedup; TWR/MWR basis",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "cost_coverage",
+      "owner": "TS accounting",
+      "source": "services/economics/repository.py",
+      "required": "fees/funding/slippage applicability and correction revisions; unknown not zero",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "fx_policy",
+      "owner": "TS valuation/DL",
+      "source": "services/performance/repository.py:validate_fx_terms/_prepare_native_fx",
+      "required": "instrument base/quote terms, fx_routes, ValuationMark source_version and at_use provenance; approved reporting-currency/time/route policy; USD!=USDT!=USDC",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "fill_notional",
+      "owner": "TS fills/economics",
+      "source": "services/private_events/repository.py",
+      "required": "fill-side notional unique fill/entity revision; no order+fill double count",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "opening_capital",
+      "owner": "TS PM/economics",
+      "source": "services/risk_pool/capital_repository.py",
+      "required": "positive denominator kind/source/effective window",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "compatible_watermarks",
+      "owner": "each producer",
+      "source": "services/source_change_journal/publication_repository.py",
+      "required": "min comparable source-set checkpoint, not observation clock",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "stress_policy",
+      "owner": "Research analytics",
+      "source": "upgrade/upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md",
+      "required": "ONE fixed_path_incremental_gross_notional_bps scenario, delta_bps>=0, same anchors as net TWR, fixed positive wealth/subperiod opening capital and observed fill path; no stress-window weighting",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "consolidation_manifest",
+      "owner": "Research economics projection",
+      "source": "packages/contracts/schemas/execution-v2-foundation.v1.schema.json",
+      "required": "unique economic IDs, ownership interval, FX, flow internalization, revision",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "approved_runtime_config",
+      "owner": "analytics owner",
+      "source": "packages/contracts/schemas/execution-v2-foundation.v1.schema.json",
+      "required": "calibration/hash/approved policy; formula approval alone insufficient",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_RUNTIME_PROOF_NOT_CERTIFIED"
+    },
+    {
+      "id": "risk_free_curve",
+      "owner": "Research analytics/valuation",
+      "source": "SCORE5.2; TS services/performance/repository.py FX/valuation candidates",
+      "required": "currency-matched cash-reference r_c,t same grid; policy/provider missing; never assume zero",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "period_return_grid",
+      "owner": "Research economics projection",
+      "source": "TS services/performance/repository.py account_equity_snapshots; SCORE4/5.2",
+      "required": "complete regular net external-flow-neutral returns and period cash series, not snapshots alone",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "calendar_policy",
+      "owner": "analytics config owner",
+      "source": "SCORE5.1/5.3/5.4; shared ScorePolicy",
+      "required": "locked frequency/timezone/origin/window; anchors and block calendar approved",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "complete_block_grid",
+      "owner": "Research analytics",
+      "source": "SCORE5.4; shared ScoreCapsule.complete_block_count",
+      "required": "predeclared non-overlap block manifest, completed coverage incl no-trade; missing observations not dropped",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "allocation_snapshot",
+      "owner": "TS PM/Research aggregation",
+      "source": "services/risk_pool/capital_repository.py; shared ScoreCapsule.allocation_snapshot_id",
+      "required": "effective economic allocated-capital a_i and all-positive denominator, not budget/cash estimate",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "allocation_coverage",
+      "owner": "Research aggregation",
+      "source": "shared ScoreCapsule.score_coverage_allocated/provisional_allocated_weight/allocation_coverage_nav",
+      "required": "basis-qualified coverage distinct from economic allocation; source full denominator required",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "full_economic_denominator",
+      "owner": "TS PM/Research aggregation",
+      "source": "services/risk_pool/capital_repository.py; SCORE6",
+      "required": "all positive allocated economic capital incl constituents with missing q; no renormalization",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "consolidated_nav",
+      "owner": "Research economics projection",
+      "source": "services/performance/repository.py account_equity_snapshots; SCORE7",
+      "required": "dedup same economic source, FX, internalized transfers/ownership and source cuts; canonical producer absent",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "unique_economic_facts",
+      "owner": "TS accounting",
+      "source": "services/economics/repository.py; services/private_events/repository.py",
+      "required": "immutable fact/posting/fill identity+revision and correction links, attribution dedupe",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "cashflow_free_subperiod_returns",
+      "owner": "Research economics projection",
+      "source": "SCORE4.3/5.4; services/performance/repository.py current equity snapshots",
+      "required": "baseline positive opening capital after each external flow, net return subperiods compounded to fixed grid",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "exact_research_run_binding",
+      "owner": "Research evidence owner",
+      "source": "shared ScoreCapsule.research_binding_ref; execution.regime-fit.v1",
+      "required": "exact run/alpha-version/parameter/source snapshot; no latest-run substitution",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "feature_cutoff",
+      "owner": "Research Regime worker",
+      "source": "execution.regime-fit.v1 feature_version/feature_cutoff_ms",
+      "required": "features fixed to as-of available observations; lookahead absent",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "reference_snapshot",
+      "owner": "Research Regime worker",
+      "source": "execution.regime-fit.v1 reference_snapshot_ref/reference_cutoff_ms",
+      "required": "immutable reference universe/snapshot and exact distance method",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "no_lookahead_policy",
+      "owner": "Research analytics config owner",
+      "source": "execution.regime-fit.v1 no_lookahead_policy_ref",
+      "required": "reference+feature+knowledge cutoffs bound, no future inputs",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "approved_watch_policy",
+      "owner": "Research Archive owner",
+      "source": "EDGE6.8; SCORE10; shared ArchiveDisposition",
+      "required": "quota/cadence/stop/retention/binding policy; no active watch in02",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "origin_lineage",
+      "owner": "TS disposition/Research Archive",
+      "source": "shared ArchiveDisposition.clone_lineage",
+      "required": "origin deployment+alpha version, ARCHIVE_MONITOR, effective time/config digest",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "source_set",
+      "owner": "each producer/Research",
+      "source": "execution.metric-evidence.v1 source_set",
+      "required": "dataset partition epoch/checkpoint/revision, same authorized source population",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    },
+    {
+      "id": "paper_clone_disposition",
+      "owner": "TS disposition/Research Archive",
+      "source": "shared ArchiveDisposition",
+      "required": "explicit obligations disposition receipt before close; no auto liquidation/reservation",
+      "availability": "UNAVAILABLE",
+      "gap": "SOURCE_BOUND_PUBLICATION_OR_APPROVED_DERIVED_CONFIG_NOT_CERTIFIED"
+    }
+  ],
+  "prohibited_direct_portfolio_dependencies": [
+    "raw_alpha_score",
+    "grouping",
+    "correlation",
+    "regime_fit",
+    "research_run_unless_research_evidence",
+    "lambda",
+    "HHI_fallback"
+  ]
+}

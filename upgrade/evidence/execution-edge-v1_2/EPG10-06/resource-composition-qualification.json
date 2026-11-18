@@ -1,0 +1,153 @@
+{
+  "schema": "epg10.resource-composition-qualification.v1",
+  "status": "ISOLATED_QUALIFIED_NOT_CONNECTED_OR_CAPACITY",
+  "phase": "EPG10-01/06_INDEPENDENT_TEST_TARGET",
+  "full_phase_acceptance": "NOT_MET",
+  "provenance": "TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+  "tainted_for_capacity": true,
+  "performance_acceptance": false,
+  "source": {
+    "repository": "BobbyAxerol/awesome-portal",
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "parent_commit": "126e045f8db1278291c80f6ba20ca99b36957e62",
+    "owned_input_sha256": {
+      "scripts/epg10-04/run.py": "5e298a16d27be7342f787ebd3f12cbbc857b593767057fa561670726417bf105",
+      "scripts/epg10-04/test_run.py": "991ff1c45e5ea0878bd154768559c8236aabb57a4022b831457ed4ea21413d0a",
+      "services/portal-execution-edge-rs/crates/projection-store-pg/tests/epg10_05_scoped_read.rs": "d783519d4eaa5f4746badc27b47c865169bd2e377f6f9ac5221e966c1a601072"
+    },
+    "qualification_manifest_sha256": "6189db1507a5d13b105da9a7c294f82bfb158bc0fd89f2ee20cbc8a280e4e9fa",
+    "input_count": 449,
+    "compiled_pg_case_identity_manifest_sha256": "fa469aae6ddf4c691b27823c46e3c3d4466d5e9ce4842e7238f0ba77a2048207",
+    "unchanged_product_code": true,
+    "peer_wip_excluded": true
+  },
+  "actual_final_source_gates": {
+    "runner_tests": {"passed": 119, "new_methods": 12, "seconds": 5.337},
+    "rustfmt": "PASS",
+    "all_target_compile": "PASS",
+    "edge_service_all_target_check": "PASS",
+    "unit_tests": {"passed": 159, "lib_summaries": 6},
+    "edge_binary_tests": {"passed": 60},
+    "bootstrap_tests": {"passed": 33, "failed": 0, "skipped": 0},
+    "read_tests": {"passed": 45, "failed": 0, "skipped": 0, "new_composition_cases": 3, "test_summary_seconds": 104.76, "stage_wall_seconds": 152.373},
+    "resource_tests": {"passed": 8, "failed": 0, "skipped": 0, "test_summary_seconds": 12.21, "stage_wall_seconds": 63.062},
+    "manager_tests": {"passed": 11, "failed": 0, "skipped": 0, "test_summary_seconds": 43.86, "stage_wall_seconds": 72.267},
+    "strict_all_target_clippy": {"status": "PASS_STRICT_ZERO_WARNINGS", "seconds": 59.679, "owned_warnings": 0, "upstream_warnings": 0},
+    "final_input_immutability": {"status": "PASS", "input_count": 449},
+    "selected_rust_passed": 316,
+    "new_rust_tests": 3,
+    "uninterrupted_full_runner_pass_claimed": false,
+    "continuation": {
+      "terminal_exit_code": 0,
+      "seconds": 360.620,
+      "outer_log_sha256": "5f47418121b9619972d27691f1d8a296731667769d392cfe1b74009b00ecf53d",
+      "receipt_sha256": "8480089dfa2b4817cab1b0396e3ea2bb7aeea3c20c09b1b1d774390d9f66b37c"
+    }
+  },
+  "failed_predecessors_retained": [
+    {
+      "kind": "PRIVATE_SUPERVISOR_TRAVERSAL_RACE",
+      "disposition": "Original qualification not restarted; repaired ENOENT handling, reattached. Monitoring gap not retrospectively measurable.",
+      "private_supervisor_injection_checks_passed": 4,
+      "counted_as_product_tests": false
+    },
+    {
+      "kind": "RUNNER_UNIT_BUILD_PLUS_TEST_WALL_TIMEOUT",
+      "status": "FAIL",
+      "receipt_sha256": "2a0aa1d0a3908fe63e2b7a5b2522d90d45ea7ea8d54dc8f602a27b20dc99c26d",
+      "correction": "Only06 correctness unit wall240 to600s; unchanged corpus/assertions/caps/1500s total. No performance threshold changed."
+    },
+    {
+      "kind": "OWNED_CLIPPY_NEEDLESS_PASS_BY_VALUE",
+      "status": "FAIL",
+      "log_sha256": "e6c642f63de90092c6b853d6df8e6d5a000e6528c61056980433db80c946914d",
+      "correction": "Emitter borrows &[Value]; no lint allowance or semantic change."
+    },
+    {
+      "kind": "STALE_EXPECTED_BOOTSTRAP_COUNT_INPUT",
+      "status": "FAIL",
+      "receipt_sha256": "1430719c955b16ad69f491e02a94fe7ad278b9e1972300634ba18fe7240156cb",
+      "actual_bootstrap_passed": 33,
+      "old_expected": 22,
+      "correction": "Compiled distinct identities frozen33/45/8/11. Passed suites inherited by exact final bytes; only missing gates continue."
+    }
+  ],
+  "observations": {
+    "basis": "ACTUAL_LOGICAL_ENVELOPE_NOT_RSS_OR_POOL_WAIT",
+    "SHARED_ENVELOPE": {
+      "peak_active": 1, "peak_entries": 1257, "peak_bytes": 38797312,
+      "max_fanout_clients": 16,
+      "phases": ["REGISTERED", "CACHE_WARM", "QUEUED", "DELIVERED", "RELEASED"],
+      "terminal_six_current_gauges": [0, 0, 0, 0, 0, 0]
+    },
+    "PRESSURE_RECOVERY": {
+      "peak_active": 3, "peak_entries": 1259, "peak_bytes": 38797314,
+      "phases": ["BACKGROUND_SATURATED", "HIGH", "HARD", "RECOVERED", "RELEASED"],
+      "terminal_six_current_gauges": [0, 0, 0, 0, 0, 0]
+    },
+    "LIFETIME_RELEASE": {
+      "peak_active": 1, "peak_entries": 258, "peak_bytes": 5242881,
+      "phases": ["CLONED", "ORIGINALS_DROPPED", "RETAINED", "RELEASED"],
+      "terminal_six_current_gauges": [0, 0, 0, 0, 0, 0]
+    },
+    "terminal_gauge_order": ["active", "entries", "bytes", "background_active", "background_entries", "background_bytes"]
+  },
+  "unavailable_metrics": ["physical_pool_acquire_wait", "allocator_bytes", "all_process_rss"],
+  "execution_bounds": {
+    "class": "correctness_nonexclusive",
+    "cargo_cpu_affinity": [0],
+    "cargo_jobs": 1,
+    "cargo_cgroup_memory_bytes": 2147483648,
+    "cargo_cgroup_swap_bytes": 0,
+    "cargo_tasks_max": 256,
+    "cargo_cfs_quota_claimed": false,
+    "pg_cpus": 0.5,
+    "pg_memory_bytes": 805306368,
+    "pg_tmpfs_bytes": 536870912,
+    "pg_max_connections": 24,
+    "overall_wall_seconds_per_attempt": 1500,
+    "pg_image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "private_cell_max_bytes": 8589934592,
+    "free_disk_floor_bytes": 107374182400
+  },
+  "peer_returns_received_not_edge_test_credit": {
+    "pm_http_commit": "326411478e005a0dbe52368ab1f2f4922c4ee505",
+    "pm_http_receipt_sha256": "1d61d15d262f16e6272622eeeda697d14edc85ca824e895238df8cfd6d17c5cb",
+    "pm_receiver_commit": "aec6434f588ae9de254cce53a10b7a150d3eed05",
+    "pm_receiver_receipt_sha256": "943f71098000dd1b8299b21630874505e595d8d7e34962498d105069d755c1e2",
+    "core009": "PREPARED_NOT_COMMISSIONED_NO_INSTALLED_ACK_SESSION_WINDOW",
+    "ts_publication": "SOURCE_DARK_NOT_ACCEPTED",
+    "pm_command": "NOT_COMMISSIONED"
+  },
+  "cleanup": {
+    "sgp_private_cell_removed": true,
+    "sgp_removed_logical_bytes": 6595021163,
+    "sgp_free_before_bytes": 136048787456,
+    "sgp_free_after_bytes": 142527565824,
+    "disk_delta_is_shared_host_not_exclusive_attribution": true,
+    "own_pg_activity_and_four_scopes_removed_or_inactive": true,
+    "cleanup_errors": [],
+    "images_built_pulled_added_removed": [0, 0, 0, 0],
+    "runtime_unchanged_during_cleanup": true,
+    "whole_window_runtime_exact_tuples_unchanged": "58/60",
+    "foreign_restart_deltas_observed_not_attributed": {
+      "primus-historical-market-data-crypto-1m-live-1": [2, 3],
+      "primus-historical-market-data-vn30f1m-vndirect-1m-1": [15, 18]
+    },
+    "shared_buildkit_records_before_after": [3858, 3858],
+    "shared_cache_volumes_operational_and_rollback_artifacts_removed": false,
+    "private_sgp_audit_summary_sha256": "a39d7b2c0df2d1b798cf776b60a8a5e51dc60143c85fbe1dc1e6540bafdd148d",
+    "hk_hook_and_packet_cleanup": "POST_TERMINAL_PUBLICATION_RECEIPTS_REQUIRED_NO_BROAD_PRUNE",
+    "private_hk_packet_receipt": "/home/bobby/secure/epg10-06-composition-r45yVujP/hk-packet-cleanup.json"
+  },
+  "normal_commit_hook": {
+    "mandatory": true,
+    "command_prefix": "git -c core.hooksPath=.githooks commit",
+    "private_terminal_log": "/home/bobby/secure/epg10-06-composition-r45yVujP/normal-hook.log",
+    "private_post_commit_closeout": "/home/bobby/secure/epg10-06-composition-r45yVujP/closeout.json",
+    "no_hook_bypass": true
+  },
+  "runtime_mutations": false,
+  "production_database_or_authority_mutations": false,
+  "production_capacity_or_source_acceptance": false
+}

@@ -1,0 +1,141 @@
+{
+  "schema": "epg10.inventory-verification-receipt.v1",
+  "phase": "EPG10-00",
+  "observed_at": "2026-10-15T16:41:25+00:00",
+  "status": "PASS_INVENTORY_WITH_OWNED_UNKNOWNS",
+  "evidence_class": "LOCAL_OFFLINE_METADATA_ASSERTIONS_NOT_RUNTIME_ACCEPTANCE",
+  "producer": "Bobby-approved feature branch feat/execution-edge-upgrade-v1_2 based on ca13617ff273af4b4ad68453b944e83c30a5a19e",
+  "digests": {
+    "source-runtime-manifest.json": "c7379a67a75251162b4f0c60304bc14d0c400ead7e4188e7fa34a8064580c20b",
+    "SOURCE_AUTHORITY_AND_SCOPE.md": "da0bec67d0a00e4b5a4c3401f7cc6c6db6825f706f0da6c1ba9e499f2acfb166",
+    "scripts/verify_execution_edge_authority.py": "09cede3ae01c8ca09c0b523d1f44b352974493d6994a7e1cf0adbec08b5da600"
+  },
+  "commands": [
+    {
+      "command": "python3 scripts/verify_execution_edge_authority.py --self-test --check-local",
+      "status": "PASS",
+      "scope": "6 required case IDs with24 negative variants; local producer commit/dirty/untracked/interface bytes rechecked; remote source evidence remains separately timestamped."
+    },
+    {
+      "command": "Python3 standard-library source-map row/decision/link assertions",
+      "status": "PASS",
+      "scope": "39 ordered guide-family rows,15 unique decision rows, source-map local targets and anchors; receipt destination subsequently created."
+    },
+    {
+      "command": "git diff --check",
+      "status": "PASS"
+    },
+    {
+      "command": "Read-only metadata start/end Docker inspect comparison",
+      "status": "PASS",
+      "scope": "18 HK service image/config/restart tuples unchanged; source routes not exercised."
+    },
+    {
+      "command": "Read-only strict-pinned SSH source/runtime repin",
+      "status": "PASS",
+      "scope": "Six SGP HEADs unchanged; FE screenshot dirty digest moved under independent worker, recorded not hidden. Stable runtime tuples unchanged."
+    }
+  ],
+  "cases": [
+    {
+      "id": "EPG10-T00-01",
+      "status": "PASS",
+      "description": "Reject abbreviated/mismatched source SHA and omitted source-file inventory",
+      "negative_variants": 3
+    },
+    {
+      "id": "EPG10-T00-02",
+      "status": "PASS",
+      "description": "Reject applied-schema certification from migration source alone",
+      "negative_variants": 1
+    },
+    {
+      "id": "EPG10-T00-03",
+      "status": "PASS",
+      "description": "Reject owner TEXT/shared admin token and missing current-membership evidence",
+      "negative_variants": 4
+    },
+    {
+      "id": "EPG10-T00-04",
+      "status": "PASS",
+      "description": "Reject pending publication promoted to runtime/live; omitted/empty inventory",
+      "negative_variants": 4
+    },
+    {
+      "id": "EPG10-T00-05",
+      "status": "PASS",
+      "description": "Reject HEAD-only dirty pin or untracked source without content hash",
+      "negative_variants": 2
+    },
+    {
+      "id": "EPG10-T00-06",
+      "status": "PASS",
+      "description": "Keep seven gate namespaces separate; reject unreceipted PASS/global readiness/duplicate decisions",
+      "negative_variants": 10
+    }
+  ],
+  "summary": {
+    "pass": 6,
+    "fail": 0,
+    "skip": 0,
+    "blocked": 0,
+    "negative_variants": 24,
+    "other_epg10_cases_not_run": 94
+  },
+  "additional_audit_assertions": {
+    "repositories": 14,
+    "reviewed_source_file_pins": 54,
+    "guide_family_rows": 39,
+    "decision_rows": 15,
+    "host_runtime_services_in_initial_manifest": 20
+  },
+  "runtime_comparison": {
+    "result": "PASS",
+    "observed_at": "2026-10-15T16:40:23+00:00",
+    "services_compared": 18,
+    "images_configs_restart_counters_unchanged": true,
+    "tuple_set_sha256": "7a567fe1805882b2ddc49b5c37b9a3c080a6e308605f7991a8df129dd3d03923"
+  },
+  "unverified_boundaries": [
+    "Real TLS handshake and source/private read routes",
+    "Target DB applied migration ledger and schemas",
+    "Business membership/current trust lease runtime",
+    "External N03/P16 accepted publication/capture/barrier/retention",
+    "PM actual exporter and consumer applied checkpoint",
+    "Sandbox/Live/native/all-scope qualification",
+    "Capacity/HA/DR and any performance scorecard"
+  ],
+  "peer_review": {
+    "owner": "read-only PM reviewer",
+    "facts": "PM R2 and report transport/publication distinctions confirmed against d16aa2b5f251596e469807f57e81fe14cdc7e763",
+    "defects_found_and_fixed": [
+      "Missing evidence sections previously accepted by metadata validator",
+      "Decision count allowed duplicates",
+      "Gate namespace count wording"
+    ],
+    "remaining_in_scope_defects": 0
+  },
+  "runtime_acceptance": false,
+  "all_scope_ready": false,
+  "safety": {
+    "source_rows_read": 0,
+    "source_writes": 0,
+    "credential_values_copied": 0,
+    "service_restarts": 0,
+    "created_containers_images_cache": 0,
+    "heavy_tests_build_load": 0,
+    "push_merge_deploy": false,
+    "shared_measurement_lock_respected": true
+  },
+  "cleanup": {
+    "status": "NO_ACTION_NEEDED_FOR_PHASE_CREATED_RESOURCES",
+    "removed": 0,
+    "shared_and_rollback_artifacts_retained": true,
+    "no_prune_during_foreign_measurement": true,
+    "available_bytes_before": 194088599552,
+    "available_bytes_after": 191712604160,
+    "reclaimed_bytes": 0,
+    "disk_movement_not_attributed_to_phase": true
+  },
+  "next": "Await Bobby named approval for EPG10-01 and/or EPG10-02; no automatic continuation or production activation."
+}

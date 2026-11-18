@@ -1,0 +1,241 @@
+{
+  "schema": "epg10-06-preparation-input-reconciliation/v1",
+  "at_utc": "2026-10-16T09:21:08.959504+00:00",
+  "authority": [
+    {
+      "repository": "ts_next",
+      "path": "domain/source_journal_coverage.py",
+      "sha256": "59f9017f6bad4094c87eaf893dd7e35a7264716c45876945286d98a1245404d9",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/source_change_journal/read_source.py",
+      "sha256": "258746849106db79d57990efe6fb2337ef4a628bd8c3bbf0e72e7f0eb8087a2d",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/source_change_journal/publication_repository.py",
+      "sha256": "f10bfc9a0e194987b23e0db04b08430de6412b191196ef3f82dbb0264755ddcd",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/source_change_journal/consumer_repository.py",
+      "sha256": "854db0c11184c1e52dcfb24d67300ae7c24e2e569792a83f055656c674368df9",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/source_change_journal/writer.py",
+      "sha256": "fc7525229f81df42893e0021da54a70ed3438a0f4f070a5f696314fc7c5fbcd8",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/paper_execution/repository.py",
+      "sha256": "201e938f7daafe265dc41bbb6811b76529cb0efb4d085070c5dde3824cd47a2b",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/economics/repository.py",
+      "sha256": "141e3cf4e2463bfeb15d16b25f897111c47a6d9454ea42b40c85d8c0424517c2",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/private_events/repository.py",
+      "sha256": "97aec288c5ac678de31dbc9f7f5b038940e27dffd90343a2e62569c792018123",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/portfolio_management/repository.py",
+      "sha256": "2d48b60485b76d01492dc0b80dcaa36853a91477b65e29e10b09c798042889bb",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "services/portal_execution_owner/manager_facade.py",
+      "sha256": "244315bf26c71ef74a131cac727f1d7d30e09ed25aa634f0f894f2de32a0d628",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "rust/crates/trading-runtime/src/publication.rs",
+      "sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "rust/crates/trading-runtime/src/logical_replication.rs",
+      "sha256": "9991c191c06ac988526489ab0d9447881627e6f933cec636714d933cd6e6ae82",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "init-db/48-v2-source-change-journal.sql",
+      "sha256": "b35a4f05020c4518bfe752c6ad71bdbc32a3e09624763d2ebe23cea04b5e33d4",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "init-db/59-v2-source-commit-order-replay.sql",
+      "sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "init-db/60-v2-source-journal-paper-reader.sql",
+      "sha256": "e6d37838552bcb2d67531666956377faf3940e4930ceef9c6d733d31696ab9c2",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "init-db/67-v2-p16-consumer-publication-controls.sql",
+      "sha256": "7ada53a992661723eab1f701821fa1aba0ef983f978ffc245d4651e9bcd84e87",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "contracts/portal-execution-owner/ts-oc-02/n03-source-implementation/owner-implementation.manifest.json",
+      "sha256": "f3a496034abbb9fc3e29789d147b8040825015ed700113725717dd460d414872",
+      "matches": true
+    },
+    {
+      "repository": "ts_next",
+      "path": "contracts/baseline/rust-first-v2/p16/consumer-publication-contract.json",
+      "sha256": "342b3bce1fdbc3b74f94227be27ca226fe758d3b20e2392f63d9136fff590189",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md",
+      "sha256": "7d79d8de84eab19d0d2de3dce2b4c9278a691277b0b8b4379a7db0000dfc8945",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portal_execution_owner/identity/human.py",
+      "sha256": "abea7c04ba789226b8c0f069b7243014cbb0262e3f7a0f058350731b1343f01c",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/membership_repository.py",
+      "sha256": "0f9e4a5514c305b1089e155e120a450b4e6907962552dab615259cb7061cfa71",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/instance_repository.py",
+      "sha256": "16fac06f8253c84e7a67729bd245681f7d5717744853bd440f87e080fb936f74",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/binding_repository.py",
+      "sha256": "f1c8eef0a73b43aecc38cc9e4ba63cf304043c63b517bee0cdff0aff903ca48a",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/operator_reports_repository.py",
+      "sha256": "0dd378a565090f5312ebf8ea4f8d86fb6de6d3310903a90ac84c9c04f74dd76d",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/report_delivery.py",
+      "sha256": "03cdac9be4f8e9176c5d6045d3cf3b7dfa9133ddbfc487fb78e3e7e818304d13",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/report_wire.py",
+      "sha256": "add29f554b4a67393140b4978c86ed95aec25cd0a3c7b0b211d54c2eb32a657e",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/operator_runtime.py",
+      "sha256": "a8231a07c8acb780e933608845e0e93307642737ffe80a3db8b9899c7ffb9a5e",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/portfolio_management/profile_attempts.py",
+      "sha256": "0d1c6832e43b4352744a341f388a0cd6843196f5fca40c0525b86fbc6f185d3d",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/risk_pool/capital_repository.py",
+      "sha256": "6077d5309edf1396f745732c3d86079dc5246eed89783d38431c308fc9bf404f",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/risk_pool/recall_repository.py",
+      "sha256": "6185e0ab03dbf46dcec276e366d49e4adb56d9144da941f9312be6d02198dfbb",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/risk_pool/lock_reallocation_repository.py",
+      "sha256": "ec0a518a0c015f3716198846596966994deefe183e13da2cbba4c1c9115044e9",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "services/risk_pool/admission_repository.py",
+      "sha256": "d868fec52e9a4c49ec45990118d3d9c6feb9ad664a96932e1a8160ee6fc25817",
+      "matches": true
+    },
+    {
+      "repository": "ts_pm",
+      "path": "contracts/baseline/portfolio-account-v1_1/pma11-13-report-catalogue.json",
+      "sha256": "ef60d8db492b7b8d6d496fa88566c4a03a1134cb57f95f6c84c2ba2cf690facf",
+      "matches": true
+    },
+    {
+      "repository": "dl_closure",
+      "path": "DATA_LAYER_SERVICE_ACCESS_GUIDE.md",
+      "sha256": "ef9aec518b33579a8556d88cd1e8a02909f9977e2fcdb37dc44d4140bd0513e8",
+      "matches": true
+    }
+  ],
+  "guides": [
+    {
+      "path": "upgrade/upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md",
+      "sha256": "af6d53725d58aca4dfefb0fb212272c2df281b7d605a1f7bca5e54ced9b2eeb0",
+      "matches": true
+    },
+    {
+      "path": "upgrade/upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md",
+      "sha256": "9047f765f7878f7284363bc6322ff14f3feb5fff4913cc7d4b9a328afd591985",
+      "matches": true
+    },
+    {
+      "path": "upgrade/upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md",
+      "sha256": "0a266334f26d02bc4be858017d44e980e4ab5a4a5a4a007dad6827f565f06b86",
+      "matches": true
+    },
+    {
+      "path": "upgrade/upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md",
+      "sha256": "d77a05fc0c6b481114c0d4055a2ff0c09f6b7a3cc0ca1447f691d92f139adbad",
+      "matches": true
+    }
+  ],
+  "authority_count": 34,
+  "guide_count": 4,
+  "authority_mismatches": 0,
+  "previous_compiled_inputs": 399,
+  "previous_compiled_mismatches": [],
+  "new_tested_input_count": 6,
+  "new_tested_input_mismatches": [],
+  "capacity_acceptance": false,
+  "runtime_mutations": 0
+}

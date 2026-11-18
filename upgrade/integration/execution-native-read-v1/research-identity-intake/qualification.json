@@ -1,0 +1,202 @@
+{
+  "schema_version": "edge.research-identity-prerequisite-qualification.v1",
+  "phase": "EPG10-08",
+  "connected_acceptance": "NOT_MET",
+  "consumer": "research-portal.primusspark.com",
+  "source_database": "live_data_executor",
+  "source_system_identifier": "7674585245102796834",
+  "pre_enter_recovery": {
+    "status": "IMPLEMENTED_ISOLATED_QUALIFIED_NOT_CONNECTED",
+    "source_revision": "SAME_GIT_REVISION_AS_THIS_QUALIFICATION",
+    "base_commit": "551a6a21afbbd360005e88cd90ce2bb53245e8be",
+    "source_sha256": {
+      "identity_role_window.py": "5f1a0f293311f752d934de72666f8b2e9d671c899eec115d08d7ccd30265dec2",
+      "test_pre_enter_recovery.py": "49eb121c0cb71bee51ebb689b3468c149dbda696755863f2bfaae6c4c1f0800a"
+    },
+    "core_draft_review_input_sha256": {
+      "identity_role_window.py": "78b71144293694ca7233d0cc42a4f8ee9699f607931d5cea612d3729645c5152",
+      "test_pre_enter_recovery.py": "243258a2f89533ad91760b0712fe554b8d17df78bc6058e5e1924481ed519b37"
+    },
+    "isolated_gate": {
+      "new_cases_pass": 17,
+      "role_window_regression_pass": 40,
+      "wrapper_regression_pass": 14,
+      "distinct_reused_receipt_baseline_pass": 18,
+      "distinct_total_pass": 89,
+      "final_fail": 0,
+      "final_skip": 0,
+      "reused_18_case_baseline_counted_once": true,
+      "core_ack": "EXPLICIT_AUTHENTICATED_TEST_ONLY_MODEL_NOT_ACTUAL_CORE",
+      "source": "REAL_DISPOSABLE_PG15_OFFICIAL_PM_SDK_VERIFIER_SCRAM",
+      "new_cases_identity_business_dml": 0,
+      "ended_utc": "2026-10-19T08:44:27.340863+00:00",
+      "log_sha256": {
+        "pre_enter_17": "40ab89e1cfedc3b7bb3c9c31f10e4a2a919b0a40e604a1e8408671e480863e13",
+        "role_window_40": "364dc22d8f1f4533ff8fc54a015227c94570d920ef8659f4bf51519f7096a36b",
+        "wrapper_14": "f889134b61e526015a38d77e39df691ec71d919d2e995db2e79973e88b098eef"
+      },
+      "earlier_failed_specimens_retained": 2,
+      "earlier_tainted_specimens_not_counted": 1,
+      "preflight_deferred_launches_not_tests": 2,
+      "failure_fix": "PYTHON310_WAIT_FOR_CANCEL_MESSAGE_IS_NOT_PORTABLE_REQUIRE_TYPE_AND_INVALIDATION",
+      "no_observed_foreign_work_in_final_batch": true
+    },
+    "cleanup": {
+      "own_test_containers_networks_leases_remaining": 0,
+      "new_images": 0,
+      "new_cache_ids": 0,
+      "protected_runtime_tuples_unchanged": 41,
+      "shared_free_before_bytes": 256491765760,
+      "shared_free_after_bytes": 256407875584,
+      "exclusive_reclaimed_bytes_claimed": false,
+      "source_pins_unchanged_during_tests": true,
+      "sgp_owned_test_or_transfer_resources_created": 0,
+      "production_mutations": 0
+    },
+    "publication": {
+      "normal_unmodified_hook_required": true,
+      "terminal_and_exact_cleanup_receipt_index": "/tmp/epg10-08-pre-enter-EGKQFQGk/publication-folder.txt",
+      "feature_only_no_merge": true
+    },
+    "goal_resumed": false,
+    "actual_core_interoperability": "PENDING_GENUINE_CONNECTED_COMPOSITION",
+    "next_owner": "CORE_ADOPT_SAME_HELPER_AND_QUALIFIED_ROLLBACK_ONLY_PROTOCOL_THEN_ORIGINAL08_BINDING"
+  },
+  "qualified_source_publication": {
+    "repository": "BobbyAxerol/awesome-portal",
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "commit": "44ee6c186de9e0822f587c37069738a8f410ae58",
+    "remote_verified": true,
+    "scope": "EDGE_OPERATOR_SOURCE_NOT_ACTUAL_CORE_RELEASE_OR_RUNTIME",
+    "source_sha256": {
+      "identity_intake.py": "375b3305124113087b6d7231d8037274feda8c972f229141078d294b5dddfc27",
+      "receipt_installation.py": "7d03ef66085446dee55637fabeb52ccb607897c88a7bc7ea85d2efc544cf4975",
+      "identity_role_window.py": "2d6c7df277f1cd7be85a21eff4550c2c077d0c399d8baeb09b5a91661afe008e",
+      "test_identity_role_window.py": "6e5bc464fef58f676347155f0fda88c57c06b8a54715b63da61a1564a7e708d2"
+    },
+    "normal_hook": {
+      "ended_utc": "2026-10-19T07:50:54.274362+00:00",
+      "contracts_pass": 130,
+      "api_pass": 717,
+      "fail": 0,
+      "skip": 0,
+      "build_and_scoped_pg_restore": "PASS",
+      "log_sha256": "781e026530b4e192df6c2ce84166ea5d7c003e48f1664f9219016d339469272b",
+      "source_outputs_unchanged": true,
+      "connected_acceptance": false
+    },
+    "exact_hook_cleanup": {
+      "ended_utc": "2026-10-19T07:51:07.854651+00:00",
+      "removed_test_image": "sha256:0216f92b25f8a7296e656549a5d94d34292df923141b48076a90ba2d6504a68f",
+      "new_cache_ids": 0,
+      "protected_runtime_tuples_unchanged": 41,
+      "shared_free_before_bytes": 213275004928,
+      "shared_free_after_bytes": 213271875584,
+      "exclusive_reclaimed_bytes_claimed": false,
+      "own_lease_removed": true,
+      "old_runtime_source_data_private_rollback_retained": true
+    }
+  },
+  "current_connected_input_boundary": {
+    "core_source_adoption": "DONE_D0789674_LATEST_678CF731_WITH_RECOVERY_OWNER_WIP_DO_NOT_REAPPLY_OLD_PATCH",
+    "consumer_source": "/home/bobby/portal-research",
+    "consumer_branch": "docs/research-loop-plan",
+    "core_owner_journal": "upgrade/execution_loop/evidence/ELP2-10/research-temporary-session-recovery-2026-10-19.md",
+    "required_input": "QUALIFIED_CORE_ROLLBACK_ONLY_RECOVERY_RESEARCH_SCHEMA134_REVERSE_TRUST_AND_APPROVED_TEMPORARY_PREVIEW_SESSION",
+    "source_acl_implementation": "ISOLATED_QUALIFIED_NOT_ACTIVATED",
+    "research_private_native_bundle_observed": "EARLIER_ABSENCE_ONLY_NOT_REINSPECTED_BY_HK_REPAIR",
+    "selected_real_session_private_reference": "SUPERSEDED_CORE_OWNS_APPROVED_TEMPORARY_PREVIEW_SESSION_AND_EXACT_REVOCATION_NOT_CLOUDFLARE_PASSWORD_PROOF",
+    "do_not_recreate": ["RECEIPT_SCHEMA", "DORMANT_IDENTITY_ROLE", "EXISTING_NATIVE_PRODUCER"],
+    "no_repeated_generic_approval": true,
+    "next_connected_scope": "ORIGINAL_EPG10_08_NOT_09"
+  },
+  "owner_approved_delta": {
+    "receipt_schema": "elp210_human_candidate",
+    "identity_role": "ts_portal_research_identity",
+    "existing_native_roles_or_provider_changed": false
+  },
+  "isolated_wrapper_gate": {
+    "pass": 14,
+    "fail": 0,
+    "skip": 0,
+    "positive_control": "TEST_ONLY_LIFECYCLE_DOUBLE_NOT_REAL_IDENTITY",
+    "negative_verifier": "REAL_PM_ED25519_VERIFIER",
+    "log_sha256": "d62eb179700474018b920a4d3d713536dd16dfed375eeedd302ec375137c7af7",
+    "earlier_setup_error_cases_retained": 14
+  },
+  "isolated_pg15_gate": {
+    "pass": 18,
+    "fail": 0,
+    "skip": 0,
+    "postgres_version_num": 150018,
+    "receipt_sql_sha256": "305ba23619578935696bbcb6ce434b031746280101034f98accee9271d7ae370",
+    "independent_receipt_catalogue_sha256": "4c38d6ebf0ac9ff2b0e274082b6b6ea895346245ba577114047d8e25668adc63",
+    "log_sha256": "2a7f8332fdfee7f52e26406595f2c7f683f935f375bfe8929da0379ccb428c2a",
+    "identity_or_business_rows_seeded": false,
+    "connected_or_capacity_evidence": false
+  },
+  "actual_mapping_observation": {
+    "adapter": "ExistingIdentityMappingSource.lookup",
+    "transaction_read_only": true,
+    "result": "NO_ACTIVE_EXACT_MAPPING",
+    "inactive_status_not_reactivated": true,
+    "observation_ended_utc": "2026-10-19T06:58:53.045029+00:00",
+    "log_sha256": "221cb0d32b7b0f369f57899459a3dc415c7aef0e5c2c62d15cee7770188b2e6b"
+  },
+  "isolated_identity_role_window_gate": {
+    "pass": 40,
+    "reused_pg15_baseline_pass": 18,
+    "fail": 0,
+    "skip": 0,
+    "ended_utc": "2026-10-19T07:40:37.202455+00:00",
+    "log_sha256": "364dc22d8f1f4533ff8fc54a015227c94570d920ef8659f4bf51519f7096a36b",
+    "independent_effective_acl_receipt_sha256": "dfe6994059e2c6b29780e28c1f18de32078227203a40d12e0e1e2487ca6bd500",
+    "reused_scram_helper_sha256": "89ed42edec78454142f8b1310e48d903b75fde9bdf667f8f8c0509359d30a707",
+    "postgres_auth": "REAL_DISPOSABLE_PG15_SCRAM",
+    "identity_and_receipt_sql": "OFFICIAL_PM_SDK",
+    "core_enter_and_ack": "TEST_ONLY_AUTHENTICATED_DISPOSABLE_KEYS_NOT_REAL_CORE",
+    "lost_ack_or_unknown_retains_recovery": true,
+    "borrowed_pool_not_force_closed": true,
+    "inactive_mapping_preserved": true,
+    "known_terminal_exact_retirement": true,
+    "real_human_or_connected_acceptance": false,
+    "production_mutations": 0,
+    "earlier_failed_specimens_retained": 3,
+    "foreign_job_preflight_abort_retained": 1
+  },
+  "actual_source_preparation": {
+    "state": "RECEIPT_AND_DORMANT_ROLE_PREPARED",
+    "committed_at_utc": "2026-10-19T07:13:08.126232+00:00",
+    "role_can_login": false,
+    "role_connection_limit": 1,
+    "receipt_rows_after_install": 0,
+    "native_original_installation_verified_before_and_after": true,
+    "registry_evidence": "PRESERVATION_ONLY_NOT_AUTHORITY",
+    "registry_before_sha256": "16d2ce989b5f5f93d81b2948381edf601d5370ff92d5319eec629282b98ba0b3",
+    "registry_after_sha256": "16d2ce989b5f5f93d81b2948381edf601d5370ff92d5319eec629282b98ba0b3",
+    "log_sha256": "29eab1fb41cdffcebb40b6172d16ae192b4bd36f04b71341b083e967c48d7323",
+    "identity_operation_started": false,
+    "identity_writer_activated": false,
+    "human_mapping_created": false
+  },
+  "cleanup": {
+    "own_test_containers_remaining": 0,
+    "own_test_networks_remaining": 0,
+    "own_leases_remaining": 0,
+    "new_images": 0,
+    "new_build_cache_ids": 0,
+    "protected_runtime_tuples": 41,
+    "protected_runtime_unchanged": true,
+    "shared_pg_test_free_before_bytes": 212605419520,
+    "shared_pg_test_free_after_bytes": 212839006208,
+    "exclusive_reclaimed_bytes_claimed": false
+  },
+  "not_claimed": [
+    "REAL_CORE_HUMAN_AUTHENTICATION",
+    "CONNECTED_REVOCATION_CACHE_CURSOR_SSE",
+    "COMMAND_AUTHORITY",
+    "N03_NATIVE_PUBLICATION",
+    "PRODUCTION_CAPACITY",
+    "CUTOVER_OR_PHASE_09_CONNECTED_ACCEPTANCE"
+  ]
+}

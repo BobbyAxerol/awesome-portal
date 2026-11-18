@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod scoped;
+
 use std::sync::{
     atomic::{AtomicU64, AtomicUsize, Ordering},
     Arc,

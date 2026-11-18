@@ -26,7 +26,7 @@ DEBT = PACK / "debt-register.v1.json"
 MANIFEST = PACK / "MANIFEST.sha256"
 
 EVIDENCE_PATHS = {
-    "n18_census_sha256": ROOT / "services/portal-execution-edge-rs/contracts/manager-surface-census-v1/manager-surface-census.v1.json",
+    "n18_census_sha256": ROOT / "services/portal-execution-edge-rs/contracts/manager-surface-census-v2/manager-surface-census.v2.json",
     "n28_registry_sha256": ROOT / "services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/missing-capability-registry.v1.json",
     "n28_owner_request_sha256": ROOT / "services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/owner-request.v3.json",
     "screen_bff_catalogue_sha256": ROOT / "apps/control-api/src/screen-bff/catalogue.ts",
@@ -127,7 +127,7 @@ def validate_manifest(*, allow_acceptance_drift: bool = False) -> None:
 def validate_inventory(acceptance: dict[str, Any]) -> None:
     census = read_json(EVIDENCE_PATHS["n18_census_sha256"])
     require(census["counts"] == {
-        "relations": 96,
+        "relations": 109,
         "manager_primitives": 5,
         "gateway_operations": 104,
         "gateway_get_operations": 56,
@@ -141,7 +141,7 @@ def validate_inventory(acceptance: dict[str, Any]) -> None:
     relation_classes = Counter(row["classification"] for row in census["relations"])
     require(relation_classes == {
         "SCREEN_BOUND": 54,
-        "PROJECTION_INPUT": 16,
+        "PROJECTION_INPUT": 29,
         "AUDIT_ONLY": 13,
         "INTERNAL_ONLY": 13,
     }, "N18 relation disposition drifted")
@@ -494,7 +494,7 @@ def validate_current_acceptance() -> dict[str, Any]:
         "phase": "N29",
         "backend_decision": "RELEASE_CANDIDATE_READY",
         "product_release": "NO_GO",
-        "relations": 96,
+        "relations": 109,
         "commissioned_requests": 31,
         "portal_reads": 27,
         "commands": 9,

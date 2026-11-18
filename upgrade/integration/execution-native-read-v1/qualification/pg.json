@@ -1,0 +1,88 @@
+{
+  "status": "99_CASES_31_PURE_68_PG_FIXTURE_PASS_SOURCE_ONLY_NOT_INSTALLED_AUTHORITY",
+  "provenance": "SYNTHETIC_PM_PROTOCOL_ACTUAL_DISPOSABLE_PG_TLS_HTTP_NOT_INSTALLED_AUTHORITY",
+  "started_utc": "2026-10-18T13:45:12.633595+00:00",
+  "source_manifest_sha256": "ed93f56f1031cebac36ed2139992e048568ddd432138f6cff8a09e9965e4f44e",
+  "source_base": "0d5ceaba3281cd51e8dd2f7caebc9a7b8e82db05",
+  "maximum_concurrent_cpu": 2,
+  "maximum_concurrent_memory_bytes": 2147483648,
+  "maximum_lease_seconds": 300,
+  "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+  "postgres_image": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+  "free_before": 223425798144,
+  "groups": [
+    {
+      "label": "manager-domain",
+      "expected": 56,
+      "exit_code": 0,
+      "physical_exit_code": 0,
+      "oom_killed": false,
+      "log_sha256": "520c8fc5683c05449616c49db1e831aa8d65c62c439437099948f428b1040e34",
+      "actual_cases": 56,
+      "unique_cases": 56,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "junit_sha256": "adae4813782e73e327b0f0d5356505731aa4e3f68b02444303f6736dc87b35f6"
+    },
+    {
+      "label": "manager-notice",
+      "expected": 43,
+      "exit_code": 0,
+      "physical_exit_code": 0,
+      "oom_killed": false,
+      "log_sha256": "32a408ab772b44b5573a62c64c25b0d99505bf8052ccc9dae48ca8018ea0d3f7",
+      "actual_cases": 43,
+      "unique_cases": 43,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "junit_sha256": "d6ae41f14ed5cb64e4ccced8985ce7b89beb2c7e876242d0d9755db362203ba4"
+    }
+  ],
+  "commands": [
+    [
+      "node",
+      "node_modules/vitest/vitest.mjs",
+      "run",
+      "--configLoader",
+      "runner",
+      "--cache=false",
+      "--maxWorkers=1",
+      "--no-file-parallelism",
+      "--reporter=default",
+      "--reporter=junit",
+      "--outputFile.junit=/evidence/manager-domain.xml",
+      "test/elp210-manager-domain-access.spec.ts"
+    ],
+    [
+      "node",
+      "node_modules/vitest/vitest.mjs",
+      "run",
+      "--configLoader",
+      "runner",
+      "--cache=false",
+      "--maxWorkers=1",
+      "--no-file-parallelism",
+      "--reporter=default",
+      "--reporter=junit",
+      "--outputFile.junit=/evidence/manager-notice.xml",
+      "test/elp210-native-frame-coupled.spec.ts"
+    ]
+  ],
+  "case_census": {
+    "total": 99,
+    "pure": 31,
+    "actual_pg_fixture_cases": 68,
+    "coupled_pg_tls_http_suite_cases": 43,
+    "new_composition_cases": 2
+  },
+  "resource_cleanup_errors": [],
+  "runtime_unchanged": true,
+  "input_copy_cleanup": "EXACT_TARGET_REMOVED_AFTER_TERMINAL_JOBS",
+  "own_lease_removed": true,
+  "finished_utc": "2026-10-18T13:47:32.308010+00:00",
+  "elapsed_seconds": 139.674,
+  "free_after": 223424040960,
+  "no_build_pull_install_shared_prune_or_runtime_mutation": true
+}

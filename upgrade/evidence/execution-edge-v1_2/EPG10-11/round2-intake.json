@@ -1,0 +1,1385 @@
+{
+  "schema": "epg10.connected-round2-intake.v1",
+  "current_state_ref": "../EPG10-08/commissioning-intake.json (current); resumed_intake/blocked_audit are historical",
+  "resumed_intake": {
+    "observed_utc": "2026-10-16T19:28:14Z",
+    "feature_baseline": "d2d0f65230ed0cb09c915bafd528e720765fd557",
+    "goal": "BLOCKED_NOT_COMPLETE_ACTUAL_INPUTS_MISSING",
+    "same_blocker_resumed_turns": 3,
+    "original_approval": "UNCHANGED_NO_NEW_PHASE",
+    "pm_commit": "84456381f11b056a2d003fe3941f52e8a69dbb92",
+    "pm_packet": "/home/bobby/.worktrees/trading-system-pm-v1_1/contracts/baseline/portfolio-account-v1_1/pma11-03-http-request-binding.json",
+    "packet_sha256": "16687796123014686290576be7153ae6d42ccf21d6515afbc37ebacdfea749ec",
+    "packet_status": "SOURCE_DARK_IMPLEMENTED_PENDING_VERIFICATION",
+    "attempt": {
+      "controller_ref": "/home/bobby/.local/state/trading-system/pma11-http-human-20261016/sgp-evidence/attempt-191521/controller.json",
+      "controller_sha256": "266c47767db7c1ece2d7531d75b2ba1ba31cc83364474418ae69392b3cbffd91",
+      "started_utc": "2026-10-16T19:15:21.093481Z",
+      "finished_utc": "2026-10-16T19:19:15.042423Z",
+      "tests": 1009,
+      "passed": 1000,
+      "failures": 9,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "failure": "All9 new PG cases failed fixture helper shadowing during setup; PM owns correction/full retake",
+      "cleanup_complete": true,
+      "owner_runtime_unchanged": true,
+      "terminal_not_a_live_wait": true
+    },
+    "retake": {
+      "controller_ref": "/home/bobby/.local/state/pma11-http-human-sgp-4l5y2_g0/attempt-192318/controller.json",
+      "controller_sha256": "41aff892d7a7aab26169c2b2536cbbe8865f761e50804ade7f1df86f62017025",
+      "tests": 1009,
+      "passed": 1007,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "exit_code": 1,
+      "cleanup_complete": true,
+      "owner_runtime_unchanged": true
+    },
+    "abi": "HTTP delivery digest != immutable intent/grant/receipt; no compatible provider/port",
+    "ts_commit": "ca435a18feb46ef497fef5b6c3bc359ee57e3376",
+    "native_fence": "DECISIVE_BYTES_UNCHANGED",
+    "research": "d92efc0e; packet b721e6fa3a464f8b0caa8d6856ff31351ba49528463d58428fe1ebfbc4594b97; current-human/budget/coexistence OPEN",
+    "runtime": {
+      "protected_tuples_unchanged": 23,
+      "hk_free_bytes": 210380058624,
+      "sgp_free_bytes": 167730122752,
+      "last_observed_utc": "2026-10-16T19:27Z"
+    },
+    "c4": "NO_ACTION_NEEDED own0 deleted0B; retain active/rollback/7worktrees",
+    "independent11": "COMPLETE",
+    "full_connected10_11": "NOT_MET",
+    "fresh_edge_product_tests": 0,
+    "new_bound_ports": 0,
+    "next": "Same six10 returns -> affected original03/08/09/10/11 cells; no new phase/approval"
+  },
+  "blocked_audit": {
+    "observed_utc": "2026-10-16T19:13:36Z",
+    "feature_baseline": "fdd24ec34080fff01584ae473691be9c8368b810",
+    "purpose": "Full original10/11 connected objective; not narrowed to independent completion",
+    "previous_goal_turn": "NO_CONNECTED_PROGRESS_SOURCE_PIN_REFRESH_ONLY_NO_BINDING_OR_NEXT_ACTION_CHANGE",
+    "consecutive_same_blocker_goal_turns": 3,
+    "goal_disposition": "BLOCKED_NOT_COMPLETE",
+    "verification": {
+      "provenance": "READ_ONLY_METADATA_HASH_LINK_AUDIT_NOT_PRODUCT_TESTS",
+      "status": "PASS",
+      "edge_input_hashes": 439,
+      "edge_helper_hashes": 4,
+      "local_file_links": 594,
+      "missing_links": [],
+      "git_diff_check": "PASS",
+      "new_product_or_connected_tests": 0
+    },
+    "approval": "Original round2 remains approved; no new phase/general approval",
+    "independent11": "COMPLETE",
+    "full_connected10_11": "NOT_MET",
+    "actual_compatible_new_inputs": 0,
+    "connected_cases": {
+      "T10_01": "NOT_RUN",
+      "T10_02": "NOT_RUN",
+      "T10_03": "NOT_RUN",
+      "T10_04": "NOT_RUN",
+      "T10_05": "NOT_RUN",
+      "T11_01": "NOT_RUN",
+      "T11_02": "NOT_RUN",
+      "T11_03": "NOT_RUN",
+      "T11_04": "NOT_RUN",
+      "T11_05": "NOT_RUN"
+    },
+    "fresh_source_evidence": {
+      "ts_commit": "1dde708ed8f787d4f81e156f0a160b4a45226325",
+      "native_publication_rust_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+      "native_sql59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+      "native_fence_return": "NO_NEW_QUALIFIED_RETURN_DECISIVE_BYTES_UNCHANGED",
+      "pm_commit": "84456381f11b056a2d003fe3941f52e8a69dbb92",
+      "pm_current_read_handoff_sha256": "f8cce9fa63e14069664b55e85cd04031a9de62beba36e3a29255a61ddaf67484",
+      "pm_command_handoff_sha256": "7b62d7e17198347c85adc5267a319a175733adc2cb3b540d167a35135ed04a0b",
+      "pm_actual_read_provider_or_trust_installed": false,
+      "pm_real_mapping": "UNBOUND_NOT_RUNTIME_CERTIFIED",
+      "pm_export_or_apply_enabled": false,
+      "pm_command_providers": "UNCONFIGURED_FAIL_CLOSED",
+      "pm_command_qualified_cells": 0,
+      "pm_edge_wire_mounted": false,
+      "pm_new_send_transport": false,
+      "pm_authoritative_retention": "NOT_PUBLISHED_RUNTIME_GATE",
+      "pm_current_request_binding": "PEER_OWNED_UNQUALIFIED_WIP_NOT_ADOPTED_OR_EDITED",
+      "research_commit": "d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b",
+      "research_commissioning_packet_sha256": "e08aa877e3fc3a3a00df312d1476fb9a0c22e6d503e0be4a5a5300be1223fe43",
+      "research_actual_provider_return": "NO_NEW_QUALIFIED_RETURN_COMMISSIONING_WIP_UNCHANGED_OPEN_PACKET",
+      "scoped_cutover_manifest": "EMPTY_SCOPE_NO_ACTIVATION",
+      "operations_production_budget": null
+    },
+    "inspection_safety": {
+      "rejected_request": "Remote commissioning document tail/process-derived scan rejected by safety review; not retried or bypassed",
+      "allowed_alternative": "Only Git revision/diff counts and named public commissioning packet SHA256; no document body or process arguments",
+      "required_inspection_still_blocked_by_review": false
+    },
+    "partition": {
+      "runnable_owned_binding_or_product_work": [],
+      "independently_runnable_preparation": "Already complete; no additional candidate-only fixture/job substitutes connected input",
+      "genuine_blocker": "No qualified actual authenticated current-provider/publication/command binding or exact connected target/recovery input returned",
+      "owners_and_exact_unblock_actions": "Original six10 packet SOURCE/TRUST/COMMAND/RESEARCH/LOAD/RELEASE; no blanket PM/TS/DL roadmap wait",
+      "packet": "upgrade/evidence/execution-edge-v1_2/EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md",
+      "next": "Resume original approved round as each actual compatible input arrives, bind it and execute its affected03/08/09/10/11 cases"
+    },
+    "runtime": {
+      "hk": {
+        "observed_utc": "2026-10-16T19:13:16.269042+00:00",
+        "protected_tuples": 18,
+        "unchanged_against_protected_baseline": true,
+        "disk_available_bytes": 211955408896,
+        "disk_total_bytes": 518933680128,
+        "measurement_lock": {
+          "owner": "claude P18.4 G13 isolated v224 release 20261016T190612Z",
+          "purpose": "G13 isolated dr05-upstream + dr08 on v2.2.4 release set + canonical writer",
+          "started_utc": "2026-10-16T19:06:12Z",
+          "until_utc": "2026-10-16T20:16:12Z"
+        },
+        "docker_image_and_buildkit_inventory": [
+          {
+            "Active": "39",
+            "Reclaimable": "7.725GB (25%)",
+            "Size": "30.57GB",
+            "TotalCount": "102",
+            "Type": "Images"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "442.3MB",
+            "Size": "28.3GB",
+            "TotalCount": "371",
+            "Type": "Build Cache"
+          }
+        ]
+      },
+      "sgp": {
+        "observed_utc": "2026-10-16T19:13:18.447261+00:00",
+        "protected_tuples": 5,
+        "unchanged_against_protected_baseline": true,
+        "disk_available_bytes": 167823126528,
+        "disk_total_bytes": 665811062784,
+        "measurement_lock": null,
+        "docker_image_and_buildkit_inventory": [
+          {
+            "Active": "25",
+            "Reclaimable": "74.4GB (83%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.89GB",
+            "Size": "195.9GB",
+            "TotalCount": "3774",
+            "Type": "Build Cache"
+          }
+        ]
+      }
+    },
+    "c4": {
+      "decision": "NO_ACTION_NEEDED",
+      "own_artifacts_created": 0,
+      "removed_bytes": 0,
+      "shared_prune": false,
+      "retention": "All7 active Portal worktrees, unchanged23 protected runtime tuples and active/named rollback/08PKI retained"
+    },
+    "fresh_edge_product_tests": 0,
+    "new_connected_cases": 0,
+    "actual_new_bound_ports": 0,
+    "production_mutations": 0,
+    "peer_edits": 0,
+    "push_or_merge": false
+  },
+  "publication_followup": {
+    "observed_utc": "2026-10-16T19:09:36Z",
+    "feature_baseline": "d625b12d79e6b5468deaedc3dfbffe57dc5ad6f4",
+    "provenance": "READ_ONLY_COMMITTED_SOURCE_PUBLICATION_AND_RUNTIME_RECONCILIATION_NOT_CONNECTED_ACCEPTANCE",
+    "pm": {
+      "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "commit": "84456381f11b056a2d003fe3941f52e8a69dbb92",
+      "evidence_ref": "contracts/baseline/portfolio-account-v1_1/pma11-13-provider-publication-evidence.json",
+      "evidence_sha256": "2b03704c65d22269c6f8b5d56fadadb0c1f713c7c4d6a953109a64533170de8f",
+      "status": "COMMITTED_ISOLATED_SOURCE_PACKAGE_QUALIFIED_FULL_PHASES_OPEN",
+      "source_passed": 965,
+      "offline_passed_separately": 25,
+      "replaces_obsolete_publication_state": "Previously consumed tests now have immutable owner commit; historical f8+WIP/owner-publication-pending descriptions are not current",
+      "actual_provider_installed": false,
+      "actual_field_enablement": false,
+      "unfinished_pm_owned_implementation": "Per-request current-human preparation factory and server-computed HTTP request binding; do not duplicate or mislabel as external debt",
+      "source_publication_is_authenticated_export_or_runtime_mount": false
+    },
+    "research": {
+      "observed_utc": "2026-10-16T19:03:40.707749+00:00",
+      "worktree": "/home/bobby/portal-research",
+      "commit": "d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b",
+      "state": "COMMISSIONING_WIP_PEER_OWNED_NO_ACTUAL_CURRENT_PROVIDER_RETURN",
+      "unstaged_sha256": "73121925078990e9a075668c24e554ceb9205e54588b51728bb9e9a958dd1b9b",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "live_relevant_jobs_at_observation": [],
+      "untested_wip_inherits_prior_source_hook_pass": false
+    },
+    "source": {
+      "ts_commit": "1dde708ed8f787d4f81e156f0a160b4a45226325",
+      "dl_commit": "860b79bacbb70d20b4c895da6f4664245e637dd2",
+      "native_publication_rust_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+      "native_sql59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+      "native_fence": "NO_NEW_OWNER_RETURN_DECISIVE_BYTES_UNCHANGED",
+      "command_runtime": "UNCONFIGURED_FAIL_CLOSED_NO_QUALIFIED_CELLS_NO_NEW_SEND_TRANSPORT",
+      "former_g12_namespace": "p184-g12-dl-90f8a08ef462e6ae",
+      "former_g12_running_containers_now": 0,
+      "lock_absence_or_g12_completion_is_n03_or_connected_capacity_pass": false
+    },
+    "verification": {
+      "provenance": "READ_ONLY_IMMUTABLE_SOURCE_HASH_RECONCILIATION_NOT_PRODUCT_TESTS",
+      "pm_commit": "84456381f11b056a2d003fe3941f52e8a69dbb92",
+      "pm_committed_pins": 17,
+      "pm_committed_mismatches": [],
+      "pm_current_worktree_mismatches": [],
+      "pm_evidence_sha256": "2b03704c65d22269c6f8b5d56fadadb0c1f713c7c4d6a953109a64533170de8f",
+      "pm_actual_provider_installed": false,
+      "pm_actual_fields_enabled": false,
+      "edge_public_inputs": 439,
+      "edge_input_mismatches": [],
+      "edge_helpers": 4,
+      "edge_helper_mismatches": [],
+      "retained_historical_edge_passed": 535,
+      "fresh_edge_product_tests": 0
+    },
+    "tracking_verification": {
+      "provenance": "READ_ONLY_METADATA_JSON_LINK_SCOPE_CHECK_NOT_PRODUCT_TEST",
+      "status": "PASS",
+      "local_file_links_checked": 594,
+      "missing_links": [],
+      "changed_owned_files": 5,
+      "git_diff_check": "PASS",
+      "fresh_edge_product_tests": 0,
+      "new_connected_cases": 0
+    },
+    "runtime": {
+      "hk": {
+        "observed_utc": "2026-10-16T19:06:06.211481+00:00",
+        "tuples": 18,
+        "unchanged_against_protected_baseline": true,
+        "disk_available_bytes": 210311163904,
+        "disk_total_bytes": 518933680128,
+        "measurement_lock": null,
+        "docker_inventory": [
+          {
+            "Active": "39",
+            "Reclaimable": "7.725GB (25%)",
+            "Size": "30.57GB",
+            "TotalCount": "102",
+            "Type": "Images"
+          },
+          {
+            "Active": "40",
+            "Reclaimable": "17.29MB (4%)",
+            "Size": "404.1MB",
+            "TotalCount": "69",
+            "Type": "Containers"
+          },
+          {
+            "Active": "14",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "129.3GB",
+            "TotalCount": "39",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "442.3MB",
+            "Size": "28.3GB",
+            "TotalCount": "371",
+            "Type": "Build Cache"
+          }
+        ]
+      },
+      "sgp": {
+        "observed_utc": "2026-10-16T19:07:43.035326+00:00",
+        "tuples": 5,
+        "unchanged_against_protected_baseline": true,
+        "disk_available_bytes": 167833169920,
+        "disk_total_bytes": 665811062784,
+        "measurement_lock": null,
+        "docker_inventory": [
+          {
+            "Active": "25",
+            "Reclaimable": "74.4GB (83%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "51",
+            "Reclaimable": "471kB (19%)",
+            "Size": "2.449MB",
+            "TotalCount": "59",
+            "Type": "Containers"
+          },
+          {
+            "Active": "22",
+            "Reclaimable": "13.78GB (42%)",
+            "Size": "32.46GB",
+            "TotalCount": "97",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.89GB",
+            "Size": "195.9GB",
+            "TotalCount": "3774",
+            "Type": "Build Cache"
+          }
+        ]
+      }
+    },
+    "c4": {
+      "decision": "NO_ACTION_NEEDED",
+      "own_images": 0,
+      "own_buildkit": 0,
+      "own_containers": 0,
+      "own_volumes": 0,
+      "own_networks": 0,
+      "removed_bytes": 0,
+      "shared_prune": false,
+      "retention": "All7 active Portal worktrees, unchanged active23 runtime/release/config tuples, named rollback and08 private PKI retained"
+    },
+    "result": {
+      "full_connected10_11": "NOT_MET",
+      "independent11": "COMPLETE",
+      "actual_new_bound_ports": 0,
+      "new_connected_cases_run": 0,
+      "goal": "ACTIVE_NOT_COMPLETE_SOURCE_PIN_PROGRESS_ONLY",
+      "runnable_owned_intake_status": "COMPLETE_NO_NEW_OWNED_BINDING_FROM_SOURCE_PUBLICATION_ALONE",
+      "genuinely_blocked": "Original SOURCE/TRUST/COMMAND/RESEARCH/LOAD/RELEASE require compatible actual input/target/provider; exact owners and actions remain in same10 packet",
+      "next": "Consume each actual compatible return and run original affected03/08/09/10/11 cells immediately; no new phase, repeated generic approval or synthetic substitute",
+      "production_mutations": 0,
+      "peer_edits": 0,
+      "push_or_merge": false
+    }
+  },
+  "latest_followup": {
+    "observed_at": "2026-10-17T01:59:53+07:00",
+    "feature_baseline": "03180552340c3b132381fcd334e08bb276f148fc",
+    "purpose": "Consume genuinely new owner returns toward full original10/11 connected objective; no redefinition to independent completion",
+    "classification_of_previous_goal_turn": "NO_PROGRESS_FOR_BINDING_METADATA_ONLY; revalidated source and live process handles, terminal Research return changes next action",
+    "research_terminal_return": {
+      "commit": "d92efc0e33d71d2d2f21f7f67cafa1cae946cb0b",
+      "branch": "docs/research-loop-plan",
+      "worktree": "/home/bobby/portal-research",
+      "status": "PASS_NORMAL_HOOK",
+      "exit_code": 0,
+      "started_at": "2026-10-17T01:20:53.632658+07:00",
+      "finished_at": "2026-10-17T01:45:30.268069+07:00",
+      "receipt_sha256": "fa28054cd12b20e35b7e5fe09f26790833badcba3bae5213aad8e1ed4e434c2c",
+      "hook_log_sha256": "50f6b27398a428caedcf68c38a475f200c6134288b4ee7ead42ca1b67a2fed95",
+      "committed_receipt_paths_checked": 12,
+      "committed_path_mismatches": [],
+      "worktree_clean_at_01_47": true,
+      "subsequent_peer_wip": {
+        "tracked": [
+          "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md"
+        ],
+        "untracked": [
+          "upgrade/execution_loop/evidence/ELP2-10/commissioning-followthrough.md"
+        ],
+        "unstaged_sha256": "e82d49efd81e0f2a000e105d6bdb891f9905fd03205c53e4e39846bde4486e90",
+        "commissioning_packet_sha256": "e08aa877e3fc3a3a00df312d1476fb9a0c22e6d503e0be4a5a5300be1223fe43",
+        "actual_client_provider_commissioning": "IN_PROGRESS_PEER_OWNED_NOT_YET_RETURNED"
+      },
+      "eight_peer_runtime_tuples_unchanged": true,
+      "remaining_owned_resources": [],
+      "actual_authenticated_client_or_current_read_provider_installed": false,
+      "elp2_11_actual_receipt": "NOT_RETURNED",
+      "first_timeout": "Historical first attempt exit124 retained separately; not current landing status"
+    },
+    "pm_terminal_return": {
+      "scope": "ISOLATED_CORRECTNESS_ONLY_OWNER_WIP_NOT_EDGE_OR_CONNECTED_ACCEPTANCE",
+      "started_at": "2026-10-16T18:54:10.236790+00:00",
+      "finished_at": "2026-10-16T18:58:03.078228+00:00",
+      "controller_ref": "/home/bobby/.local/state/trading-system/pma11-publisher-capture-20261016/sgp-evidence/attempt-185410/controller.json",
+      "controller_sha256": "71a9732be7b4d82588937c7ed72ec5827e729eb934425f19f1c92a88c7863a76",
+      "junit_sha256": "bcf356837b420196f2f1e80a756ad91160a9b97594e3fe12aecbd2e8828ad44a",
+      "test_exit_code": 0,
+      "pytest": {
+        "tests": 965,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "offline_exit_code": 0,
+      "offline_tests": 25,
+      "offline_ok": true,
+      "protected_runtime_unchanged": true,
+      "cleanup_complete": true,
+      "artifact_inventory_status": "TIMEOUT_10S_NO_BUILD_OR_NEW_IMAGE",
+      "copy_hash_manifest_sha256": "850582b0adb3605dfd898513ec68595db08b5584eb0926116abc0af771077f7a",
+      "tested_copy_entries": 2257,
+      "current_module_test_hashes_verified": 11,
+      "current_module_test_mismatches": [],
+      "verified_relevant_hashes": {
+        "services/portfolio_management/linked_financial.py": {
+          "tested_sha256": "35e6a2b0ed9874bfda4e6fb7bdfe9433a712d62103171db60f9011fa01e10219",
+          "current_sha256": "35e6a2b0ed9874bfda4e6fb7bdfe9433a712d62103171db60f9011fa01e10219"
+        },
+        "services/portfolio_management/read_policy.py": {
+          "tested_sha256": "874983fe9dff700e108702dbb3989223b6904ae1fecc2951aad0f4c896913508",
+          "current_sha256": "874983fe9dff700e108702dbb3989223b6904ae1fecc2951aad0f4c896913508"
+        },
+        "services/portfolio_management/report_publisher.py": {
+          "tested_sha256": "fad2e019adadee8f5b570f2e4c324fe8054a01f13b90b71cc79b8f723a2cfba9",
+          "current_sha256": "fad2e019adadee8f5b570f2e4c324fe8054a01f13b90b71cc79b8f723a2cfba9"
+        },
+        "services/portfolio_management/operator_reports_repository.py": {
+          "tested_sha256": "0853f9da78cd4b9e5161f1f6d8fea1c64ea8b5e764497f96ac6cd464ce126e08",
+          "current_sha256": "0853f9da78cd4b9e5161f1f6d8fea1c64ea8b5e764497f96ac6cd464ce126e08"
+        },
+        "services/portfolio_management/portal_human_candidate.py": {
+          "tested_sha256": "aa437f986301b13bb320770e452fc4a76675a408fd53fe3d98ef0ac4f0a75c01",
+          "current_sha256": "aa437f986301b13bb320770e452fc4a76675a408fd53fe3d98ef0ac4f0a75c01"
+        },
+        "tests/integration/test_pma11_linked_financial.py": {
+          "tested_sha256": "023286b9bd579bd9de54c8accd3675f868c38cec8f276ff8e6ba5717671f0a43",
+          "current_sha256": "023286b9bd579bd9de54c8accd3675f868c38cec8f276ff8e6ba5717671f0a43"
+        },
+        "tests/integration/test_pma11_portal_human_composition.py": {
+          "tested_sha256": "781d7f940c02cd4c8c04d3da54b565621fa514815b4135b4e78b0da86c71604f",
+          "current_sha256": "781d7f940c02cd4c8c04d3da54b565621fa514815b4135b4e78b0da86c71604f"
+        },
+        "tests/integration/test_pma11_publisher_capture.py": {
+          "tested_sha256": "aead29c7b99dbadcea4989547d929acfaf9e385c11ef4c4b23c938c5e56450b1",
+          "current_sha256": "aead29c7b99dbadcea4989547d929acfaf9e385c11ef4c4b23c938c5e56450b1"
+        },
+        "tests/integration/test_elp210_human_commit_candidate.py": {
+          "tested_sha256": "a30d2f71ac20e4e358abf076c1157db3b8dba2de1bf33d0a9e8ff57782b87d43",
+          "current_sha256": "a30d2f71ac20e4e358abf076c1157db3b8dba2de1bf33d0a9e8ff57782b87d43"
+        },
+        "tests/unit/test_pma11_linked_financial.py": {
+          "tested_sha256": "53e92dfdfcc5dd7a7c33945f49fd974f237e6850302a11d7ec420767676f9782",
+          "current_sha256": "53e92dfdfcc5dd7a7c33945f49fd974f237e6850302a11d7ec420767676f9782"
+        },
+        "tests/unit/test_pma11_report_publisher.py": {
+          "tested_sha256": "7ed078a2ce19d9020dc46a538d43724cf7ccd256b464956a6440db608137d50d",
+          "current_sha256": "7ed078a2ce19d9020dc46a538d43724cf7ccd256b464956a6440db608137d50d"
+        }
+      },
+      "owner_commit_or_runtime_publication": "PENDING_OWNER; do not treat f8 HEAD as tested WIP hash or source tests as a grant/mount",
+      "actual_client_provider_export_command_bindings": "UNCHANGED_UNBOUND; no actual compatible input returned",
+      "supersedes": "Pending-current-tests subgap only; both failed attempts retained; no peer count added to historical535 or human23"
+    },
+    "fresh_source_pins": {
+      "observed_utc": "2026-10-16T18:49:06Z",
+      "ts": {
+        "commit": "1dde708ed8f787d4f81e156f0a160b4a45226325",
+        "branch": "feat/v2-rust-first-okx-demo",
+        "publication_rust_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+        "sql59_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+        "meaning": "Market-data writer rollout7c71e3af is not native trading change-journal publisher generation-through-COMMIT certification"
+      },
+      "pm": {
+        "commit": "f8ddea319a0588ea2994b937db1b2e999bd688d9",
+        "branch": "feat/portfolio-account-v1_1-parallel",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "6d1288f98e980166d853d2ca1e1573ffdc37d31740f54ac8abc5d30b76d79a7a",
+        "untracked_manifest_sha256": "3e8184d5ffed69f62fe83310b3e7f7d0c662ae059e958b7d12470250a76ce6c3",
+        "handoff_sha256": "b33e05602c7ebde0b16f3c0191b0ebc9a49b30313fca75fc2fbbefdcf26dd0b3",
+        "accepted_r1_document_sha256": "591051fef2ed52736cc73be6409ef9444e9ba0e9870bb0382f5ca98dbbded505",
+        "linked_financial_sha256": "35e6a2b0ed9874bfda4e6fb7bdfe9433a712d62103171db60f9011fa01e10219",
+        "financial_projection": "IMPLEMENTED_ISOLATED_TESTED_OWNER_WIP_11_BYTE_PINS_VERIFIED_NOT_RUNTIME_CERTIFIED",
+        "first_expanded_suite": {
+          "total": 903,
+          "passed": 902,
+          "failed": 1,
+          "error": 0,
+          "skip": 0,
+          "defect": "PM15 inventory omitted adopted human receipt SQL; owner corrected; no passing full retake returned at intake"
+        },
+        "second_attempt": {
+          "started_at": "2026-10-17T01:49:03.801108+07:00",
+          "finished_at": "2026-10-17T01:52:52.487294+07:00",
+          "total": 965,
+          "passed": 960,
+          "failed": 5,
+          "error": 0,
+          "skip": 0,
+          "defect": "Five new fixture expectations403 versus actual existing400 plus sanitized denial/null business shape; corrected by PM owner, not weaker product authorization",
+          "qualification": "NOT_ACCEPTED_AS_FULL_SOURCE_PASS"
+        },
+        "actual_client_trust": false,
+        "real_mapping_qualification": "UNBOUND_NOT_RUNTIME_CERTIFIED",
+        "actual_transport_or_apply_enabled": false,
+        "pm14_production_mounted": false,
+        "pm14_edge_wire_mounted": false,
+        "pm14_new_send_transport": false,
+        "qualified_runtime_cells": [],
+        "full_and_worker_provider_runtime": "UNCONFIGURED_FAIL_CLOSED",
+        "authoritative_retention": "NOT_PUBLISHED_RUNTIME_GATE"
+      },
+      "dl": {
+        "commit": "860b79bacbb70d20b4c895da6f4664245e637dd2",
+        "branch": "fix/p184-dl-closure",
+        "meaning": "G12/G13 deployed image-set pins; no Edge source-authority/export return"
+      },
+      "pm_candidate": {
+        "current_commit": "49c45af89ebac0faec3fb2f3286dd7d6168d37f2",
+        "implementation_commit": "0e7059cc968654d50e76fcc76f3a2d3aceababe3",
+        "branch": "feat/portal-elp210-pm-provider-candidate",
+        "qualified_human_cases": 23,
+        "scope": "TEST_ONLY_SOURCE_CANDIDATE_NOT_EDGE_CONNECTED_COUNTS"
+      },
+      "edge_candidate": {
+        "commit": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+        "branch": "feat/portal-elp210-edge-provider-candidate",
+        "actual_provider_binding": false
+      }
+    },
+    "binding_audit": {
+      "actual_compatible_input_returned": false,
+      "owned_edge_binding_task_opened": false,
+      "reason": "Human issue/ENTER/resolve/drain lifecycle does not supply CurrentReadGrant/current workload+app+field+TS membership facts or normalized B/delta/history export",
+      "research_source_composition": "No CurrentHumanCandidate.create call or import/mount in production main/controller; snapshot shared in access.service is not source human wire installation",
+      "pm_source_port": "PROPOSED_PM_RETURN_TO_EXISTING_EDGE04_PROTOCOL_NOT_SOURCE_QUALIFIED",
+      "do_not_duplicate": "PM composition and Research actual client/trust/current provider commissioning are already peer-owned active implementation; candidate-only interop does not replace connected evidence",
+      "runnable_owned_work": "Consume new terminal source return, repair stale status, verify immutable commit paths/ABI/current runtime and preserve exact original return actions",
+      "connected_cases": "T10-01..05 and T11-01..05 remain NOT_RUN; all original requirements retained"
+    },
+    "completion_audit": [
+      {
+        "case": "T10-01",
+        "status": "NOT_MET",
+        "missing": "Authenticated matched barrier/publication/current authority/consumer and connected budgets"
+      },
+      {
+        "case": "T10-02",
+        "status": "NOT_MET",
+        "missing": "Actual native publisher owner/generation fence through stage/publish COMMIT; decisive source unchanged"
+      },
+      {
+        "case": "T10-03",
+        "status": "NOT_MET",
+        "missing": "Actual current read/command wire and native permission-through-COMMIT receipt"
+      },
+      {
+        "case": "T10-04",
+        "status": "NOT_MET",
+        "missing": "Qualified actual release/recovery target, retained source/history/facts and current authority"
+      },
+      {
+        "case": "T10-05",
+        "status": "NOT_MET",
+        "missing": "Actual connected interrupted rollout/operator/recovery scope"
+      },
+      {
+        "case": "T11-01",
+        "status": "NOT_MET",
+        "missing": "Actual scoped operator/target/versioned release configuration"
+      },
+      {
+        "case": "T11-02",
+        "status": "NOT_MET",
+        "missing": "Actual authenticated source retention/floor/backup and required failure-domain DR proof"
+      },
+      {
+        "case": "T11-03",
+        "status": "NOT_MET",
+        "missing": "Actual v1.2 collector/notification/current provider/source telemetry binding"
+      },
+      {
+        "case": "T11-04",
+        "status": "NOT_MET",
+        "missing": "Full selected connected release/source/schema/config/image/acceptance receipts"
+      },
+      {
+        "case": "T11-05",
+        "status": "NOT_MET",
+        "missing": "Actual selected Research watch/score consumer/provider/calibration/revision and measured budget"
+      }
+    ],
+    "live_job_evidence": {
+      "hk": {
+        "observed_utc": "2026-10-16T18:49:06Z",
+        "namespace": "p184-g12-dl-90f8a08ef462e6ae",
+        "running_containers": 18,
+        "handles": [
+          {
+            "role": "tswriter-okx",
+            "container": "1462629fe072",
+            "host_pid": 16092
+          },
+          {
+            "role": "tswriter-binance",
+            "container": "533761176a16",
+            "host_pid": 15751
+          },
+          {
+            "role": "sampler",
+            "container": "ccf8dff99794",
+            "host_pid": 12910
+          },
+          {
+            "role": "publisher",
+            "container": "1714d87ae0bc",
+            "host_pid": 11414
+          }
+        ],
+        "meaning": "Verified live G12 market-data run, not native journal or connected Edge acceptance"
+      },
+      "pm_sgp": {
+        "observed_live_at": "2026-10-17T01:52:10+07:00",
+        "containers": [
+          "b947ca122347",
+          "8f1a4b026574"
+        ],
+        "polled_at": "2026-10-17T01:53:02+07:00",
+        "poll_result": "BOTH_HANDLES_REMOVED_BY_OWNER; no terminal test result inferred, no restart by Edge",
+        "later_reservation": "Owner extended separate current reservation01:54:07..01:59:07; lock alone is not counted as live job or PASS",
+        "successor_live_handles_verified": ["e0b69977c77f", "1c2d891caefd"],
+        "successor_result": "TERMINAL_965_PYTEST_PASS_25_OFFLINE_SEPARATE; both exact handles removed, see pm_terminal_return; no Edge restart"
+      },
+      "research_retry": "TERMINAL_PASS_CONFIRMED_FROM_RECEIPT_AND_COMMIT_NOT_STILL_RUNNING"
+    },
+    "verification": {
+      "kind": "READ_ONLY_DOCUMENTATION_SOURCE_ABI_METADATA_NO_NEW_PRODUCT_TEST_JOB",
+      "local_metadata_checks": 17,
+      "local_metadata_failures": 0,
+      "local_markdown_file_links_resolved": 605,
+      "source_input_hashes_checked": 439,
+      "helper_hashes_checked": 4,
+      "source_or_helper_mismatches": [],
+      "historical535_rerun": false,
+      "peer_tests_added_to_edge_count": false,
+      "first_readonly_assertion": "Strict all-worktree hash check found one later peer journal edit; all12 immutable committed paths match. Gate must pin tested commit/product bytes, not require another agent to freeze its journal.",
+      "source_read_fallback": "SGP rg unavailable; bounded grep used to verify actual production references; no permission/workaround mutation"
+    },
+    "runtime": {
+      "reference": "runtime-before.json",
+      "all_23_protected_tuples_unchanged": true,
+      "hk": {
+        "observed_utc": "2026-10-16T18:51:10.478800+00:00",
+        "tuples": 18,
+        "tuples_sha256": "c660138bf2f893254cac6f28fb7119eaa50ba4f003d5715eaa1ad2aa8372e261",
+        "disk_available_bytes": 208668975104,
+        "disk_total_bytes": 518933680128,
+        "docker_inventory": [
+          {
+            "Active": "40",
+            "Reclaimable": "7.713GB (25%)",
+            "Size": "30.57GB",
+            "TotalCount": "102",
+            "Type": "Images"
+          },
+          {
+            "Active": "58",
+            "Reclaimable": "17.29MB (4%)",
+            "Size": "400.8MB",
+            "TotalCount": "87",
+            "Type": "Containers"
+          },
+          {
+            "Active": "16",
+            "Reclaimable": "218.3MB (0%)",
+            "Size": "130.8GB",
+            "TotalCount": "41",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "47",
+            "Reclaimable": "442.3MB",
+            "Size": "28.3GB",
+            "TotalCount": "371",
+            "Type": "Build Cache"
+          }
+        ],
+        "measurement_lock": {
+          "owner": "claude P18.4 G12 v224 final-release 20261016T183459Z",
+          "purpose": "G12 final on v2.2.4 release set + canonical writer, isolated ns p184-g12-dl-90f8a08ef462e6ae",
+          "started_utc": "2026-10-16T18:35:00Z",
+          "until_utc": "2026-10-16T19:50:00Z"
+        }
+      },
+      "sgp": {
+        "observed_utc": "2026-10-16T18:51:10.606132+00:00",
+        "tuples": 5,
+        "tuples_sha256": "97d4f9883a1385054d6619f8b740d6f87b6d79115049e5828a47bfb942bf9582",
+        "disk_available_bytes": 167793295360,
+        "disk_total_bytes": 665811062784,
+        "docker_inventory": [
+          {
+            "Active": "27",
+            "Reclaimable": "73.42GB (82%)",
+            "Size": "88.82GB",
+            "TotalCount": "328",
+            "Type": "Images"
+          },
+          {
+            "Active": "53",
+            "Reclaimable": "471kB (19%)",
+            "Size": "2.47MB",
+            "TotalCount": "61",
+            "Type": "Containers"
+          },
+          {
+            "Active": "22",
+            "Reclaimable": "13.78GB (42%)",
+            "Size": "32.46GB",
+            "TotalCount": "97",
+            "Type": "Local Volumes"
+          },
+          {
+            "Active": "93",
+            "Reclaimable": "62.89GB",
+            "Size": "195.9GB",
+            "TotalCount": "3774",
+            "Type": "Build Cache"
+          }
+        ],
+        "measurement_lock": {
+          "owner": "codex-pma11-publisher-capture-sgp-pma11-read-sgp-sy9gzl4u",
+          "purpose": "PMA11-13 report worker capture correctness only",
+          "started_utc": "2026-10-16T18:49:00.871674+00:00",
+          "until_utc": "2026-10-16T18:54:00.871674+00:00"
+        }
+      }
+    },
+    "c4": {
+      "decision": "NO_ACTION_NEEDED_NO_OWNED_BUILD_OR_RUNTIME_RESOURCES_CREATED",
+      "own_images": 0,
+      "own_buildkit": 0,
+      "own_containers": 0,
+      "own_volumes": 0,
+      "own_networks": 0,
+      "removed_bytes": 0,
+      "shared_prune": false,
+      "retention": "Existing active image/service/config tuples, all7 active Portal worktrees and named rollback/08PKI artifacts retained; source/release identities remain as enclosing receipt release section"
+    },
+    "result": {
+      "full_objective": "NOT_ACHIEVED",
+      "independent11": "COMPLETE",
+      "full_connected10_11": "NOT_MET",
+      "goal": "KEEP_ACTIVE_THIS_FIRST_GOAL_TURN",
+      "actual_bound_new_ports": 0,
+      "production_mutations": 0,
+      "peer_edits": 0,
+      "new_phase": false,
+      "repeated_general_approval": false,
+      "next": "Consume each actual compatible current-provider/mapping/publication/command/target return and run its original03/08/09/10/11 dependent binding/drills; do not wait for unrelated roadmaps or substitute source-only checks"
+    }
+  },
+  "provenance": "READ_ONLY_SOURCE_ABI_RUNTIME_RECONCILIATION_NOT_CONNECTED_ACCEPTANCE",
+  "recorded_at": "2026-10-17T01:23:00+07:00",
+  "timezone": "Asia/Saigon",
+  "approval": "Bobby approved original10/11 round2 and EPG10-11; no new phase or repeated general approval",
+  "feature": {
+    "worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "baseline": "d682da29454ceb709754b7e381b76c22383d951e",
+    "enclosing_commit_contains_this_receipt": true,
+    "pushed": false,
+    "merged": false
+  },
+  "disposition": {
+    "independent11": "COMPLETE",
+    "round2_intake": "COMPLETE_SCOPED_SOURCE_RECONCILIATION",
+    "full_connected10_11": "NOT_MET",
+    "connected_formal_cases_executed": 0,
+    "product_or_harness_bytes_changed": false,
+    "production_mutations": 0,
+    "source_requests": 0,
+    "runtime_deploys_or_restarts": 0,
+    "peer_worktree_mutations": 0
+  },
+  "source_snapshot": {
+    "at_utc": "2026-10-16T18:20:00.759817+00:00",
+    "sources": {
+      "ts": {
+        "worktree": "/home/bobby/.worktrees/trading-system-next-upgrade",
+        "branch": "feat/v2-rust-first-okx-demo",
+        "commit": "77a6d6710ae7b2b11da05b6049c7dbc7fd1e8616",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 1,
+        "untracked_content_manifest_sha256": "d70eddd8c15ab3a57955586f662a91cd05b917e67ec7b0433a7adbfeb702ac0e"
+      },
+      "pm": {
+        "worktree": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+        "branch": "feat/portfolio-account-v1_1-parallel",
+        "commit": "f8ddea319a0588ea2994b937db1b2e999bd688d9",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "37e81989399dcecbe61188affcec7370b6918ffdc2f7594e68de2d04c1db4c8f",
+        "untracked_count": 7,
+        "untracked_content_manifest_sha256": "d15d6d3424ed4c5f7f4d567f2d291290fb78fe388544209c135b25665a1974d9"
+      },
+      "dl": {
+        "worktree": "/home/bobby/.worktrees/data-layer-p184-closure",
+        "branch": "fix/p184-dl-closure",
+        "commit": "77e74e7c34fbee09bb9229be3f2f85a0f74a19f4",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_content_manifest_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "pm_candidate": {
+        "worktree": "/home/bobby/.worktrees/portal-elp210-pm-provider-candidate",
+        "branch": "feat/portal-elp210-pm-provider-candidate",
+        "commit": "0e7059cc968654d50e76fcc76f3a2d3aceababe3",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_content_manifest_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "edge_candidate": {
+        "worktree": "/home/bobby/.worktrees/portal-elp210-edge-provider-candidate",
+        "branch": "feat/portal-elp210-edge-provider-candidate",
+        "commit": "9db77811fb0845344422f1c77968f6fcbc64b66f",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_content_manifest_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "contracts": {
+      "ts_publication": {
+        "path": "/home/bobby/.worktrees/trading-system-next-upgrade/rust/crates/trading-runtime/src/publication.rs",
+        "sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05"
+      },
+      "ts_sql59": {
+        "path": "/home/bobby/.worktrees/trading-system-next-upgrade/init-db/59-v2-source-commit-order-replay.sql",
+        "sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96"
+      },
+      "pm_handoff": {
+        "path": "/home/bobby/.worktrees/trading-system-pm-v1_1/contracts/baseline/portfolio-account-v1_1/pma11-03-04-current-read-handoff.json",
+        "sha256": "b17f8a579917c6f0c091e62d4b1854242ede381f6a0f913a2bb231189c9a2628"
+      },
+      "pm_capture": {
+        "path": "/home/bobby/.worktrees/trading-system-pm-v1_1/contracts/baseline/portfolio-account-v1_1/pma11-13-operator-capture-evidence.json",
+        "sha256": "3846f44caa7e2f5dbf5f17bebc58d374f24e80cf86670b9d5a3b800d06c5e5ec"
+      },
+      "field_matrix": {
+        "path": "/home/bobby/.worktrees/trading-system-pm-v1_1/contracts/baseline/portfolio-account-v1_1/pma11-03-04-field-policy-proposal.json",
+        "sha256": "e274b7ffb43d8916f542516c851a470a7fd77e8d883f339496dbf6c72cf47824"
+      },
+      "human_handoff": {
+        "path": "/home/bobby/.worktrees/portal-elp210-pm-provider-candidate/contracts/baseline/portfolio-account-v1_1/pma11-elp210-human-commit-candidate.md",
+        "sha256": "33f865f4e23afbfd855cdea40284c8ef67c7e9bca68ca6fed01fe6d07cd16db7"
+      },
+      "human_module": {
+        "path": "/home/bobby/.worktrees/portal-elp210-pm-provider-candidate/services/portfolio_management/portal_human_candidate.py",
+        "sha256": "aa437f986301b13bb320770e452fc4a76675a408fd53fe3d98ef0ac4f0a75c01"
+      },
+      "human_sql": {
+        "path": "/home/bobby/.worktrees/portal-elp210-pm-provider-candidate/contracts/baseline/portfolio-account-v1_1/pma11-elp210-human-commit-candidate.sql",
+        "sha256": "305ba23619578935696bbcb6ce434b031746280101034f98accee9271d7ae370"
+      },
+      "human_tests": {
+        "path": "/home/bobby/.worktrees/portal-elp210-pm-provider-candidate/tests/integration/test_elp210_human_commit_candidate.py",
+        "sha256": "a30d2f71ac20e4e358abf076c1157db3b8dba2de1bf33d0a9e8ff57782b87d43"
+      },
+      "edge_abi": {
+        "path": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2/services/portal-execution-edge-rs/crates/query-api/src/scoped/authority.rs",
+        "sha256": "8cd8a369c95c08d2b20b6a50cf2f54a40ce12428fc103dbd805cc1bcd8ff751c"
+      }
+    }
+  },
+  "accepted_progress": {
+    "current_human": {
+      "source_commit": "0e7059cc968654d50e76fcc76f3a2d3aceababe3",
+      "handoff_sha256": "33f865f4e23afbfd855cdea40284c8ef67c7e9bca68ca6fed01fe6d07cd16db7",
+      "peer_passed": 23,
+      "peer_failed": 0,
+      "peer_error": 0,
+      "peer_skip": 0,
+      "provenance": "TEST_ONLY_REAL_PG_CRYPTO_TEST_PORTAL_TRANSPORT_NOT_EDGE_COUNTS",
+      "controller_sha256": "7ffaaf20cf4e6badc6f3fc42cf44acab83e3380288133b0fa9d555b31bd87df6",
+      "junit_sha256": "26c651d042fa7bffa97b4f2b967cd61c0fcadac29c745c84c51f8ff7ffe20cd0",
+      "implemented": [
+        "prepare with actual PM human verifier",
+        "signed ENTER before acquiring source connection",
+        "one-task transaction lease through logical COMMIT",
+        "immutable COMMITTED/ROLLED_BACK proof and token-free recovery",
+        "expiry/lost ACK/cancellation quarantine UNKNOWN; fenced resolution"
+      ],
+      "owning_pm_import": "MECHANICALLY_IMPORTED_COMPOSITION_TESTS_PENDING",
+      "not_supplied": [
+        "actual authenticated Portal client and runtime trust",
+        "independent workload/application/read-field current authority",
+        "Edge current operation grant or effective scope digest",
+        "native journal publisher generation fence",
+        "B/delta/history exporter"
+      ]
+    },
+    "field_matrix": {
+      "revision": "pma-field-policy-20261016-r1",
+      "status": "OWNER_ACCEPTED_IMPLEMENTATION_AND_ENABLEMENT_GATES_OPEN",
+      "sha256": "e274b7ffb43d8916f542516c851a470a7fd77e8d883f339496dbf6c72cf47824",
+      "approval_subgap_closed": true,
+      "authentication_or_grant": false,
+      "runtime_enabled": false,
+      "environments": [
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "linked_read": "Only approved attributed fields/current eligible alpha-account-deployment tuples, exact decimal/source currency/basis; unavailable is not zero",
+      "linked_history_export_stream": "DENIED_R1",
+      "financial_projection": "NOT_IMPLEMENTED_PEER_PM_SCOPE",
+      "provider_and_privacy_revoke_qualification": "PENDING"
+    },
+    "research": {
+      "worktree": "/home/bobby/portal-research",
+      "branch": "docs/research-loop-plan",
+      "commit": "fa857b8538c1dd38ab61af94700c71c911d81424",
+      "staged_path_count": 12,
+      "staged_sha256": "e70119832e8be49c0a5944608ad10b5d71e869f9b188ce9f875cc84795edd3d6",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "authority_doc_sha256": "c9a17c881352bab0977542e32f66e6274978429ade831f2178254ffd1a62abc1",
+      "first_landing": {
+        "receipt": "/home/bobby/.local/state/portal-execution-elp210/20261016/authority-landing-receipt.json",
+        "receipt_sha256": "0985ed6c99a17bf9533f229eb09e488ec08490129c59540a3c4ed96923857d80",
+        "status": "FAIL_OR_INCOMPLETE",
+        "exit_code": 124,
+        "finished_at": "2026-10-17T01:15:39.955181+07:00",
+        "head_advanced": false,
+        "eight_peer_runtime_tuples_unchanged": true
+      },
+      "retry": {
+        "status_at_intake": "IN_PROGRESS_NOT_PASS",
+        "started_at": "2026-10-17T01:20:53.632658+07:00",
+        "lease_until": "2026-10-17T02:00:53.632658+07:00",
+        "owner": "codex-portal-elp210-land-182053"
+      },
+      "actual_client_trust_and_read_provider_installed": false,
+      "elp2_11_connected_receipt": "NOT_RETURNED"
+    }
+  },
+  "abi_decision": {
+    "edge_trait": "CurrentReadGrantProvider::current(&ReadScope, Operation, now_ms) -> Result<CurrentReadGrant, CurrentReadError>",
+    "source_sha256": "8cd8a369c95c08d2b20b6a50cf2f54a40ce12428fc103dbd805cc1bcd8ff751c",
+    "required": "Fresh authenticated session/human/workload/app/field/membership/delegation/model/current historical visibility for every operation/recheck",
+    "source_candidate": "Async human prepare/ENTER/resolve only; successful ENTER is not a current read/field grant",
+    "binding_performed": false,
+    "reason": "No actual compatible authenticated authority/export return; do not fabricate a provider or edit parallel owner code"
+  },
+  "original_return_packet": "../EPG10-10/SHADOW_CUTOVER_AND_OWNER_RETURN.md",
+  "original_returns": [
+    {
+      "id": "10-SOURCE",
+      "owner": "TS native + PM publication",
+      "status": "PARTIAL_SOURCE_PROGRESS_ACTUAL_BINDING_ABSENT",
+      "missing": "Native owner/generation fence through actual stage/publish COMMIT; authenticated matched B/delta/history/floor/retention and dataset coverage",
+      "unblock": "Return immutable implementation/migration/export/config refs for selected actual scope",
+      "dependent": "Original03/09 then T10-01/02/05 and T11-02/03/04"
+    },
+    {
+      "id": "10-TRUST",
+      "owner": "TS/PM authority + Portal identity",
+      "status": "HUMAN_LIFECYCLE_AND_R1_POLICY_SOURCE_CONSUMED_ACTUAL_PROVIDER_ABSENT",
+      "missing": "Actual stable human/workload/session mapping, authenticated Portal-PM client/trust, fresh current operation/field provider and native commit composition",
+      "unblock": "Return installed provider/config/mapping/revision and revoke/COMMIT receipts; no r1 reapproval",
+      "dependent": "Original08/09 then affected T10 and T11 current-policy/security cases"
+    },
+    {
+      "id": "10-COMMAND",
+      "owner": "PM14/source owner",
+      "status": "ACTUAL_BOUND_TRANSPORT_NOT_RETURNED",
+      "missing": "Mounted typed intent/full-outcome/status/recovery; native idempotency/retention; exact operation/profile/target",
+      "unblock": "Return qualified same-intent durable wire and recovery target references",
+      "dependent": "Original07/09 then T10-03/04/05 and T11 command recovery"
+    },
+    {
+      "id": "10-RESEARCH",
+      "owner": "Research owner",
+      "status": "SOURCE_LANDING_RETRY_IN_PROGRESS_ACTUAL_COMMISSIONING_ABSENT",
+      "missing": "Authenticated provider installation/mapping, field projection qualification and exact scoped consumer/shadow/ELP2-11 receipt",
+      "unblock": "Finish owned source landing, then return actual commissioned trust/client/provider/consumer facts with target/recovery",
+      "dependent": "Affected08/09/10 read/shadow and T11-01/03/04/05"
+    },
+    {
+      "id": "10-LOAD",
+      "owner": "Edge + TS/DL/Research capacity",
+      "status": "CONNECTED_TARGET_AND_APPROVED_NUMERIC_BOUNDS_NOT_RETURNED",
+      "missing": "Actual source-connected current-config B0/B1/B2/coexistence target and fourteen-group approved numeric bounds",
+      "unblock": "Use prepared01/06 harness on exact returned source/config under own exclusive measurement lease",
+      "dependent": "Original01/06/09 then T10-01 and supported T11 release capacity"
+    },
+    {
+      "id": "10-RELEASE",
+      "owner": "Operational owners",
+      "status": "EXACT_CONNECTED_RELEASE_RECOVERY_TUPLE_NOT_RETURNED",
+      "missing": "Qualified09 scope; candidate/reader-only rollback digests; stable config, target/window/owners and verified backup/checkpoint",
+      "unblock": "Populate existing cutover release inputs; then run the approved original10/11 scope, not another general approval request",
+      "dependent": "Original10 bounded rollout/rollback and all applicable T11 operational gates"
+    }
+  ],
+  "connected_case_status": {
+    "T10-01": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T10-02": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T10-03": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T10-04": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T10-05": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T11-01": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T11-02": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T11-03": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T11-04": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT",
+    "T11-05": "NOT_RUN_NO_ACTUAL_COMPATIBLE_BOUND_INPUT"
+  },
+  "verification": {
+    "read_only_consistency": {
+      "checks_satisfied": 24,
+      "failures": 0,
+      "local_markdown_file_links_resolved": 612,
+      "scope": "JSON/return IDs/NOT_RUN provenance/policy-versus-grant/peer-versus-Edge counts/23 exact tuples/inventories/8 contract hashes/owned docs only",
+      "new_test_execution": false
+    },
+    "read_only_hash_reconciliation": {
+      "source_files_checked": 439,
+      "source_mismatches": [],
+      "helpers_checked": 4,
+      "helper_mismatches": [],
+      "baseline_runtime_receipt_sha256": "851568dd4d00a499e8831d9bd569c1eea2796efaf0e1c50f0beae2d3ce6cd55b",
+      "historical_qualification_file_sha256": "91578d204ce67afbceab2bc0604e69658928fb28197cdaba5f35d44c072ff5de",
+      "historical_passed": 535,
+      "provenance": "READ_ONLY_HASH_RECONCILIATION_NOT_NEW_TEST_EXECUTION"
+    },
+    "historical_test_results_not_reexecuted": {
+      "receipt": "qualification.json",
+      "passed": 535,
+      "failed": 0,
+      "skip": 0,
+      "ignored": 0,
+      "filtered": 0
+    },
+    "new_edge_test_runs": 0,
+    "new_connected_passes": 0,
+    "contemplated_9_ops_100_runner_rerun": "NOT_RUN_FOREIGN_MEASUREMENT_LOCKS; product/harness unchanged, no new PASS claimed"
+  },
+  "runtime": {
+    "baseline": "runtime-before.json",
+    "baseline_sha256": "851568dd4d00a499e8831d9bd569c1eea2796efaf0e1c50f0beae2d3ce6cd55b",
+    "protected_tuples": 23,
+    "all_23_unchanged": true,
+    "hk": {
+      "at_utc": "2026-10-16T18:20:15.165788+00:00",
+      "tuples": [
+        {
+          "name": "/portal-execution-edge-execution-edge-1",
+          "id": "131c8c7ef16dfa512dc388c47a52f1c7e5e0305de7d046ba2014174e9fdce4c1",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.222432627Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-live-execution-edge-1",
+          "id": "73cd3e85723776aa7b1445ecc62d8b981253ad72ad54973d884ef4cf9fb2768f",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.216153683Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-live-manager-projection-worker-1",
+          "id": "510a0fa25669cddb5bf0b2d3d508176c9bd84631340e270ef401f49edf16b3fe",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "1582b40cffaa5fb00350fa79da5f32519d03271fdb6f6dc59e719bc73ca68d53",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.216377234Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-live-projection-postgres-1",
+          "id": "ed97b30e4ed355d3ee1359a7441fdbca45467dad5b83b8e224b1ec319f4d64c6",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.196296887Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-live-source-proxy-1",
+          "id": "e5895351de60e4ae25a2d8375c55c2f606f5cbce6aa919fcf20e3a91b9482dbf",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "config": "9bb20c8894a71aa620bce6a62828f66336618526a0f8e6fcb4a1f46449d6384c",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.200743474Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-manager-projection-worker-1",
+          "id": "8113bdc737f1085fd41e123a956c942e54dd6452bc1c15c42191efd2136fbde4",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "95e96a9b2c547f91b6175a0055de71aaee7197db3b37ed48012509cacee73801",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.212450549Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-projection-postgres-1",
+          "id": "8c7913cc1e393e4c6165570459dd60b4ab091a5aaaa69cfffeb69f23f899d3fb",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.1391836Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-sandbox-execution-edge-1",
+          "id": "cfbd5942298e66cdabf53cbd00329b9bd4da9f584a09bfd407fcdc17996ab569",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.220112038Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-sandbox-manager-projection-worker-1",
+          "id": "9a222eec68a10e3fa46a06b394d69634d28c2e61ce47d6643485966bd04f28f7",
+          "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+          "config": "12294191799e7d112a3c8c8eff86f32dce1531fc40ec87062d87b13b53b23caa",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.210734102Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-sandbox-projection-postgres-1",
+          "id": "1f2f7796c26de7c81b32bb5a3995fef6f16b9f69b9c2fe1552c863d642a1696f",
+          "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+          "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.134189771Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-sandbox-source-proxy-1",
+          "id": "dadf1c61f7b883af2250f66d608f2ede8bedfd81caeeaf13ea48581cf0e41186",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "config": "da4b44c00580f3e4dfa42b77fd160f72c79300d6ab3f226e595ec42ee7f26b77",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.163786113Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-execution-edge-source-proxy-1",
+          "id": "ffdcbdebe71def456c83809d1382daeaac04f60815c37e78c1f4355c1668f098",
+          "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+          "config": "21786bb09a2c5e94481b457a19a262c0cb2bf3fc6edb86629b053247ca329de8",
+          "running": true,
+          "started_at": "2026-09-15T04:31:56.153396054Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-manager-read-paper-v2-portal_manager_read-1",
+          "id": "2a87918c7fd17bc0ef28fd5328414da3c1c0e9d15440ca214f245688dc8cd22f",
+          "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+          "config": "225db7755ea8ca9317e18af8febf06c7f3a4f92892a57f344a626126c98bf889",
+          "running": true,
+          "started_at": "2026-10-16T12:39:24.779624184Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-manager-read-paper-v2-portal_manager_issuer-1",
+          "id": "30c3a81dddfa5a88aa6585626843db52ba78d72b07a535e400d2536594c63952",
+          "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+          "config": "7710fc8e206a9812eb2abea7d7d222a1c568217a2f7ee6d8b122ed0009043342",
+          "running": true,
+          "started_at": "2026-10-16T12:39:25.023819622Z",
+          "restarts": 0
+        },
+        {
+          "name": "/trading-system-manager-read-sandbox-portal_manager_read-1",
+          "id": "fb2107bd7021de57ed42648d53ff719345f4b4e9360f4edc71ed7308b232f91a",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "config": "453f59be45d1935795155c1aa2e44ceb7c6e10d636878f54f7319e4fa831a5bd",
+          "running": true,
+          "started_at": "2026-10-16T12:39:25.285275074Z",
+          "restarts": 0
+        },
+        {
+          "name": "/trading-system-manager-read-sandbox-portal_manager_issuer-1",
+          "id": "3b15396a2c4520a53abd283a65c3cda98bff119e3993a0430d86b1ea1cd60565",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "config": "a97d6be022ee4c9c11e61539980aa80a15a96d77f18d2af94b057cae1d89c4df",
+          "running": true,
+          "started_at": "2026-10-16T12:39:25.541952691Z",
+          "restarts": 0
+        },
+        {
+          "name": "/trading-system-manager-read-live-portal_manager_read-1",
+          "id": "cc975621909254caa701977735cfd1543032afb6e8fdaeb85eba04d13a8357dc",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "config": "976ebe89ed6839c23119c4ed7b927a6465de0cd333941c93fcbe077d740f8111",
+          "running": true,
+          "started_at": "2026-10-16T12:39:25.821076411Z",
+          "restarts": 0
+        },
+        {
+          "name": "/trading-system-manager-read-live-portal_manager_issuer-1",
+          "id": "5577af90835f3c21710afe3d7ff9654991426aa46a3914e8a14eb7279c5c29c2",
+          "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+          "config": "e68c442990013c2c22a55a0816d62124823aa5d0aabfc95ad27278a2d76664ba",
+          "running": true,
+          "started_at": "2026-10-16T12:39:26.074285865Z",
+          "restarts": 0
+        }
+      ],
+      "disk_available_bytes": 212277415936,
+      "disk_total_bytes": 518933680128,
+      "measurement_lock": {
+        "owner": "claude-writer-release",
+        "purpose": "TS writer release 77a6d671 B17 proof set rerun (handoff13/expiry3/drill), TEST_ONLY isolated, no production mutation",
+        "started_utc": "2026-10-16T18:14:02Z",
+        "until_utc": "2026-10-16T19:29:02Z"
+      },
+      "docker_inventory_returncode": 0,
+      "docker_inventory": [
+        {
+          "Active": "40",
+          "Reclaimable": "8.317GB (27%)",
+          "Size": "30.57GB",
+          "TotalCount": "102",
+          "Type": "Images"
+        },
+        {
+          "Active": "41",
+          "Reclaimable": "17.29MB (4%)",
+          "Size": "393.7MB",
+          "TotalCount": "70",
+          "Type": "Containers"
+        },
+        {
+          "Active": "14",
+          "Reclaimable": "218.3MB (0%)",
+          "Size": "127.5GB",
+          "TotalCount": "39",
+          "Type": "Local Volumes"
+        },
+        {
+          "Active": "47",
+          "Reclaimable": "442.3MB",
+          "Size": "28.3GB",
+          "TotalCount": "371",
+          "Type": "Build Cache"
+        }
+      ]
+    },
+    "sgp": {
+      "at_utc": "2026-10-16T18:18:35.019608+00:00",
+      "tuples": [
+        {
+          "name": "/portal-control-api-1",
+          "id": "4a5ba3ef4ed8689121cc96d1b4ea83eb7ed4bcd0afa49b4ad6200dc8be3fed47",
+          "image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+          "config": "963a3d8436bd48220cc41cafb73a18e8c6d0d4fd6abe72eddb843539b8918f60",
+          "running": true,
+          "started_at": "2026-09-19T09:03:33.22089525Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-portal-web-1",
+          "id": "8ef970197fefa92323e049f4716461098940c51ace019e636a247c10e8f9410f",
+          "image": "sha256:c2fb7a8c1122f8b737c3cefee1b78cafda7b025a0f8c36b56b5b9424a1b9ea31",
+          "config": "e0e3c404d22c6ae26fa993e3d56433591bcaf7c77fc89a675b21f4856ff87840",
+          "running": true,
+          "started_at": "2026-09-19T09:03:38.883641001Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-research-preview-control-api-1",
+          "id": "aa7da793229de962591f6cf9ee37cba2391503c3c853f4064a0ef12e790b2ca9",
+          "image": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+          "config": "42a9f3ad29ba77eeab6683f99070469673bb2f78824f3c4191093f8ee664306d",
+          "running": true,
+          "started_at": "2026-10-15T08:01:01.542764346Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-research-preview-portal-api-1",
+          "id": "7b1fed9efa94c70736c7cee3063fd20d63ab026a11ad693b7132d5af17f29824",
+          "image": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+          "config": "59551a2cdeb2bb8696602336920f30db42cd61b9ecaed3cbd55ebd96e50d4fd4",
+          "running": true,
+          "started_at": "2026-10-10T11:05:38.405806314Z",
+          "restarts": 0
+        },
+        {
+          "name": "/portal-stable-v1-0-1-control-api-1",
+          "id": "38604d6e80c4dc5d2d7b7de1417f597ae55aa742098c132464cf2cc275f24c0f",
+          "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+          "config": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+          "running": true,
+          "started_at": "2026-09-18T16:24:22.016887481Z",
+          "restarts": 0
+        }
+      ],
+      "disk_available_bytes": 167616708608,
+      "disk_total_bytes": 665811062784,
+      "measurement_lock": {
+        "owner": "codex-pma11-publisher-capture-sgp-pma11-read-sgp-sy9gzl4u",
+        "purpose": "PMA11-13 report worker capture correctness only",
+        "started_utc": "2026-10-16T18:16:40.068633+00:00",
+        "until_utc": "2026-10-16T18:21:40.068633+00:00"
+      },
+      "docker_inventory_returncode": 0,
+      "docker_inventory": [
+        {
+          "Active": "27",
+          "Reclaimable": "73.42GB (82%)",
+          "Size": "88.82GB",
+          "TotalCount": "328",
+          "Type": "Images"
+        },
+        {
+          "Active": "54",
+          "Reclaimable": "475.1kB (18%)",
+          "Size": "2.515MB",
+          "TotalCount": "63",
+          "Type": "Containers"
+        },
+        {
+          "Active": "22",
+          "Reclaimable": "13.78GB (42%)",
+          "Size": "32.46GB",
+          "TotalCount": "97",
+          "Type": "Local Volumes"
+        },
+        {
+          "Active": "93",
+          "Reclaimable": "62.89GB",
+          "Size": "195.9GB",
+          "TotalCount": "3774",
+          "Type": "Build Cache"
+        }
+      ]
+    },
+    "deploy_runner": "portal-gh-deploy-runner.service active at read-only intake"
+  },
+  "c4": {
+    "decision": "NO_ACTION_NEEDED_ZERO_OWNED_RUNTIME_BUILD_RESOURCES_CREATED",
+    "created_images": 0,
+    "created_buildkit_cache": 0,
+    "created_containers": 0,
+    "created_volumes": 0,
+    "created_networks": 0,
+    "removed_bytes": 0,
+    "shared_prune": false,
+    "foreign_locks_untouched": true,
+    "retention": "All active images in runtime tuples, existing named rollback/private PKI bundle and all7 active Portal worktrees retained; no operational resource removed",
+    "private_pki_retention_ref": "Existing08 recovery bundle retained until 2026-11-15T12:37:33Z; no expired certificate rollback"
+  },
+  "release": {
+    "canonical_checkout": "/home/bobby/.worktrees/portal-execution-manager-v2",
+    "canonical_branch": "feat/manager-v2-paper-read",
+    "canonical_commit": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+    "stable_sgp": "/home/bobby/portal-main-release main@533162635f56584d630e3d971d77d50860595f15",
+    "edge_release": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+    "edge_revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb",
+    "active_worktrees": "Same7 documented Portal worktrees retained; current feature baseline d682da29 plus enclosing intake commit",
+    "deployed_feature": false
+  }
+}

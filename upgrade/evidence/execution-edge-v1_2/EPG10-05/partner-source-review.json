@@ -1,0 +1,93 @@
+{
+  "schema": "epg10.partner-source-review.v1",
+  "phase": "EPG10-05",
+  "peer_edits": 0,
+  "heavy_peer_jobs": 0,
+  "rounds": [
+    {
+      "at_utc": "2026-10-16T05:19:52Z",
+      "record": "hk-source-runtime-before.json"
+    },
+    {
+      "at_utc": "2026-10-16T05:28:34Z",
+      "authority_delta": false
+    },
+    {
+      "at_utc": "2026-10-16T05:44:08Z",
+      "authority_delta": false
+    },
+    {
+      "at_utc": "2026-10-16T05:57:24Z",
+      "authority_delta": false
+    },
+    {
+      "at_utc": "2026-10-16T06:03:09.872194+00:00",
+      "record": "hk-source-runtime-final.json",
+      "authority_delta": false
+    },
+    {
+      "at_utc": "2026-10-16T06:05:44Z",
+      "research_head": "2ec5924da42a42525f96cb733e30bb062a034074",
+      "research_branch": "docs/research-loop-plan",
+      "committed_diff_sha256": "e309beddc6f0abe6738ae014bbbff57c6937a35e2bd7a6cc46a402a994a728c1",
+      "commit_ruling": "Exactly the ELP2-04 bytes observed as staged in preflight; frozen contracts unchanged",
+      "unstaged_sha256": "01bdaa566b977228b10d4a43684e240e971696fface64838c043e1592c67c5b8",
+      "untracked_count": 20,
+      "untracked_paths_sha256": "e7d591c075ce02dc63e1ec7fbb65791769bd3b6fb15a7567e755282172c9920a",
+      "working_tree_ruling": "Concurrent peer WIP, observational and not adopted. New catalogue metadata 42 families/31 fields is SOURCE_CONTRACT_NOT_RUNTIME_ACCEPTANCE, all families unavailable/history UNKNOWN/runtime false. No production caller or new source publication. Requested bounded page and timestamp helper edits are peer WIP, not Edge wire authority."
+    }
+  ],
+  "ts_pm_dl_final": [
+    {
+      "branch": "feat/v2-rust-first-okx-demo",
+      "head": "c2035b41700c27ce810406a59dffeb259c621ea0",
+      "journal_sha256": "77bf6666f2aa8a5c9d2598bb5be56218716e55e2d07cb8e002cf0aa5161dd935",
+      "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "6cde02a0e1990df480287911b2e6343294a1de0d50697830356712b59e61c438",
+      "untracked_count": 1,
+      "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2"
+    },
+    {
+      "branch": "feat/portfolio-account-v1_1-parallel",
+      "head": "d16aa2b5f251596e469807f57e81fe14cdc7e763",
+      "journal_sha256": "96ee825d90a33f3cab614b8c7053408fc34b6ae965db867e6efc33ef769735fd",
+      "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "branch": "fix/p184-dl-closure",
+      "head": "18c888fa6a568c66fb62606d882e34352973e8f7",
+      "journal_sha256": "db0f55f44a3b63045d821c90fa90fc30fc8b087005ad1094d8a310489e5f2433",
+      "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+      "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "untracked_count": 0,
+      "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "frozen_research_pins": {
+    "foundation_schema": "7a28e0545005789da1a54d304dbf242a2413d464aa905b83d5641e40821c4828",
+    "foundation_fixture": "7b3044c2f4c990633a4550ab2c521f0fdf0108f9e70027bcbc1c2df02643cb75",
+    "read_publication": "61fd25aadecfb358949e3b6096f9fc9cd620bedb0e7a846a031204f4a6cb34ba",
+    "read_scope": "1fa1b57baf301efd28682feb1f184809fda796f135c6af9fa38f791237266f2a",
+    "history_service": "de33d9eb17bf707ff88c2186bef11305b9ad45e0927527f2d62701c9655a7c6d",
+    "legacy_realtime": "b3d9502cfed351f7a924d4b007e8a10d421a5643a4400a0e9fd3546303c23958",
+    "unchanged": true
+  },
+  "authority_ruling": {
+    "native_inputs_15_unchanged": true,
+    "pm_authority_inputs_16_unchanged": true,
+    "generic_publisher_generation_fence": "ABSENT_COUNTEREXAMPLE_REPRODUCED_IN_03",
+    "coverage_tested_methods": 52,
+    "coverage_exclusions": 16,
+    "n03": "SOURCE_DARK",
+    "snapshot": "JOURNAL_PREFIX_NOT_BUSINESS_CURRENT_SNAPSHOT",
+    "new_source_publication": false,
+    "bff_current_identity_tls_runtime_receipt": false
+  },
+  "next_review": "Refresh only before connected adoption/rerun; no peer HEAD or dirty catalogue draft is runtime authority."
+}

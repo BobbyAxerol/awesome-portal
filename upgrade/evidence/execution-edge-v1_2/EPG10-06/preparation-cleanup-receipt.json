@@ -1,0 +1,20 @@
+{
+  "schema": "epg10-06-preparation-cleanup/v1",
+  "at_utc": "2026-10-16T09:20:45.359316+00:00",
+  "exact_target": "/tmp/epg10-06-preparation-ST6Hs733",
+  "validated_owner_uid": 1000,
+  "validated_mode": "0700",
+  "files_removed": 6,
+  "allocated_bytes_removed": 139264,
+  "before_free_bytes": 167970856960,
+  "after_free_bytes": 167970996224,
+  "free_delta_bytes": 139264,
+  "target_absent": true,
+  "owned_lock_absent": true,
+  "containers_created_or_deleted": 0,
+  "images_created_or_deleted": 0,
+  "buildkit_cache_created_or_deleted": 0,
+  "volumes_or_networks_deleted": 0,
+  "operational_restart": 0,
+  "retention": "All active and existing explicitly retained rollback artifacts preserved; no new release/rollback artifact."
+}

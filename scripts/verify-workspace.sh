@@ -519,6 +519,17 @@ for required in \
   "${ROOT_DIR}/scripts/execution-n18-census.py" \
   "${ROOT_DIR}/scripts/test_execution_n18_census.py" \
   "${ROOT_DIR}/scripts/execution-n18-census-test.sh" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v2/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v2/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v2/manager-surface-census.v2.schema.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v2/manager-surface-census.v2.json" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v2/README.md" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v2/MANIFEST.sha256" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v2/DATABASE_RELATION_CENSUS.csv" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v2/COLUMN_SEMANTICS_CATALOG.csv" \
+  "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v2/E1_CAPTURE_PROVENANCE.json" \
+  "${ROOT_DIR}/scripts/test_execution_n18_census_v2.py" \
+  "${ROOT_DIR}/scripts/execution-n18-census-v2-test.sh" \
   "${ROOT_DIR}/upgrade/backend/EX_BE_22_N19_RUST_MANAGER_V2_COMPATIBILITY_AUTHORITY.md" \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/CODEX_TO_CLAUDE_N19_MANAGER_COMPATIBILITY_HANDOFF.md" \
   "${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-compat-authority-v1/README.md" \
@@ -1828,6 +1839,7 @@ python3 "${ROOT_DIR}/scripts/execution-n18-census.py" --verify
 python3 "${ROOT_DIR}/scripts/test_execution_n18_census.py"
 python3 "${ROOT_DIR}/scripts/execution-eds12-qualification.py" verify-static
 python3 "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py"
+python3 -B "${ROOT_DIR}/scripts/epg10-08/test_connected_read.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"
@@ -1893,6 +1905,7 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-n17a-production-dr-test.sh"
 "${ROOT_DIR}/scripts/execution-n17b-current-acceptance-test.sh"
 "${ROOT_DIR}/scripts/execution-n18-census-test.sh"
+"${ROOT_DIR}/scripts/execution-n18-census-v2-test.sh"
 "${ROOT_DIR}/scripts/execution-n19-manager-compat-test.sh"
 "${ROOT_DIR}/scripts/execution-n20-screen-bff-test.sh"
 "${ROOT_DIR}/scripts/execution-n21-shared-admission-test.sh"

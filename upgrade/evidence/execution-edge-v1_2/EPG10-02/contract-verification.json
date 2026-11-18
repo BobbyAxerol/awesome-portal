@@ -1,0 +1,152 @@
+{
+  "schema_version": "epg10.catalogue-verification.v1",
+  "phase": "EPG10-02",
+  "status": "COMPLETED_CONTRACT_ONLY",
+  "exit": "PASS_LOGICAL_SCHEMA_NO_RUNTIME_ACTIVATION",
+  "scope": {
+    "families": 42,
+    "edge_guide_families": 39,
+    "additional_be_logical_views": 3,
+    "field_entries": 31,
+    "new_runtime_exports": 0,
+    "full_runtime_history_claimed": false
+  },
+  "formal_cases": [
+    {
+      "id": "EPG10-T02-01",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-02",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-03",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-04",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-05",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-06",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-07",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-08",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-09",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-10",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    },
+    {
+      "id": "EPG10-T02-11",
+      "status": "PASS",
+      "evidence": "named test cases in scripts/test_execution_edge_catalogue.py and execution-contracts::catalogue_v1::tests; contract-only"
+    }
+  ],
+  "tests": {
+    "python": {
+      "command": "python3 -B -m unittest discover -s scripts -p test_execution_edge_catalogue.py -q",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "dependency": "jsonschema4.10.3"
+    },
+    "rust": {
+      "command": "cargo test --offline --locked -p execution-contracts -p manager-v2-contract -p maximum-data-contract",
+      "toolchain": "rust1.85.1",
+      "build_jobs": 1,
+      "test_threads": 1,
+      "execution_contracts_passed": 19,
+      "new_catalogue_tests": 12,
+      "manager_v2_passed": 8,
+      "maximum_data_passed": 9,
+      "total_passed": 36,
+      "failed": 0,
+      "ignored": 0,
+      "doc_tests": 0
+    },
+    "format": "cargo fmt -p execution-contracts -- --check: PASS",
+    "lint": "cargo clippy --offline --locked -p execution-contracts --all-targets -- -D warnings: PASS",
+    "partner_fixtures": {
+      "cases": 25,
+      "vectors": 57,
+      "positive": 53,
+      "expected_rejections": 4,
+      "actual_mismatches": 0,
+      "evidence_class": "IMPORTED_TEST_ONLY_SCHEMA_FACTS_NOT_PARTNER_RUNTIME_ACCEPTANCE"
+    }
+  },
+  "correctness": [
+    "1379 authorized rows traversed exactly once over >80 bounded pages including Unicode/escaped bytes, oversize and duplicate-key rejection",
+    "exact decimal beyond fixed128bit range/null/zero/string IDs; safe UTCms and retained RFC3339 nanoseconds",
+    "all9 cursor binding dimensions plus expiry changed-case reject",
+    "same Research golden metadata and separately versioned BFF cursor stage",
+    "PM7 independent nonnegative controls, canonical payload bytes and HTTP counter strings unchanged",
+    "ADD regular-grid arithmetic mean/no E0; fixed-path incremental cost stress; every dependency leaf has source/gap",
+    "direct NAV score independent of raw-q/grouping/correlation/Regime; conditional Research binding only"
+  ],
+  "prior_attempts": [
+    {
+      "result": "Python9PASS3ERROR",
+      "reason": "test requested absent fixture kind aliases",
+      "resolution": "select existing canonical fixture types; shared fixtures unchanged"
+    },
+    {
+      "result": "Rust compileFAIL before tests",
+      "reason": "temporary test copy omitted repo-level existing execution-event corpus",
+      "resolution": "preserve full relative repo fixture layout; rerun all3 crates"
+    }
+  ],
+  "not_run": [
+    "production database/source endpoints",
+    "producer/capture certification",
+    "runtime token signing/auth activation",
+    "source replay/native all-mode qualification",
+    "capacity/HA/DR or paired baseline admission",
+    "partner ELP2 application/runtime suites"
+  ],
+  "reviews": {
+    "ts_dl": "final read-only signoff after all6source/formula findings fixed",
+    "pm": "identity/binding roles and7dimension mapping fixed; final nonnegative-controls finding fixed and7negative vectors PASS",
+    "research": "strict shared shape, dedup/bounds and scoped token stage reviewed; no remaining concrete finding"
+  },
+  "remaining": {
+    "in_scope_defects": [],
+    "source_owned": [
+      "TS P13/P16 external N03 still not runtime-advertised; fixed Paper reader is not all-family producer",
+      "PM full-source report export/current authority and applied checkpoint unqualified",
+      "metric source/basis/runtime calibration and exact researcher field policy not deployed; each registry field remains unavailable"
+    ],
+    "research_mapper_boundary": "Shared no-proof TS mapper can exceed32reasons; Rust rejects invalid output; peer fix outside this phase documented in package README",
+    "phase01": "capacity/placement exit remains unmet, not waived",
+    "next_phase": "EPG10-03 awaits named approval; phase02 logical schema is closed"
+  },
+  "pushed": false,
+  "merged": false,
+  "deployed": false
+}

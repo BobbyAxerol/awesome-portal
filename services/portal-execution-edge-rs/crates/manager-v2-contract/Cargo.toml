@@ -8,6 +8,7 @@ repository.workspace = true
 build = "build.rs"
 
 [dependencies]
+execution-contracts = { path = "../execution-contracts" }
 chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true

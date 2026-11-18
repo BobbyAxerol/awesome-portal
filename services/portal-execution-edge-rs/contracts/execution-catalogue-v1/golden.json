@@ -1,0 +1,169 @@
+{
+  "schema_version": "execution.catalogue-golden.v1",
+  "provenance": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "metric_evidence": {
+    "schema_version": "execution.metric-evidence.v1",
+    "metric_ref": "test:direct-nav-score",
+    "source_set": {
+      "source_set_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "dataset_refs": [
+        "test:economics"
+      ],
+      "watermarks": [
+        {
+          "dataset_id": "test:economics",
+          "partition": "test:account",
+          "source_continuity_epoch": "test:epoch",
+          "checkpoint_ref": "test:checkpoint",
+          "facts_through_ms": 100,
+          "recorded_through_ms": 105,
+          "coverage": "PARTIAL",
+          "proof_ref": "test:cut-proof"
+        }
+      ],
+      "scope": {
+        "workspace_id": "test:workspace",
+        "environment": "live",
+        "venue": "test:venue",
+        "native_profile_id": "test:canary-profile",
+        "execution_backend": "test:non-executing",
+        "authorization_revision": "test:auth-1",
+        "scope_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "correction_view": "RESTATED",
+      "revision": "test:2",
+      "supersedes_revision": "test:1",
+      "provenance_ref": "test:source-proof"
+    },
+    "formula_approved": true,
+    "runtime_config_approved": false,
+    "runtime_config_ref": null,
+    "approved_policy_id": null,
+    "calibration_ref": null,
+    "comparable_basis_id": "test:common-population",
+    "individual_evidence_binding_id": "test:portfolio-specific",
+    "research_run_ref": null,
+    "research_evidence_used": false,
+    "stress_manifest_ref": "test:stress-not-approved",
+    "consolidation_manifest_ref": "test:consolidation",
+    "return_source_snapshot_id": "test:returns",
+    "cost_applicability_ref": "test:cost-applicability",
+    "fx_policy_ref": "test:USD-not-USDT",
+    "flow_grid_ref": "test:external-flows",
+    "fill_notional_dedupe_ref": "test:canonical-fill-side",
+    "opening_capital_ref": "test:opening-source"
+  },
+  "pm_r2": {
+    "schema_version": "execution.pm-r2-read.v1",
+    "availability": {
+      "state": "UNAVAILABLE",
+      "reason_code": "TEST_ONLY_NOT_RUNTIME_CERTIFIED"
+    },
+    "currency": "USDT",
+    "basis": "TEST_ONLY_R2_DIMENSION_PARITY",
+    "nominal_budget": "80",
+    "margin_risk_requirement": "20",
+    "economic_backing": "100",
+    "exposure_cap": "200",
+    "exposure_unit": "QUOTE_NOTIONAL",
+    "netting_policy_ref": "test:product-model",
+    "new_risk_capacity": "60",
+    "amount_locked": "0",
+    "recall_pending": "0",
+    "authority_ref": "test:pm",
+    "model_revision": "test:r2-model",
+    "profile_ref": "test:profile",
+    "lineage": {
+      "source_set_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "dataset_refs": [
+        "test:economics"
+      ],
+      "watermarks": [
+        {
+          "dataset_id": "test:economics",
+          "partition": "test:account",
+          "source_continuity_epoch": "test:epoch",
+          "checkpoint_ref": "test:checkpoint",
+          "facts_through_ms": 100,
+          "recorded_through_ms": 105,
+          "coverage": "PARTIAL",
+          "proof_ref": "test:cut-proof"
+        }
+      ],
+      "scope": {
+        "workspace_id": "test:workspace",
+        "environment": "live",
+        "venue": "test:venue",
+        "native_profile_id": "test:canary-profile",
+        "execution_backend": "test:non-executing",
+        "authorization_revision": "test:auth-1",
+        "scope_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "correction_view": "RESTATED",
+      "revision": "test:2",
+      "supersedes_revision": "test:1",
+      "provenance_ref": "test:source-proof"
+    }
+  },
+  "regime": {
+    "schema_version": "execution.regime-fit.v1",
+    "availability": {
+      "state": "UNAVAILABLE",
+      "reason_code": "TEST_ONLY_NOT_RUNTIME_CERTIFIED"
+    },
+    "run_id": "test:run",
+    "alpha_version_id": "test:v3",
+    "parameter_binding_ref": "test:params",
+    "feature_version": "test:features-v1",
+    "feature_cutoff_ms": 100,
+    "reference_snapshot_ref": "test:reference",
+    "reference_cutoff_ms": 90,
+    "no_lookahead_policy_ref": "test:cutoff",
+    "methodology_revision": "test:regime-v1",
+    "distance": null,
+    "neighbor_count": null,
+    "effective_sample_size": null,
+    "episode_count": null,
+    "financial_stages": [
+      "CANARY"
+    ],
+    "evidence_snapshot_ref": "test:evidence",
+    "lineage": {
+      "source_set_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "dataset_refs": [
+        "test:economics"
+      ],
+      "watermarks": [
+        {
+          "dataset_id": "test:economics",
+          "partition": "test:account",
+          "source_continuity_epoch": "test:epoch",
+          "checkpoint_ref": "test:checkpoint",
+          "facts_through_ms": 100,
+          "recorded_through_ms": 105,
+          "coverage": "PARTIAL",
+          "proof_ref": "test:cut-proof"
+        }
+      ],
+      "scope": {
+        "workspace_id": "test:workspace",
+        "environment": "live",
+        "venue": "test:venue",
+        "native_profile_id": "test:canary-profile",
+        "execution_backend": "test:non-executing",
+        "authorization_revision": "test:auth-1",
+        "scope_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "correction_view": "RESTATED",
+      "revision": "test:2",
+      "supersedes_revision": "test:1",
+      "provenance_ref": "test:source-proof"
+    }
+  },
+  "dimensions": {
+    "environment": "live",
+    "financial_stage": "CANARY",
+    "lifecycle": "ARCHIVED",
+    "trade_state": "HALTED"
+  }
+}

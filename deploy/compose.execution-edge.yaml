@@ -59,6 +59,8 @@ services:
       # resource claim and its exact profile binding.
       EDGE_MANAGER_V2_READ_ENABLED: ${EDGE_MANAGER_V2_READ_ENABLED:-false}
       EDGE_MANAGER_V2_PROFILE_ID: ${EDGE_MANAGER_V2_PROFILE_ID:-}
+      EDGE_MANAGER_CATALOGUE_RELEASE_FILE: ${EDGE_MANAGER_CATALOGUE_RELEASE_FILE:-}
+      EDGE_MANAGER_CATALOGUE_RELEASE_SHA256: ${EDGE_MANAGER_CATALOGUE_RELEASE_SHA256:-}
       # N24 ingestion runs in a separate no-port worker. Keep this false on
       # the serving Edge container even when the worker overlay is active.
       EDGE_MANAGER_PROJECTION_ENABLED: ${EDGE_MANAGER_PROJECTION_ENABLED:-false}

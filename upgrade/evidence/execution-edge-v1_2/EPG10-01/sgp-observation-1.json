@@ -1,0 +1,1521 @@
+{
+  "captured_at": "2026-10-15T18:18:58.588680+00:00",
+  "duration_seconds": 120.002383,
+  "groups": [
+    {
+      "anonymous_max_bytes": 20439040,
+      "average_cores": 0.000397,
+      "cpu_core_seconds": 0.047623,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 172658688,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 172658688,
+      "name": "e16r1-pg",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 6,
+      "sampled_memory_max_bytes": 172666880,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 199311360,
+      "average_cores": 0.130086,
+      "cpu_core_seconds": 15.610586,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 214568960,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 202027008,
+      "name": "portal-control-api-1",
+      "network_delta": {
+        "rx_bytes": 88226697,
+        "tx_bytes": 64679098
+      },
+      "pids_max": 20,
+      "sampled_memory_max_bytes": 214888448,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 105484288,
+      "average_cores": 0.035328,
+      "cpu_core_seconds": 4.23944,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 99086336,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 99090432,
+      "name": "portal-portal-api-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 16,
+      "sampled_memory_max_bytes": 111935488,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 82325504,
+      "average_cores": 0.008067,
+      "cpu_core_seconds": 0.968034,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 57344,
+        "wios": 14
+      },
+      "memory_end_bytes": 102035456,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 102072320,
+      "name": "portal-portal-minio-1",
+      "network_delta": {
+        "rx_bytes": 70,
+        "tx_bytes": 0
+      },
+      "pids_max": 25,
+      "sampled_memory_max_bytes": 107696128,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 9711616,
+      "average_cores": 0.003796,
+      "cpu_core_seconds": 0.455473,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 1
+      },
+      "memory_end_bytes": 7548928,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 7352320,
+      "name": "portal-portal-nats-1",
+      "network_delta": {
+        "rx_bytes": 222,
+        "tx_bytes": 156
+      },
+      "pids_max": 18,
+      "sampled_memory_max_bytes": 11829248,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 37261312,
+      "average_cores": 0.132518,
+      "cpu_core_seconds": 15.902427,
+      "io_delta": {
+        "rbytes": 139264,
+        "rios": 16,
+        "wbytes": 33873920,
+        "wios": 1774
+      },
+      "memory_end_bytes": 353484800,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 353255424,
+      "name": "portal-portal-postgres-1",
+      "network_delta": {
+        "rx_bytes": 64425539,
+        "tx_bytes": 88157010
+      },
+      "pids_max": 9,
+      "sampled_memory_max_bytes": 362786816,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 7069696,
+      "average_cores": 0.003323,
+      "cpu_core_seconds": 0.398744,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 8683520,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 8683520,
+      "name": "portal-portal-web-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 9,
+      "sampled_memory_max_bytes": 8749056,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 64270336,
+      "average_cores": 0.019192,
+      "cpu_core_seconds": 2.303139,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 85000192,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 84979712,
+      "name": "portal-probe-control-api-1",
+      "network_delta": {
+        "rx_bytes": 34708,
+        "tx_bytes": 41442
+      },
+      "pids_max": 20,
+      "sampled_memory_max_bytes": 99549184,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 10006528,
+      "average_cores": 0.002291,
+      "cpu_core_seconds": 0.274923,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 161460224,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 161460224,
+      "name": "portal-probe-pg",
+      "network_delta": {
+        "rx_bytes": 41442,
+        "tx_bytes": 34708
+      },
+      "pids_max": 9,
+      "sampled_memory_max_bytes": 165998592,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 105828352,
+      "average_cores": 0.040454,
+      "cpu_core_seconds": 4.854615,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 102588416,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 102588416,
+      "name": "portal-probe-portal-api-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 11,
+      "sampled_memory_max_bytes": 114716672,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 101883904,
+      "average_cores": 0.008106,
+      "cpu_core_seconds": 0.972778,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 65536,
+        "wios": 16
+      },
+      "memory_end_bytes": 106192896,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 106164224,
+      "name": "portal-probe-portal-minio-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 26,
+      "sampled_memory_max_bytes": 114085888,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 9609216,
+      "average_cores": 0.005148,
+      "cpu_core_seconds": 0.617749,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 1
+      },
+      "memory_end_bytes": 8798208,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 8798208,
+      "name": "portal-probe-portal-nats-1",
+      "network_delta": {
+        "rx_bytes": 222,
+        "tx_bytes": 156
+      },
+      "pids_max": 18,
+      "sampled_memory_max_bytes": 13180928,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 4333568,
+      "average_cores": 0.004584,
+      "cpu_core_seconds": 0.550145,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 39956480,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 39964672,
+      "name": "portal-probe-portal-postgres-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 7,
+      "sampled_memory_max_bytes": 40280064,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 6938624,
+      "average_cores": 0.003415,
+      "cpu_core_seconds": 0.409791,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 9940992,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 9940992,
+      "name": "portal-probe-portal-web-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 9,
+      "sampled_memory_max_bytes": 10010624,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 66498560,
+      "average_cores": 0.000003,
+      "cpu_core_seconds": 0.000355,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 67866624,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 67866624,
+      "name": "portal-probe-quant-worker-py-1",
+      "network_delta": {
+        "rx_bytes": 156,
+        "tx_bytes": 222
+      },
+      "pids_max": 10,
+      "sampled_memory_max_bytes": 67866624,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 53936128,
+      "average_cores": 0.039012,
+      "cpu_core_seconds": 4.68157,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 44281856,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 44277760,
+      "name": "portal-probe-roadmap-task-board-api-1",
+      "network_delta": {
+        "rx_bytes": 70,
+        "tx_bytes": 0
+      },
+      "pids_max": 15,
+      "sampled_memory_max_bytes": 57880576,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 66609152,
+      "average_cores": 0.000004,
+      "cpu_core_seconds": 0.000462,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 68026368,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 68026368,
+      "name": "portal-quant-worker-py-1",
+      "network_delta": {
+        "rx_bytes": 226,
+        "tx_bytes": 222
+      },
+      "pids_max": 10,
+      "sampled_memory_max_bytes": 68026368,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 4247552,
+      "average_cores": 0.00026,
+      "cpu_core_seconds": 0.031224,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 103260160,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 103268352,
+      "name": "portal-research-e17-custody-pg",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 6,
+      "sampled_memory_max_bytes": 103268352,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 107851776,
+      "average_cores": 0.020294,
+      "cpu_core_seconds": 2.435323,
+      "io_delta": {
+        "rbytes": 4096,
+        "rios": 1,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 105730048,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 105725952,
+      "name": "portal-research-preview-control-api-1",
+      "network_delta": {
+        "rx_bytes": 176376,
+        "tx_bytes": 236952
+      },
+      "pids_max": 19,
+      "sampled_memory_max_bytes": 120442880,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 4157440,
+      "average_cores": 0.010922,
+      "cpu_core_seconds": 1.310617,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 85139456,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 85143552,
+      "name": "portal-research-preview-execution-postgres-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 6,
+      "sampled_memory_max_bytes": 85295104,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 201183232,
+      "average_cores": 0.04086,
+      "cpu_core_seconds": 4.903321,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 207306752,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 207302656,
+      "name": "portal-research-preview-portal-api-1",
+      "network_delta": {
+        "rx_bytes": 156,
+        "tx_bytes": 222
+      },
+      "pids_max": 27,
+      "sampled_memory_max_bytes": 221282304,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 10559488,
+      "average_cores": 0.005225,
+      "cpu_core_seconds": 0.626969,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 1
+      },
+      "memory_end_bytes": 10153984,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 10145792,
+      "name": "portal-research-preview-portal-nats-1",
+      "network_delta": {
+        "rx_bytes": 1542,
+        "tx_bytes": 1666
+      },
+      "pids_max": 17,
+      "sampled_memory_max_bytes": 14323712,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 8568832,
+      "average_cores": 0.009761,
+      "cpu_core_seconds": 1.171291,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 245760,
+        "wios": 60
+      },
+      "memory_end_bytes": 316452864,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 316440576,
+      "name": "portal-research-preview-portal-postgres-1",
+      "network_delta": {
+        "rx_bytes": 219960,
+        "tx_bytes": 77184
+      },
+      "pids_max": 9,
+      "sampled_memory_max_bytes": 318369792,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 10936320,
+      "average_cores": 0.003244,
+      "cpu_core_seconds": 0.389284,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 10485760,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 10481664,
+      "name": "portal-research-preview-portal-web-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 15,
+      "sampled_memory_max_bytes": 14958592,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 404054016,
+      "average_cores": 0.002848,
+      "cpu_core_seconds": 0.341745,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 419532800,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 419532800,
+      "name": "portal-research-preview-quant-worker-py-1",
+      "network_delta": {
+        "rx_bytes": 18502,
+        "tx_bytes": 100512
+      },
+      "pids_max": 15,
+      "sampled_memory_max_bytes": 419659776,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 53051392,
+      "average_cores": 0.039396,
+      "cpu_core_seconds": 4.727591,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 43839488,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 43839488,
+      "name": "portal-research-preview-roadmap-task-board-api-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 15,
+      "sampled_memory_max_bytes": 56688640,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 52183040,
+      "average_cores": 0.036381,
+      "cpu_core_seconds": 4.365817,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 44531712,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 44527616,
+      "name": "portal-roadmap-task-board-api-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 21,
+      "sampled_memory_max_bytes": 56590336,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 6770688,
+      "average_cores": 0,
+      "cpu_core_seconds": 0,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 8048640,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 8048640,
+      "name": "portal-showcase",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 9,
+      "sampled_memory_max_bytes": 8048640,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 178978816,
+      "average_cores": 0.099597,
+      "cpu_core_seconds": 11.951868,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 149233664,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 143745024,
+      "name": "portal-stable-v1-0-1-control-api-1",
+      "network_delta": {
+        "rx_bytes": 95761953,
+        "tx_bytes": 2828441
+      },
+      "pids_max": 19,
+      "sampled_memory_max_bytes": 198791168,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 113831936,
+      "average_cores": 0.038991,
+      "cpu_core_seconds": 4.678992,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 105324544,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 115064832,
+      "name": "portal-stable-v1-0-1-portal-api-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 26,
+      "sampled_memory_max_bytes": 117432320,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 90673152,
+      "average_cores": 0.008174,
+      "cpu_core_seconds": 0.980883,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 57344,
+        "wios": 14
+      },
+      "memory_end_bytes": 103628800,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 103669760,
+      "name": "portal-stable-v1-0-1-portal-minio-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 19,
+      "sampled_memory_max_bytes": 106840064,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 5971968,
+      "average_cores": 0.003832,
+      "cpu_core_seconds": 0.459874,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 1
+      },
+      "memory_end_bytes": 8871936,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 8871936,
+      "name": "portal-stable-v1-0-1-portal-nats-1",
+      "network_delta": {
+        "rx_bytes": 222,
+        "tx_bytes": 156
+      },
+      "pids_max": 12,
+      "sampled_memory_max_bytes": 9003008,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 46698496,
+      "average_cores": 0.028512,
+      "cpu_core_seconds": 3.421542,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 7200768,
+        "wios": 1525
+      },
+      "memory_end_bytes": 230592512,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 227594240,
+      "name": "portal-stable-v1-0-1-portal-postgres-1",
+      "network_delta": {
+        "rx_bytes": 2462563,
+        "tx_bytes": 95660952
+      },
+      "pids_max": 9,
+      "sampled_memory_max_bytes": 272412672,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 7405568,
+      "average_cores": 0.003271,
+      "cpu_core_seconds": 0.392568,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 10133504,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 10129408,
+      "name": "portal-stable-v1-0-1-portal-web-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 9,
+      "sampled_memory_max_bytes": 10141696,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 66408448,
+      "average_cores": 0.000003,
+      "cpu_core_seconds": 0.0004,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 67792896,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 67792896,
+      "name": "portal-stable-v1-0-1-quant-worker-py-1",
+      "network_delta": {
+        "rx_bytes": 156,
+        "tx_bytes": 222
+      },
+      "pids_max": 10,
+      "sampled_memory_max_bytes": 67792896,
+      "throttled_usec": 0
+    },
+    {
+      "anonymous_max_bytes": 78200832,
+      "average_cores": 0.039807,
+      "cpu_core_seconds": 4.77699,
+      "io_delta": {
+        "rbytes": 0,
+        "rios": 0,
+        "wbytes": 0,
+        "wios": 0
+      },
+      "memory_end_bytes": 68812800,
+      "memory_events_delta": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "memory_start_bytes": 68812800,
+      "name": "portal-stable-v1-0-1-roadmap-task-board-api-1",
+      "network_delta": {
+        "rx_bytes": 0,
+        "tx_bytes": 0
+      },
+      "pids_max": 20,
+      "sampled_memory_max_bytes": 82305024,
+      "throttled_usec": 0
+    }
+  ],
+  "host_summary": {
+    "cpu_busy_fraction": 0.153379,
+    "cpu_iowait_fraction": 0.000525,
+    "load_one_minute_max": 1.7080078125,
+    "load_one_minute_min": 1.1201171875,
+    "memory_available_max_bytes": 12655165440,
+    "memory_available_min_bytes": 12287721472
+  },
+  "limitations": [
+    "PASS means stable observation only, not capacity/latency acceptance",
+    "sampled memory maximum is not true transient peak or per-process RSS",
+    "network counters are per namespace; do not sum shared namespaces",
+    "no DB query/WAL/lock/allocations/business freshness counter in this observation",
+    "host clocks not calibrated by local wall-vs-monotonic drift",
+    "not controlled W-IDLE, B0/B1/B2 or performance G2"
+  ],
+  "lock": {
+    "owner": "codex-epg10-01-sgp-observation-20261015T1818Z",
+    "purpose": "EPG10-01 passive observation; no generator/source requests",
+    "started_utc": "2026-10-15T18:16:58.441351+00:00",
+    "until_utc": "2026-10-15T18:20:28.441385+00:00"
+  },
+  "maximum_sampling_gap_seconds": 1.016632,
+  "observer_cpu_seconds": 2.032295,
+  "raw_sha256": "67da4c8a5f455d2e4397112cca332cd3d1883d7afa0c9f23895c8ee026e92578",
+  "roster": [
+    {
+      "cgroup": "/system.slice/docker-0cc148d320f6abbf70a74bf30feb08916047ae198d5534dc92cd8e650faf7ec1.scope",
+      "config_sha256": null,
+      "container_id": "0cc148d320f6abbf70a74bf30feb08916047ae198d5534dc92cd8e650faf7ec1",
+      "image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6",
+      "name": "e16r1-pg",
+      "network_namespace": "net:[4026535923]",
+      "pid": 1181177,
+      "project": null,
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 396132560
+    },
+    {
+      "cgroup": "/system.slice/docker-4a5ba3ef4ed8689121cc96d1b4ea83eb7ed4bcd0afa49b4ad6200dc8be3fed47.scope",
+      "config_sha256": "963a3d8436bd48220cc41cafb73a18e8c6d0d4fd6abe72eddb843539b8918f60",
+      "container_id": "4a5ba3ef4ed8689121cc96d1b4ea83eb7ed4bcd0afa49b4ad6200dc8be3fed47",
+      "image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+      "name": "portal-control-api-1",
+      "network_namespace": "net:[4026533741]",
+      "pid": 1545565,
+      "project": "portal",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 328437357
+    },
+    {
+      "cgroup": "/system.slice/docker-74356a67ad64a408ac60195493c9528e38f4eef809182cbc38afbed697d8be92.scope",
+      "config_sha256": "2056027ecff00524d57dc45dffc08475fe16612b0ae651acc59560083a261f7e",
+      "container_id": "74356a67ad64a408ac60195493c9528e38f4eef809182cbc38afbed697d8be92",
+      "image": "sha256:4b094ff0d98ad8d6821cca670ab574bc54ae0f31fb38c72ff5edba45da114fed",
+      "name": "portal-portal-api-1",
+      "network_namespace": "net:[4026532522]",
+      "pid": 1545203,
+      "project": "portal",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 328437154
+    },
+    {
+      "cgroup": "/system.slice/docker-198da4bd0a14e525ef0af94b37acc61671241687f6e92a698a4f108698e87bb8.scope",
+      "config_sha256": "66de1f4b2ab9c1d6c9f8be1e7e622bdf35ddca932b263584510842eb89163eb9",
+      "container_id": "198da4bd0a14e525ef0af94b37acc61671241687f6e92a698a4f108698e87bb8",
+      "image": "sha256:cd04ea408e185cb50076ea1c3988d444119b19aaae15aab45387ccf14b2a2f86",
+      "name": "portal-portal-minio-1",
+      "network_namespace": "net:[4026532664]",
+      "pid": 472300,
+      "project": "portal",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 302621951
+    },
+    {
+      "cgroup": "/system.slice/docker-95b6a28fd83878fd5638f5d765601a01d5d5621aaa5eeeb7aae4887f49c3299b.scope",
+      "config_sha256": "63741aa5d84c9fa91aadcfbc138c88da7d44e90a8acfb326801d235aa8dfec39",
+      "container_id": "95b6a28fd83878fd5638f5d765601a01d5d5621aaa5eeeb7aae4887f49c3299b",
+      "image": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+      "name": "portal-portal-nats-1",
+      "network_namespace": "net:[4026532818]",
+      "pid": 2072209,
+      "project": "portal",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 227164997
+    },
+    {
+      "cgroup": "/system.slice/docker-92247ad3a188c97ae1d00866c8896c24a6e56c93553e0cad11890cccef3e3da4.scope",
+      "config_sha256": "b57b92f6b7e971291ff8e546b587e5145743b1c9234b88574949f0db14b40a7d",
+      "container_id": "92247ad3a188c97ae1d00866c8896c24a6e56c93553e0cad11890cccef3e3da4",
+      "image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6",
+      "name": "portal-portal-postgres-1",
+      "network_namespace": "net:[4026533599]",
+      "pid": 2072215,
+      "project": "portal",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 227164997
+    },
+    {
+      "cgroup": "/system.slice/docker-8ef970197fefa92323e049f4716461098940c51ace019e636a247c10e8f9410f.scope",
+      "config_sha256": "e0e3c404d22c6ae26fa993e3d56433591bcaf7c77fc89a675b21f4856ff87840",
+      "container_id": "8ef970197fefa92323e049f4716461098940c51ace019e636a247c10e8f9410f",
+      "image": "sha256:c2fb7a8c1122f8b737c3cefee1b78cafda7b025a0f8c36b56b5b9424a1b9ea31",
+      "name": "portal-portal-web-1",
+      "network_namespace": "net:[4026533938]",
+      "pid": 1545894,
+      "project": "portal",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 328437923
+    },
+    {
+      "cgroup": "/system.slice/docker-eb93862f55a38d613fe77a20201e3d3804322bf529e484732de7eadfd7144381.scope",
+      "config_sha256": "a761bd5c21babdad675388c4798fd12bfbcdb2eb844e238b9f643f5140765987",
+      "container_id": "eb93862f55a38d613fe77a20201e3d3804322bf529e484732de7eadfd7144381",
+      "image": "sha256:5db1d65fc859bede1f37573af3275ac84db795ab638bd23c187b5b94bc58f619",
+      "name": "portal-probe-control-api-1",
+      "network_namespace": "net:[4026534318]",
+      "pid": 3179188,
+      "project": "portal-probe",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 266476859
+    },
+    {
+      "cgroup": "/system.slice/docker-96d2fed8643d68c77466a784f33c67c972ac65ac54bc216d44429091ecd7adbb.scope",
+      "config_sha256": null,
+      "container_id": "96d2fed8643d68c77466a784f33c67c972ac65ac54bc216d44429091ecd7adbb",
+      "image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6",
+      "name": "portal-probe-pg",
+      "network_namespace": "net:[4026534594]",
+      "pid": 4037702,
+      "project": null,
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 209484074
+    },
+    {
+      "cgroup": "/system.slice/docker-35d9ade7fa828c81879c2dbb515c6042050cbc6b245cec791fd1c12620314dc2.scope",
+      "config_sha256": "d44dea26ca8fc2ffd2023c78ab246a62f8b1ec7c4e56c864cd8783caf51fcbcf",
+      "container_id": "35d9ade7fa828c81879c2dbb515c6042050cbc6b245cec791fd1c12620314dc2",
+      "image": "sha256:89c6e3a12ea8f1409658fa47d7f9446c666e650ef55d7377cac268291e533d2f",
+      "name": "portal-probe-portal-api-1",
+      "network_namespace": "net:[4026533434]",
+      "pid": 4105927,
+      "project": "portal-probe",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 223463716
+    },
+    {
+      "cgroup": "/system.slice/docker-34430a326ead65152bd705656901584717fe93d770b62b5e7491a2ece8f13a1c.scope",
+      "config_sha256": "d26c9a5b885041497991f7ba6384cc1855be3c1e2960c115ac7880b8ff682de6",
+      "container_id": "34430a326ead65152bd705656901584717fe93d770b62b5e7491a2ece8f13a1c",
+      "image": "sha256:cd04ea408e185cb50076ea1c3988d444119b19aaae15aab45387ccf14b2a2f86",
+      "name": "portal-probe-portal-minio-1",
+      "network_namespace": "net:[4026534814]",
+      "pid": 4120683,
+      "project": "portal-probe",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 209749784
+    },
+    {
+      "cgroup": "/system.slice/docker-67fd88cd796f06c7e9ed161cd960da144845a193bff29bea12e47302d973ccb5.scope",
+      "config_sha256": "63741aa5d84c9fa91aadcfbc138c88da7d44e90a8acfb326801d235aa8dfec39",
+      "container_id": "67fd88cd796f06c7e9ed161cd960da144845a193bff29bea12e47302d973ccb5",
+      "image": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+      "name": "portal-probe-portal-nats-1",
+      "network_namespace": "net:[4026534885]",
+      "pid": 4120688,
+      "project": "portal-probe",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 209749784
+    },
+    {
+      "cgroup": "/system.slice/docker-2848e873b7b00576653a75fc1473189b1110785375e50a3d0d7668515ac95695.scope",
+      "config_sha256": "b57b92f6b7e971291ff8e546b587e5145743b1c9234b88574949f0db14b40a7d",
+      "container_id": "2848e873b7b00576653a75fc1473189b1110785375e50a3d0d7668515ac95695",
+      "image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6",
+      "name": "portal-probe-portal-postgres-1",
+      "network_namespace": "net:[4026534670]",
+      "pid": 4120411,
+      "project": "portal-probe",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 209749692
+    },
+    {
+      "cgroup": "/system.slice/docker-788d45316c48584cd07910b383f83ddf0a7a68921bfd97d9cca63ffeba80f9c1.scope",
+      "config_sha256": "db84460402ab58330467023b180585cdb8e978399cabca138af850f5cca1f072",
+      "container_id": "788d45316c48584cd07910b383f83ddf0a7a68921bfd97d9cca63ffeba80f9c1",
+      "image": "sha256:d50514cea6517403b0594798ca97689d630c4289e23075d69d23a42302db8b2c",
+      "name": "portal-probe-portal-web-1",
+      "network_namespace": "net:[4026534744]",
+      "pid": 3179579,
+      "project": "portal-probe",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 266477426
+    },
+    {
+      "cgroup": "/system.slice/docker-f313fced3b131025916f7e8bbbb71e2a8eda7c80764eda826b2a4eb1c755d8c3.scope",
+      "config_sha256": "57a71c4ab8ed203e8a4e845b57300c4b07e79fdae3cd44bb15524afe5d905337",
+      "container_id": "f313fced3b131025916f7e8bbbb71e2a8eda7c80764eda826b2a4eb1c755d8c3",
+      "image": "sha256:89c6e3a12ea8f1409658fa47d7f9446c666e650ef55d7377cac268291e533d2f",
+      "name": "portal-probe-quant-worker-py-1",
+      "network_namespace": "net:[4026535108]",
+      "pid": 4121263,
+      "project": "portal-probe",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 209750358
+    },
+    {
+      "cgroup": "/system.slice/docker-fbd016d1bc4481251c6a5bfe9ce960a47d4f9053bcc52e5b4a12e3d56247183b.scope",
+      "config_sha256": "66470f035ea1410c91b5dd154bf818add55e28643625dc8971922f5a85c6cfdb",
+      "container_id": "fbd016d1bc4481251c6a5bfe9ce960a47d4f9053bcc52e5b4a12e3d56247183b",
+      "image": "sha256:6a7f40605694608a1ecc8d8305b9deb5caceef2eafb6b8b6aa6f041fcc8208b2",
+      "name": "portal-probe-roadmap-task-board-api-1",
+      "network_namespace": "net:[4026534956]",
+      "pid": 4120691,
+      "project": "portal-probe",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 209749785
+    },
+    {
+      "cgroup": "/system.slice/docker-5a898d9947c4877e1702bf6888a1c53e8cc02d357e68728901d218a0af54f31e.scope",
+      "config_sha256": "a05d0d60bd664e7043a3ee1d164287bbf930932f9d86daa843c4ca31a64cb87b",
+      "container_id": "5a898d9947c4877e1702bf6888a1c53e8cc02d357e68728901d218a0af54f31e",
+      "image": "sha256:006e86f3ddfb8411cad03db59a0205fafe17a16de5cb147a6f5a96be37bc2798",
+      "name": "portal-quant-worker-py-1",
+      "network_namespace": "net:[4026533854]",
+      "pid": 2715971,
+      "project": "portal",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 322636673
+    },
+    {
+      "cgroup": "/system.slice/docker-1b4dd0402346386ffd73bef21555695eb8f56002bdbe3234184e70a6e900fa2a.scope",
+      "config_sha256": null,
+      "container_id": "1b4dd0402346386ffd73bef21555695eb8f56002bdbe3234184e70a6e900fa2a",
+      "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "name": "portal-research-e17-custody-pg",
+      "network_namespace": "net:[4026535852]",
+      "pid": 2099022,
+      "project": null,
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 397382577
+    },
+    {
+      "cgroup": "/system.slice/docker-aa7da793229de962591f6cf9ee37cba2391503c3c853f4064a0ef12e790b2ca9.scope",
+      "config_sha256": "42a9f3ad29ba77eeab6683f99070469673bb2f78824f3c4191093f8ee664306d",
+      "container_id": "aa7da793229de962591f6cf9ee37cba2391503c3c853f4064a0ef12e790b2ca9",
+      "image": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+      "name": "portal-research-preview-control-api-1",
+      "network_namespace": "net:[4026533290]",
+      "pid": 2692042,
+      "project": "portal-research-preview",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 552702190
+    },
+    {
+      "cgroup": "/system.slice/docker-5d83f6e7c716a6529686b9630fd18013c8239a611c89d98f0cb70a886adc6f1d.scope",
+      "config_sha256": "39900f6c97ca522eed2ce301949ec3524eba61776b91704cffb1ce35d1620ca4",
+      "container_id": "5d83f6e7c716a6529686b9630fd18013c8239a611c89d98f0cb70a886adc6f1d",
+      "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "name": "portal-research-preview-execution-postgres-1",
+      "network_namespace": "net:[4026535344]",
+      "pid": 3879769,
+      "project": "portal-research-preview",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 510607561
+    },
+    {
+      "cgroup": "/system.slice/docker-7b1fed9efa94c70736c7cee3063fd20d63ab026a11ad693b7132d5af17f29824.scope",
+      "config_sha256": "59551a2cdeb2bb8696602336920f30db42cd61b9ecaed3cbd55ebd96e50d4fd4",
+      "container_id": "7b1fed9efa94c70736c7cee3063fd20d63ab026a11ad693b7132d5af17f29824",
+      "image": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+      "name": "portal-research-preview-portal-api-1",
+      "network_namespace": "net:[4026536001]",
+      "pid": 3882648,
+      "project": "portal-research-preview",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 510609876
+    },
+    {
+      "cgroup": "/system.slice/docker-0e119abd8f5aa9fd398cd95f24bc044d120600b675213481a36b53c77e0586ce.scope",
+      "config_sha256": "63741aa5d84c9fa91aadcfbc138c88da7d44e90a8acfb326801d235aa8dfec39",
+      "container_id": "0e119abd8f5aa9fd398cd95f24bc044d120600b675213481a36b53c77e0586ce",
+      "image": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+      "name": "portal-research-preview-portal-nats-1",
+      "network_namespace": "net:[4026535554]",
+      "pid": 3100456,
+      "project": "portal-research-preview",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 363466763
+    },
+    {
+      "cgroup": "/system.slice/docker-4eb8a87cd7fec431cb10f0419a9b0f5107804473258807e946655f3ca2ddb924.scope",
+      "config_sha256": "2bcf754719a65b8672d0f6847c8ce9ef250fe1b7a0bc01d86ae7b5056d2c7faf",
+      "container_id": "4eb8a87cd7fec431cb10f0419a9b0f5107804473258807e946655f3ca2ddb924",
+      "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "name": "portal-research-preview-portal-postgres-1",
+      "network_namespace": "net:[4026535403]",
+      "pid": 3830680,
+      "project": "portal-research-preview",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 510541303
+    },
+    {
+      "cgroup": "/system.slice/docker-b6c98ed741c7748fcdba0594f9025af1cb2b779d92c943a203848e9f98417660.scope",
+      "config_sha256": "ba474b36efa77f66194f0adb5702f62ae4c27ac5e0b48d35d288c6a445598d5d",
+      "container_id": "b6c98ed741c7748fcdba0594f9025af1cb2b779d92c943a203848e9f98417660",
+      "image": "sha256:423e5b1efa920bbb2d3b3597f27d9e06f066229add9a25422d956a2a23a3e89a",
+      "name": "portal-research-preview-portal-web-1",
+      "network_namespace": "net:[4026535509]",
+      "pid": 3143813,
+      "project": "portal-research-preview",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 553308143
+    },
+    {
+      "cgroup": "/system.slice/docker-b0ee6f3947700d10868ddbb132b33da09d14dbdc583465e2043183e5d7523655.scope",
+      "config_sha256": "0f72a268430a77eb25eaaed39d741556ac417b65f8d8877a890d518689708a8b",
+      "container_id": "b0ee6f3947700d10868ddbb132b33da09d14dbdc583465e2043183e5d7523655",
+      "image": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+      "name": "portal-research-preview-quant-worker-py-1",
+      "network_namespace": "net:[4026535646]",
+      "pid": 3882641,
+      "project": "portal-research-preview",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 510609875
+    },
+    {
+      "cgroup": "/system.slice/docker-283c59611a6738eebda83c51df18ed1133c78e5cbdf453daa88b17f83b9467ca.scope",
+      "config_sha256": "bfc4f31e541f3dbeb75e5a642b99db77d6bcb7d315b81fda76c9ae78f7103700",
+      "container_id": "283c59611a6738eebda83c51df18ed1133c78e5cbdf453daa88b17f83b9467ca",
+      "image": "sha256:e32bd3220153caaead4828495f2fc8580973a4266182cd3aae261ca0687fca59",
+      "name": "portal-research-preview-roadmap-task-board-api-1",
+      "network_namespace": "net:[4026535412]",
+      "pid": 2253563,
+      "project": "portal-research-preview",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 514119255
+    },
+    {
+      "cgroup": "/system.slice/docker-1c4d43b33cfa74a301d80d7d44a6957809550e3cdf84a668f0166579332b161a.scope",
+      "config_sha256": "3933f1fad59ed3ce4f551fa9edc188f7864b07bff4d2cd296763387443ae2095",
+      "container_id": "1c4d43b33cfa74a301d80d7d44a6957809550e3cdf84a668f0166579332b161a",
+      "image": "sha256:c3fa9a77ed8b8153038b72e35fbe38e46775fc99ceae9b88582082b4a554d93d",
+      "name": "portal-roadmap-task-board-api-1",
+      "network_namespace": "net:[4026532451]",
+      "pid": 1545202,
+      "project": "portal",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 328437154
+    },
+    {
+      "cgroup": "/system.slice/docker-1181bcbb5a4253103bc3c75d33f0e47bcd429b4344f1e5006300741e0a8805d6.scope",
+      "config_sha256": null,
+      "container_id": "1181bcbb5a4253103bc3c75d33f0e47bcd429b4344f1e5006300741e0a8805d6",
+      "image": "sha256:481e7b1933f24708b15f0cb7663f5d954b0982900dc52a5cd55bb51add972497",
+      "name": "portal-showcase",
+      "network_namespace": "net:[4026533944]",
+      "pid": 1460305,
+      "project": null,
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 179882017
+    },
+    {
+      "cgroup": "/system.slice/docker-38604d6e80c4dc5d2d7b7de1417f597ae55aa742098c132464cf2cc275f24c0f.scope",
+      "config_sha256": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+      "container_id": "38604d6e80c4dc5d2d7b7de1417f597ae55aa742098c132464cf2cc275f24c0f",
+      "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+      "name": "portal-stable-v1-0-1-control-api-1",
+      "network_namespace": "net:[4026534479]",
+      "pid": 2619719,
+      "project": "portal-stable-v1-0-1",
+      "restarts": 0,
+      "revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+      "start_ticks": 322442238
+    },
+    {
+      "cgroup": "/system.slice/docker-043aa9b68e771bac775e26e792f09898aaf8219ab201aed30ea00fb6396975fa.scope",
+      "config_sha256": "7d1004a5207f1ad4f70b9a3d9816f9491f6d8fffd0181517f7c59f413e99c633",
+      "container_id": "043aa9b68e771bac775e26e792f09898aaf8219ab201aed30ea00fb6396975fa",
+      "image": "sha256:243c9de8b62c4718a64b2f839537c760c102b0e2fa6eb0d7ddc0cb6ce33ffdbf",
+      "name": "portal-stable-v1-0-1-portal-api-1",
+      "network_namespace": "net:[4026533180]",
+      "pid": 2619247,
+      "project": "portal-stable-v1-0-1",
+      "restarts": 0,
+      "revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+      "start_ticks": 322441978
+    },
+    {
+      "cgroup": "/system.slice/docker-eb33942173954311e835d287b5db7ab958a59a40c8be040af8544ce301d5aa95.scope",
+      "config_sha256": "66de1f4b2ab9c1d6c9f8be1e7e622bdf35ddca932b263584510842eb89163eb9",
+      "container_id": "eb33942173954311e835d287b5db7ab958a59a40c8be040af8544ce301d5aa95",
+      "image": "sha256:cd04ea408e185cb50076ea1c3988d444119b19aaae15aab45387ccf14b2a2f86",
+      "name": "portal-stable-v1-0-1-portal-minio-1",
+      "network_namespace": "net:[4026533252]",
+      "pid": 722341,
+      "project": "portal-stable-v1-0-1",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 277569228
+    },
+    {
+      "cgroup": "/system.slice/docker-66319af6abed3696b7a97103919109f76debca6bb1168c9b0fdf6c4360c590ac.scope",
+      "config_sha256": "63741aa5d84c9fa91aadcfbc138c88da7d44e90a8acfb326801d235aa8dfec39",
+      "container_id": "66319af6abed3696b7a97103919109f76debca6bb1168c9b0fdf6c4360c590ac",
+      "image": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+      "name": "portal-stable-v1-0-1-portal-nats-1",
+      "network_namespace": "net:[4026534093]",
+      "pid": 3714352,
+      "project": "portal-stable-v1-0-1",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 236767377
+    },
+    {
+      "cgroup": "/system.slice/docker-41e4bd63f550dcb0f36c6ffa7f993d2c260f3a749a235d6c432beb8f94607f69.scope",
+      "config_sha256": "b57b92f6b7e971291ff8e546b587e5145743b1c9234b88574949f0db14b40a7d",
+      "container_id": "41e4bd63f550dcb0f36c6ffa7f993d2c260f3a749a235d6c432beb8f94607f69",
+      "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+      "name": "portal-stable-v1-0-1-portal-postgres-1",
+      "network_namespace": "net:[4026533971]",
+      "pid": 3714345,
+      "project": "portal-stable-v1-0-1",
+      "restarts": 0,
+      "revision": null,
+      "start_ticks": 236767376
+    },
+    {
+      "cgroup": "/system.slice/docker-0a1d2f7c1792fd7cbc379f3bce4c3dd77a4be0831c78f4cda088366cf29914f5.scope",
+      "config_sha256": "4326852fe0f34ccf15ae7c22b9a7897be24f15bbc50ccef5ebcd9971130bf187",
+      "container_id": "0a1d2f7c1792fd7cbc379f3bce4c3dd77a4be0831c78f4cda088366cf29914f5",
+      "image": "sha256:e237aabba580445fd43ae839b057e2cdc001b0ab7f1be120e5056c199173cadc",
+      "name": "portal-stable-v1-0-1-portal-web-1",
+      "network_namespace": "net:[4026534186]",
+      "pid": 2620155,
+      "project": "portal-stable-v1-0-1",
+      "restarts": 0,
+      "revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+      "start_ticks": 322442808
+    },
+    {
+      "cgroup": "/system.slice/docker-aaa828d49ffe52469b79c571da0ec43652fae765d2ea0dc277967d16a711abd8.scope",
+      "config_sha256": "280425d89d45c3563c882d885625e5c31a6c63528e47f6f9a0ff243d9698fcc7",
+      "container_id": "aaa828d49ffe52469b79c571da0ec43652fae765d2ea0dc277967d16a711abd8",
+      "image": "sha256:243c9de8b62c4718a64b2f839537c760c102b0e2fa6eb0d7ddc0cb6ce33ffdbf",
+      "name": "portal-stable-v1-0-1-quant-worker-py-1",
+      "network_namespace": "net:[4026534747]",
+      "pid": 2619408,
+      "project": "portal-stable-v1-0-1",
+      "restarts": 0,
+      "revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+      "start_ticks": 322442029
+    },
+    {
+      "cgroup": "/system.slice/docker-05261cb38d4f02dab13a07687a14143efb0c389126ecbb7d616e2e5cc40c7762.scope",
+      "config_sha256": "3ab688f7e91def7c16a0ea62ce05182bf86371178e2b55c547f19140d77122ab",
+      "container_id": "05261cb38d4f02dab13a07687a14143efb0c389126ecbb7d616e2e5cc40c7762",
+      "image": "sha256:1db39f35413083c98c154df366168aca93fa462df09338bed68cfcf653254830",
+      "name": "portal-stable-v1-0-1-roadmap-task-board-api-1",
+      "network_namespace": "net:[4026533561]",
+      "pid": 2619248,
+      "project": "portal-stable-v1-0-1",
+      "restarts": 0,
+      "revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f",
+      "start_ticks": 322441979
+    }
+  ],
+  "runtime_acceptance": false,
+  "runtime_changes": 0,
+  "sample_count": 121,
+  "schema": "epg10.passive-observation.v1",
+  "source_requests": 0,
+  "status": "PASS_OBSERVATION_ONLY",
+  "wall_vs_monotonic_drift_ms": -0.002009,
+  "review_notes": [
+    "Existing workload, not controlled W-IDLE or B0.",
+    "One own short metadata-only Node require.resolve invocation occurred in this window; included overhead, not a clean benchmark repeat.",
+    "Pre-existing e16/e17/probe PostgreSQL containers retained untouched; no visible client backend at pre-window check."
+  ]
+}

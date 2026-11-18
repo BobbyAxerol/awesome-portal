@@ -1,0 +1,854 @@
+{
+  "schema": "epg10.security-final-reconciliation.v1",
+  "provenance": "BOUNDED_READ_ONLY_METADATA_NOT_RUNTIME_ACCEPTANCE",
+  "HK": {
+    "at_utc": "2026-10-16T11:52:08.017455+00:00",
+    "disk_available_bytes": 185210892288,
+    "docker_inventory": [
+      {
+        "Active": "43",
+        "Reclaimable": "13.15GB (37%)",
+        "Size": "34.7GB",
+        "TotalCount": "127",
+        "Type": "Images"
+      },
+      {
+        "Active": "58",
+        "Reclaimable": "17.29MB (0%)",
+        "Size": "3.575GB",
+        "TotalCount": "87",
+        "Type": "Containers"
+      },
+      {
+        "Active": "16",
+        "Reclaimable": "218.3MB (0%)",
+        "Size": "121.4GB",
+        "TotalCount": "80",
+        "Type": "Local Volumes"
+      },
+      {
+        "Active": "47",
+        "Reclaimable": "716.2MB",
+        "Size": "27.94GB",
+        "TotalCount": "402",
+        "Type": "Build Cache"
+      }
+    ],
+    "host": "HK",
+    "host_lock": {
+      "owner": "claude-burst-b16-a1parity",
+      "purpose": "P18.4 B16 amendment-1 harness-parity rerun (tsredis CPU 1.0): isolated TEST_ONLY 5 cells at 9k, --rm containers, no production mutation",
+      "started_utc": "2026-10-16T10:48:52+00:00",
+      "until_utc": "2026-10-16T13:48:52+00:00"
+    },
+    "owned_epg03_containers": [],
+    "running_container_count": 58,
+    "runtime": [
+      {
+        "config": "6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-execution-edge-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "98a191c75adf491d5b61de58f2e7d3b7e022a1f15533150d406ae9dc7f55ab0f",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-live-execution-edge-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "1582b40cffaa5fb00350fa79da5f32519d03271fdb6f6dc59e719bc73ca68d53",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-live-manager-projection-worker-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "name": "/portal-execution-edge-live-projection-postgres-1",
+        "release_path": "/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "9bb20c8894a71aa620bce6a62828f66336618526a0f8e6fcb4a1f46449d6384c",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "name": "/portal-execution-edge-live-source-proxy-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "95e96a9b2c547f91b6175a0055de71aaee7197db3b37ed48012509cacee73801",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-manager-projection-worker-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "name": "/portal-execution-edge-projection-postgres-1",
+        "release_path": "/srv/primus/portal/releases/501d27a3702f82cc8d7792ffa6e870485a5dbc09/deploy",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "cd79e9c68f67595e5ddbb88bddb95e4694a5b286ac25a72fb29bbe38d15190a1",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-sandbox-execution-edge-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "12294191799e7d112a3c8c8eff86f32dce1531fc40ec87062d87b13b53b23caa",
+        "image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+        "name": "/portal-execution-edge-sandbox-manager-projection-worker-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "79c88b6a12ac39912919c6f3a0ee1e4d53c994519ad40cc5939d8ca050b8e76e",
+        "image": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+        "name": "/portal-execution-edge-sandbox-projection-postgres-1",
+        "release_path": "/srv/primus/portal/releases/e18d21f223ea1a25e485801fad30265306b144d6/deploy",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "da4b44c00580f3e4dfa42b77fd160f72c79300d6ab3f226e595ec42ee7f26b77",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "name": "/portal-execution-edge-sandbox-source-proxy-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      },
+      {
+        "config": "21786bb09a2c5e94481b457a19a262c0cb2bf3fc6edb86629b053247ca329de8",
+        "image": "sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+        "name": "/portal-execution-edge-source-proxy-1",
+        "release_path": "/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy",
+        "restarts": 0,
+        "revision": "8814cd2a5f66aeac0828812dbb8340c4f0a4adbb"
+      }
+    ],
+    "schema": "epg10.source-runtime-metadata.v1",
+    "sources": [
+      {
+        "branch": "feat/v2-rust-first-okx-demo",
+        "head": "434bf38d5e73dd77de4e47b6a416bc35a19c2b6f",
+        "journal_sha256": "592a1606a6fb6a5b1da56adc099bf15858088950639d3bf1da10e3dfc69a61d6",
+        "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "bd66859489349fd7c05a5328d32ed83637766256961edb3a59241ad40080addf",
+        "untracked_count": 1,
+        "untracked_paths_sha256": "0f5ccc3e62adf3367f549fa8fc2ab99b763ff0c1580f8bbc0fef1ba4b1d800e2"
+      },
+      {
+        "branch": "feat/portfolio-account-v1_1-parallel",
+        "head": "e2003bfe8a21124fb78dbdfdda1ad774cbecdfc2",
+        "journal_sha256": "ac71ea7295c7b047d2ea9ad52e0393f0a9ba93ffc340eca2821a4bd3aa1b4e9f",
+        "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "731c7c0e45465ddcf2242ccd690199e6743e5ed44d7871aada1e2f4b415e664b",
+        "untracked_count": 2,
+        "untracked_paths_sha256": "6ce76bdd3d30223be4c23bc1c100dab811aa2f7494061a52ee92c6f14d99f459"
+      },
+      {
+        "branch": "fix/p184-dl-closure",
+        "head": "fe8c857cfa97405aaccef3ae45ad7e4f0f9a7c56",
+        "journal_sha256": "8cd246c83302b2733fa66adcf47336d8bc10c47b578536ca1f17b870795644d4",
+        "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "branch": "feat/manager-v2-paper-read",
+        "head": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+        "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 4,
+        "untracked_paths_sha256": "51ffb84753145825dbfd449cfa77440dd156af83e34fc40fd6400b82663e75a4"
+      }
+    ],
+    "worktrees": "worktree /home/bobby/.worktrees/portal-execution-manager-v2\nHEAD 54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4\nbranch refs/heads/feat/manager-v2-paper-read\n\nworktree /home/bobby/.worktrees/portal-eds-current-bff\nHEAD bab79402be7ca65adb529080865a4fe1a7d5a0bb\nbranch refs/heads/feat/eds-current-bff\n\nworktree /home/bobby/.worktrees/portal-eds09-owner-return-handoff\nHEAD ec97c4835acd1d68e9b58dd8b68015ceecd96864\nbranch refs/heads/docs/eds09-ts-owner-return-handoff\n\nworktree /home/bobby/.worktrees/portal-execution-data-activation\nHEAD 6f6503ea21327bc39946f48c697b4287c673f12c\nbranch refs/heads/feat/execution-data-activation\n\nworktree /home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2\nHEAD f10c15f6bd6d7e30358af5946c2877b33b8fe4c2\nbranch refs/heads/feat/execution-edge-upgrade-v1_2\n\nworktree /home/bobby/.worktrees/portal-r4r5-activation\nHEAD d63a650112eca3b2b17f4df1faedd1a0ab06ceaa\nbranch refs/heads/deploy/r4r5-activation\n\n"
+  },
+  "SGP": {
+    "at_utc": "2026-10-16T11:52:33.833502+00:00",
+    "disk_available_bytes": 167971209216,
+    "docker_inventory": [
+      {
+        "Active": "26",
+        "Reclaimable": "74.4GB (83%)",
+        "Size": "88.82GB",
+        "TotalCount": "328",
+        "Type": "Images"
+      },
+      {
+        "Active": "52",
+        "Reclaimable": "471kB (19%)",
+        "Size": "2.466MB",
+        "TotalCount": "60",
+        "Type": "Containers"
+      },
+      {
+        "Active": "22",
+        "Reclaimable": "13.78GB (43%)",
+        "Size": "32.04GB",
+        "TotalCount": "97",
+        "Type": "Local Volumes"
+      },
+      {
+        "Active": "93",
+        "Reclaimable": "62.97GB",
+        "Size": "195.9GB",
+        "TotalCount": "3776",
+        "Type": "Build Cache"
+      }
+    ],
+    "host": "SGP",
+    "host_lock": null,
+    "owned_epg03_containers": [],
+    "research_contracts": {
+      "apps/control-api/src/execution-v2/read-publication.ts": "61fd25aadecfb358949e3b6096f9fc9cd620bedb0e7a846a031204f4a6cb34ba",
+      "packages/contracts/fixtures/execution-v2-foundation.synthetic.valid.json": "7b3044c2f4c990633a4550ab2c521f0fdf0108f9e70027bcbc1c2df02643cb75",
+      "packages/contracts/schemas/execution-v2-foundation.v1.schema.json": "7a28e0545005789da1a54d304dbf242a2413d464aa905b83d5641e40821c4828"
+    },
+    "running_container_count": 52,
+    "runtime": [
+      {
+        "config": "963a3d8436bd48220cc41cafb73a18e8c6d0d4fd6abe72eddb843539b8918f60",
+        "image": "sha256:8400439bc2cea6baf9bb86d3b4e851d4a0601531de86a7c1a47347f5837b7641",
+        "name": "/portal-control-api-1",
+        "release_path": "/home/bobby/portal-integration",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "e0e3c404d22c6ae26fa993e3d56433591bcaf7c77fc89a675b21f4856ff87840",
+        "image": "sha256:c2fb7a8c1122f8b737c3cefee1b78cafda7b025a0f8c36b56b5b9424a1b9ea31",
+        "name": "/portal-portal-web-1",
+        "release_path": "/home/bobby/portal-integration",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "42a9f3ad29ba77eeab6683f99070469673bb2f78824f3c4191093f8ee664306d",
+        "image": "sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d",
+        "name": "/portal-research-preview-control-api-1",
+        "release_path": "/home/bobby/portal-research",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "59551a2cdeb2bb8696602336920f30db42cd61b9ecaed3cbd55ebd96e50d4fd4",
+        "image": "sha256:20da76618efb92e1b8930339a6797aba3b5bc72849bdf5173c62617cf554b2b5",
+        "name": "/portal-research-preview-portal-api-1",
+        "release_path": "/home/bobby/portal-research",
+        "restarts": 0,
+        "revision": ""
+      },
+      {
+        "config": "26c0d954d1f3af2133b2a528f39430f814e3c35d350095aecf7178f3bc90cedb",
+        "image": "sha256:d2c23ad668fcf4e03e0c6edffe9b9cc1a8d5a7b3787dd9ae280677f76e965263",
+        "name": "/portal-stable-v1-0-1-control-api-1",
+        "release_path": "/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose",
+        "restarts": 0,
+        "revision": "e4fd93658de1ff0614126a85d70e59a23c25a01f"
+      }
+    ],
+    "schema": "epg10.source-runtime-metadata.v1",
+    "sources": [
+      {
+        "branch": "docs/research-loop-plan",
+        "head": "e6620f416e43bc8c18a044339a598c436d8556ba",
+        "path": "/home/bobby/portal-research",
+        "staged_sha256": "998b5b3c3d657a575cc258a6fd4ac01c5dcf76ef0bd86c9b196686ed056c7e95",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "branch": "main",
+        "head": "533162635f56584d630e3d971d77d50860595f15",
+        "path": "/home/bobby/portal-main-release",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_count": 0,
+        "untracked_paths_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "additional_ts_manager_runtime": [
+    {
+      "name": "/portal-manager-read-paper-v2-portal_manager_read-1",
+      "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+      "config": "225db7755ea8ca9317e18af8febf06c7f3a4f92892a57f344a626126c98bf889",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 3,
+      "ports": {
+        "8023/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8023"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/portal-manager-read-paper-v2-portal_manager_issuer-1",
+      "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+      "config": "7710fc8e206a9812eb2abea7d7d222a1c568217a2f7ee6d8b122ed0009043342",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 0,
+      "ports": {
+        "8024/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8024"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/trading-system-manager-read-sandbox-portal_manager_read-1",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "config": "453f59be45d1935795155c1aa2e44ceb7c6e10d636878f54f7319e4fa831a5bd",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 4,
+      "ports": {
+        "8023/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8123"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/trading-system-manager-read-sandbox-portal_manager_issuer-1",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "config": "a97d6be022ee4c9c11e61539980aa80a15a96d77f18d2af94b057cae1d89c4df",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 0,
+      "ports": {
+        "8024/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8124"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/trading-system-manager-read-live-portal_manager_read-1",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "config": "976ebe89ed6839c23119c4ed7b927a6465de0cd333941c93fcbe077d740f8111",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 4,
+      "ports": {
+        "8023/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8223"
+          }
+        ]
+      }
+    },
+    {
+      "name": "/trading-system-manager-read-live-portal_manager_issuer-1",
+      "image": "sha256:0bd48db3ca54ce2b236caaf55f01a1c02bb6050d4cbb2a48c2d54f291aa873b7",
+      "config": "e68c442990013c2c22a55a0816d62124823aa5d0aabfc95ad27278a2d76664ba",
+      "revision": "",
+      "release_path": "/home/bobby/.worktrees/trading-system-portal-execution-owner-v2",
+      "restarts": 0,
+      "ports": {
+        "8024/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8224"
+          }
+        ]
+      }
+    }
+  ],
+  "comparison": {
+    "hk_runtime_unchanged": true,
+    "sgp_runtime_unchanged": true,
+    "manager_runtime_unchanged": true,
+    "baseline_edge_proxy_projection_and_sgp_count": 17,
+    "additional_ts_manager_baseline_count": 6,
+    "zero_restart_counts_for_original17": true,
+    "manager_restart_counts_are_historical": [
+      {
+        "name": "/portal-manager-read-paper-v2-portal_manager_read-1",
+        "restarts": 3
+      },
+      {
+        "name": "/portal-manager-read-paper-v2-portal_manager_issuer-1",
+        "restarts": 0
+      },
+      {
+        "name": "/trading-system-manager-read-sandbox-portal_manager_read-1",
+        "restarts": 4
+      },
+      {
+        "name": "/trading-system-manager-read-sandbox-portal_manager_issuer-1",
+        "restarts": 0
+      },
+      {
+        "name": "/trading-system-manager-read-live-portal_manager_read-1",
+        "restarts": 4
+      },
+      {
+        "name": "/trading-system-manager-read-live-portal_manager_issuer-1",
+        "restarts": 0
+      }
+    ]
+  },
+  "source_alignment": {
+    "at_utc": "2026-10-16T11:53:06.158739+00:00",
+    "changed_nonjournal_sources": [
+      {
+        "path": "upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md",
+        "phase07_sha256": "7d79d8de84eab19d0d2de3dce2b4c9278a691277b0b8b4379a7db0000dfc8945",
+        "repository": "ts_pm",
+        "sha256": "fb3ad2dbe42efa46e5465635b49e5e25cb4d62225c83466e33d3d312c42e4b3e",
+        "unchanged_from07": false
+      },
+      {
+        "path": "services/portfolio_management/binding_repository.py",
+        "phase07_sha256": "f1c8eef0a73b43aecc38cc9e4ba63cf304043c63b517bee0cdff0aff903ca48a",
+        "repository": "ts_pm",
+        "sha256": "cee38e2c62415043a00e8ba1b36d8e0da4747df3ef49f4ca5ceed5c00ffaa9b1",
+        "unchanged_from07": false
+      }
+    ],
+    "detailed_guides": [
+      {
+        "path": "upgrade/upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md",
+        "sha256": "9047f765f7878f7284363bc6322ff14f3feb5fff4913cc7d4b9a328afd591985",
+        "unchanged_from07": true
+      },
+      {
+        "path": "upgrade/upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md",
+        "sha256": "af6d53725d58aca4dfefb0fb212272c2df281b7d605a1f7bca5e54ced9b2eeb0",
+        "unchanged_from07": true
+      },
+      {
+        "path": "upgrade/upgrade_v1.2/REVIEW_DECISIONS_AND_PM_DELTA_v1.2_VI.md",
+        "sha256": "0a266334f26d02bc4be858017d44e980e4ab5a4a5a4a007dad6827f565f06b86",
+        "unchanged_from07": true
+      },
+      {
+        "path": "upgrade/upgrade_v1.2/SCORE_REGIME_SPECIFICATION_v1.1_FINAL_VI.md",
+        "sha256": "d77a05fc0c6b481114c0d4055a2ff0c09f6b7a3cc0ca1447f691d92f139adbad",
+        "unchanged_from07": true
+      }
+    ],
+    "source_files": [
+      {
+        "path": "domain/source_journal_coverage.py",
+        "phase07_sha256": "59f9017f6bad4094c87eaf893dd7e35a7264716c45876945286d98a1245404d9",
+        "repository": "ts_next",
+        "sha256": "59f9017f6bad4094c87eaf893dd7e35a7264716c45876945286d98a1245404d9",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/source_change_journal/read_source.py",
+        "phase07_sha256": "258746849106db79d57990efe6fb2337ef4a628bd8c3bbf0e72e7f0eb8087a2d",
+        "repository": "ts_next",
+        "sha256": "258746849106db79d57990efe6fb2337ef4a628bd8c3bbf0e72e7f0eb8087a2d",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/source_change_journal/publication_repository.py",
+        "phase07_sha256": "f10bfc9a0e194987b23e0db04b08430de6412b191196ef3f82dbb0264755ddcd",
+        "repository": "ts_next",
+        "sha256": "f10bfc9a0e194987b23e0db04b08430de6412b191196ef3f82dbb0264755ddcd",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/source_change_journal/consumer_repository.py",
+        "phase07_sha256": "854db0c11184c1e52dcfb24d67300ae7c24e2e569792a83f055656c674368df9",
+        "repository": "ts_next",
+        "sha256": "854db0c11184c1e52dcfb24d67300ae7c24e2e569792a83f055656c674368df9",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/source_change_journal/writer.py",
+        "phase07_sha256": "fc7525229f81df42893e0021da54a70ed3438a0f4f070a5f696314fc7c5fbcd8",
+        "repository": "ts_next",
+        "sha256": "fc7525229f81df42893e0021da54a70ed3438a0f4f070a5f696314fc7c5fbcd8",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/paper_execution/repository.py",
+        "phase07_sha256": "201e938f7daafe265dc41bbb6811b76529cb0efb4d085070c5dde3824cd47a2b",
+        "repository": "ts_next",
+        "sha256": "201e938f7daafe265dc41bbb6811b76529cb0efb4d085070c5dde3824cd47a2b",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/economics/repository.py",
+        "phase07_sha256": "141e3cf4e2463bfeb15d16b25f897111c47a6d9454ea42b40c85d8c0424517c2",
+        "repository": "ts_next",
+        "sha256": "141e3cf4e2463bfeb15d16b25f897111c47a6d9454ea42b40c85d8c0424517c2",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/private_events/repository.py",
+        "phase07_sha256": "97aec288c5ac678de31dbc9f7f5b038940e27dffd90343a2e62569c792018123",
+        "repository": "ts_next",
+        "sha256": "97aec288c5ac678de31dbc9f7f5b038940e27dffd90343a2e62569c792018123",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portfolio_management/repository.py",
+        "phase07_sha256": "2d48b60485b76d01492dc0b80dcaa36853a91477b65e29e10b09c798042889bb",
+        "repository": "ts_next",
+        "sha256": "2d48b60485b76d01492dc0b80dcaa36853a91477b65e29e10b09c798042889bb",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portal_execution_owner/manager_facade.py",
+        "phase07_sha256": "244315bf26c71ef74a131cac727f1d7d30e09ed25aa634f0f894f2de32a0d628",
+        "repository": "ts_next",
+        "sha256": "244315bf26c71ef74a131cac727f1d7d30e09ed25aa634f0f894f2de32a0d628",
+        "unchanged_from07": true
+      },
+      {
+        "path": "rust/crates/trading-runtime/src/publication.rs",
+        "phase07_sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+        "repository": "ts_next",
+        "sha256": "13f21d5369b641dafaaff9f5664ee5d97c5d870376b57ace3ce8feba17e59c05",
+        "unchanged_from07": true
+      },
+      {
+        "path": "rust/crates/trading-runtime/src/logical_replication.rs",
+        "phase07_sha256": "9991c191c06ac988526489ab0d9447881627e6f933cec636714d933cd6e6ae82",
+        "repository": "ts_next",
+        "sha256": "9991c191c06ac988526489ab0d9447881627e6f933cec636714d933cd6e6ae82",
+        "unchanged_from07": true
+      },
+      {
+        "path": "init-db/48-v2-source-change-journal.sql",
+        "phase07_sha256": "b35a4f05020c4518bfe752c6ad71bdbc32a3e09624763d2ebe23cea04b5e33d4",
+        "repository": "ts_next",
+        "sha256": "b35a4f05020c4518bfe752c6ad71bdbc32a3e09624763d2ebe23cea04b5e33d4",
+        "unchanged_from07": true
+      },
+      {
+        "path": "init-db/59-v2-source-commit-order-replay.sql",
+        "phase07_sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+        "repository": "ts_next",
+        "sha256": "0115a6bc9142e330ec48b9ada7ecc6506548815190790ed776178f332ced6a96",
+        "unchanged_from07": true
+      },
+      {
+        "path": "init-db/60-v2-source-journal-paper-reader.sql",
+        "phase07_sha256": "e6d37838552bcb2d67531666956377faf3940e4930ceef9c6d733d31696ab9c2",
+        "repository": "ts_next",
+        "sha256": "e6d37838552bcb2d67531666956377faf3940e4930ceef9c6d733d31696ab9c2",
+        "unchanged_from07": true
+      },
+      {
+        "path": "init-db/67-v2-p16-consumer-publication-controls.sql",
+        "phase07_sha256": "7ada53a992661723eab1f701821fa1aba0ef983f978ffc245d4651e9bcd84e87",
+        "repository": "ts_next",
+        "sha256": "7ada53a992661723eab1f701821fa1aba0ef983f978ffc245d4651e9bcd84e87",
+        "unchanged_from07": true
+      },
+      {
+        "path": "contracts/portal-execution-owner/ts-oc-02/n03-source-implementation/owner-implementation.manifest.json",
+        "phase07_sha256": "f3a496034abbb9fc3e29789d147b8040825015ed700113725717dd460d414872",
+        "repository": "ts_next",
+        "sha256": "f3a496034abbb9fc3e29789d147b8040825015ed700113725717dd460d414872",
+        "unchanged_from07": true
+      },
+      {
+        "path": "contracts/baseline/rust-first-v2/p16/consumer-publication-contract.json",
+        "phase07_sha256": "342b3bce1fdbc3b74f94227be27ca226fe758d3b20e2392f63d9136fff590189",
+        "repository": "ts_next",
+        "sha256": "342b3bce1fdbc3b74f94227be27ca226fe758d3b20e2392f63d9136fff590189",
+        "unchanged_from07": true
+      },
+      {
+        "path": "upgrade/TS_PORTFOLIO_ACCOUNT_MANAGEMENT_UPGRADE_GUIDE_v1.1 (1).md",
+        "phase07_sha256": "7d79d8de84eab19d0d2de3dce2b4c9278a691277b0b8b4379a7db0000dfc8945",
+        "repository": "ts_pm",
+        "sha256": "fb3ad2dbe42efa46e5465635b49e5e25cb4d62225c83466e33d3d312c42e4b3e",
+        "unchanged_from07": false
+      },
+      {
+        "path": "services/portal_execution_owner/identity/human.py",
+        "phase07_sha256": "abea7c04ba789226b8c0f069b7243014cbb0262e3f7a0f058350731b1343f01c",
+        "repository": "ts_pm",
+        "sha256": "abea7c04ba789226b8c0f069b7243014cbb0262e3f7a0f058350731b1343f01c",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portfolio_management/membership_repository.py",
+        "phase07_sha256": "0f9e4a5514c305b1089e155e120a450b4e6907962552dab615259cb7061cfa71",
+        "repository": "ts_pm",
+        "sha256": "0f9e4a5514c305b1089e155e120a450b4e6907962552dab615259cb7061cfa71",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portfolio_management/instance_repository.py",
+        "phase07_sha256": "16fac06f8253c84e7a67729bd245681f7d5717744853bd440f87e080fb936f74",
+        "repository": "ts_pm",
+        "sha256": "16fac06f8253c84e7a67729bd245681f7d5717744853bd440f87e080fb936f74",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portfolio_management/binding_repository.py",
+        "phase07_sha256": "f1c8eef0a73b43aecc38cc9e4ba63cf304043c63b517bee0cdff0aff903ca48a",
+        "repository": "ts_pm",
+        "sha256": "cee38e2c62415043a00e8ba1b36d8e0da4747df3ef49f4ca5ceed5c00ffaa9b1",
+        "unchanged_from07": false
+      },
+      {
+        "path": "services/portfolio_management/operator_reports_repository.py",
+        "phase07_sha256": "0dd378a565090f5312ebf8ea4f8d86fb6de6d3310903a90ac84c9c04f74dd76d",
+        "repository": "ts_pm",
+        "sha256": "0dd378a565090f5312ebf8ea4f8d86fb6de6d3310903a90ac84c9c04f74dd76d",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portfolio_management/report_delivery.py",
+        "phase07_sha256": "03cdac9be4f8e9176c5d6045d3cf3b7dfa9133ddbfc487fb78e3e7e818304d13",
+        "repository": "ts_pm",
+        "sha256": "03cdac9be4f8e9176c5d6045d3cf3b7dfa9133ddbfc487fb78e3e7e818304d13",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portfolio_management/report_wire.py",
+        "phase07_sha256": "add29f554b4a67393140b4978c86ed95aec25cd0a3c7b0b211d54c2eb32a657e",
+        "repository": "ts_pm",
+        "sha256": "add29f554b4a67393140b4978c86ed95aec25cd0a3c7b0b211d54c2eb32a657e",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portfolio_management/operator_runtime.py",
+        "phase07_sha256": "a8231a07c8acb780e933608845e0e93307642737ffe80a3db8b9899c7ffb9a5e",
+        "repository": "ts_pm",
+        "sha256": "a8231a07c8acb780e933608845e0e93307642737ffe80a3db8b9899c7ffb9a5e",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/portfolio_management/profile_attempts.py",
+        "phase07_sha256": "0d1c6832e43b4352744a341f388a0cd6843196f5fca40c0525b86fbc6f185d3d",
+        "repository": "ts_pm",
+        "sha256": "0d1c6832e43b4352744a341f388a0cd6843196f5fca40c0525b86fbc6f185d3d",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/risk_pool/capital_repository.py",
+        "phase07_sha256": "6077d5309edf1396f745732c3d86079dc5246eed89783d38431c308fc9bf404f",
+        "repository": "ts_pm",
+        "sha256": "6077d5309edf1396f745732c3d86079dc5246eed89783d38431c308fc9bf404f",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/risk_pool/recall_repository.py",
+        "phase07_sha256": "6185e0ab03dbf46dcec276e366d49e4adb56d9144da941f9312be6d02198dfbb",
+        "repository": "ts_pm",
+        "sha256": "6185e0ab03dbf46dcec276e366d49e4adb56d9144da941f9312be6d02198dfbb",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/risk_pool/lock_reallocation_repository.py",
+        "phase07_sha256": "ec0a518a0c015f3716198846596966994deefe183e13da2cbba4c1c9115044e9",
+        "repository": "ts_pm",
+        "sha256": "ec0a518a0c015f3716198846596966994deefe183e13da2cbba4c1c9115044e9",
+        "unchanged_from07": true
+      },
+      {
+        "path": "services/risk_pool/admission_repository.py",
+        "phase07_sha256": "d868fec52e9a4c49ec45990118d3d9c6feb9ad664a96932e1a8160ee6fc25817",
+        "repository": "ts_pm",
+        "sha256": "d868fec52e9a4c49ec45990118d3d9c6feb9ad664a96932e1a8160ee6fc25817",
+        "unchanged_from07": true
+      },
+      {
+        "path": "contracts/baseline/portfolio-account-v1_1/pma11-13-report-catalogue.json",
+        "phase07_sha256": "ef60d8db492b7b8d6d496fa88566c4a03a1134cb57f95f6c84c2ba2cf690facf",
+        "repository": "ts_pm",
+        "sha256": "ef60d8db492b7b8d6d496fa88566c4a03a1134cb57f95f6c84c2ba2cf690facf",
+        "unchanged_from07": true
+      },
+      {
+        "path": "DATA_LAYER_SERVICE_ACCESS_GUIDE.md",
+        "phase07_sha256": "ef9aec518b33579a8556d88cd1e8a02909f9977e2fcdb37dc44d4140bd0513e8",
+        "repository": "dl_closure",
+        "sha256": "ef9aec518b33579a8556d88cd1e8a02909f9977e2fcdb37dc44d4140bd0513e8",
+        "unchanged_from07": true
+      }
+    ],
+    "nonjournal_source_count": 34,
+    "unchanged_nonjournal_count": 32,
+    "research": {
+      "observed_from_utc": "2026-10-16T11:43:24Z",
+      "observed_to_utc": "2026-10-16T11:43:40Z",
+      "checkout": "/home/bobby/portal-research",
+      "branch": "docs/research-loop-plan",
+      "head": "e6620f416e43bc8c18a044339a598c436d8556ba",
+      "snapshot_atomic": false,
+      "concurrent_work": "ELP2-10_UNCOMMITTED_MANAGER_CONSUMER_FENCE_AND_READ_OPTIMIZATION",
+      "digests": {
+        "unstaged_binary_diff_start": "33ed01ceb4709cedd0690d6b8da4e85f010e71c998d57e7e23935680af806cee",
+        "unstaged_binary_diff_end": "4bc708e6204b85f4083ad86d066d0ed1997307b91863e702c11134a50dba4414",
+        "staged_binary_diff": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "untracked_paths_nul": "38e9d6242201645049f919e21d6eb8a1d359d10e5937406399b85fecaed19c4c",
+        "final_status_porcelain_nul": "2805bf02218a4776a481c6fe1dad443680433494bba0ecda8ad2386db77ab2aa"
+      },
+      "source_hash_base": "apps/control-api/src/",
+      "source_sha256": {
+        "execution-v2/access-policy.ts": "f19fc034f4953e350978c747abf65445ae082469be97471467018a8fa6405167",
+        "execution-v2/access-trust.ts": "14a1d3210f0d633ae5e11bdb1e57c6e6a7611429a58bec94428b6fe7cc9ed59a",
+        "execution-v2/access.service.ts": "ade195afd7f42436d75bfad0e46f68dfeb5c343ec945ef49cf4fbb716ec23176",
+        "execution-v2/read-scope.ts": "f79cae3fac5dbe36f088ac3828262ef0e9edd986b073689f48ea41343d486056",
+        "execution-v2/read-publication.ts": "61fd25aadecfb358949e3b6096f9fc9cd620bedb0e7a846a031204f4a6cb34ba",
+        "execution-v2/read-fields.ts": "cfd22384336b6a9ef55acb9a8b4981faa0f8b277c1e07d7822389a0abe1c99b6",
+        "execution-v2/publication-adapter.ts": "cc092b1602e06ae897ca4c857dc0d39b6bce28d130b0a2f7a54cb38da682975f",
+        "execution-v2/realtime.ts": "ce9ed6ab7c4139ee2f0293532f933ab9a67234c2b863c4f10d52afe5f3370be9",
+        "execution-v2/realtime-commit.ts": "9dcd71dcc2e65e51391900ad51ef7edaa85558c206bf293cf44ef954962478f9",
+        "execution-v2/realtime.contract.ts": "79be182f33a01134a000cf5fa4413ddd355faca09fb8be0ea33316af745562f4",
+        "execution-v2/command-trust.ts": "7b58c6bb27b1b788e3e75d62c7a5db484fa4c8a7bc39474a2387b8bc48cc9559",
+        "execution-v2/command.service.ts": "e4c3b791f784f1135bd984ff8bc73b3c0cd4bb7a0161e59ae076a49f90d72d89",
+        "app.module.ts": "49bc66f405fe53b9edc7a32a87d4ba1309cd19d94936db9551376f435421209c",
+        "main.ts": "d9383c44b73cbd6eaccfe986a1737487611c8d032f7f64df1227274a39738b34",
+        "execution/realtime.controller.ts": "2d5837fbf557eac3ddbbcf9b168c6f5e68b72a7e17f1fede03b62549d0f59e2f"
+      },
+      "wiring": {
+        "qualified_trust_injected_by_main": false,
+        "scoped_replay_hub_instantiated_in_application_source": false,
+        "commissioned_source_adapter_or_listener": false,
+        "source_verified_publication_enabled": false,
+        "evidence_level": "COMMITTED_COMPONENT_NOT_RUNTIME_ACCEPTANCE"
+      },
+      "remaining_external_gates": [
+        "ELP2-03 actual Stan mutation ceiling and owner-reviewed researcher field matrix",
+        "ELP2-03 qualified TS mapping and acceptance",
+        "ELP2-05-001 authenticated source coverage and producer fence",
+        "ELP2-06-002 commissioned source/model/field publication and named projection",
+        "ELP2-07-001 current trust/transport and source commit authority"
+      ],
+      "peer_writes": 0,
+      "tests_or_builds": 0,
+      "runtime_mutations": 0
+    },
+    "pm_latest_review": {
+      "head": "e2003bfe8a21124fb78dbdfdda1ad774cbecdfc2",
+      "change": "Docs-only guide1.6/1.7 and journal58.65 now reference Edge v1.2 and plan18 remaining gaps. Reviewed full guide delta; no business math/phase-body/runtime/provider authority change. Recovery code remains WIP, six prepared cases NOT_RUN; no mounted provider. Root read-only final audit records exact concurrent dirty hashes.",
+      "authority_widened": false
+    }
+  },
+  "cleanup": {
+    "at_utc": "2026-10-16T11:51:28.870869+00:00",
+    "buildkit_cache_created_or_removed": 0,
+    "disk_available_after_bytes": 168109350912,
+    "disk_available_before_bytes": 159725641728,
+    "disk_delta_is_observational_shared_host": true,
+    "exact_removed_path": "/tmp/epg10-08-2o2e0k22",
+    "host": "SGP",
+    "images_built": 0,
+    "images_pulled": 0,
+    "images_removed": 0,
+    "networks_created_or_removed": 0,
+    "operational_resources_removed": 0,
+    "own_lock_absent": true,
+    "owned_test_containers_remaining": 0,
+    "raw_receipt_sha256": "3fc50c53ffc41e57c5c6b1cdc1659cb3837710128020c0aaa071715f381ab4af",
+    "recovery": "Source remains in feature Git; sanitized hashes/metrics receipts retained; disposable TEST_ONLY PG and compiler/cache/log copies intentionally discarded.",
+    "removed_allocated_bytes": 8387694592,
+    "residual_test_keys_overwritten": 0,
+    "schema": "epg10.security-owned-cleanup.v1",
+    "source_manifest_sha256": "7b8130d48037c0084fc3dffbb44954feecd49059915df4daafdc4f1637189197",
+    "target_absent": true,
+    "tls_directories_remaining_before_cleanup": [],
+    "volumes_created_or_removed": 0
+  },
+  "retention": {
+    "phase_test_artifacts": [],
+    "new_images_or_rollback_artifacts": [],
+    "operational_release_rollback_artifacts": "NOT_TOUCHED_NOT_REQUALIFIED; all17original protected +6additional TS Manager runtime tuples unchanged; no owned image created; no expired certificate is an approved rollback set",
+    "shared_buildkit_prune": "NOT_PERFORMED_FOREIGN_HK_LOCK_AND_SHARED_SGP_BUILD_RELEASE_RETENTION_OUTSIDE_APPROVED_SCOPE",
+    "active_feature_worktrees": "All6 Portal worktrees retained; none merged or abandoned by08",
+    "canonical_source_checkout": "/home/bobby/.worktrees/portal-execution-manager-v2 feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+    "stable_release_checkout": "/home/bobby/portal-main-release main@533162635f56584d630e3d971d77d50860595f15",
+    "source_not_runtime": "Candidate source hashes/feature commit are not a deployed release or image"
+  },
+  "push": false,
+  "merge": false,
+  "deploy": false,
+  "post_interruption_source_audit": {
+    "at_utc": "2026-10-16T12:06:52.322866+00:00",
+    "local_selected_changes": [],
+    "local_selected_hashes": 34,
+    "peer_writes": 0,
+    "research": {
+      "at_utc": "2026-10-16T12:06:52.249730+00:00",
+      "branch": "docs/research-loop-plan",
+      "head": "e6620f416e43bc8c18a044339a598c436d8556ba",
+      "path": "/home/bobby/portal-research",
+      "selected_changes": [],
+      "selected_security_hashes": 15,
+      "staged_sha256": "998b5b3c3d657a575cc258a6fd4ac01c5dcf76ef0bd86c9b196686ed056c7e95",
+      "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "tests_builds_runtime_mutations": 0,
+    "local_peers": [
+      {
+        "branch": "feat/v2-rust-first-okx-demo",
+        "head": "434bf38d5e73dd77de4e47b6a416bc35a19c2b6f",
+        "path": "/home/bobby/.worktrees/trading-system-next-upgrade",
+        "previous_head": "434bf38d5e73dd77de4e47b6a416bc35a19c2b6f",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "bd66859489349fd7c05a5328d32ed83637766256961edb3a59241ad40080addf"
+      },
+      {
+        "branch": "feat/portfolio-account-v1_1-parallel",
+        "head": "e2003bfe8a21124fb78dbdfdda1ad774cbecdfc2",
+        "path": "/home/bobby/.worktrees/trading-system-pm-v1_1",
+        "previous_head": "e2003bfe8a21124fb78dbdfdda1ad774cbecdfc2",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "731c7c0e45465ddcf2242ccd690199e6743e5ed44d7871aada1e2f4b415e664b"
+      },
+      {
+        "branch": "fix/p184-dl-closure",
+        "head": "fe8c857cfa97405aaccef3ae45ad7e4f0f9a7c56",
+        "path": "/home/bobby/.worktrees/data-layer-p184-closure",
+        "previous_head": "fe8c857cfa97405aaccef3ae45ad7e4f0f9a7c56",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "branch": "feat/manager-v2-paper-read",
+        "head": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+        "path": "/home/bobby/.worktrees/portal-execution-manager-v2",
+        "previous_head": "54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+        "staged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "unstaged_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  }
+}

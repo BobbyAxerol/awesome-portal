@@ -50,6 +50,7 @@ trap cleanup EXIT
 # application source are mounted later, read-only, in a networkless container.
 cp "${CONTRACTS_DIR}/package.json" "${CONTRACTS_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
+  --cpus 2 --memory 1536m --memory-swap 1536m \
   -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
@@ -93,6 +94,7 @@ mv "${DEPS_DIR}/node_modules" "${WORKSPACE_DIR}/node_modules"
 ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network none --read-only \
+  --cpus 2 --memory 1536m --memory-swap 1536m \
   -u "${CONTAINER_USER}" \
   -v "${WORKSPACE_DIR}:/repo" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
