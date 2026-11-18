@@ -93,6 +93,14 @@ describe("the environment manifest", () => {
     const paper = parity.profiles.find((entry) => entry.environment === "paper");
     expect(paper?.origin_configured).toBe(true);
   });
+
+  it("states an unconfigured OKX Paper origin as its own readiness fact", () => {
+    const parity = environmentParity(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true" }));
+    const okx = parity.capability_readiness.find((entry) => entry.capability === "source.paper-okx");
+    expect(okx?.state).toBe("UNAVAILABLE");
+    expect(okx?.reason_code).toBe("EDS_OKX_ORIGIN_NOT_CONFIGURED");
+    expect(parity.profiles.find((entry) => entry.environment === "paper-okx")?.origin_configured).toBe(false);
+  });
 });
 
 describe("the freshness policy", () => {

@@ -112,6 +112,10 @@ const EnvSchema = z.object({
   // P4-D taxonomy (Bobby approved 2026-09-03): the DNSE/VN paper family gets
   // its own profile home. Off until the Edge publishes the N13B origin.
   FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: z.enum(["true", "false"]).default("false"),
+  // OKX Paper profile (owner decision 2026-11-18, staged): PAPER_OKX_SWAP is a
+  // third Paper family beside BINANCE and DNSE. Off until the Edge instance,
+  // Manager and catalogue for it exist; Core wiring is groundwork only.
+  FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
   // EDS-11R4 remains separately dark even when a current-source profile is
@@ -173,6 +177,15 @@ const EnvSchema = z.object({
     z.string().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
   ),
   EXECUTION_EDGE_PAPER_DNSE_AUDIENCE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).max(160).optional(),
+  ),
+  EXECUTION_EDGE_PAPER_OKX_ORIGIN: OptionalServiceOriginSchema,
+  EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
+  ),
+  EXECUTION_EDGE_PAPER_OKX_AUDIENCE: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).max(160).optional(),
   ),
@@ -395,6 +408,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       audience: config.EXECUTION_EDGE_PAPER_DNSE_AUDIENCE,
       expectedProfileId: "PAPER_DNSE_VNM",
       expectedAudience: "portal-execution-edge-paper-dnse",
+    },
+    {
+      environment: "paper",
+      keyPrefix: "PAPER_OKX",
+      feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX,
+      origin: config.EXECUTION_EDGE_PAPER_OKX_ORIGIN,
+      profileId: config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID,
+      audience: config.EXECUTION_EDGE_PAPER_OKX_AUDIENCE,
+      expectedProfileId: "PAPER_OKX_SWAP",
+      expectedAudience: "portal-execution-edge-paper-okx",
     },
     {
       environment: "sandbox",

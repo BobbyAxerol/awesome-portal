@@ -165,3 +165,58 @@ describe("P4-D DNSE paper-profile taxonomy config (owner-approved 2026-09-03)", 
     expect(loadConfig({ ...baseEnv(), ...edgeCommon, FEATURE_EXECUTION_EDGE: "false" }).FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE).toBe("false");
   });
 });
+
+describe("OKX Paper profile config (owner decision 2026-11-18, staged groundwork, flag off)", () => {
+  const edgeCommon = {
+    QUERY_CURSOR_KEYS_JSON:
+      '{"query-k1":"query-taxonomy-test-key-that-is-longer-than-thirty-two-bytes"}',
+    GOVERNANCE_APPLY_KEYS_JSON:
+      '{"governance-k1":"governance-taxonomy-test-key-longer-than-thirty-two-b"}',
+    FEATURE_EXECUTION_EDGE: "true",
+    EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+    EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+    EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+    EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+  };
+
+  it("fails closed when the OKX flag is on without its own origin, profile and audience", () => {
+    expect(() => loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+    })).toThrow(/EXECUTION_EDGE_PAPER_OKX_ORIGIN.*EXECUTION_EDGE_PAPER_OKX_PROFILE_ID.*EXECUTION_EDGE_PAPER_OKX_AUDIENCE/);
+  });
+
+  it("pins the OKX profile and audience to PAPER_OKX_SWAP / portal-execution-edge-paper-okx", () => {
+    expect(() => loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+      EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.execution.internal",
+      EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_OTHER",
+      EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper-okx",
+    })).toThrow(/profile and audience must match the N13B pins/);
+    expect(() => loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+      EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.execution.internal",
+      EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+      EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper",
+    })).toThrow(/profile and audience must match the N13B pins/);
+  });
+
+  it("loads a complete OKX profile configuration and stays inert by default", () => {
+    const config = loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+      EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.execution.internal",
+      EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+      EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper-okx",
+    });
+    expect(config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID).toBe("PAPER_OKX_SWAP");
+    expect(config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX).toBe("true");
+    expect(loadConfig({ ...baseEnv(), ...edgeCommon, FEATURE_EXECUTION_EDGE: "false" }).FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX).toBe("false");
+  });
+});
