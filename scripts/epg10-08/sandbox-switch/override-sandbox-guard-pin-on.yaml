@@ -1,0 +1,13 @@
+# SANDBOX source-database identity pin (guard ON), Edge side only: adds the two pin variables and a read-only bind of the pin file.
+# Stacked after the live Sandbox Edge stack (render-final/edge-sandbox.rendered.json, plus override-edge-memo-on.yaml when the catalogue memo is on); nothing else changes
+# (image 167e031a, release file and its pin, memo TTL as it is).
+services:
+  execution-edge:
+    environment:
+      EDGE_MANAGER_SOURCE_DB_PIN_FILE: "/run/manager-source-pin/pin.json"
+      EDGE_MANAGER_SOURCE_DB_PIN_SHA256: "sha256:1fd93331ed27902d049366451e1c787eb024992c6aac9388145ef8259cfa51f6"
+    volumes:
+      - type: bind
+        source: /home/bobby/.local/state/portal-execution-edge/releases/guard-pin-sandbox-20261118/pin.sandbox.json
+        target: /run/manager-source-pin/pin.json
+        read_only: true

@@ -1,0 +1,32 @@
+#!/bin/bash
+# Fake `docker` for tests/test_step_shim.sh: answers `inspect --format` and `logs` from files in $SHIM_STATE, records EVERY call in $SHIM_STATE/calls.log and never touches a real daemon.
+# `compose ... up` is simulated: it only rewrites the fake Edge's env/health files according to which override files appear in the -f list.
+echo "docker $*" >> "$SHIM_STATE/calls.log"
+S=$SHIM_STATE
+case "$1" in
+inspect)
+  name=$2; fmt=${4:-}
+  case "$fmt" in
+    '{{.Image}}') cat "$S/img.$name" ;;
+    '{{.State.Status}}') cat "$S/status.$name" ;;
+    '{{.RestartCount}}') cat "$S/restarts.$name" ;;
+    '{{if .State.Health}}{{.State.Health.Status}}{{end}}') cat "$S/health.$name" ;;
+    '{{range .Config.Env}}{{println .}}{{end}}') cat "$S/env.$name" ;;
+    *) echo "" ;;
+  esac ;;
+logs) : ;;
+compose)
+  shift; files=(); proj=""
+  while [ $# -gt 0 ]; do case "$1" in -p) proj=$2; shift 2 ;; -f) files+=("$(basename "$2")"); shift 2 ;; up) shift; break ;; *) shift ;; esac; done
+  echo "COMPOSE project=$proj files=${files[*]} args=$*" >> "$S/calls.log"
+  [ "$proj" = portal-execution-edge-sandbox ] || exit 0
+  name=portal-execution-edge-sandbox-execution-edge-1
+  grep -v -E '^EDGE_MANAGER_(CATALOGUE_CACHE_TTL_MS|SOURCE_DB_PIN_FILE|SOURCE_DB_PIN_SHA256)=' "$S/env.$name" > "$S/env.tmp"
+  ttl=0; pin=0
+  for f in "${files[@]}"; do [ "$f" = override-edge-memo-on.yaml ] && ttl=30000; [ "$f" = override-sandbox-guard-pin-on.yaml ] && pin=1; done
+  echo "EDGE_MANAGER_CATALOGUE_CACHE_TTL_MS=$ttl" >> "$S/env.tmp"
+  if [ $pin = 1 ]; then printf 'EDGE_MANAGER_SOURCE_DB_PIN_FILE=/run/manager-source-pin/pin.json\nEDGE_MANAGER_SOURCE_DB_PIN_SHA256=sha256:x\n' >> "$S/env.tmp"; fi
+  mv "$S/env.tmp" "$S/env.$name"
+  if [ $pin = 1 ] && [ -e "$S/fail_pin_up" ]; then echo unhealthy > "$S/health.$name"; else echo healthy > "$S/health.$name"; fi ;;
+*) echo "docker $* [REFUSED BY SHIM: not simulated]" >> "$S/calls.log"; exit 0 ;;
+esac

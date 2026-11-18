@@ -1,0 +1,11 @@
+# Sandbox DB step, executed 2026-11-18 (record)
+
+Owner approved by exact hash (script sha256 `8b72acbb4402cc48cddbc73ef507400d87259f25913d4cd736aee22ad5fd54c8`, SQL draft `d436664c…6877`, installer `0238a113…3013`). Run 04:27:14Z-04:27:43Z from the coordinator, database `trading_system_sandbox` only.
+
+- `login`: role `ts_portal_manager_read_sandbox_facade` (LOGIN NOINHERIT, connection limit 4, read-only, statement 5 s, lock 1 s, idle-in-tx 10 s), member of group role `ts_portal_manager_read`; random 64-hex password, written only to the 0600 DSN file in `/home/bobby/secure/portal-manager-sandbox-20261116` (never printed, never in argv).
+- `grants`: CONNECT, USAGE, SELECT on `schema_migration_ledger` and the 67 catalogue relations for the group role (68 SELECT grants, one transaction). The login is NOINHERIT: `has_table_privilege(login, ...)` is false by design; the Manager does `SET LOCAL ROLE ts_portal_manager_read`. (The script's `verify` mode reads that query as 0|0: use `preflight.py` instead.)
+- `hba`: one line `hostssl trading_system_sandbox ts_portal_manager_read_sandbox_facade 172.18.0.0/16 scram-sha-256` before the reject line; backup `pg_hba.conf.bak-sbx-20261118T042716Z` in PGDATA; `pg_hba_file_rules` checked for errors before `pg_reload_conf()`.
+- `indexes`: `t1_read_index_install.py` dry-run, apply, verify; Sandbox ledger 122 to 124, both files APPLIED. The test image tag `local/trading-system-test:laneb-native-b7b59839b5a6` no longer existed; it was re-tagged to `laneb-native-82b02b64ebe5` (same python and asyncpg 0.31.0; the installer is the pinned-hash code from the mounted repo).
+- Preflight (`preflight.py`, one-off container on executor_network, TLS verify-full, scram, SET ROLE, counts only): ledger 124, write refused (`ReadOnlySQLTransactionError`); counts strategies 4, account_balances 5, command_transport_bindings 5, economic_facts 319, orders 446, fills 241, domain_events 831, source_change_journal 42,588, portfolios 0.
+- Rollback: `sandbox_db_step.sh rollback-db` (restores pg_hba, revokes grants, drops the login; the two ledger rows and the indexes stay by design; delete the DSN file by hand).
+- Not changed by this step: Sandbox Manager (0bd48db3), Sandbox Edge, projection worker, Paper, Live, the Paper database, the legacy database.
