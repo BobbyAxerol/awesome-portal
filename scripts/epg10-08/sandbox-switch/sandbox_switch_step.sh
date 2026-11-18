@@ -1,6 +1,8 @@
 #!/bin/bash
 # DRAFT, NOT EXECUTED. SANDBOX (SANDBOX_BINANCE_USDM) switch helper:
-#   status | baseline | stage | worker-stop | manager | edge | memo-on | verify | rollback-edge | rollback-manager | worker-start
+#   status | baseline | stage | worker-stop | manager | edge | memo-on | memo-off | pin-stage | pin-on | pin-off | verify | rollback-edge | rollback-manager | worker-start
+# 2026-11-18 (after the switch): the Sandbox now runs Manager 8d4765a4 + Edge 167e031a (release pin 14778175, memo off, guard off). memo-on/memo-off/pin-on/pin-off recreate ONLY the
+# Sandbox Edge from render-final/edge-sandbox.rendered.json plus the overlay files wanted (memo-on override, guard-pin override); each step keeps the OTHER overlay as it is live.
 # Owner approved the switch (D1-D12 recommended); the DB step (login, grants, indexes, pg_hba, facade-db.dsn in the new secret dir) is done by the coordinator BEFORE `stage`.
 # Boundary: only the Sandbox Manager read service, the Sandbox Edge service and the Sandbox projection worker. Never Paper, Live or the issuers.
 # Compose files are RENDERED from `docker inspect` by sandbox_render.py (the original compose sources are gone or unreadable); their sha256 are pinned below. A drift check
@@ -20,7 +22,9 @@ D=$R/sandbox-switch-20261116                                        # staging di
 RD=$D/render-final                                                  # rendered compose files (0600; they contain host paths). $D/render holds the first, faulty render of 2026-11-18 (see the doc) and stays untouched
 SEC=/home/bobby/secure/portal-manager-sandbox-20261116              # private dir: the DB step creates it (0700) with ONLY facade-db.dsn
 SRC=${SBX_SRC:-/home/bobby/.worktrees/edge-from-running-source-20261116/scripts/epg10-08/sandbox-switch}
-RENDER="python3 -B $SRC/sandbox_render.py"
+RENDER=${SBX_RENDER:-"python3 -B $SRC/sandbox_render.py"}   # SBX_RENDER only for the shim tests (tests/test_step_shim.sh)
+
+PD=${SBX_PD:-$R/guard-pin-sandbox-20261118}                                    # staged guard pin (pin file + override, non-secret), created by pin-stage
 
 # --- approved hashes -------------------------------------------------------------------------------------------------------------------------------------------
 CAT_SHA=372e99b2d0476a7240a53069c77def71f5cdaf50e7f83522f822be5d726db19a       # relation-catalogue.json (106: 67 real-tool-qualified + 39 carried from the current Sandbox catalogue)
@@ -32,6 +36,8 @@ EDGE_RENDER_SHA=3ae54225f4c403b59ef9b437c18e18d1209c56289bc467bb2ea85ca6b9cc9a81
 MEMO_ON_SHA=b2ee0c620ce2043f1aa7d32131cf5d2dd9f7f849d127786d463396d891d28342
 MGR_ROLLBACK_SHA=3567eff15a65d2c0d6936f023c4880fa45565e94d9e912bda321a558e539be7d
 EDGE_ROLLBACK_SHA=1dea1b15261b2016ea15ccdeab3cc14ea2558793d3a4ac435dd4e0659ae0b03b
+PIN_SHA=1fd93331ed27902d049366451e1c787eb024992c6aac9388145ef8259cfa51f6       # pin.sandbox.json (SANDBOX_BINANCE_USDM, trading_system_sandbox, ledger minimum 124)
+OVR_SHA=db75fcced83586d8bf177aea11b869985e8ed2165ed844271fba4b696f6b8bb0       # override-sandbox-guard-pin-on.yaml
 
 h() { sha256sum "$1" | cut -c1-64; }
 need() { [ "$(h "$1")" = "$2" ] || { echo "STOP: hash of $1 differs from approved $2"; exit 2; }; }
@@ -53,7 +59,27 @@ need_sec() {   # every file the Manager mounts, mode 0600, the two package files
 }
 mdc() { docker compose -p trading-system-manager-read-sandbox -f "$1" "${@:2}"; }
 edc() { docker compose -p portal-execution-edge-sandbox -f "$1" "${@:2}"; }
-wait_healthy() { s=""; for i in 1 2 3 4 5 6; do sleep 10; s=$(docker inspect $EC --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}'); echo "health=$s"; [ "$s" = healthy ] && break; done; }
+# live Edge overlay state, read from the running container (never assumed)
+evar() { docker inspect $EC --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n "s/^$1=//p"; }
+memo_state() { t=$(evar EDGE_MANAGER_CATALOGUE_CACHE_TTL_MS); if [ -n "$t" ] && [ "$t" != 0 ]; then echo on; else echo off; fi; }
+guard_state() { if [ -n "$(evar EDGE_MANAGER_SOURCE_DB_PIN_FILE)" ]; then echo on; else echo off; fi; }
+# recreate ONLY execution-edge from the rendered file + the wanted overlays: edge_recreate <memo on|off> <guard on|off>
+edge_recreate() {
+  a=(-p portal-execution-edge-sandbox -f $RD/edge-sandbox.rendered.json)
+  [ "$1" = on ] && a+=(-f $RD/override-edge-memo-on.yaml)
+  [ "$2" = on ] && a+=(-f $PD/override-sandbox-guard-pin-on.yaml)
+  docker compose "${a[@]}" up -d --no-deps --pull never --force-recreate execution-edge 2>&1 | tail -n 5
+}
+# gate of every post-switch Edge step: renders approved, Manager and Edge on the new images, release pin as approved, the live Edge still renders to the approved file
+gate_edge_live() {
+  need_renders; need $D/manager-catalogue-release.json $REL_SHA
+  [ "$(docker inspect $MC --format '{{.Image}}')" = $NEW_M ] || { echo "STOP: the Manager is not on the new image"; exit 3; }
+  [ "$(docker inspect $MC --format '{{.State.Status}}')" = running ] || { echo "STOP: the Manager is not running"; exit 3; }
+  [ "$(docker inspect $EC --format '{{.Image}}')" = $NEW_E ] || { echo "STOP: Edge not on the new image"; exit 3; }
+  [ "$(evar EDGE_MANAGER_CATALOGUE_RELEASE_SHA256)" = "sha256:$REL_SHA" ] || { echo "STOP: the Edge release pin is not the approved release"; exit 3; }
+  $RENDER check --out $RD --only edge --live      # the live Edge (any overlay state) still renders to the approved base file
+}
+wait_healthy() { s=""; for i in 1 2 3 4 5 6; do sleep 10; s=$(docker inspect $EC --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}'); echo "health=$s"; [ "$s" = healthy ] && break; done; return 0; }   # return 0: an unhealthy last probe must not abort the script under set -e before its own rollback branch runs
 
 case "${1:-}" in
 status) state; docker inspect $WC --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E '^EDGE_MANAGER_PROJECTION_(OWNER_DIGEST|REBUILD_AUTHORIZED|ENABLED)' | sed -E 's/(sha256:[0-9a-f]{12})[0-9a-f]+/\1.../'; ls -l $D $RD 2>&1 | head -20 ;;
@@ -102,9 +128,33 @@ edge)
   wait_healthy; state
   [ "$(docker inspect $EC --format '{{.Image}}')" = $NEW_E ] && [ "$s" = healthy ] || { echo "STOP: Edge not healthy on the new image: run rollback-edge then rollback-manager"; exit 4; }
   echo "edge recreate done $(date -u +%FT%TZ)" ;;
-memo-on)   # separate step after a clean verify: memo 30 s via the one-value override
-  need_renders; [ "$(docker inspect $EC --format '{{.Image}}')" = $NEW_E ] || { echo "STOP: Edge not on the new image"; exit 3; }
-  edc $RD/edge-sandbox.rendered.json -f $RD/override-edge-memo-on.yaml up -d --no-deps --pull never --force-recreate execution-edge 2>&1 | tail -n 5; wait_healthy; state ;;
+memo-on|memo-off)   # separate step after a clean verify; the guard overlay stays exactly as it is live
+  gate_edge_live; want=${1#memo-}; g=$(guard_state)
+  [ "$g" != on ] || need $PD/override-sandbox-guard-pin-on.yaml $OVR_SHA
+  [ "$(memo_state)" != $want ] || { echo "STOP: the memo is already $want"; exit 3; }
+  echo "edge $1 start $(date -u +%FT%TZ) (guard $g kept)"; edge_recreate $want $g; wait_healthy; state
+  [ "$s" = healthy ] || { echo "STOP: Edge not healthy after $1: run memo-$([ $want = on ] && echo off || echo on) or rollback-edge"; exit 4; }
+  echo "edge $1 done $(date -u +%FT%TZ)" ;;
+pin-stage)   # no service touched; creates ONE new directory with the pin file and the override, never overwrites
+  need $SRC/pin.sandbox.json $PIN_SHA; need $SRC/override-sandbox-guard-pin-on.yaml $OVR_SHA
+  [ ! -e $PD ] || { echo "STOP: $PD already exists (pin-stage never overwrites)"; exit 3; }
+  install -d -m 0755 $PD; install -m 0644 $SRC/pin.sandbox.json $PD/pin.sandbox.json; install -m 0644 $SRC/override-sandbox-guard-pin-on.yaml $PD/override-sandbox-guard-pin-on.yaml
+  need $PD/pin.sandbox.json $PIN_SHA; need $PD/override-sandbox-guard-pin-on.yaml $OVR_SHA; ls -l $PD; echo "pin-stage done $(date -u +%FT%TZ)" ;;
+pin-on)   # guard ON: adds EDGE_MANAGER_SOURCE_DB_PIN_FILE/_SHA256 + a read-only bind of the pin file; the memo overlay stays as it is live
+  gate_edge_live; need $PD/pin.sandbox.json $PIN_SHA; need $PD/override-sandbox-guard-pin-on.yaml $OVR_SHA
+  [ "$(guard_state)" = off ] || { echo "STOP: the guard is already on"; exit 3; }
+  m=$(memo_state); echo "edge pin-on start $(date -u +%FT%TZ) (memo $m kept)"
+  edge_recreate $m on; wait_healthy; state
+  if [ "$(docker inspect $EC --format '{{.Image}}')" != $NEW_E ] || [ "$s" != healthy ]; then
+    echo "Edge not healthy with the pin (a pin refused at start exits the process): rolling back to guard off"; edge_recreate $m off; wait_healthy; state
+    echo "STOP: pin-on failed, rolled back $(date -u +%FT%TZ)"; exit 4
+  fi
+  echo "edge pin-on done $(date -u +%FT%TZ)  -> run: $0 verify" ;;
+pin-off)   # rollback of pin-on: the same stack WITHOUT the pin variables and mount (the state that runs today); the memo overlay stays as it is live
+  gate_edge_live; [ "$(guard_state)" = on ] || { echo "STOP: the guard is already off"; exit 3; }
+  m=$(memo_state); echo "edge pin-off start $(date -u +%FT%TZ) (memo $m kept)"; edge_recreate $m off; wait_healthy; state
+  [ "$s" = healthy ] || { echo "STOP: Edge not healthy after pin-off: run rollback-edge"; exit 4; }
+  echo "edge pin-off done $(date -u +%FT%TZ)" ;;
 verify) # read-only
   state
   echo "Manager mounts (destinations):"; docker inspect $MC --format '{{range .Mounts}}{{.Destination}}{{println}}{{end}}' | sort | tr '\n' ' '; echo
@@ -114,7 +164,8 @@ verify) # read-only
   docker inspect $EC --format 'Edge image={{.Image}} release-mount={{range .Mounts}}{{if eq .Destination "/run/manager-release/catalogue.json"}}yes{{end}}{{end}}'
   docker inspect $EC --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -E '^EDGE_MANAGER_(CATALOGUE_RELEASE_SHA256|CATALOGUE_CACHE_TTL_MS|SOURCE_DB_PIN)' | sed -E 's/(sha256:[0-9a-f]{12})[0-9a-f]+/\1.../'
   echo "Edge log CATALOGUE_DRIFT lines (120 s): $(docker logs --since 120s $EC 2>&1 | grep -c CATALOGUE_DRIFT || true) (expected 0)"
-  echo "Edge log SOURCE_DB_IDENTITY_MISMATCH lines (120 s): $(docker logs --since 120s $EC 2>&1 | grep -c SOURCE_DB_IDENTITY_MISMATCH || true) (expected 0: guard off)"
+  echo "Edge overlay state: memo=$(memo_state) guard=$(guard_state)"
+  echo "Edge log SOURCE_DB_IDENTITY_MISMATCH lines (120 s): $(docker logs --since 120s $EC 2>&1 | grep -c SOURCE_DB_IDENTITY_MISMATCH || true) (expected 0; the guard has nothing to refuse while it is off)"
   echo "Edge restarts: $(docker inspect $EC --format '{{.RestartCount}}') (expected 0)" ;;
 rollback-edge)    # the CURRENT (pre-switch) Edge state, rendered from the running container before the switch: image d6aa7a51, no release variables
   need $RD/edge-sandbox.rollback.rendered.json $EDGE_ROLLBACK_SHA
@@ -123,5 +174,5 @@ rollback-manager) # the CURRENT (pre-switch) Manager state: image 0bd48db3, old 
   need $RD/manager-sandbox.rollback.rendered.json $MGR_ROLLBACK_SHA
   echo "manager rollback start $(date -u +%FT%TZ)"; mdc $RD/manager-sandbox.rollback.rendered.json up -d --no-deps --pull never --force-recreate portal_manager_read 2>&1 | tail -n 5; sleep 8; state ;;
 worker-start) docker start $WC >/dev/null; state ;;
-*) echo "usage: sandbox_switch_step.sh status|baseline|stage|worker-stop|manager|edge|memo-on|verify|rollback-edge|rollback-manager|worker-start"; exit 64 ;;
+*) echo "usage: sandbox_switch_step.sh status|baseline|stage|worker-stop|manager|edge|memo-on|memo-off|pin-stage|pin-on|pin-off|verify|rollback-edge|rollback-manager|worker-start"; exit 64 ;;
 esac

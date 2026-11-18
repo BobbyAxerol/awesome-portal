@@ -7478,6 +7478,56 @@ mod tests {
     }
 
     #[test]
+    fn the_sandbox_pin_is_loaded_at_start_only_for_sandbox_and_its_profile_with_exact_bytes() {
+        const PIN: &[u8] =
+            include_bytes!("../../../../../scripts/epg10-08/sandbox-switch/pin.sandbox.json");
+        const PROFILE: &str = "SANDBOX_BINANCE_USDM";
+        use sha2::Digest as _;
+        let path = env::temp_dir().join(format!("edge-sandbox-pin-test-{}", Uuid::now_v7()));
+        fs::write(&path, PIN).unwrap();
+        let file = path.to_str().unwrap();
+        let digest = format!("sha256:{:x}", sha2::Sha256::digest(PIN));
+        let load =
+            |environment: &str, profile: Option<&str>, file: Option<&str>, digest: Option<&str>| {
+                manager_source_identity_pinned(
+                    ManagerCompatibilityAuthority::canonical().unwrap(),
+                    environment,
+                    profile,
+                    file,
+                    digest,
+                )
+            };
+        assert!(
+            load("sandbox", Some(PROFILE), None, None).is_ok(),
+            "no pin: unchanged behaviour"
+        );
+        assert!(load("sandbox", Some(PROFILE), Some(file), Some(&digest)).is_ok());
+        for refusal in [
+            load("sandbox", Some(PROFILE), Some(file), None),
+            load("sandbox", Some(PROFILE), None, Some(&digest)),
+            load("paper", Some(PROFILE), Some(file), Some(&digest)),
+            load("live", Some("LIVE_BINANCE_USDM"), Some(file), Some(&digest)),
+            load("sandbox", Some("SANDBOX_OKX"), Some(file), Some(&digest)),
+            load("sandbox", None, Some(file), Some(&digest)),
+            load(
+                "sandbox",
+                Some(PROFILE),
+                Some(file),
+                Some(&format!("sha256:{}", "0".repeat(64))),
+            ),
+            load(
+                "sandbox",
+                Some(PROFILE),
+                Some("/missing/pin.json"),
+                Some(&digest),
+            ),
+        ] {
+            assert!(refusal.is_err());
+        }
+        fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
     fn mtls_is_mandatory_and_rejects_a_client_from_another_ca() {
         let trusted = certificate_fixture("sgp-control-api");
         let untrusted = certificate_fixture("untrusted-client");

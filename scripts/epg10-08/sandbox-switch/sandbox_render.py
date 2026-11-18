@@ -7,7 +7,12 @@ Sub-commands (never prints secret content, host paths of secrets or DSN parts; p
                         (JWKS, revocations, server cert/key, mTLS CA, cursor key), the Postgres CA from the Paper Manager mount, and a runtime env with ONE key changed
                         (TS_PORTAL_MANAGER_READ_DB_CONNECTION_LIMIT 4 -> 2). facade-db.dsn is never written or overwritten (the DB step creates it); catalogue and policy come from
                         the committed package via sandbox_switch_step.sh stage.
-  check --out DIR [--only manager|edge]   re-render in memory and compare with DIR/RENDER.sha256 (drift detector: images, env, mounts of the running containers changed or not)
+  check --out DIR [--only manager|edge] [--live]
+                        re-render in memory and compare with DIR/RENDER.sha256 (drift detector: images, env, mounts of the running containers changed or not).
+                        --only X inspects ONLY the containers that group is derived from (manager: Sandbox Manager + Paper Manager reference; edge: Sandbox Edge + Live Edge reference);
+                        the other group is never inspected, so its state cannot break the check. --live: the container is already on its post-switch state; the rollback renders
+                        (which describe the PRE-switch container) are not compared and the Manager's own S1 source id env is accepted. Overlay state of the Edge (catalogue memo
+                        TTL, the two source-DB pin variables) never counts as drift: it is delivered by override files, not by the base render.
   dsn --sec DIR         shape check of facade-db.dsn (no part printed)
 Inputs it reads: docker inspect of the Sandbox Manager, Sandbox Edge and Paper Manager containers; nothing else is read except the files it copies in `secrets`.
 """
@@ -43,6 +48,8 @@ S1_DESCRIPTOR = {
     "catalogue_sha256": SEAL,
 }
 CONNECTION_LIMIT_KEY = "TS_PORTAL_MANAGER_READ_DB_CONNECTION_LIMIT"
+S1_ENV_KEY = "TS_PORTAL_MANAGER_S1_SOURCE_ID"
+OVERLAY_ENV_KEYS = ("EDGE_MANAGER_SOURCE_DB_PIN_FILE", "EDGE_MANAGER_SOURCE_DB_PIN_SHA256")   # delivered by override-sandbox-guard-pin-on.yaml, not by the base render
 MANAGER_FILES = {  # destination in the container -> file name in SEC
     "/run/secrets/manager-runtime.env": "facade-runtime.env",
     "/run/secrets/facade-db.dsn": "facade-db.dsn",
@@ -86,14 +93,14 @@ def mount_source(container: dict, destination: str) -> str:
     return next(m["Source"] for m in container["Mounts"] if m["Destination"] == destination)
 
 
-def render_manager(sbx: dict, paper: dict) -> dict:
+def render_manager(sbx: dict, paper: dict, live: bool = False) -> dict:
     own = dict(item.split("=", 1) for item in sbx["Config"]["Env"])
     names = ("PYTHONDONTWRITEBYTECODE", "PYTHONPATH", "PYTHONUNBUFFERED", "TS_PORTAL_MANAGER_READ_RUNTIME_ENV_FILE")   # the four Paper's rendered file sets explicitly
-    extra = set(compose_env(sbx)) - set(names)
+    extra = set(compose_env(sbx)) - set(names) - ({S1_ENV_KEY} if live else set())
     if extra:
         raise SystemExit(f"STOP: the Sandbox Manager has compose-set env beyond the four known names: {sorted(extra)}")
     env = {name: own[name] for name in names}
-    env["TS_PORTAL_MANAGER_S1_SOURCE_ID"] = "sha256:" + sha(canonical(S1_DESCRIPTOR))
+    env[S1_ENV_KEY] = "sha256:" + sha(canonical(S1_DESCRIPTOR))
     host = sbx["HostConfig"]
     paper_host = paper["HostConfig"]
     (port,) = host["PortBindings"]["8023/tcp"]
@@ -134,7 +141,7 @@ def render_edge(edge: dict, reference: dict, current: bool = False) -> dict:
     group_add = host.get("GroupAdd") or ref.get("GroupAdd")
     if not group_add:
         raise SystemExit("STOP: no supplementary group found for the Edge (the secrets directory would be unreadable)")
-    env = compose_env(edge)
+    env = {k: v for k, v in compose_env(edge).items() if k not in OVERLAY_ENV_KEYS}
     if not current:
         env["EDGE_MANAGER_CATALOGUE_RELEASE_FILE"] = "/run/manager-release/catalogue.json"
         env["EDGE_MANAGER_CATALOGUE_RELEASE_SHA256"] = RELEASE_SHA
@@ -225,15 +232,42 @@ services:
 """
 
 
-def render_all() -> dict[str, bytes]:
-    sbx, edge, paper, live_edge = inspect(SBX_MANAGER), inspect(SBX_EDGE), inspect(PAPER_MANAGER), inspect(LIVE_EDGE)
-    return {
-        "manager-sandbox.rendered.json": (json.dumps(render_manager(sbx, paper), indent=2, sort_keys=True) + "\n").encode(),
-        "edge-sandbox.rendered.json": (json.dumps(render_edge(edge, live_edge), indent=2, sort_keys=True) + "\n").encode(),
-        "override-edge-memo-on.yaml": MEMO_ON.encode(),
-        "manager-sandbox.rollback.rendered.json": (json.dumps(render_manager_rollback(sbx), indent=2, sort_keys=True) + "\n").encode(),
-        "edge-sandbox.rollback.rendered.json": (json.dumps(render_edge(edge, live_edge, current=True), indent=2, sort_keys=True) + "\n").encode(),
-    }
+GROUP_FILES = {
+    "manager": ("manager-sandbox.rendered.json", "manager-sandbox.rollback.rendered.json"),
+    "edge": ("edge-sandbox.rendered.json", "override-edge-memo-on.yaml", "edge-sandbox.rollback.rendered.json"),
+}
+ROLLBACK_FILES = {"manager-sandbox.rollback.rendered.json", "edge-sandbox.rollback.rendered.json"}
+
+
+def _dump(value: dict) -> bytes:
+    return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
+
+
+def render_group(group: str, live: bool = False) -> dict[str, bytes]:
+    """Render only the files of one group; inspects only that group's containers."""
+    if group == "manager":
+        sbx, paper = inspect(SBX_MANAGER), inspect(PAPER_MANAGER)
+        return {
+            "manager-sandbox.rendered.json": _dump(render_manager(sbx, paper, live)),
+            "manager-sandbox.rollback.rendered.json": _dump(render_manager_rollback(sbx)),
+        }
+    if group == "edge":
+        edge, live_edge = inspect(SBX_EDGE), inspect(LIVE_EDGE)
+        return {
+            "edge-sandbox.rendered.json": _dump(render_edge(edge, live_edge)),
+            "override-edge-memo-on.yaml": MEMO_ON.encode(),
+            "edge-sandbox.rollback.rendered.json": _dump(render_edge(edge, live_edge, current=True)),
+        }
+    raise SystemExit(f"unknown group {group!r}")
+
+
+def render_all(only: str = "", live: bool = False) -> dict[str, bytes]:
+    groups = [only] if only else ["manager", "edge"]
+    files: dict[str, bytes] = {}
+    for group in groups:
+        files.update(render_group(group, live))
+    order = [name for names in GROUP_FILES.values() for name in names]
+    return {name: files[name] for name in sorted(files, key=order.index)}
 
 
 def write_new(path: Path, data: bytes, mode: int) -> None:
@@ -253,13 +287,17 @@ def cmd_render(out: Path) -> None:
     print(table, end="")
 
 
-def cmd_check(out: Path, only: str = "") -> None:
-    """--only manager|edge compares just the files derived from that container (the other one has changed by design after its own step)."""
+def cmd_check(out: Path, only: str = "", live: bool = False) -> None:
+    """--only manager|edge renders and compares just the files derived from that container (the other one has changed by design after its own step).
+    --live skips the rollback renders (they describe the pre-switch container) for a container that is already on its post-switch state."""
+    if only and only not in GROUP_FILES:
+        raise SystemExit("STOP: --only takes manager or edge")
     expected = dict(line.split("  ", 1)[::-1] for line in (out / "RENDER.sha256").read_text().splitlines())
-    bad = [name for name, data in render_all().items() if (not only or only in name) and expected.get(name) != sha(data)]
+    rendered = render_all(only, live)
+    bad = [name for name, data in rendered.items() if not (live and name in ROLLBACK_FILES) and expected.get(name) != sha(data)]
     if bad:
         raise SystemExit(f"DRIFT: the running containers no longer render to {bad}")
-    print("render matches", out)
+    print("render matches", out, f"(only={only or 'all'} live={live})")
 
 
 def cmd_secrets(sec: Path) -> None:
@@ -330,13 +368,17 @@ def cmd_dsn(sec: Path) -> None:
 
 def main() -> None:
     args = sys.argv[1:]
-    if len(args) not in {3, 5} or args[0] not in {"render", "secrets", "check", "dsn"} or args[1] not in {"--out", "--sec"}:
+    if args[:1] == ["check"] and len(args) >= 3 and args[1] == "--out":
+        rest = args[3:]
+        live = "--live" in rest
+        rest = [a for a in rest if a != "--live"]
+        if rest not in ([], ["--only", "manager"], ["--only", "edge"]):
+            raise SystemExit(__doc__)
+        cmd_check(Path(args[2]), rest[1] if rest else "", live)
+        return
+    if len(args) != 3 or args[0] not in {"render", "secrets", "dsn"} or args[1] not in {"--out", "--sec"}:
         raise SystemExit(__doc__)
-    target = Path(args[2])
-    if args[0] == "check":
-        cmd_check(target, args[4] if len(args) == 5 and args[3] == "--only" else "")
-    else:
-        {"render": cmd_render, "secrets": cmd_secrets, "dsn": cmd_dsn}[args[0]](target)
+    {"render": cmd_render, "secrets": cmd_secrets, "dsn": cmd_dsn}[args[0]](Path(args[2]))
 
 
 if __name__ == "__main__":
