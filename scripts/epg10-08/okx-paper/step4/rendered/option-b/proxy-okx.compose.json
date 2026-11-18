@@ -1,0 +1,86 @@
+{
+  "name": "portal-execution-edge-okx",
+  "services": {
+    "source-proxy": {
+      "cap_drop": [
+        "ALL"
+      ],
+      "command": [
+        "nginx",
+        "-g",
+        "daemon off;"
+      ],
+      "container_name": "portal-execution-edge-okx-source-proxy-1",
+      "cpus": 0.5,
+      "entrypoint": [
+        "/docker-entrypoint.sh"
+      ],
+      "group_add": [
+        "987"
+      ],
+      "healthcheck": {
+        "interval": "15s",
+        "retries": 4,
+        "start_period": "10s",
+        "test": [
+          "CMD",
+          "nginx",
+          "-t",
+          "-q"
+        ],
+        "timeout": "3s"
+      },
+      "image": "ghcr.io/bobbyaxerol/portal-source-proxy@sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b",
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-file": "3",
+          "max-size": "5m"
+        }
+      },
+      "mem_limit": "536870912",
+      "network_mode": "host",
+      "pids_limit": 64,
+      "pull_policy": "never",
+      "read_only": true,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "tmpfs": [
+        "/tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777",
+        "/var/cache/nginx:rw,noexec,nosuid,nodev,size=8m,mode=0750,uid=101,gid=101"
+      ],
+      "user": "101:101",
+      "volumes": [
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/srv/primus/portal/source-proxy",
+          "target": "/run/secrets",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/srv/primus/portal/source-proxy/nginx.manager-okx.conf",
+          "target": "/etc/nginx/nginx.conf",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/srv/primus/portal/source-proxy/manager-v2-locations-okx.conf",
+          "target": "/run/secrets/manager-v2-locations.conf",
+          "type": "bind"
+        }
+      ]
+    }
+  }
+}

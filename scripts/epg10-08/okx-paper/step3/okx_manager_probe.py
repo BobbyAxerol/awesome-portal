@@ -5,7 +5,7 @@ Modelled on renew_manager_tls.qualify() but restricted to the new endpoints. It 
 counts, status codes, hashes of public certificates and booleans.
 
   manager   (owner, NO sudo)  TLS + token + catalogue probe of 127.0.0.1:8323 (facade) and 127.0.0.1:8324 (issuer) with the Manager proxy-client identity
-  proxy     (sudo -n)         the same read path through the NEW source proxy at 172.30.0.1:8444 with the Edge->proxy identity files (root:portal-runtime 0640)
+  proxy     (sudo -n)         the same read path through the NEW source proxy (default 172.23.0.1:8454, option B; `--endpoint host:port` for option A) with the Edge->proxy identity files (root:portal-runtime 0640)
   edge-tls  (no sudo)         10.70.0.2:8446 completes TLS 1.3 and REFUSES a client without a certificate (no Control API identity exists on this host)
 
 Private material: `manager` loads RUNTIME/source-proxy-manager-client.pem (certificate AND private key in one file, mode 0600 owner bobby, the same file renew_manager_tls.qualify()
@@ -41,7 +41,8 @@ BASE = "/portal/execution/v2/manager"
 MAX_BYTES = 1_048_576
 FACADE, ISSUER = ("127.0.0.1", 8323), ("127.0.0.1", 8324)
 PAPER_ISSUER = ("127.0.0.1", 8024)
-PROXY = ("172.30.0.1", 8444)
+MAX_TOKEN_LIFETIME = 300       # the Managers' configured maximum (issuer TTL is 120 s); NOT 60
+PROXY = ("172.23.0.1", 8454)      # option B (default); option A: --endpoint 172.30.0.1:8444
 EDGE_FRONT = ("10.70.0.2", 8446)
 
 
@@ -129,7 +130,7 @@ def read_checks(transport, facade, issuer, *, server_names=("manager-facade", "m
         require(bearer.startswith("Bearer ") and len(bearer) > 40, "TOKEN_HEADER_MISSING")
         claims = jwt_claims(bearer[7:])
         require((claims.get("profile_id"), claims.get("profile_mode"), claims.get("profile_venue")) == (PROFILE, MODE, VENUE), "TOKEN_PROFILE_CLAIMS_WRONG")
-        require(0 < int(claims["exp"]) - int(claims["iat"]) <= 60, "TOKEN_LIFETIME")
+        require(0 < int(claims["exp"]) - int(claims["iat"]) <= MAX_TOKEN_LIFETIME, "TOKEN_LIFETIME")
         headers = {"Authorization": bearer, "Accept": "application/json"}
         report["token"] = {"issued": True, "profile_claims_ok": True}
     name = server_names[0]
@@ -189,14 +190,15 @@ def manager_probe(transport_factory=Transport, paper_issuer=True):
     return report
 
 
-def proxy_probe(transport_factory=Transport):
+def proxy_probe(transport_factory=Transport, endpoint=None):
+    proxy = endpoint or PROXY
     ca, identity = EDGE_DIR / "source-proxy-ca.crt", EDGE_DIR / "source-proxy-client.pem"
     transport = transport_factory(ca, identity)
     report = {"probe": "okx-proxy", "profile": PROFILE}
-    report.update(read_checks(transport, PROXY, PROXY, server_names=(PROXY[0], PROXY[0]), via_proxy=True))
-    negatives = {"proxy_without_client_certificate_refused": refused(lambda: transport_factory(ca, None).get(PROXY, BASE + "/catalog", server_name=PROXY[0]))}
+    report.update(read_checks(transport, proxy, proxy, server_names=(proxy[0], proxy[0]), via_proxy=True))
+    negatives = {"proxy_without_client_certificate_refused": refused(lambda: transport_factory(ca, None).get(proxy, BASE + "/catalog", server_name=proxy[0]))}
     for path, expected in (("/not-allowed", (404,)),):
-        status, _, _ = transport.get(PROXY, BASE + path, server_name=PROXY[0])
+        status, _, _ = transport.get(proxy, BASE + path, server_name=proxy[0])
         negatives["unknown_route_denied"] = status in expected
     report["negative"] = negatives
     require(all(negatives.values()), "NEGATIVE_CASE_NOT_REFUSED")
@@ -221,14 +223,25 @@ def edge_tls_probe(transport_factory=Transport):
 
 
 def main(argv):
-    if len(argv) < 2 or argv[1] not in ("manager", "proxy", "edge-tls") or any(a not in ("--no-cross-profile",) for a in argv[2:]):
+    args = argv[2:]
+    endpoint = None
+    if "--endpoint" in args:
+        i = args.index("--endpoint")
+        try:
+            host, port = args[i + 1].rsplit(":", 1)
+            endpoint = (host, int(port))
+        except (IndexError, ValueError):
+            print(__doc__)
+            return 64
+        args = args[:i] + args[i + 2:]
+    if len(argv) < 2 or argv[1] not in ("manager", "proxy", "edge-tls") or any(a not in ("--no-cross-profile",) for a in args):
         print(__doc__)
         return 64
     try:
         if argv[1] == "manager":
-            report = manager_probe(paper_issuer="--no-cross-profile" not in argv)
+            report = manager_probe(paper_issuer="--no-cross-profile" not in args)
         elif argv[1] == "proxy":
-            report = proxy_probe()
+            report = proxy_probe(endpoint=endpoint)
         else:
             report = edge_tls_probe()
     except (ProbeFailure, OSError, ssl.SSLError, ValueError, KeyError) as error:

@@ -51,7 +51,7 @@ class Fake:
             if not self.identity:
                 raise p.ssl.SSLError("certificate required")
             return 204, {"x-manager-authorization": token(**self.override.get("claims", {})) if endpoint[1] != 8024 else token(profile="PAPER_BINANCE_USDM", venue="BINANCE")}, b""
-        if endpoint[1] in (8323, 8444) and not self.identity:
+        if endpoint[1] in (8323, 8444, 8454) and not self.identity:
             raise p.ssl.SSLError("certificate required")
         auth = headers.get("Authorization", "")
         if endpoint[1] == 8323:
@@ -97,11 +97,15 @@ class ManagerProbe(unittest.TestCase):
                 self.run_probe(**override)
 
     def test_wrong_token_claims_capabilities_or_scoping_fail(self):
-        for override in ({"claims": {"profile": "PAPER_BINANCE_USDM"}}, {"claims": {"venue": "BINANCE"}}, {"claims": {"mode": "live"}}, {"claims": {"lifetime": 600}},
+        for override in ({"claims": {"profile": "PAPER_BINANCE_USDM"}}, {"claims": {"venue": "BINANCE"}}, {"claims": {"mode": "live"}}, {"claims": {"lifetime": 301}},
                          {"capabilities": {"contract_revision": p.CONTRACT, "active_profile_id": "PAPER_BINANCE_USDM", "capabilities": [{"registered": True}] * 5}},
                          {"accounts": {"mode": "paper", "venue": "BINANCE"}}, {"accounts": {"mode": "live", "venue": "OKX"}}, {"instruments": {"venue": "BINANCE"}}):
             with self.assertRaises(p.ProbeFailure, msg=str(override)):
                 self.run_probe(**override)
+
+    def test_token_lifetime_up_to_the_manager_maximum_is_accepted(self):
+        for lifetime in (45, 120, 300):
+            self.assertTrue(self.run_probe(claims={"lifetime": lifetime})["ok"], lifetime)
 
     def test_negative_cases_must_be_refused(self):
         class Lax(Fake):
@@ -143,6 +147,10 @@ class ProxyAndEdge(unittest.TestCase):
         self.assertTrue(report["ok"])
         self.assertFalse(any(c[1] == "/internal/issue" for _, _, f in seen for c in f.calls))
         self.assertEqual({c[0] for _, _, f in seen for c in f.calls}, {p.PROXY})
+        self.assertEqual(p.PROXY, ("172.23.0.1", 8454))
+        other = []
+        report = p.proxy_probe(lambda ca, identity: other.append(1) or Fake(identity=identity is not None), endpoint=("172.30.0.1", 8444))
+        self.assertTrue(report["ok"])
 
     def test_edge_tls_requires_refusal_without_a_client_certificate(self):
         class Open(Fake):

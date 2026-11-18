@@ -27,10 +27,16 @@ def paper_edge():
 
 
 class Render(unittest.TestCase):
+    """OPTION A (new bridge, new leaf): the alternative."""
+
     def setUp(self):
         self.live = {"HostConfig": {"CpuShares": 512, "MemoryReservation": 5}}
         r.image_env = lambda ref: {"PATH": "/usr/bin"}
+        r.use_option("a")
         self.edge = r.render_edge(paper_edge(), self.live, r.PLACEHOLDER)["services"]["execution-edge"]
+
+    def tearDown(self):
+        r.use_option("b")
 
     def test_identity_ports_and_feature_flags(self):
         e = self.edge["environment"]
@@ -71,6 +77,44 @@ class Render(unittest.TestCase):
     def test_bridge_subnet_avoids_the_vpc_resolver_range(self):
         self.assertEqual(r.NETWORK_SUBNET, "172.30.0.0/24")
         self.assertFalse(r.NETWORK_SUBNET.startswith("172.31."))
+
+
+class OptionB(unittest.TestCase):
+    """OPTION B (default): no new bridge, no new certificate."""
+
+    def setUp(self):
+        r.image_env = lambda ref: {"PATH": "/usr/bin"}
+        r.use_option("b")
+        self.compose = r.render_edge(paper_edge(), {"HostConfig": {"CpuShares": 512, "MemoryReservation": 5}}, r.PLACEHOLDER)
+        self.edge = self.compose["services"]["execution-edge-okx"]
+
+    def test_joins_the_paper_bridge_as_external_at_a_fixed_address_without_the_paper_dns_alias(self):
+        self.assertEqual(self.compose["networks"], {"execution-private": {"external": True, "name": "portal-execution-edge_execution-private"}})
+        self.assertEqual(self.edge["networks"], {"execution-private": {"ipv4_address": "172.23.0.4"}})
+        self.assertNotIn("execution-edge", self.compose["services"])        # the Paper Edge owns the alias `execution-edge` on that bridge
+        self.assertEqual(self.edge["environment"]["EDGE_SOURCE_ORIGIN"], "https://172.23.0.1:8454")
+        self.assertEqual(self.edge["environment"]["EDGE_MANAGER_V2_PROFILE_ID"], "PAPER_OKX_SWAP")
+
+    def test_nginx_listens_on_the_new_port_with_the_existing_certificate_and_carries_only_manager_routes(self):
+        nginx = r.render_nginx().decode()
+        self.assertIn("listen 172.23.0.1:8454 ssl;", nginx)
+        self.assertNotIn("8444", nginx)
+        self.assertIn("/run/secrets/source-proxy-server.crt", nginx)
+        self.assertNotIn("-okx.", nginx)
+        self.assertNotIn("trading-system-read-header", nginx)
+        self.assertNotIn("/v1/", nginx)
+        self.assertNotIn("127.0.0.1:8000", nginx)
+        self.assertIn("include /run/secrets/manager-v2-locations.conf;", nginx)
+        self.assertIn("ssl_client_certificate /run/secrets/projection-ingestor-ca.crt;", nginx)
+        self.assertIn("ssl_verify_client on;", nginx)
+        self.assertIn("limit_req_zone", nginx)
+
+    def test_locations_are_the_base_manager_pack_only_pointing_at_the_okx_manager(self):
+        text = r.render_locations().decode()
+        self.assertEqual(len(re.findall(r"^location ", text, re.M)), 6)         # issuer + catalog + capabilities + projections + two record routes
+        self.assertNotIn("market/", text); self.assertNotIn("events/", text)     # the EDS-11R4/R5 extension of the Paper file is NOT replicated
+        self.assertEqual(set(re.findall(r"127\.0\.0\.1:(\d+)", text)), {"8323", "8324"})
+        self.assertNotIn("trading-system-read-header", text)
 
 
 if __name__ == "__main__":
