@@ -764,7 +764,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
         environment: profile.environment,
         profileId: profile.profileId,
       });
-      profiles.set(profile.environment, {
+      profiles.set(profile.key, {
         environment: profile.environment,
         origin: new URL(profile.origin),
         profileId: profile.profileId,
@@ -892,6 +892,12 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     relation: string,
     query: CurrentSourcePageQuery,
     operationPolicy?: CurrentSourceCataloguedOperationPolicy,
+    /**
+     * A second Paper profile family (OKX) shares the `paper` environment, so
+     * the transport is chosen by profile id as well. Omitted = the environment's
+     * own transport, exactly as before.
+     */
+    profileId?: string,
   ): Promise<unknown> {
     if (operationPolicy) {
       // The projection worker may consume only an operation selected by the
@@ -922,6 +928,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
           ...EDS11R_MANAGER_RELATION_GATEWAY_CONTEXT,
           sourceBindingIds: [operationPolicy.sourceId],
         },
+        profileId,
       );
     }
     assertAcceptedProfileRead(environment, screenId);
@@ -933,7 +940,7 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       role: "ADMIN",
       authenticationTime: new Date(),
       authenticationMethods: ["service_identity", "mtls"],
-    }, environment, screenId, path);
+    }, environment, screenId, path, undefined, undefined, profileId);
   }
 
   close(): void {
@@ -1006,9 +1013,10 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     path: string,
     operationPolicy?: CurrentSourceOperationPolicy,
     gatewayContext?: CurrentSourceGatewayContext,
+    selectedProfileId?: string,
   ): Promise<unknown> {
     const sourceEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
-    const profile = this.profiles.get(sourceEnvironment);
+    const profile = selectProfileTransport(this.profiles, sourceEnvironment, selectedProfileId);
     if (!profile || !this.tls) {
       throw new CurrentSourceProxyError("N13B_PROFILE_NOT_ACTIVATED", 404, {
         classification: "SUPPORTED_BUT_NOT_ACTIVATED",
@@ -2087,7 +2095,30 @@ function sourcePageItemCount(value: unknown): number | null {
   return Array.isArray(items) ? items.length : null;
 }
 
+/**
+ * Picks the Edge transport for a read. Without a profile id it is the
+ * environment's own transport (unchanged behaviour); with one, the transport of
+ * that exact profile inside the environment, so a second Paper family (OKX)
+ * can never be answered by the BINANCE Paper transport or the reverse.
+ */
+export function selectProfileTransport<T extends { environment: string; profileId: string }>(
+  profiles: Map<string, T>,
+  environment: string,
+  profileId?: string,
+): T | undefined {
+  if (profileId === undefined) return profiles.get(environment);
+  return [...profiles.values()].find((candidate) =>
+    candidate.environment === environment && candidate.profileId === profileId);
+}
+
+/** Test seam: the transports a configuration would activate (no I/O). */
+export function enabledProfileConfigurationsForTest(config: ControlApiConfig) {
+  return enabledProfileConfigurations(config);
+}
+
 function enabledProfileConfigurations(config: ControlApiConfig): Array<{
+  /** Transport map key: the environment, or `paper-okx` for the second Paper family. */
+  key: string;
   environment: "paper" | "sandbox" | "live";
   origin: string;
   profileId: string;
@@ -2095,6 +2126,7 @@ function enabledProfileConfigurations(config: ControlApiConfig): Array<{
 }> {
   const candidates = [
     {
+      key: "paper",
       environment: "paper" as const,
       enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER === "true",
       origin: config.EXECUTION_EDGE_PAPER_ORIGIN,
@@ -2102,6 +2134,15 @@ function enabledProfileConfigurations(config: ControlApiConfig): Array<{
       audience: config.EXECUTION_EDGE_PAPER_AUDIENCE,
     },
     {
+      key: "paper-okx",
+      environment: "paper" as const,
+      enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX === "true",
+      origin: config.EXECUTION_EDGE_PAPER_OKX_ORIGIN,
+      profileId: config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID,
+      audience: config.EXECUTION_EDGE_PAPER_OKX_AUDIENCE,
+    },
+    {
+      key: "sandbox",
       environment: "sandbox" as const,
       enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX === "true",
       origin: config.EXECUTION_EDGE_SANDBOX_ORIGIN,
@@ -2109,6 +2150,7 @@ function enabledProfileConfigurations(config: ControlApiConfig): Array<{
       audience: config.EXECUTION_EDGE_SANDBOX_AUDIENCE,
     },
     {
+      key: "live",
       environment: "live" as const,
       enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE === "true",
       origin: config.EXECUTION_EDGE_LIVE_ORIGIN,
@@ -2119,6 +2161,7 @@ function enabledProfileConfigurations(config: ControlApiConfig): Array<{
   return candidates
     .filter((candidate) => candidate.enabled)
     .map((candidate) => ({
+      key: candidate.key,
       environment: candidate.environment,
       origin: candidate.origin!,
       profileId: candidate.profileId!,

@@ -438,6 +438,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
         { limit: SOURCE_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
         operationPolicy,
+        context.profileId,
       );
       const page = managerPage(response, binding.relation, binding.fields, context);
       items.push(...page.items);
@@ -459,6 +460,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
               workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
               { limit: page.items.length - 1, cursor },
               operationPolicy,
+              context.profileId,
             );
             const refreshed = managerPage(refresh, binding.relation, binding.fields, context);
             if (refreshed.nextCursor) tailCursor = refreshed.nextCursor;
@@ -591,6 +593,9 @@ function enabledProfiles(config: ControlApiConfig): Array<{ environment: Project
     // Inert until the Edge publishes the origin and the flag turns on; its
     // transport activation is the named follow-on slice.
     { environment: "paper" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE, profileId: config.EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID },
+    // OKX Paper family (owner decision 2026-11-18, staged): projects under its
+    // own profile through its own Edge transport. Inert while the flag is off.
+    { environment: "paper" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX, profileId: config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID },
     { environment: "sandbox" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX, profileId: config.EXECUTION_EDGE_SANDBOX_PROFILE_ID },
     { environment: "live" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE, profileId: config.EXECUTION_EDGE_LIVE_PROFILE_ID },
   ].filter((item) => item.enabled === "true").map((item) => ({
