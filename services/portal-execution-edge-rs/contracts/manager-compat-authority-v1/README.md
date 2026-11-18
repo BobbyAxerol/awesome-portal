@@ -1,8 +1,8 @@
 # Manager compatibility authority v1
 
 This is the N19 Rust authority for the private Manager-v2 read boundary. It
-binds the N18 census to one active owner/runtime adapter, three deployment
-profiles, five sealed GET primitives, seven owner projections and fixed
+binds the N18 census to one active owner/runtime adapter, four deployment
+profiles (Paper Binance USDM, Paper OKX swap, Sandbox, Live; at most one per Edge process), five sealed GET primitives, seven owner projections and fixed
 transport limits.
 
 This N19 revision intentionally remains historical: only Paper was

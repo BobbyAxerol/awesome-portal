@@ -1,8 +1,8 @@
 {
   "schema_version": "portal.execution.manager-profile-runtime-activation.v1",
-  "activation_revision": "portal.execution.manager-profile-runtime-activation.2026-09-01.1",
+  "activation_revision": "portal.execution.manager-profile-runtime-activation.2026-11-18.1",
   "decision": "PAPER_SANDBOX_LIVE_CURRENT_SOURCE_READ_ACTIVE",
-  "adapter_matrix_sha256": "sha256:9ff30c0df4a1a2f1f123c0b4c9592116d9449def645f3ccc8a8dbad7724bbb8d",
+  "adapter_matrix_sha256": "sha256:aba5095d0077b76b30af5dd5e219ccb2d735b13cf83e906a7288e005d2f36f55",
   "qualification_evidence_sha256": "sha256:8bbd275039f0ff5aa1402c967a05c2f0f9ffe018c03fe53df6a2c45083d92017",
   "release_profiles": {
     "paper_sha256": "sha256:083d04a9b62320458fd95cf13804b82038ee122497e2a5e1e36f24b7db5be334",
@@ -16,6 +16,15 @@
       "environment": "paper",
       "profile_id": "PAPER_BINANCE_USDM",
       "delegation_audience": "portal-execution-edge-paper",
+      "delegated_resource": "execution:manager-v2:read",
+      "transport_qualified": true,
+      "current_source_read_enabled": true,
+      "empty_result_semantics": "AUTHORITATIVE_EMPTY"
+    },
+    {
+      "environment": "paper",
+      "profile_id": "PAPER_OKX_SWAP",
+      "delegation_audience": "portal-execution-edge-paper-okx",
       "delegated_resource": "execution:manager-v2:read",
       "transport_qualified": true,
       "current_source_read_enabled": true,

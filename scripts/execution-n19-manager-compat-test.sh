@@ -71,10 +71,19 @@ assert future["rollback_adapter_revision"] == active["adapter_revision"]
 
 expected_bindings = {
     ("paper", "PAPER_BINANCE_USDM"),
+    ("paper", "PAPER_OKX_SWAP"),
     ("sandbox", "SANDBOX_BINANCE_USDM"),
     ("live", "LIVE_BINANCE_USDM"),
 }
 assert {(row["environment"], row["profile_id"]) for row in matrix["profile_bindings"]} == expected_bindings
+assert len(matrix["profile_bindings"]) == len(expected_bindings) == 4
+# The OKX Paper profile has no transport observation yet: the historical N19 matrix says so, the sanitized 2026-09-01 evidence stays three environments.
+assert {row["profile_id"]: row["transport_qualified"] for row in matrix["profile_bindings"]} == {
+    "PAPER_BINANCE_USDM": True,
+    "PAPER_OKX_SWAP": False,
+    "SANDBOX_BINANCE_USDM": False,
+    "LIVE_BINANCE_USDM": False,
+}
 assert all(row["delegated_resource"] == "execution:manager-v2:read" for row in matrix["profile_bindings"])
 assert all(row["product_enabled"] is False for row in matrix["profile_bindings"])
 
@@ -87,6 +96,7 @@ assert {
     for row in activation["profiles"]
 } == {
     ("paper", "PAPER_BINANCE_USDM", "portal-execution-edge-paper"),
+    ("paper", "PAPER_OKX_SWAP", "portal-execution-edge-paper-okx"),
     ("sandbox", "SANDBOX_BINANCE_USDM", "portal-execution-edge-sandbox"),
     ("live", "LIVE_BINANCE_USDM", "portal-execution-edge-live"),
 }
