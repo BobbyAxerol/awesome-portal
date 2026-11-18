@@ -6961,6 +6961,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::too_many_lines)] // one scenario with an observed and an unknown source, kept in a single test
     fn shadow_manager_feed_observations_do_not_invent_freshness() {
         let fixture = serde_json::from_str::<PaperWorkbenchShadowEnvelope>(include_str!(
             "../../../../../packages/contracts/fixtures/execution-paper-workbench.orders-shadow.valid.json"
@@ -7038,23 +7039,40 @@ mod tests {
             FreshnessState::Unknown
         );
         page.rows = vec![fresh.clone()];
-        let bounded = build_shadow_envelope(
-            &CanonicalId::parse("dep_74").unwrap(),
-            ShadowPanel::Orders,
-            projection_store_pg::ShadowScreenAuthority {
-                epoch_id: page.epoch_id,
-                screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
-                manifest_digest: format!("sha256:{}", "a".repeat(64)),
-                capability_snapshot_id: "cap-n07".to_owned(),
-            },
-            page,
-            read_at,
-            &policy,
+        let envelope = |page: ProjectionQueryPage, observation| {
+            build_shadow_envelope(
+                &CanonicalId::parse("dep_74").unwrap(),
+                ShadowPanel::Orders,
+                projection_store_pg::ShadowScreenAuthority {
+                    epoch_id: page.epoch_id,
+                    screen_id: PAPER_WORKBENCH_SCREEN_ID.to_owned(),
+                    manifest_digest: format!("sha256:{}", "a".repeat(64)),
+                    capability_snapshot_id: "cap-n07".to_owned(),
+                },
+                page,
+                read_at,
+                &policy,
+                observation,
+            )
+            .unwrap()
+        };
+        // An observed feed means the source health is Healthy and the observation is
+        // fresh, so no source-status warning is invented; the panel stays PARTIAL
+        // because the source is poll-bounded, not event-complete.
+        let observed = envelope(
+            page.clone(),
             ShadowFeedObservation::Observed("manager.order", &fresh_observation),
-        )
-        .unwrap();
-        assert_eq!(bounded.panel_state, PanelState::Partial);
-        assert!(bounded
+        );
+        assert_eq!(observed.panel_state, PanelState::Partial);
+        assert!(!observed
+            .warnings
+            .iter()
+            .any(|warning| warning.code == "SOURCE_FAILURE_STATUS_UNAVAILABLE"));
+        // Only an unknown source health says that the last successful observation does
+        // not establish current upstream health.
+        let unknown = envelope(page, ShadowFeedObservation::Unknown);
+        assert_eq!(unknown.panel_state, PanelState::Partial);
+        assert!(unknown
             .warnings
             .iter()
             .any(|warning| warning.code == "SOURCE_FAILURE_STATUS_UNAVAILABLE"));

@@ -646,8 +646,7 @@ async fn record_probe_errors_never_become_authoritative_absence_in_any_profile()
         };
         let relation = catalogue.data().relation("public", "orders").unwrap();
         let page_request =
-            ManagerV2Request::relation_records(relation, None, PageLimit::new(2).unwrap())
-                .unwrap();
+            ManagerV2Request::relation_records(relation, None, PageLimit::new(2).unwrap()).unwrap();
         let page_wire = relation_page_body().replace(PROFILE_ID, profile);
         let ManagerPayload::RelationRecords(page) =
             decode_success_for_profile(&page_request, page_wire.as_bytes(), profile).unwrap()

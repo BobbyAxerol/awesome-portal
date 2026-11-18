@@ -4074,6 +4074,22 @@ mod tests {
         .execute(&store.pool)
         .await
         .unwrap();
+        // The analytics read is consistent only when the heartbeat is sealed at the epoch's
+        // next projection sequence (see manager_projection.rs heartbeat write).
+        sqlx::query(
+            "INSERT INTO portal_projection.manager_projection_heartbeats
+             (epoch_id,profile_id,catalogue_digest,state_digest,record_count,poll_interval_ms,
+              source_read_at,observed_at,sealed_projection_sequence)
+             VALUES ($1,'PAPER_BINANCE_USDM',$2,$3,4,1000,$4,$4,
+              (SELECT next_projection_sequence FROM portal_projection.epochs WHERE epoch_id=$1))",
+        )
+        .bind(epoch_id)
+        .bind(&catalogue)
+        .bind(&state)
+        .bind(at(200))
+        .execute(&store.pool)
+        .await
+        .unwrap();
         let facts = [
             (
                 "RUNTIME",
@@ -4097,6 +4113,7 @@ mod tests {
                     "change_label":"PORTAL_PROJECTION_DELTA","source_feed":"manager.order",
                     "source_relation":"public.orders","fields":{
                         "order_id":{"kind":"TEXT","value":"order_1"},
+                        "deployment_id":{"kind":"TEXT","value":"dep_74"},
                         "strategy_id":{"kind":"TEXT","value":"alpha_1"},
                         "account_id":{"kind":"TEXT","value":"account_1"},
                         "status":{"kind":"TEXT","value":"FILLED"},
@@ -4113,6 +4130,7 @@ mod tests {
                     "change_label":"PORTAL_PROJECTION_DELTA","source_feed":"manager.fill",
                     "source_relation":"public.fills","fields":{
                         "fill_id":{"kind":"TEXT","value":"fill_1"},
+                        "deployment_id":{"kind":"TEXT","value":"dep_74"},
                         "event_id":{"kind":"TEXT","value":"event_1"},
                         "strategy_id":{"kind":"TEXT","value":"alpha_1"},
                         "account_id":{"kind":"TEXT","value":"account_1"},
@@ -4205,6 +4223,7 @@ mod tests {
                       'source_relation','public.domain_events',
                       'fields',jsonb_build_object(
                         'event_id',jsonb_build_object('kind','TEXT','value','event-' || value),
+                        'deployment_id',jsonb_build_object('kind','TEXT','value','dep_74'),
                         'strategy_id',jsonb_build_object('kind','TEXT','value','alpha_1'),
                         'event_type',jsonb_build_object('kind','TEXT','value','ORDER_UPDATED')
                       )
