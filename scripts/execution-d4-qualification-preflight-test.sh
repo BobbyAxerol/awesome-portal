@@ -13,7 +13,13 @@ elif [[ $# -ne 0 ]]; then
   exit 2
 fi
 tmp_dir="$(mktemp -d)"
-cleanup() { rm -rf -- "${tmp_dir}"; }
+# The privileged branch chowns files in tmp_dir to root; remove them with the
+# same privilege (the unprivileged fallback keeps the plain rm).
+cleanup() {
+  if ! rm -rf -- "${tmp_dir}" 2>/dev/null; then
+    sudo -n rm -rf -- "${tmp_dir}"
+  fi
+}
 trap cleanup EXIT
 
 # CI/publication uses a deliberately non-privileged user and must never obtain
