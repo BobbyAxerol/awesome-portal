@@ -23,12 +23,12 @@ SRC=${SBX_SRC:-/home/bobby/.worktrees/edge-from-running-source-20261116/scripts/
 RENDER="python3 -B $SRC/sandbox_render.py"
 
 # --- approved hashes -------------------------------------------------------------------------------------------------------------------------------------------
-CAT_SHA=cb1d41cacc7beca0431a38be94a1130432cc5425e93e739792716d56b72bd154       # relation-catalogue.json (67, real tool)
-POL_SHA=4f3cd95a9d8b783166413aa1c633a537dfb5280154a9d4dd1a9e2eac5adb6d59       # serving-policy.json
-PRO_SHA=979191a8da756b33bb0deaf23ba5ac7562146fb4ae7b1bc46cbda1cb81c2a8b7       # profile-selection.json
-REL_SHA=af20d83d1b07a35e514dc67d03563896135dea65d71f8b9bbb624ead24f1fa84       # manager-catalogue-release.json
-MGR_RENDER_SHA=59e9ef3ccd9d215c3e174f0aed55fb0f0bd6926820dd75d259c2220a81309459
-EDGE_RENDER_SHA=28f2e6dfbe9e78c7814c6b47d234c05c4e4debfd2886ea75a18e91cfca9b97a2
+CAT_SHA=372e99b2d0476a7240a53069c77def71f5cdaf50e7f83522f822be5d726db19a       # relation-catalogue.json (106: 67 real-tool-qualified + 39 carried from the current Sandbox catalogue)
+POL_SHA=30da2153d8e4743c5d37d6119232a9b976f57ef0605efc46867dd16a1c8b6032       # serving-policy.json
+PRO_SHA=7ed7d49b12c5153b003256a2fd17fe3bba83c4d5fea40c3f39cdb9f9d06054ca       # profile-selection.json
+REL_SHA=14778175eb6720c8b56ae0dd245023e2aff2e1afb161edb0ef6f32872699a1a5       # manager-catalogue-release.json
+MGR_RENDER_SHA=9aac08fb07d2b253c01756d9039d5db9a206dde67bafaa0b0384f43cdb2575ab
+EDGE_RENDER_SHA=3ae54225f4c403b59ef9b437c18e18d1209c56289bc467bb2ea85ca6b9cc9a81
 MEMO_ON_SHA=b2ee0c620ce2043f1aa7d32131cf5d2dd9f7f849d127786d463396d891d28342
 MGR_ROLLBACK_SHA=3567eff15a65d2c0d6936f023c4880fa45565e94d9e912bda321a558e539be7d
 EDGE_ROLLBACK_SHA=1dea1b15261b2016ea15ccdeab3cc14ea2558793d3a4ac435dd4e0659ae0b03b
@@ -37,8 +37,8 @@ h() { sha256sum "$1" | cut -c1-64; }
 need() { [ "$(h "$1")" = "$2" ] || { echo "STOP: hash of $1 differs from approved $2"; exit 2; }; }
 state() { for c in $MC $EC $WC; do echo "$c image=$(docker inspect $c --format '{{.Image}}') status=$(docker inspect $c --format '{{.State.Status}}') started=$(docker inspect $c --format '{{.State.StartedAt}}') restarts=$(docker inspect $c --format '{{.RestartCount}}') health=$(docker inspect $c --format '{{if .State.Health}}{{.State.Health.Status}}{{end}}')"; done; }
 need_src() {
-  need $SRC/artifacts/binance-t1t2five67/relation-catalogue.json $CAT_SHA; need $SRC/artifacts/binance-t1t2five67/serving-policy.json $POL_SHA
-  need $SRC/artifacts/binance-t1t2five67/profile-selection.json $PRO_SHA; need $SRC/artifacts/binance-t1t2five67/manager-catalogue-release.json $REL_SHA
+  need $SRC/artifacts/binance-union106/relation-catalogue.json $CAT_SHA; need $SRC/artifacts/binance-union106/serving-policy.json $POL_SHA
+  need $SRC/artifacts/binance-union106/profile-selection.json $PRO_SHA; need $SRC/artifacts/binance-union106/manager-catalogue-release.json $REL_SHA
 }
 need_renders() {
   need $RD/manager-sandbox.rendered.json $MGR_RENDER_SHA; need $RD/edge-sandbox.rendered.json $EDGE_RENDER_SHA; need $RD/override-edge-memo-on.yaml $MEMO_ON_SHA
@@ -71,12 +71,12 @@ stage)  # tolerant: $SEC may already exist with exactly facade-db.dsn (DB step);
   install -d -m 0755 "$D"
   for f in manager-catalogue-release.json:$REL_SHA profile-selection.json:$PRO_SHA; do   # tolerant: keep a file that already exists with the approved bytes
     n=${f%%:*}; want=${f##*:}
-    if [ -e "$D/$n" ]; then need "$D/$n" "$want"; else install -m 0644 "$SRC/artifacts/binance-t1t2five67/$n" "$D/$n"; fi
+    if [ -e "$D/$n" ]; then need "$D/$n" "$want"; else install -m 0644 "$SRC/artifacts/binance-union106/$n" "$D/$n"; fi
   done
   need $D/manager-catalogue-release.json $REL_SHA; need $D/profile-selection.json $PRO_SHA
   # 3. secret dir: package files only if absent (mode 0600), then the copies of the current Sandbox Manager files (python tool, same rule)
   for f in relation-catalogue.json serving-policy.json; do
-    [ -e $SEC/$f ] || install -m 0600 $SRC/artifacts/binance-t1t2five67/$f $SEC/$f
+    [ -e $SEC/$f ] || install -m 0600 $SRC/artifacts/binance-union106/$f $SEC/$f
   done
   $RENDER secrets --sec $SEC
   need_sec; echo "stage done $(date -u +%FT%TZ)"; ls -l $D $SEC ;;

@@ -29,8 +29,8 @@ SEC = "/home/bobby/secure/portal-manager-sandbox-20261116"
 STAGE = "/home/bobby/.local/state/portal-execution-edge/releases/sandbox-switch-20261116"
 NEW_MANAGER_IMAGE = "localhost/portal-manager-read@sha256:8d4765a4451431ec6a5e146a24745d3bc791b411e1b0093bbf8cee8edc1044dd"
 NEW_EDGE_IMAGE = "localhost/portal-execution-edge@sha256:167e031aa4999a7df43efdbce34e91204ce7b85cc862ec5174e989872c449054"
-RELEASE_SHA = "sha256:af20d83d1b07a35e514dc67d03563896135dea65d71f8b9bbb624ead24f1fa84"
-SEAL = "4731541e914a214f9b19e9c9a1b888fb1929d7b8a244a49a35e4b52173b2afbf"
+RELEASE_SHA = "sha256:14778175eb6720c8b56ae0dd245023e2aff2e1afb161edb0ef6f32872699a1a5"
+SEAL = "3852c844e7d06f70317bd54e53776081213d82569c6d203f78f05caa5bda15df"
 # S1 source incarnation, formula of stage_m0_release.py:83-90 with the Sandbox database; the reset bundle and contract pins are the Paper literals (not defined for the Sandbox:
 # owner decision D13). The value is only format-checked by the Manager and used as the snapshot fence identity.
 S1_DESCRIPTOR = {
