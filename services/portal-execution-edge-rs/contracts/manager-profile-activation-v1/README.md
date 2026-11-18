@@ -1,7 +1,7 @@
 # Manager profile runtime activation v1
 
-This contract activates the exact current Manager-v2 read surface for Paper,
-Sandbox and Live without rewriting the historical N19 source-dark authority.
+This contract activates the exact current Manager-v2 read surface for Paper
+(Binance USDM and, from 2026-11-18, OKX swap), Sandbox and Live without rewriting the historical N19 source-dark authority.
 The Rust Edge binds the N19 compatibility matrix, the N22/N23 release profiles,
 the N29 product candidate and the sanitized 2026-09-01 mTLS qualification
 evidence into one immutable image.
@@ -15,3 +15,7 @@ command relay, mutation, raw browser access, SQL, Redis, CLI, generic origins,
 generic profiles or a Trading System change. Projection, analytics and SSE use
 their existing independent runtime gates and are activated only after their
 ordered operational checks pass.
+
+The Paper OKX swap profile (`PAPER_OKX_SWAP`, audience `portal-execution-edge-paper-okx`) is activated in this document and bound in the
+N19 matrix with `transport_qualified: false`; the 2026-09-01 qualification evidence is unchanged and does not contain an OKX observation.
+An Edge process serves exactly one profile; Paper release files, source-identity pins and tokens are profile-bound.

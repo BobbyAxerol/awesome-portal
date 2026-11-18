@@ -43,9 +43,40 @@ const SOURCE_IDENTITY_PIN_MAXIMUM_BYTES: usize = 65_536;
 const N18_CENSUS_DIGEST: &str =
     "sha256:cab031d8495c61b8d319bb84b5a7506840011daa263e08d3ee06b5f2cf48516c";
 const N19_MATRIX_DIGEST: &str =
-    "sha256:9ff30c0df4a1a2f1f123c0b4c9592116d9449def645f3ccc8a8dbad7724bbb8d";
+    "sha256:aba5095d0077b76b30af5dd5e219ccb2d735b13cf83e906a7288e005d2f36f55";
 const RUNTIME_ACTIVATION_DIGEST: &str =
-    "sha256:d33e5c19627f2abaa1cc59b68e2d074d1ecc050632fa8ec6a516d506949f4c68";
+    "sha256:d263b2e464e8f4539164cf2a2a982c4ba37775861443870ed989c98ba948c1b0";
+/// The deployment profiles the frozen authority accepts, as
+/// (environment, profile id, delegation audience, N19 matrix `transport_qualified`).
+/// Several profiles may share one environment (Paper: Binance USDM and OKX swap) but a
+/// profile is accepted for exactly its own environment, and an Edge process is bound to exactly
+/// one pair at startup (`from_pinned_release`, `bind`). Sandbox and Live are unchanged.
+const ACCEPTED_PROFILES: [(&str, &str, &str, bool); 4] = [
+    (
+        "paper",
+        "PAPER_BINANCE_USDM",
+        "portal-execution-edge-paper",
+        true,
+    ),
+    (
+        "paper",
+        "PAPER_OKX_SWAP",
+        "portal-execution-edge-paper-okx",
+        false,
+    ),
+    (
+        "sandbox",
+        "SANDBOX_BINANCE_USDM",
+        "portal-execution-edge-sandbox",
+        false,
+    ),
+    (
+        "live",
+        "LIVE_BINANCE_USDM",
+        "portal-execution-edge-live",
+        false,
+    ),
+];
 /// Relations in the frozen N18 census v2: the 96 of v1 plus 13 projection-input relations. A release
 /// manifest still enables only the subset it names, so a larger census changes no runtime behaviour.
 const CENSUS_RELATION_COUNT: usize = 109;
@@ -377,27 +408,43 @@ impl ManagerCompatibilityAuthority {
         {
             return Err(AuthorityError::ProfileDenied);
         }
+        let environment_known = self
+            .matrix
+            .profile_bindings
+            .iter()
+            .any(|binding| binding.environment == context.environment.as_str());
+        if !environment_known {
+            return Err(AuthorityError::EnvironmentDenied);
+        }
         let binding = self
             .matrix
             .profile_bindings
             .iter()
-            .find(|binding| binding.environment == context.environment.as_str())
-            .ok_or(AuthorityError::EnvironmentDenied)?;
-        if binding.profile_id != context.profile_id {
-            return Err(AuthorityError::ProfileDenied);
-        }
+            .find(|binding| {
+                binding.environment == context.environment.as_str()
+                    && binding.profile_id == context.profile_id
+            })
+            .ok_or(AuthorityError::ProfileDenied)?;
         if binding.delegated_resource != context.delegated_resource {
             return Err(AuthorityError::ResourceDenied);
+        }
+        let active_environment_known = self
+            .activation
+            .profiles
+            .iter()
+            .any(|profile| profile.environment == context.environment.as_str());
+        if !active_environment_known {
+            return Err(AuthorityError::EnvironmentDenied);
         }
         let active_profile = self
             .activation
             .profiles
             .iter()
-            .find(|profile| profile.environment == context.environment.as_str())
-            .ok_or(AuthorityError::EnvironmentDenied)?;
-        if active_profile.profile_id != context.profile_id {
-            return Err(AuthorityError::ProfileDenied);
-        }
+            .find(|profile| {
+                profile.environment == context.environment.as_str()
+                    && profile.profile_id == context.profile_id
+            })
+            .ok_or(AuthorityError::ProfileDenied)?;
         if active_profile.delegated_resource != context.delegated_resource {
             return Err(AuthorityError::ResourceDenied);
         }
@@ -960,26 +1007,19 @@ fn validate_runtime_activation(
         return Err(AuthorityError::QualificationEvidenceDigestDrift);
     }
 
-    let profiles: BTreeMap<&str, &ActivationProfile> = activation
+    let pairs: BTreeSet<(&str, &str)> = activation
         .profiles
         .iter()
-        .map(|profile| (profile.environment.as_str(), profile))
+        .map(|profile| (profile.environment.as_str(), profile.profile_id.as_str()))
         .collect();
-    let expected_profiles = [
-        ("paper", "PAPER_BINANCE_USDM", "portal-execution-edge-paper"),
-        (
-            "sandbox",
-            "SANDBOX_BINANCE_USDM",
-            "portal-execution-edge-sandbox",
-        ),
-        ("live", "LIVE_BINANCE_USDM", "portal-execution-edge-live"),
-    ];
-    let profiles_are_exact = profiles.len() == expected_profiles.len()
-        && expected_profiles
+    let profiles_are_exact = pairs.len() == activation.profiles.len()
+        && activation.profiles.len() == ACCEPTED_PROFILES.len()
+        && ACCEPTED_PROFILES
             .into_iter()
-            .all(|(environment, profile_id, audience)| {
-                profiles.get(environment).is_some_and(|profile| {
-                    profile.profile_id == profile_id
+            .all(|(environment, profile_id, audience, _)| {
+                activation.profiles.iter().any(|profile| {
+                    profile.environment == environment
+                        && profile.profile_id == profile_id
                         && profile.delegation_audience == audience
                         && profile.delegated_resource == DELEGATED_RESOURCE
                         && profile.transport_qualified
@@ -1124,34 +1164,24 @@ fn validate_adapters(matrix: &AdapterMatrix) -> bool {
 }
 
 fn validate_bindings(matrix: &AdapterMatrix) -> bool {
-    let binding_map: BTreeMap<&str, &ProfileBinding> = matrix
+    let pairs: BTreeSet<(&str, &str)> = matrix
         .profile_bindings
         .iter()
-        .map(|binding| (binding.environment.as_str(), binding))
+        .map(|binding| (binding.environment.as_str(), binding.profile_id.as_str()))
         .collect();
-    binding_map.len() == 3
-        && [
-            ("paper", "PAPER_BINANCE_USDM"),
-            ("sandbox", "SANDBOX_BINANCE_USDM"),
-            ("live", "LIVE_BINANCE_USDM"),
-        ]
-        .into_iter()
-        .all(|(environment, profile)| {
-            binding_map.get(environment).is_some_and(|binding| {
-                binding.profile_id == profile
-                    && binding.delegated_resource == DELEGATED_RESOURCE
-                    && !binding.product_enabled
+    pairs.len() == matrix.profile_bindings.len()
+        && matrix.profile_bindings.len() == ACCEPTED_PROFILES.len()
+        && ACCEPTED_PROFILES
+            .into_iter()
+            .all(|(environment, profile_id, _, transport_qualified)| {
+                matrix.profile_bindings.iter().any(|binding| {
+                    binding.environment == environment
+                        && binding.profile_id == profile_id
+                        && binding.delegated_resource == DELEGATED_RESOURCE
+                        && !binding.product_enabled
+                        && binding.transport_qualified == transport_qualified
+                })
             })
-        })
-        && binding_map
-            .get("paper")
-            .is_some_and(|binding| binding.transport_qualified)
-        && binding_map
-            .get("sandbox")
-            .is_some_and(|binding| !binding.transport_qualified)
-        && binding_map
-            .get("live")
-            .is_some_and(|binding| !binding.transport_qualified)
 }
 
 fn validate_transport(matrix: &AdapterMatrix) -> bool {

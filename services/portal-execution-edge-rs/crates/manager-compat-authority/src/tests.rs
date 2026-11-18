@@ -105,7 +105,7 @@ fn canonical_authority_is_digest_bound_and_runtime_activated() {
     );
     assert_eq!(
         authority.activation_revision(),
-        "portal.execution.manager-profile-runtime-activation.2026-09-01.1"
+        "portal.execution.manager-profile-runtime-activation.2026-11-18.1"
     );
 
     let bound = authority

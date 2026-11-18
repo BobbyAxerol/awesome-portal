@@ -49,6 +49,13 @@
       "product_enabled": false
     },
     {
+      "environment": "paper",
+      "profile_id": "PAPER_OKX_SWAP",
+      "delegated_resource": "execution:manager-v2:read",
+      "transport_qualified": false,
+      "product_enabled": false
+    },
+    {
       "environment": "sandbox",
       "profile_id": "SANDBOX_BINANCE_USDM",
       "delegated_resource": "execution:manager-v2:read",
