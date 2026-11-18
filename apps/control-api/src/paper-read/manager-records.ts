@@ -59,6 +59,11 @@ export const PAPER_OKX_CONTEXT: ManagerReadContext = {
   errorPrefix: "N22",
 };
 
+/** The context a Paper read validates rows against, by the profile it serves. */
+export function paperReadContext(profileId: string | undefined): ManagerReadContext {
+  return profileId === PAPER_OKX_CONTEXT.profileId ? PAPER_OKX_CONTEXT : PAPER_CONTEXT;
+}
+
 const FORBIDDEN_FIELD = /(?:^|_)(?:raw|secret|credential|password|token|dsn)(?:_|$)/i;
 const FRESHNESS = new Set(["FRESH", "AGING", "STALE", "UNKNOWN"]);
 const COMPLETENESS = new Set(["COMPLETE", "PARTIAL", "UNKNOWN"]);

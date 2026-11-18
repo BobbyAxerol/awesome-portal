@@ -3,7 +3,7 @@ import { freshnessPolicies } from "./environment-parity";
 import { retainedReview, projectionExpired } from "./retained-read-profile";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { ControlApiConfig, querySigningKeys } from "../config";
+import { ControlApiConfig, paperReadProfileId, querySigningKeys } from "../config";
 import { ExecutionReadScopes, ExecutionReadScopeError, scopeReadPopulation,
   type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, retainedRelationAction, fenceRetainedSnapshot } from "./retained-operation-page";
@@ -267,6 +267,7 @@ export class ExecutionProductReadSource {
           availability: "UNAVAILABLE", retryable: false,
         });
       }
+      this.assertWarmUpMatchesReadProfile(environment);
       this.retainProfileRead(composition, principal, environment, screenId);
       return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
     }
@@ -280,7 +281,12 @@ export class ExecutionProductReadSource {
         error instanceof CurrentSourceProxyError &&
         error.code === "N31_PROJECTION_NOT_READY" &&
         !retainedReview(this.config) &&
-        !hasLocalQuery(query)
+        !hasLocalQuery(query) &&
+        // The warm-up operations are frozen to the BINANCE Paper profile. When
+        // the read side serves another Paper profile their page would be a
+        // different profile's data under this profile's name, so "not ready"
+        // stays "not ready".
+        this.warmUpMatchesReadProfile(environment)
       ) {
         this.retainProfileRead(composition, principal, environment, screenId);
         return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
@@ -369,6 +375,24 @@ export class ExecutionProductReadSource {
    * layouts.  It does not expose a generic relation route or a raw source
    * record/cursor to any browser response.
    */
+  private assertWarmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment): void {
+    if (this.warmUpMatchesReadProfile(requestedEnvironment)) return;
+    throw new CurrentSourceProxyError("EDS11R_PANEL_REQUIRES_PROJECTION", 503, {
+      availability: "UNAVAILABLE",
+      reason_code: "WARM_UP_NOT_BOUND_TO_PAPER_READ_PROFILE",
+      retryable: false,
+    });
+  }
+
+  private warmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment): boolean {
+    const environment = maximumDataEnvironment(requestedEnvironment);
+    if (environment !== "paper") return true;
+    const readProfile = paperReadProfileId(this.config);
+    // An unconfigured profile keeps the existing typed failure of the path
+    // below; only a configured, different profile is refused here.
+    return readProfile === undefined || managerRelationProfileBinding(environment).profileId === readProfile;
+  }
+
   private async namedCurrentRelation(
     principal: CurrentSourcePrincipal,
     requestedEnvironment: CurrentSourceEnvironment,
@@ -1218,7 +1242,7 @@ function validateBinding(
 }
 
 function profile(config: ControlApiConfig, environment: ProjectionEnvironment): string {
-  const value = environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID
+  const value = environment === "paper" ? paperReadProfileId(config)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
   if (!value) throw new CurrentSourceProxyError("N31_PROFILE_NOT_CONFIGURED", 503);

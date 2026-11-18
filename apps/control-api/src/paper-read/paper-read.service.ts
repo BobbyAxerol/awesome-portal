@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { PAPER_OBSERVATION_POLICY } from "./observation-policy";
 import { Inject, Injectable, Optional } from "@nestjs/common";
-import { ControlApiConfig, querySigningKeys } from "../config";
+import { ControlApiConfig, paperReadProfileId, querySigningKeys } from "../config";
 import { PortalUser, AuthSession } from "../domain";
 import {
   CurrentSourcePrincipal,
@@ -18,7 +18,7 @@ import { AnalyticsProxyError, ExecutionAnalyticsProxy } from "../execution/analy
 import { KeysetCursorCodec, QueryContractError } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { PaperBlotterQuery } from "./contracts";
-import { ManagerPage, managerPage } from "./manager-records";
+import { ManagerPage, ManagerReadContext, managerPage, paperReadContext } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import { IDENTITY_NOT_READ, identityFields } from "../execution/deployment-identity";
 import { positionsBySide } from "./positions-by-side";
@@ -222,6 +222,7 @@ export class PaperReadService {
 
   private readonly projectionWorkspaceId: string | undefined;
   private readonly paperProfileId: string | undefined;
+  private readonly readContext: ManagerReadContext;
   private readonly historyBytePolicy: Readonly<PaperHistoryBytePolicy>;
 
   constructor(
@@ -252,7 +253,8 @@ export class PaperReadService {
       ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS,
     });
     this.projectionWorkspaceId = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? undefined;
-    this.paperProfileId = config.EXECUTION_EDGE_PAPER_PROFILE_ID ?? undefined;
+    this.paperProfileId = paperReadProfileId(config) ?? undefined;
+    this.readContext = paperReadContext(this.paperProfileId);
     this.historyBytePolicy = Object.freeze({ ...(historyBytePolicy ?? PAPER_HISTORY_BYTE_POLICY) });
     validatePaperHistoryBytePolicy(this.historyBytePolicy);
   }
@@ -444,6 +446,10 @@ export class PaperReadService {
           ? error.code
           : "ANALYTICS_LOCAL_PROJECTION_UNAVAILABLE";
       }
+    } else if (this.analytics && this.readContext.profileId !== "PAPER_BINANCE_USDM") {
+      // The Manager-v2 analytics query is bound to the BINANCE Paper profile;
+      // for any other Paper profile it would answer about the wrong one.
+      analyticsReason = "ANALYTICS_NOT_BOUND_TO_PAPER_PROFILE";
     } else if (this.analytics) {
       try {
         // The upstream envelope carries the same fact groups; the workbench
@@ -659,7 +665,7 @@ export class PaperReadService {
           ...(deploymentScope ? { deploymentScope } : {}),
         },
       );
-      const page = managerPage(response, item.relation, item.fields);
+      const page = managerPage(response, item.relation, item.fields, this.readContext);
       const normalized = this.normalizePaperRows(page.items);
       return { page: { ...page, items: normalized.items }, quarantinedOrderRows: normalized.quarantinedOrderRows };
     }));
@@ -727,7 +733,7 @@ export class PaperReadService {
       schema_version: schemaVersion,
       record_authority: "PORTAL_CONTROL",
       source_authority: "TRADING_SYSTEM",
-      delivery_profile: "PAPER_BINANCE_USDM",
+      delivery_profile: this.readContext.profileId,
       workspace_id: principal.workspaceId,
       // `*_ms` is the canonical EDS-02 wire.  The ISO aliases preserve the
       // pre-existing v1 response contract for specialised consumers until
