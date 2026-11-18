@@ -1,0 +1,270 @@
+{
+  "name": "trading-system-manager-read-paper-okx",
+  "networks": {
+    "executor_network": {
+      "external": true,
+      "name": "executor_network"
+    }
+  },
+  "services": {
+    "portal_manager_issuer": {
+      "cap_drop": [
+        "ALL"
+      ],
+      "command": [
+        "python",
+        "-m",
+        "services.portal_execution_owner.manager_issuer"
+      ],
+      "environment": {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": "/app",
+        "PYTHONUNBUFFERED": "1",
+        "TS_PORTAL_MANAGER_ISSUER_RUNTIME_ENV_FILE": "/run/secrets/manager-runtime.env"
+      },
+      "image": "localhost/portal-manager-read@sha256:8d4765a4451431ec6a5e146a24745d3bc791b411e1b0093bbf8cee8edc1044dd",
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "networks": {
+        "executor_network": null
+      },
+      "ports": [
+        {
+          "host_ip": "127.0.0.1",
+          "mode": "ingress",
+          "protocol": "tcp",
+          "published": "8324",
+          "target": 8024
+        }
+      ],
+      "read_only": true,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "tmpfs": [
+        "/tmp:rw,noexec,nosuid,size=16m"
+      ],
+      "user": "1001:1001",
+      "volumes": [
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/issuer-runtime.env",
+          "target": "/run/secrets/manager-runtime.env",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/mtls-ca-cert.pem",
+          "target": "/run/secrets/mtls-ca-cert.pem",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/jwt-jwks.json",
+          "target": "/run/secrets/jwt-jwks.json",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/revocations.json",
+          "target": "/run/secrets/revocations.json",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/issuer-server-cert.pem",
+          "target": "/run/secrets/issuer-server-cert.pem",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/issuer-server-key.pem",
+          "target": "/run/secrets/issuer-server-key.pem",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/jwt-ed25519-private.pem",
+          "target": "/run/secrets/jwt-ed25519-private.pem",
+          "type": "bind"
+        }
+      ]
+    },
+    "portal_manager_read": {
+      "cap_drop": [
+        "ALL"
+      ],
+      "command": [
+        "python",
+        "/opt/manager-s1/manager_s1.py"
+      ],
+      "cpus": 0.5,
+      "environment": {
+        "PYTHONDONTWRITEBYTECODE": "1",
+        "PYTHONPATH": "/app",
+        "PYTHONUNBUFFERED": "1",
+        "TS_PORTAL_MANAGER_READ_RUNTIME_ENV_FILE": "/run/secrets/manager-runtime.env",
+        "TS_PORTAL_MANAGER_S1_SOURCE_ID": "sha256:ac7c1cd2081f78e3ee7c04772cf7c109d8e5ad271c4f65eef4f63c0e55c5b175"
+      },
+      "image": "localhost/portal-manager-read@sha256:8d4765a4451431ec6a5e146a24745d3bc791b411e1b0093bbf8cee8edc1044dd",
+      "logging": {
+        "driver": "json-file",
+        "options": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "mem_limit": "536870912",
+      "networks": {
+        "executor_network": null
+      },
+      "pids_limit": 128,
+      "ports": [
+        {
+          "host_ip": "127.0.0.1",
+          "mode": "ingress",
+          "protocol": "tcp",
+          "published": "8323",
+          "target": 8023
+        }
+      ],
+      "read_only": true,
+      "restart": "unless-stopped",
+      "security_opt": [
+        "no-new-privileges:true"
+      ],
+      "tmpfs": [
+        "/tmp:rw,noexec,nosuid,size=16m"
+      ],
+      "user": "1001:1001",
+      "volumes": [
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/facade-runtime.env",
+          "target": "/run/secrets/manager-runtime.env",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/facade-db.dsn",
+          "target": "/run/secrets/facade-db.dsn",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/relation-catalogue.json",
+          "target": "/run/secrets/relation-catalogue.json",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/serving-policy.json",
+          "target": "/run/secrets/serving-policy.json",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/cursor.key",
+          "target": "/run/secrets/cursor.key",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/jwt-jwks.json",
+          "target": "/run/secrets/jwt-jwks.json",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/revocations.json",
+          "target": "/run/secrets/revocations.json",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/server-cert.pem",
+          "target": "/run/secrets/server-cert.pem",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/server-key.pem",
+          "target": "/run/secrets/server-key.pem",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/mtls-ca-cert.pem",
+          "target": "/run/secrets/mtls-ca-cert.pem",
+          "type": "bind"
+        },
+        {
+          "bind": {
+            "create_host_path": false
+          },
+          "read_only": true,
+          "source": "/home/bobby/secure/portal-manager-paper-okx-20261118/ts-postgres-ca.crt",
+          "target": "/run/secrets/ts-postgres-ca.crt",
+          "type": "bind"
+        }
+      ]
+    }
+  }
+}
