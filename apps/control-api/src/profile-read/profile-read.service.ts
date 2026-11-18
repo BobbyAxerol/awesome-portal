@@ -1,4 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ControlApiConfig, paperReadProfileId } from "../config";
+import { CONTROL_API_CONFIG } from "../tokens";
 import { AuthSession, PortalUser } from "../domain";
 import {
   CurrentSourcePrincipal,
@@ -9,7 +11,7 @@ import {
   DeploymentScopeResolution,
   ExecutionProductReadSource,
 } from "../execution/product-read-source";
-import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
+import { ManagerPage, ManagerReadContext, managerPage, paperReadContext } from "../paper-read/manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import {
   oldestStageAsOfMs,
@@ -150,7 +152,17 @@ const PROFILE = Object.freeze({
 export class ProfileReadService {
   constructor(
     @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
   ) {}
+
+  /** Paper follows the configured read profile; Sandbox and Live are fixed. */
+  private profileFor(environment: SourceEnvironment): { profileId: ManagerReadContext["profileId"]; mode: ManagerReadContext["mode"] } {
+    if (environment === "paper" && this.config) {
+      const { profileId, mode } = paperReadContext(paperReadProfileId(this.config));
+      return { profileId, mode };
+    }
+    return PROFILE[environment];
+  }
 
   overview(principal: ProfileReadPrincipal, environment: SourceEnvironment) {
     const screenId = environment === "sandbox" ? "SANDBOX_TRADING_SCREEN" : "LIVE_OPERATIONS_SCREEN";
@@ -166,7 +178,7 @@ export class ProfileReadService {
       ? [requestedEnvironment]
       : ["live", "sandbox", "paper"];
     const candidates = await Promise.all(environments.map(async (environment) => {
-      const profile = PROFILE[environment];
+      const profile = this.profileFor(environment);
       const context: ManagerReadContext = {
         ...profile,
         errorPrefix: environment === "paper" ? "N22" : "N23",
@@ -236,7 +248,7 @@ export class ProfileReadService {
     deploymentId?: string,
   ) {
     const sourceEnvironment: SourceEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
-    const profile = PROFILE[sourceEnvironment];
+    const profile = this.profileFor(sourceEnvironment);
     const context: ManagerReadContext = { ...profile, errorPrefix: "N23" };
     const resolution = deploymentId
       ? await this.source.resolveDeploymentScope(

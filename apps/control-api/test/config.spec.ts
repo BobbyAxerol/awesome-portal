@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadConfig } from "../src/config";
+import { loadConfig, paperReadProfileId } from "../src/config";
 
 const folders: string[] = [];
 
@@ -218,5 +218,38 @@ describe("OKX Paper profile config (owner decision 2026-11-18, staged groundwork
     expect(config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID).toBe("PAPER_OKX_SWAP");
     expect(config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX).toBe("true");
     expect(loadConfig({ ...baseEnv(), ...edgeCommon, FEATURE_EXECUTION_EDGE: "false" }).FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX).toBe("false");
+  });
+});
+
+describe("Paper read profile (owner decision 2026-11-18: OKX is the Paper default where it exists)", () => {
+  const okx = {
+    FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+    EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+    EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+  } as const;
+
+  it("defaults to OKX when the OKX profile is enabled and wired", () => {
+    expect(paperReadProfileId(okx)).toBe("PAPER_OKX_SWAP");
+  });
+
+  it("stays on the BINANCE Paper profile where OKX is off or unwired", () => {
+    expect(paperReadProfileId({ ...okx, FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "false" })).toBe("PAPER_BINANCE_USDM");
+    expect(paperReadProfileId({ ...okx, EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: undefined })).toBe("PAPER_BINANCE_USDM");
+    expect(paperReadProfileId({})).toBeUndefined();
+  });
+
+  it("lets an explicit choice move the read side back to BINANCE", () => {
+    expect(paperReadProfileId({ ...okx, EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_BINANCE_USDM" })).toBe("PAPER_BINANCE_USDM");
+  });
+
+  it("refuses an explicit OKX read profile without the OKX profile wired", () => {
+    expect(() => loadConfig({
+      ...baseEnv(),
+      EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_OKX_SWAP",
+    })).toThrow(/EXECUTION_PAPER_READ_PROFILE_ID=PAPER_OKX_SWAP requires/);
+  });
+
+  it("rejects a profile id that is not a known Paper family", () => {
+    expect(() => loadConfig({ ...baseEnv(), EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_DNSE_VNM" })).toThrow();
   });
 });

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { ControlApiConfig, querySigningKeys } from "../config";
+import { ControlApiConfig, querySigningKeys, paperReadProfileId } from "../config";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -233,7 +233,7 @@ function validateRequest(request: SubjectActivityRequest): void {
 }
 
 function profileIdFor(config: ControlApiConfig, environment: ProjectionEnvironment): string | undefined {
-  return environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID
+  return environment === "paper" ? paperReadProfileId(config)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
 }

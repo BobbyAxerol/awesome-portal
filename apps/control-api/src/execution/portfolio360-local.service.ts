@@ -41,6 +41,7 @@ import {
 } from "./maximum-data-operation.service";
 import { ExecutionProfileProjectionRepository, ProjectionEnvironment } from "./profile-projection.repository";
 import { CONTROL_API_CONFIG } from "../tokens";
+import { paperReadProfileId } from "../config";
 import type { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
 
@@ -182,7 +183,7 @@ export class Portfolio360LocalService {
     const context = await this.portfolioContext(principal, portfolioId, environment);
     const { version, readAt } = context;
     const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
-    const profileId = environment === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID
+    const profileId = environment === "paper" ? paperReadProfileId(this.config)
       : environment === "sandbox" ? this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
     if (!workspaceId || !profileId) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED", 503);

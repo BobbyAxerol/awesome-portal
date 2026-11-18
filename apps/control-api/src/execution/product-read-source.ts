@@ -1,7 +1,7 @@
 import { canonicalOrderStatus } from "../paper-read/order-status-map";
 import { freshnessPolicies } from "./environment-parity";
 import { Inject, Injectable } from "@nestjs/common";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, paperReadProfileId } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   CurrentSourceEnvironment,
@@ -116,6 +116,7 @@ export class ExecutionProductReadSource {
           availability: "UNAVAILABLE", retryable: false,
         });
       }
+      this.assertWarmUpMatchesReadProfile(environment);
       return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
     }
     try {
@@ -127,12 +128,32 @@ export class ExecutionProductReadSource {
       if (
         error instanceof CurrentSourceProxyError &&
         error.code === "N31_PROJECTION_NOT_READY" &&
-        !hasLocalQuery(query)
+        !hasLocalQuery(query) &&
+        // The warm-up operations are frozen to the BINANCE Paper profile. When
+        // the read side serves another Paper profile their page would be a
+        // different profile's data under this profile's name, so "not ready"
+        // stays "not ready".
+        this.warmUpMatchesReadProfile(environment)
       ) {
         return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
       }
       throw error;
     }
+  }
+
+  private assertWarmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment): void {
+    if (this.warmUpMatchesReadProfile(requestedEnvironment)) return;
+    throw new CurrentSourceProxyError("EDS11R_PANEL_REQUIRES_PROJECTION", 503, {
+      availability: "UNAVAILABLE",
+      reason_code: "WARM_UP_NOT_BOUND_TO_PAPER_READ_PROFILE",
+      retryable: false,
+    });
+  }
+
+  private warmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment): boolean {
+    const environment = maximumDataEnvironment(requestedEnvironment);
+    if (environment !== "paper") return true;
+    return managerRelationProfileBinding(environment).profileId === profile(this.config, environment);
   }
 
   /**
@@ -678,7 +699,7 @@ function validateBinding(
 }
 
 function profile(config: ControlApiConfig, environment: ProjectionEnvironment): string {
-  const value = environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID
+  const value = environment === "paper" ? paperReadProfileId(config)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
   if (!value) throw new CurrentSourceProxyError("N31_PROFILE_NOT_CONFIGURED", 503);

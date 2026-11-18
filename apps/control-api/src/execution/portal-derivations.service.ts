@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, paperReadProfileId } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -471,7 +471,7 @@ function relation(snapshot: ProfileProjectionSnapshot, key: string): ProjectionR
 }
 
 function profileIdFor(environment: Environment, config: ControlApiConfig): string | undefined {
-  return environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID
+  return environment === "paper" ? paperReadProfileId(config)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
 }

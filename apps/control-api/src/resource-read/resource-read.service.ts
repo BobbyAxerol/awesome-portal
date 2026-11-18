@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, paperReadProfileId } from "../config";
 import { utcEpochMs } from "../execution/contract-authority";
 import {
   ExecutionProfileProjectionRepository,
@@ -1295,7 +1295,7 @@ function renderDecimal(value: bigint, scale: number): string {
 function unique(values: readonly string[]): string[] { return [...new Set(values.filter((value) => value.length > 0))].sort(); }
 
 function profileIdFor(environment: ResourceEnvironment, config: ControlApiConfig): string | null {
-  return environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID ?? null
+  return environment === "paper" ? paperReadProfileId(config) ?? null
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID ?? null
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID ?? null;
 }

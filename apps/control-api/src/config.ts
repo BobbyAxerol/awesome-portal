@@ -116,6 +116,15 @@ const EnvSchema = z.object({
   // third Paper family beside BINANCE and DNSE. Off until the Edge instance,
   // Manager and catalogue for it exist; Core wiring is groundwork only.
   FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: z.enum(["true", "false"]).default("false"),
+  // Which Paper profile the product READ side serves (screens, history,
+  // analytics, lists). Unset = PAPER_OKX_SWAP when the OKX profile is enabled
+  // and wired, otherwise the BINANCE Paper profile (owner, 2026-11-18: OKX is
+  // the Paper default where it exists). Write-side paths (projection worker,
+  // history mirror, event ledger) are never moved by this setting.
+  EXECUTION_PAPER_READ_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"]).optional(),
+  ),
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
   // EDS-11R4 remains separately dark even when a current-source profile is
@@ -266,6 +275,34 @@ const EnvSchema = z.object({
 
 export type ControlApiConfig = z.infer<typeof EnvSchema>;
 
+export const PAPER_OKX_PROFILE_ID = "PAPER_OKX_SWAP";
+
+type PaperReadProfileConfig = Partial<Pick<ControlApiConfig,
+  | "EXECUTION_EDGE_PAPER_PROFILE_ID"
+  | "EXECUTION_PAPER_READ_PROFILE_ID"
+  | "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX"
+  | "EXECUTION_EDGE_PAPER_OKX_PROFILE_ID">>;
+
+/** True when the OKX Paper profile is enabled and its profile id is wired. */
+export function paperOkxReady(config: PaperReadProfileConfig): boolean {
+  return config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX === "true" &&
+    config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID === PAPER_OKX_PROFILE_ID;
+}
+
+/**
+ * The Paper profile every product READ resolves to. One function so a screen,
+ * its history, its analytics and its lists can never disagree about which
+ * Paper profile they describe. Write-side paths keep using
+ * EXECUTION_EDGE_PAPER_PROFILE_ID directly.
+ */
+export function paperReadProfileId(config: PaperReadProfileConfig): string | undefined {
+  const choice = config.EXECUTION_PAPER_READ_PROFILE_ID
+    ?? (paperOkxReady(config) ? PAPER_OKX_PROFILE_ID : undefined);
+  return choice === PAPER_OKX_PROFILE_ID && paperOkxReady(config)
+    ? PAPER_OKX_PROFILE_ID
+    : config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+}
+
 function signingKeysFromFile(
   env: NodeJS.ProcessEnv,
   jsonName: "QUERY_CURSOR_KEYS_JSON" | "GOVERNANCE_APPLY_KEYS_JSON",
@@ -324,6 +361,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     "GOVERNANCE_APPLY_KEYS_FILE",
   );
   const config = EnvSchema.parse(resolved);
+  if (config.EXECUTION_PAPER_READ_PROFILE_ID === PAPER_OKX_PROFILE_ID && !paperOkxReady(config)) {
+    throw new Error(
+      "EXECUTION_PAPER_READ_PROFILE_ID=PAPER_OKX_SWAP requires FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX=true " +
+      "and EXECUTION_EDGE_PAPER_OKX_PROFILE_ID=PAPER_OKX_SWAP",
+    );
+  }
   if (config.PORTAL_ENV !== "local") {
     const missingSigningKeys = ["QUERY_CURSOR_KEYS_JSON", "GOVERNANCE_APPLY_KEYS_JSON"]
       .filter((name) => !resolved[name]);

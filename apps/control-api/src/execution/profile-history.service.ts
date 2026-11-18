@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, paperReadProfileId } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { profileProjectionCatalog } from "./profile-projection.catalog";
 import {
@@ -37,7 +37,7 @@ export class ExecutionProfileHistoryService {
     if (!binding) throw new HistoryReadError("N33_HISTORY_RELATION_NOT_ACCEPTED", 404);
     const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     if (!workspaceId) throw new HistoryReadError("N33_PROJECTION_WORKSPACE_NOT_CONFIGURED", 503);
-    const profileId = environment === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID
+    const profileId = environment === "paper" ? paperReadProfileId(this.config)
       : environment === "sandbox" ? this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
         : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
     if (!profileId) throw new HistoryReadError("N33_PROFILE_NOT_CONFIGURED", 503);

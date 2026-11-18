@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, paperReadProfileId } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionProfileProjectionRepository,
@@ -230,7 +230,7 @@ function publicGroupId(sourceReference: string): string {
 }
 
 function profile(config: ControlApiConfig, environment: ProjectionEnvironment): string {
-  const profileId = environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID
+  const profileId = environment === "paper" ? paperReadProfileId(config)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
   if (!profileId) throw new ProjectionAdapterError("N32_PROFILE_NOT_CONFIGURED", 503);

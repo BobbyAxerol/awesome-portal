@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { CommandCenterError, CommandCenterService } from "../command-center/command-center.service";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, paperReadProfileId } from "../config";
 import { GovernanceService } from "../governance/governance.service";
 import { governanceConditionsQuery } from "../governance/contracts";
 import { PaperExitService } from "../governance/paper-exit.service";
@@ -238,7 +238,7 @@ export class OperationalCompositionService {
 }
 
 function profileIdFor(environment: ProjectionEnvironment, config: ControlApiConfig): string | undefined {
-  return environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID
+  return environment === "paper" ? paperReadProfileId(config)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
 }
