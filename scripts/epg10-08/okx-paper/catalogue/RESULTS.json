@@ -1,0 +1,85 @@
+{
+ "checks": {
+  "binance_new_equals_installed_paper": {
+   "manager-catalogue-release.json": true,
+   "profile-selection.json": true,
+   "relation-catalogue.json": true,
+   "serving-policy.json": true
+  },
+  "binance_old_equals_new_all_5_files": true,
+  "okx_proposal_old_equals_new": true
+ },
+ "installed_paper": {
+  "manager-catalogue-release.json": "57d52f66d06f098769da43114fcd036045524c1482559ccb4c86089bfba5e5cc",
+  "profile-selection.json": "fd8d62529fcf1a75e9137e3499216c9c95b08935ac6f20bb2aa731253675a8cc",
+  "relation-catalogue.json": "0e34dc5214ecefaaa5416f4cd33710f1730eb1dbf8a420bdf5b0c6a4691d3c2e",
+  "serving-policy.json": "272e32f1b352a7a1edfa4e6a3c64ec8ff184cdfb2907c495fd5e531292495509"
+ },
+ "results": {
+  "binance_new": {
+   "catalogue-candidate.json": "ed14cfa1835a788aea6d310adacb80ddddf8cb46a3c88d464150264d3560a2e4",
+   "denied": 12,
+   "manager-catalogue-release.json": "57d52f66d06f098769da43114fcd036045524c1482559ccb4c86089bfba5e5cc",
+   "profile-selection.json": "fd8d62529fcf1a75e9137e3499216c9c95b08935ac6f20bb2aa731253675a8cc",
+   "profile_sha256": "fd8d62529fcf1a75e9137e3499216c9c95b08935ac6f20bb2aa731253675a8cc",
+   "relation-catalogue.json": "0e34dc5214ecefaaa5416f4cd33710f1730eb1dbf8a420bdf5b0c6a4691d3c2e",
+   "relations": 67,
+   "returnable": 1105,
+   "seal": "4f38c58fed81c7600aea3d5c57dbca64443fc6b47c8ffa54d60296d7cd83c811",
+   "serving-policy.json": "272e32f1b352a7a1edfa4e6a3c64ec8ff184cdfb2907c495fd5e531292495509",
+   "status": "PARTIAL_CANDIDATE_NOT_INSTALLED"
+  },
+  "binance_old": {
+   "catalogue-candidate.json": "ed14cfa1835a788aea6d310adacb80ddddf8cb46a3c88d464150264d3560a2e4",
+   "denied": 12,
+   "manager-catalogue-release.json": "57d52f66d06f098769da43114fcd036045524c1482559ccb4c86089bfba5e5cc",
+   "profile-selection.json": "fd8d62529fcf1a75e9137e3499216c9c95b08935ac6f20bb2aa731253675a8cc",
+   "profile_sha256": "fd8d62529fcf1a75e9137e3499216c9c95b08935ac6f20bb2aa731253675a8cc",
+   "relation-catalogue.json": "0e34dc5214ecefaaa5416f4cd33710f1730eb1dbf8a420bdf5b0c6a4691d3c2e",
+   "relations": 67,
+   "returnable": 1105,
+   "seal": "4f38c58fed81c7600aea3d5c57dbca64443fc6b47c8ffa54d60296d7cd83c811",
+   "serving-policy.json": "272e32f1b352a7a1edfa4e6a3c64ec8ff184cdfb2907c495fd5e531292495509",
+   "status": "PARTIAL_CANDIDATE_NOT_INSTALLED"
+  },
+  "okx_proposal_new": {
+   "catalogue-candidate.json": "4d7ad7b0df3326bbc85a99538a7bc096f1be0f05f6d5351a45437fbae736fc1e",
+   "denied": 12,
+   "manager-catalogue-release.json": "6a4c92435afb46efab56e3515714fb54b1c884e19eb1478e1ae97ac2ba8ee7a7",
+   "profile-selection.json": "fd3fb6c58e92b79fb24360f7a71d7b234ab7005f19e32945fc5dff85b55d6578",
+   "profile_sha256": "fd3fb6c58e92b79fb24360f7a71d7b234ab7005f19e32945fc5dff85b55d6578",
+   "relation-catalogue.json": "4ac10bd0132a4f40bd259f17a4574db11af6b84f65e3219408c9b2f267390bcc",
+   "relations": 67,
+   "returnable": 1105,
+   "seal": "bd83d54b099d2249f45d0631fd3452bbef97d7172a1c0e92d19c4c8d86b2c1b5",
+   "serving-policy.json": "718c9de07c179284333dc876f10de2e9c41393a7183c098fab08fa9714e3aef6",
+   "status": "PARTIAL_CANDIDATE_NOT_INSTALLED"
+  },
+  "okx_proposal_old": {
+   "catalogue-candidate.json": "4d7ad7b0df3326bbc85a99538a7bc096f1be0f05f6d5351a45437fbae736fc1e",
+   "denied": 12,
+   "manager-catalogue-release.json": "6a4c92435afb46efab56e3515714fb54b1c884e19eb1478e1ae97ac2ba8ee7a7",
+   "profile-selection.json": "fd3fb6c58e92b79fb24360f7a71d7b234ab7005f19e32945fc5dff85b55d6578",
+   "profile_sha256": "fd3fb6c58e92b79fb24360f7a71d7b234ab7005f19e32945fc5dff85b55d6578",
+   "relation-catalogue.json": "4ac10bd0132a4f40bd259f17a4574db11af6b84f65e3219408c9b2f267390bcc",
+   "relations": 67,
+   "returnable": 1105,
+   "seal": "bd83d54b099d2249f45d0631fd3452bbef97d7172a1c0e92d19c4c8d86b2c1b5",
+   "serving-policy.json": "718c9de07c179284333dc876f10de2e9c41393a7183c098fab08fa9714e3aef6",
+   "status": "PARTIAL_CANDIDATE_NOT_INSTALLED"
+  },
+  "okx_swap_new": {
+   "catalogue-candidate.json": "936f9676db7d10775f89149e4bd0d1685245d40368c4b95fb9ac9efde5b547b2",
+   "denied": 12,
+   "manager-catalogue-release.json": "8fd7bdf8d1cc36a50077b7e5565c58ba6886a03f76680c48640c00a9f97d6f82",
+   "profile-selection.json": "b61876234af3b0dc270bad80d33ccf95e03b8d721a95b6ef471a87dc9a00f1dc",
+   "profile_sha256": "b61876234af3b0dc270bad80d33ccf95e03b8d721a95b6ef471a87dc9a00f1dc",
+   "relation-catalogue.json": "6c89a03abb44c8c7bd90cc59ecae17ab4a72a2238f9528d7ba8fb6ad0f485d1a",
+   "relations": 67,
+   "returnable": 1105,
+   "seal": "14bb84b495bca93807486b4edac1f9fb45488485ee6e80842970a4848312eb29",
+   "serving-policy.json": "ac8b1478027a090bc0c8b8512bc70cffdaa8dfca8c133586edee1ef7f7509ed1",
+   "status": "PARTIAL_CANDIDATE_NOT_INSTALLED"
+  }
+ }
+}

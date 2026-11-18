@@ -1,0 +1,12 @@
+# OKX Paper source-database identity pin (guard ON), OKX Edge only: adds the two pin variables and a read-only bind of the pin file.
+# Stacked after the OKX Edge stack (rendered edge + proxy files + projection-url override); nothing else changes.
+services:
+  execution-edge-okx:
+    environment:
+      EDGE_MANAGER_SOURCE_DB_PIN_FILE: "/run/manager-source-pin/pin.json"
+      EDGE_MANAGER_SOURCE_DB_PIN_SHA256: "sha256:7463c6e0ab75396426d76ead3c62ed0deb494740376c280ee378500a86d67351"
+    volumes:
+      - type: bind
+        source: /home/bobby/.local/state/portal-execution-edge/releases/okx-paper-step4-20261118/guard-pin/pin.okx.json
+        target: /run/manager-source-pin/pin.json
+        read_only: true
