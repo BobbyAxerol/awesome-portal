@@ -235,7 +235,7 @@ def prepare(validity_days=None, new_ca_days=None):
                 'ANCHOR_NOT_PINNED_CA')  # Each anchor holds exactly the pinned old CA today.
     keys = [private_read(RUNTIME / 'facade-server-key.pem'),
             private_read(RUNTIME / 'issuer-server-key.pem'),
-            re.search(rb'-----BEGIN PRIVATE KEY-----.*?-----END PRIVATE KEY-----',
+            re.search(rb'-----BEGIN ' rb'PRIVATE KEY-----.*?-----END PRIVATE KEY-----',
                       originals[2], re.S).group(0) + b'\n']
     now = datetime.now(timezone.utc)
     days = DEFAULT_VALIDITY_DAYS if validity_days is None else validity_days

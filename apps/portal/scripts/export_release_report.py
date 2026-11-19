@@ -58,6 +58,14 @@ SCAN_ALLOWLIST = {
     # itself would turn the release hygiene gate into a permanent false
     # positive; its runtime assertion remains in force.
     "scripts/execution-d2-test.sh",
+    # EPG10 native-read evidence tests: each literal below is a deliberately wrong or
+    # TEST_ONLY password (DSN host TEST_ONLY.invalid / a closed golden test database)
+    # that must provoke InvalidPasswordError; none authenticates anywhere.  The first
+    # two files are also hash-pinned by their qualification evidence, so they are
+    # allowlisted instead of rewritten.
+    "upgrade/integration/execution-native-read-v1/native-db-commissioning/role-credential-compatibility.py",
+    "upgrade/integration/execution-native-read-v1/research-identity-intake/test_identity_operator.py",
+    "upgrade/integration/execution-native-read-v1/research-identity-intake/test_identity_role_window.py",
 }
 
 
