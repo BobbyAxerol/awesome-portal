@@ -21,19 +21,19 @@
     "openapi_planning_snapshot": "sha256:1566dcdff7c3cc72debdeb392566ad6bd36d029babb23db7ed220c7d5633d605",
     "openapi_portal": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
     "openapi_portal_snapshot": "sha256:db5c129387a26fe7fe22087bf6d53f6d2b00588d9b186834a749d9f9b825e0c2",
-    "planning_frontend_lock": "sha256:ac4c28d02e411ae40c7c9eb0a80871adf9a179c12ad0bb33930a37797e083ac7",
+    "planning_frontend_lock": "sha256:ecce66117cbebc21e59eaa93b101ea7e923b888173359528eed1ec621ffd04f5",
     "planning_frontend_package": "sha256:50296a506bfa3c5786e7bc5845655b10c0a7d222cfcfabd58a0ada28d2024268",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
     "planning_requirements_dev": "sha256:6b932715dbbe91092d3abd614cbb095f2d105ddce45eaa99f5c98159ec93156b",
     "portal_backend_pyproject": "sha256:82975f70a727453e452de81f21ffd25f671d3cc047b7fcbf7be769e908a313db",
-    "portal_frontend_lock": "sha256:468da5d8cdff4bf1668d7ef21c112dcd79d865a8cd1a61bec98ecb96269f4752",
+    "portal_frontend_lock": "sha256:359fab3dfb2c3dbe8b065aa02151e544aa21851dbd30a46e735b073f8865101e",
     "portal_frontend_package": "sha256:9120f2903cb786dcfa120801a878aac76d64d560683486886d8f1c8789261f34",
     "protected_kernel_hash": "sha256:3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
     "protected_kernel_main": "sha256:34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
     "registry_source": "sha256:620c6cf89030ba3fef0267c9eea67db62fc334be8db8f628f68cde7d962e0694",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "973b2e2b1c098393291e57d3f08c17d237c3270e",
+  "frozen_at_commit": "de9e21ad5cf211cd220b82ef47b96e1965e3607e",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
