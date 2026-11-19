@@ -45,7 +45,7 @@ from uuid import UUID
 ORIGIN = "https://research-portal.primusspark.com"
 HOST = "research-portal.primusspark.com"
 MAX_BYTES = 1024 * 1024
-HELPER_PIN = "a6fa59aeb1438a4cff2147dc2359f614c347e2d3f6dbfbed8e108faffa77ad1f"
+HELPER_PIN = "e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424"
 CASES = ("deployments", "relation", "repeat_read", "snapshot", "cursor_resume",
          "stream_notice", "post_revoke_read", "post_revoke_cursor",
          "post_revoke_stream", "post_revoke_stream_read_preserved",
