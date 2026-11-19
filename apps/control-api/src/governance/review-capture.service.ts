@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, paperReadProfileId } from "../config";
 import { withTransaction } from "../db/pool";
 import { PortalUser } from "../domain";
 import { ExecutionProfileProjectionRepository, projectionDigest, type ProjectionRow } from "../execution/profile-projection.repository";
@@ -216,10 +216,12 @@ export class GovernanceReviewCaptureService {
   private async paperSnapshot(client: PoolClient,workspace: string,digest: string) {
     if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || this.config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER !== "true" ||
       this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID !== workspace) fail("CAPTURE_PROJECTION_NOT_AUTHORIZED",404);
-    const snapshot = await this.projections.snapshot(workspace,"paper",this.config.EXECUTION_EDGE_PAPER_PROFILE_ID!,client);
+    // The capture must describe the Paper profile the screens read.
+    const paperProfile = paperReadProfileId(this.config);
+    const snapshot = await this.projections.snapshot(workspace,"paper",paperProfile!,client);
     if (!snapshot) fail("CAPTURE_PROJECTION_UNAVAILABLE",422);
     if (snapshot.document.workspace_id !== workspace || snapshot.document.environment !== "paper" ||
-        snapshot.document.profile_id !== this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) fail("CAPTURE_PROJECTION_SCOPE_MISMATCH",422);
+        snapshot.document.profile_id !== paperProfile) fail("CAPTURE_PROJECTION_SCOPE_MISMATCH",422);
     if (snapshot.payloadDigest !== digest) fail("CAPTURE_PROJECTION_VERSION_CONFLICT");
     if (Date.now()-snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) fail("CAPTURE_PROJECTION_STALE",422);
     return snapshot;

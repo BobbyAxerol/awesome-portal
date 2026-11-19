@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { freshnessPolicies } from "../execution/environment-parity";
 import { AuthSession, PortalUser } from "../domain";
-import { ControlApiConfig, querySigningKeys } from "../config";
+import { ControlApiConfig, paperReadProfileId, querySigningKeys } from "../config";
 import { ExecutionProductReadSource } from "../execution/product-read-source";
 import { ControlPlaneQueryService, KeysetCursorCodec } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -105,7 +105,7 @@ export class ManagerListsService {
       fleetRawQuery(query),
     );
     return {
-      ...envelope("execution.alpha-fleet-list.v2", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config)),
+      ...envelope("execution.alpha-fleet-list.v2", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config), profile(query.environment, this.config)),
       summary: snapshot.summary,
     };
   }
@@ -117,7 +117,7 @@ export class ManagerListsService {
       { actorId: principal.user.userId, workspaceId: scope(principal.workspaceId, query.environment), role: principal.user.role },
       bindingsRawQuery(query),
     );
-    return envelope("execution.bindings-list.v1", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config));
+    return envelope("execution.bindings-list.v1", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config), profile(query.environment, this.config));
   }
 
   async binding(principal: ManagerListPrincipal, environment: ManagerListEnvironment, bindingId: string) {
@@ -128,7 +128,7 @@ export class ManagerListsService {
       schema_version: "execution.binding-detail.v1",
       record_authority: "PORTAL_PROJECTION",
       source_authority: "TRADING_SYSTEM",
-      delivery_profile: profile(environment),
+      delivery_profile: profile(environment, this.config),
       workspace_id: principal.workspaceId,
       environment,
       read_at: new Date().toISOString(),
@@ -179,7 +179,7 @@ export class ManagerListsService {
       schema_version: "execution.portfolio-list.v1",
       record_authority: "PORTAL_PROJECTION",
       source_authority: "TRADING_SYSTEM",
-      delivery_profile: profile(query.environment),
+      delivery_profile: profile(query.environment, this.config),
       workspace_id: principal.workspaceId,
       environment: query.environment,
       read_at: new Date().toISOString(),
@@ -222,7 +222,7 @@ export class ManagerListsService {
     // Profile-sized batches for the same reason as refreshFleet: the shared
     // source admission budget is global, so profiles run serially.
     for (const sourceEnvironment of sourceEnvironments) {
-      const context = readContext(sourceEnvironment);
+      const context = readContext(sourceEnvironment, this.config);
       try {
         const [portfolios, allocations] = await Promise.all([
           this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.portfolios", "portfolios", PORTFOLIO_FIELDS, context),
@@ -327,6 +327,7 @@ export class ManagerListsService {
         truncated,
         total_portfolios: items.length,
         page_freshness: pageFreshness,
+        read_profile: snapshotReadProfile(query.environment, this.config),
       },
     });
     return requiredSnapshot(this.repository, principal.workspaceId, query.environment, "PORTFOLIOS");
@@ -338,7 +339,13 @@ export class ManagerListsService {
     kind: ProjectionKind,
     refreshAllowed: boolean,
   ): Promise<ProjectionSnapshot> {
-    const existing = await this.repository.snapshot(principal.workspaceId, environment, kind);
+    const stored = await this.repository.snapshot(principal.workspaceId, environment, kind);
+    // A snapshot built from another Paper profile is not this profile's
+    // truth: it is treated as missing so the first read rebuilds it. A
+    // snapshot written before profiles were recorded is BINANCE data.
+    const wanted = snapshotReadProfile(environment, this.config);
+    const storedProfile = stored ? (stored.summary?.read_profile ?? PAPER_BINANCE_PROFILE) : null;
+    const existing = stored && (wanted === null || storedProfile === wanted) ? stored : null;
     if (!refreshAllowed || (existing && Date.now() - existing.refreshedAt.valueOf() <= SNAPSHOT_MAX_AGE_MS)) {
       if (existing) return existing;
       throw new ManagerListsError("BR72_PROJECTION_NOT_AVAILABLE", 503);
@@ -392,7 +399,7 @@ export class ManagerListsService {
     // global fail-closed pacing budget. Profile-sized batches keep the source
     // below its accepted envelope without weakening or retrying admission.
     for (const sourceEnvironment of sourceEnvironments) {
-      const context = readContext(sourceEnvironment);
+      const context = readContext(sourceEnvironment, this.config);
       const [strategies, deployments, accounts, balances, portfolios, allocations, positions, findings] = await Promise.all([
         this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.strategies", "strategies", STRATEGY_FIELDS, context),
         this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, context),
@@ -446,13 +453,14 @@ export class ManagerListsService {
     const sourceAsOf = oldestDate(...pages.map((page) => page.asOf));
     await this.repository.replaceAlphaFleet({
       workspaceId: principal.workspaceId, environment, sourceAsOf,
-      completeness: completeness(...pages), rows, summary: fleetSummary(rows),
+      completeness: completeness(...pages), rows,
+      summary: { ...fleetSummary(rows), read_profile: snapshotReadProfile(environment, this.config) },
     });
     return requiredSnapshot(this.repository, principal.workspaceId, environment, "ALPHA_FLEET");
   }
 
   private async refreshBindings(principal: ManagerListPrincipal, environment: ManagerListEnvironment) {
-    const context = readContext(environment);
+    const context = readContext(environment, this.config);
     const [accounts, venueAccounts, brokerSync] = await Promise.all([
       this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "accounts", ACCOUNT_FIELDS, context),
       this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, context),
@@ -472,6 +480,7 @@ export class ManagerListsService {
     await this.repository.replaceBindings({
       workspaceId: principal.workspaceId, environment, sourceAsOf,
       completeness: completeness(accounts, venueAccounts, brokerSync), rows,
+      summary: { read_profile: snapshotReadProfile(environment, this.config) },
     });
     return requiredSnapshot(this.repository, principal.workspaceId, environment, "BINDINGS");
   }
@@ -531,11 +540,21 @@ export class ManagerListsError extends Error {
 }
 
 function scope(workspaceId: string, environment: AlphaFleetEnvironment) { return `${workspaceId}:${environment}`; }
-function profile(environment: AlphaFleetEnvironment) {
-  return environment === "all" ? "ALL_EXECUTION_PROFILES" : `${environment.toUpperCase()}_BINANCE_USDM`;
+const PAPER_BINANCE_PROFILE = "PAPER_BINANCE_USDM";
+/** The Paper profile this list reads: the configured read profile, else BINANCE. */
+function paperProfile(config: ControlApiConfig): string {
+  return paperReadProfileId(config) ?? PAPER_BINANCE_PROFILE;
 }
-function readContext(environment: ManagerListEnvironment): ManagerReadContext {
-  return { profileId: profile(environment) as ManagerReadContext["profileId"], mode: environment, errorPrefix: "N23" };
+function profile(environment: AlphaFleetEnvironment, config: ControlApiConfig) {
+  if (environment === "all") return "ALL_EXECUTION_PROFILES";
+  return environment === "paper" ? paperProfile(config) : `${environment.toUpperCase()}_BINANCE_USDM`;
+}
+/** Lists that contain Paper rows remember which Paper profile produced them. */
+function snapshotReadProfile(environment: AlphaFleetEnvironment, config: ControlApiConfig): string | null {
+  return environment === "paper" || environment === "all" ? paperProfile(config) : null;
+}
+function readContext(environment: ManagerListEnvironment, config: ControlApiConfig): ManagerReadContext {
+  return { profileId: profile(environment, config) as ManagerReadContext["profileId"], mode: environment, errorPrefix: "N23" };
 }
 function sourceEnvironment(environment: AlphaFleetEnvironment): ManagerListEnvironment {
   if (environment === "all") throw new ManagerListsError("BR72_BINDINGS_ENVIRONMENT_INVALID", 400);
@@ -988,13 +1007,13 @@ function bindingItem(item: BindingProjectionRecord): BindingItem {
 }
 function envelope(
   schemaVersion: string, principal: ManagerListPrincipal, environment: AlphaFleetEnvironment,
-  snapshot: ProjectionSnapshot, page: unknown, budget: FreshnessBudgetMs,
+  snapshot: ProjectionSnapshot, page: unknown, budget: FreshnessBudgetMs, deliveryProfile: string,
 ) {
   return {
     schema_version: schemaVersion,
     record_authority: "PORTAL_PROJECTION",
     source_authority: "TRADING_SYSTEM",
-    delivery_profile: profile(environment),
+    delivery_profile: deliveryProfile,
     workspace_id: principal.workspaceId,
     environment,
     read_at: new Date().toISOString(),

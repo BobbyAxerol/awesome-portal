@@ -26,6 +26,8 @@ class FakeSource {
   readonly calls: string[] = [];
   pause: Promise<void> | null = null;
   leakUnscopedChildren = false;
+  /** The Paper profile this fake Edge answers as (Paper phase 2). */
+  paperProfileId = "PAPER_BINANCE_USDM";
   /** Set to an error code to make every relation read fail until cleared. */
   failNextRefresh: string | null = null;
   readonly rows: Record<string, Array<Record<string, Scalar>>> = {
@@ -86,7 +88,7 @@ class FakeSource {
     const start = query.cursor ? Number(query.cursor) : 0;
     const slice = all.slice(start, start + 1);
     const next = start + 1 < all.length ? String(start + 1) : null;
-    return managerResponse(environment, relation, slice, next);
+    return managerResponse(environment, relation, slice, next, this.paperProfileId);
   }
 }
 
@@ -97,8 +99,11 @@ function tagged(value: Scalar) {
   return { kind: value.includes("T") && value.endsWith("Z") ? "TIMESTAMP" : "TEXT", value };
 }
 
-function managerResponse(environment: string, relation: string, rows: Array<Record<string, Scalar>>, next: string | null) {
-  const profileId = `${environment.toUpperCase()}_BINANCE_USDM`;
+function managerResponse(
+  environment: string, relation: string, rows: Array<Record<string, Scalar>>, next: string | null,
+  paperProfileId = "PAPER_BINANCE_USDM",
+) {
+  const profileId = environment === "paper" ? paperProfileId : `${environment.toUpperCase()}_BINANCE_USDM`;
   return {
     schema_version: "portal.execution.current-source-bff.v2",
     source_environment: environment,
@@ -179,6 +184,52 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
         balance_locked: "0", position_fact_count: 1,
       })],
     });
+  });
+
+  it("reads the configured Paper profile and rebuilds a list that was written for another profile (Paper phase 2)", async () => {
+    const stored = async (kind: string) => (await pool.query<{ profile: string | null }>(
+      `SELECT summary->>'read_profile' AS profile FROM execution_manager_projection_snapshots
+        WHERE workspace_id = 'ws_primary' AND environment = 'paper' AND projection_kind = $1`, [kind],
+    )).rows[0]?.profile ?? null;
+    const labels = (value: Record<string, any>) => value.page.rows.map((item: any) => item.alpha_label);
+
+    const first = await service.fleet(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
+    expect(first.delivery_profile).toBe("PAPER_BINANCE_USDM");
+    expect(labels(first)).toContain("Carry A");
+    expect(await stored("ALPHA_FLEET")).toBe("PAPER_BINANCE_USDM");
+
+    // The read side now serves OKX: the committed BINANCE list must not be served.
+    source.paperProfileId = "PAPER_OKX_SWAP";
+    source.rows.strategies[0] = { ...source.rows.strategies[0], label: "OKX Carry" };
+    const okxService = new ManagerListsService(
+      new ManagerListsRepository(pool),
+      source as unknown as ExecutionProductReadSource,
+      testConfig({
+        FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+        EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+      }),
+    );
+    const second = await okxService.fleet(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
+    expect(second.delivery_profile).toBe("PAPER_OKX_SWAP");
+    expect(labels(second)).toContain("OKX Carry");
+    expect(labels(second)).not.toContain("Carry A");
+    expect(await stored("ALPHA_FLEET")).toBe("PAPER_OKX_SWAP");
+
+    // Bindings follow the same rule, and Sandbox/Live lists never take a profile tag.
+    const bindings = await okxService.bindings(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
+    expect(bindings.delivery_profile).toBe("PAPER_OKX_SWAP");
+    expect(await stored("BINDINGS")).toBe("PAPER_OKX_SWAP");
+    const sandbox = await okxService.bindings(principal(), { environment: "sandbox", limit: 50 }) as Record<string, any>;
+    expect(sandbox.delivery_profile).toBe("SANDBOX_BINANCE_USDM");
+
+    // A snapshot written before profiles were recorded is BINANCE data.
+    await pool.query(
+      `UPDATE execution_manager_projection_snapshots SET summary = summary - 'read_profile'
+        WHERE workspace_id = 'ws_primary' AND environment = 'paper' AND projection_kind = 'ALPHA_FLEET'`,
+    );
+    source.rows.strategies[0] = { ...source.rows.strategies[0], label: "OKX Carry rebuilt" };
+    const third = await okxService.fleet(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
+    expect(labels(third)).toContain("OKX Carry rebuilt");
   });
 
   it("combines accepted profiles without FX mixing and filters by every stage presence", async () => {

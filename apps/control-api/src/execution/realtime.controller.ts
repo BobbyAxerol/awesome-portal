@@ -15,7 +15,7 @@ import { EventEmitter } from "node:events";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { AuthService } from "../auth/auth.service";
 import { AuthSession, PortalUser } from "../domain";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, paperReadProfileId } from "../config";
 import { SessionGuard } from "../facade/session.guard";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -359,7 +359,7 @@ function localScope(
     throw new LocalRealtimeError("N31_PROFILE_ENVIRONMENT_INVALID", 404);
   }
   const environment = rawEnvironment as ProjectionEnvironment;
-  const profileId = environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID
+  const profileId = environment === "paper" ? paperReadProfileId(config)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
   if (!profileId) throw new LocalRealtimeError("N31_PROFILE_NOT_CONFIGURED", 503);
@@ -373,7 +373,7 @@ function diagnosticProfiles(config: ControlApiConfig): Array<{
   profileId: string;
 }> {
   const configured = [
-    { environment: "paper" as const, profileId: config.EXECUTION_EDGE_PAPER_PROFILE_ID },
+    { environment: "paper" as const, profileId: paperReadProfileId(config) },
     { environment: "sandbox" as const, profileId: config.EXECUTION_EDGE_SANDBOX_PROFILE_ID },
     { environment: "live" as const, profileId: config.EXECUTION_EDGE_LIVE_PROFILE_ID },
   ];

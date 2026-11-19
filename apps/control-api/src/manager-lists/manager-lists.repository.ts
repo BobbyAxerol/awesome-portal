@@ -165,6 +165,7 @@ export class ManagerListsRepository {
   async replaceBindings(input: {
     workspaceId: string; environment: ManagerListEnvironment; sourceAsOf: Date | null;
     completeness: ProjectionSnapshot["sourceCompleteness"]; rows: readonly BindingProjectionRecord[];
+    summary?: Record<string, unknown>;
   }): Promise<void> {
     await this.transaction(`bindings:${input.workspaceId}:${input.environment}`, async (client, refreshedAt) => {
       const scope = `${input.workspaceId}:${input.environment}`;
@@ -180,7 +181,7 @@ export class ManagerListsRepository {
         );
       }
       await this.upsertSnapshot(client, input.workspaceId, input.environment, "BINDINGS",
-        input.sourceAsOf, input.completeness, input.rows.length, refreshedAt, {});
+        input.sourceAsOf, input.completeness, input.rows.length, refreshedAt, input.summary ?? {});
     });
   }
 
