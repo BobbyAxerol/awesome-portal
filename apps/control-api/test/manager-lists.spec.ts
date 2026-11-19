@@ -205,8 +205,19 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
       new ManagerListsRepository(pool),
       source as unknown as ExecutionProductReadSource,
       testConfig({
+        FEATURE_EXECUTION_EDGE: "true",
+        FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+        EXECUTION_EDGE_PAPER_ORIGIN: "https://paper-edge.internal",
+        EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+        EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
         FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+        EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.internal",
         EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+        EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper-okx",
+        EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/test/delegation.pem",
+        EXECUTION_EDGE_CA_FILE: "/run/secrets/test/ca.crt",
+        EXECUTION_EDGE_CLIENT_CERT_FILE: "/run/secrets/test/client.crt",
+        EXECUTION_EDGE_CLIENT_KEY_FILE: "/run/secrets/test/client.key",
       }),
     );
     const second = await okxService.fleet(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
