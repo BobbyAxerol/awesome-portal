@@ -362,7 +362,7 @@ mv "${DEPS_DIR}/node_modules" "${WORKSPACE_DIR}/node_modules"
 ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network none --read-only \
-  --cpus 2 --memory 1536m --memory-swap 1536m --pids-limit 512 \
+  --cpus 2 --memory 3g --memory-swap 3g --pids-limit 512 \
   --label "io.primus.contract-test.owner=${DEPS_DIR}" \
   -u "${CONTAINER_USER}" \
   -v "${WORKSPACE_DIR}:/repo" \

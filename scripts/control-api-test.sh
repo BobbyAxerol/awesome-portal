@@ -202,7 +202,7 @@ if [[ "${ready}" != true ]]; then
 fi
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" --read-only \
-  --cpus 1 --memory 1536m --memory-swap 1536m --pids-limit 512 \
+  --cpus 2 --memory 3g --memory-swap 3g --pids-limit 512 \
   -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/cell" \
   -v "${ROOT_DIR}/packages/contracts:/contracts:ro" \
