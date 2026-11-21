@@ -111,7 +111,23 @@ export class ManagerListsService {
   }
 
   async bindings(principal: ManagerListPrincipal, query: BindingsQuery) {
-    const snapshot = await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
+    let snapshot: ProjectionSnapshot;
+    try {
+      snapshot = await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
+    } catch (error) {
+      // The Bindings list needs the `venue_accounts` relation. When the source
+      // does not offer it for this Paper profile and no snapshot of THIS
+      // profile exists, the answer is a typed "not offered by the source",
+      // not a 503 and never another profile's rows.
+      if (portfolioReadReason(error) !== "N31_PROJECTED_RELATION_UNAVAILABLE") throw error;
+      return {
+        ...envelope("execution.bindings-list.v1", principal, query.environment, SOURCE_NOT_OFFERED_SNAPSHOT,
+          EMPTY_BINDINGS_PAGE, projectionFreshnessBudget(this.config), profile(query.environment, this.config)),
+        state: "unavailable" as const,
+        reason_code: "SOURCE_RELATION_NOT_OFFERED",
+        unavailable_relations: ["venue_accounts"],
+      };
+    }
     const page = await this.query.list(
       bindingsResource(),
       { actorId: principal.user.userId, workspaceId: scope(principal.workspaceId, query.environment), role: principal.user.role },
@@ -140,7 +156,8 @@ export class ManagerListsService {
       // header showed only the second beside a tier derived from the first:
       // "FRESH · 54s ago" against a 30s budget, which a reader can neither
       // check nor argue with. Publishing both makes the tier verifiable.
-      projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
+      projection_refreshed_at: snapshot.refreshedAt && Number.isFinite(snapshot.refreshedAt.valueOf())
+      ? snapshot.refreshedAt.toISOString() : null,
       freshness: freshness(snapshot, projectionFreshnessBudget(this.config)),
       freshness_budget_ms: projectionFreshnessBudget(this.config),
       item: bindingItem(item),
@@ -189,7 +206,8 @@ export class ManagerListsService {
       // drained live the tier was the source's word and no budget of ours
       // applied — that distinction is why §A51 removed the field then and why
       // it returns now.
-      projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
+      projection_refreshed_at: snapshot.refreshedAt && Number.isFinite(snapshot.refreshedAt.valueOf())
+      ? snapshot.refreshedAt.toISOString() : null,
       freshness: freshness(snapshot, budget),
       freshness_budget_ms: budget,
       completeness: snapshot.sourceCompleteness,
@@ -988,6 +1006,19 @@ export function projectionFreshnessBudget(config: ControlApiConfig): FreshnessBu
   };
 }
 
+/**
+ * No refresh ever happened for this profile: age and source time are unknown,
+ * completeness is unknown, and there are no rows. `refreshedAt` is an invalid
+ * date on purpose so freshness() reports UNKNOWN, never FRESH or STALE.
+ */
+const SOURCE_NOT_OFFERED_SNAPSHOT: ProjectionSnapshot = {
+  sourceAsOf: null, sourceCompleteness: "UNKNOWN", rowCount: 0, refreshedAt: new Date(Number.NaN), summary: {},
+};
+const EMPTY_BINDINGS_PAGE = {
+  rows: [], total_count: 0, filtered_count: 0, next_cursor: null, prev_cursor: null,
+  has_more: false, has_previous: false, applied_filters: [], applied_sort: [],
+} as const;
+
 function freshness(snapshot: ProjectionSnapshot, budget: FreshnessBudgetMs): "FRESH" | "AGING" | "STALE" | "UNKNOWN" {
   // An unusable refresh stamp is an age nobody measured. `valueOf()` gives NaN
   // and every comparison below is then false, which used to fall through to
@@ -1025,7 +1056,8 @@ function envelope(
     // header showed only the second beside a tier derived from the first:
     // "FRESH · 54s ago" against a 30s budget, which a reader can neither
     // check nor argue with. Publishing both makes the tier verifiable.
-    projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
+    projection_refreshed_at: snapshot.refreshedAt && Number.isFinite(snapshot.refreshedAt.valueOf())
+      ? snapshot.refreshedAt.toISOString() : null,
     freshness: freshness(snapshot, budget),
     freshness_budget_ms: budget,
     completeness: snapshot.sourceCompleteness,

@@ -233,6 +233,20 @@ describe("BR-EX-72 manager list repository and API contracts", () => {
     const sandbox = await okxService.bindings(principal(), { environment: "sandbox", limit: 50 }) as Record<string, any>;
     expect(sandbox.delivery_profile).toBe("SANDBOX_BINANCE_USDM");
 
+    // Source does not offer venue_accounts for this profile: a typed
+    // "not offered" answer with no rows, never the other profile's rows.
+    await pool.query(`DELETE FROM execution_manager_projection_snapshots WHERE environment = 'paper' AND projection_kind = 'BINDINGS'`);
+    source.failNextRefresh = "N31_PROJECTED_RELATION_UNAVAILABLE";
+    const notOffered = await okxService.bindings(principal(), { environment: "paper", limit: 50 }) as Record<string, any>;
+    source.failNextRefresh = null;
+    expect(notOffered).toMatchObject({
+      delivery_profile: "PAPER_OKX_SWAP", state: "unavailable", reason_code: "SOURCE_RELATION_NOT_OFFERED",
+      unavailable_relations: ["venue_accounts"], freshness: "UNKNOWN", completeness: "UNKNOWN",
+      projection_refreshed_at: null, source_as_of: null,
+    });
+    expect(notOffered.page.rows).toEqual([]);
+    expect(notOffered.page.total_count).toBe(0);
+
     // A snapshot written before profiles were recorded is BINANCE data.
     await pool.query(
       `UPDATE execution_manager_projection_snapshots SET summary = summary - 'read_profile'
