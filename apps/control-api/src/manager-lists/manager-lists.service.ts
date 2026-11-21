@@ -5,7 +5,7 @@ import { ScopedManagerReader } from "./scoped-manager.reader";
 import { freshnessPolicies } from "../execution/environment-parity";
 import { retainedReview } from "../execution/retained-read-profile";
 import { AuthSession, PortalUser } from "../domain";
-import { ControlApiConfig, querySigningKeys } from "../config";
+import { ControlApiConfig, paperReadProfileId, querySigningKeys } from "../config";
 import { ExecutionProductReadSource } from "../execution/product-read-source";
 import { ControlPlaneQueryService, KeysetCursorCodec } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -127,7 +127,7 @@ export class ManagerListsService {
       fleetRawQuery(query),
     );
     return {
-      ...envelope("execution.alpha-fleet-list.v2", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config)),
+      ...envelope("execution.alpha-fleet-list.v2", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config), profile(query.environment, this.config)),
       summary: snapshot.summary,
     };
   }
@@ -139,7 +139,24 @@ export class ManagerListsService {
   }
 
   private async legacyBindings(principal: ManagerListPrincipal, query: BindingsQuery) {
-    await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
+    try {
+      await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
+    } catch (error) {
+      // The Bindings list needs the `venue_accounts` relation. When the source
+      // does not offer it for this Paper profile and no snapshot of THIS
+      // profile exists, the answer is a typed "not offered by the source",
+      // not a 503 and never another profile's rows. Only that catalogue
+      // absence is converted; retained-review and not-recorded errors keep
+      // their own 503s.
+      if (portfolioReadReason(error) !== "N31_PROJECTED_RELATION_UNAVAILABLE") throw error;
+      return {
+        ...envelope("execution.bindings-list.v1", principal, query.environment, SOURCE_NOT_OFFERED_SNAPSHOT,
+          EMPTY_BINDINGS_PAGE, projectionFreshnessBudget(this.config), profile(query.environment, this.config)),
+        state: "unavailable" as const,
+        reason_code: "SOURCE_RELATION_NOT_OFFERED",
+        unavailable_relations: ["venue_accounts"],
+      };
+    }
     const { page, snapshot: retained } = await this.query.listWithSnapshot(
       { ...bindingsResource(), ...(this.bindingFinancialSource ? { selectColumns: [...bindingsResource().selectColumns,
         "source_as_of", "projection_refreshed_at"] } : {}) },
@@ -162,7 +179,7 @@ export class ManagerListsService {
     const enriched = retained.figures ? { ...page,
       rows: page.rows.map(row => retained.figures!.has(row.binding_id) ? { ...row, figures: retained.figures!.get(row.binding_id) } : row) } : page;
     return { ...envelope("execution.bindings-list.v1", principal, query.environment, retained.snapshot, enriched,
-      projectionFreshnessBudget(this.config)), ...(retained.counts ? { counts: retained.counts } : {}) };
+      projectionFreshnessBudget(this.config), profile(query.environment, this.config)), ...(retained.counts ? { counts: retained.counts } : {}) };
   }
 
   async binding(principal: ManagerListPrincipal, environment: ManagerListEnvironment, bindingId: string) {
@@ -179,7 +196,7 @@ export class ManagerListsService {
       schema_version: "execution.binding-detail.v1",
       record_authority: "PORTAL_PROJECTION",
       source_authority: "TRADING_SYSTEM",
-      delivery_profile: profile(environment),
+      delivery_profile: profile(environment, this.config),
       workspace_id: principal.workspaceId,
       environment,
       read_at: new Date().toISOString(),
@@ -191,7 +208,8 @@ export class ManagerListsService {
       // header showed only the second beside a tier derived from the first:
       // "FRESH · 54s ago" against a 30s budget, which a reader can neither
       // check nor argue with. Publishing both makes the tier verifiable.
-      projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
+      projection_refreshed_at: snapshot.refreshedAt && Number.isFinite(snapshot.refreshedAt.valueOf())
+      ? snapshot.refreshedAt.toISOString() : null,
       freshness: freshness(snapshot, projectionFreshnessBudget(this.config)),
       freshness_budget_ms: projectionFreshnessBudget(this.config),
       item: bindingItem(item),
@@ -246,7 +264,7 @@ export class ManagerListsService {
       schema_version: "execution.portfolio-list.v1",
       record_authority: "PORTAL_PROJECTION",
       source_authority: "TRADING_SYSTEM",
-      delivery_profile: profile(query.environment),
+      delivery_profile: profile(query.environment, this.config),
       workspace_id: principal.workspaceId,
       environment: query.environment,
       read_at: new Date().toISOString(),
@@ -256,7 +274,8 @@ export class ManagerListsService {
       // drained live the tier was the source's word and no budget of ours
       // applied — that distinction is why §A51 removed the field then and why
       // it returns now.
-      projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
+      projection_refreshed_at: snapshot.refreshedAt && Number.isFinite(snapshot.refreshedAt.valueOf())
+      ? snapshot.refreshedAt.toISOString() : null,
       freshness: freshness(snapshot, budget),
       freshness_budget_ms: budget,
       completeness: snapshot.sourceCompleteness,
@@ -292,7 +311,7 @@ export class ManagerListsService {
     // Profile-sized batches for the same reason as refreshFleet: the shared
     // source admission budget is global, so profiles run serially.
     for (const sourceEnvironment of sourceEnvironments) {
-      const context = readContext(sourceEnvironment);
+      const context = readContext(sourceEnvironment, this.config);
       try {
         const [portfolios, allocations] = await Promise.all([
           this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.portfolios", "portfolios", PORTFOLIO_FIELDS, context),
@@ -397,6 +416,7 @@ export class ManagerListsService {
         truncated,
         total_portfolios: items.length,
         page_freshness: pageFreshness,
+        read_profile: snapshotReadProfile(query.environment, this.config),
       },
     });
     return requiredSnapshot(this.repository, principal.workspaceId, query.environment, "PORTFOLIOS");
@@ -408,11 +428,18 @@ export class ManagerListsService {
     kind: ProjectionKind,
     refreshAllowed: boolean,
   ): Promise<ProjectionSnapshot> {
-    const existing = await this.repository.snapshot(principal.workspaceId, environment, kind);
+    const stored = await this.repository.snapshot(principal.workspaceId, environment, kind);
     if (retainedReview(this.config)) {
-      if (existing) return existing;
+      // Imported retained lists carry no read profile; they are served as imported.
+      if (stored) return stored;
       throw new ManagerListsError("UDB_RETAINED_LIST_NOT_IMPORTED", 503);
     }
+    // A snapshot built from another Paper profile is not this profile's
+    // truth: it is treated as missing so the first read rebuilds it. A
+    // snapshot written before profiles were recorded is BINANCE data.
+    const wanted = snapshotReadProfile(environment, this.config);
+    const storedProfile = stored ? (stored.summary?.read_profile ?? PAPER_BINANCE_PROFILE) : null;
+    const existing = stored && (wanted === null || storedProfile === wanted) ? stored : null;
     if (!refreshAllowed || (existing && Date.now() - existing.refreshedAt.valueOf() <= SNAPSHOT_MAX_AGE_MS)) {
       if (existing) return existing;
       throw new ManagerListsError("BR72_PROJECTION_NOT_AVAILABLE", 503);
@@ -466,7 +493,7 @@ export class ManagerListsService {
     // global fail-closed pacing budget. Profile-sized batches keep the source
     // below its accepted envelope without weakening or retrying admission.
     for (const sourceEnvironment of sourceEnvironments) {
-      const context = readContext(sourceEnvironment);
+      const context = readContext(sourceEnvironment, this.config);
       const [strategies, deployments, accounts, balances, portfolios, allocations, positions, findings] = await Promise.all([
         this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.strategies", "strategies", STRATEGY_FIELDS, context),
         this.drain(principal, sourceEnvironment, "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, context),
@@ -522,8 +549,9 @@ export class ManagerListsService {
       workspaceId: principal.workspaceId, environment, sourceAsOf,
       completeness: completeness(...pages), rows,
       // A stage is a stated 0 only for an environment whose strategies and deployments were both read COMPLETE (FE-048).
-      summary: fleetSummary(rows, sourceEnvironments.filter((_, index) =>
+      summary: { ...fleetSummary(rows, sourceEnvironments.filter((_, index) =>
         reads[index]!.strategies.completeness === "COMPLETE" && reads[index]!.deployments.completeness === "COMPLETE")),
+        read_profile: snapshotReadProfile(environment, this.config) },
     });
     return requiredSnapshot(this.repository, principal.workspaceId, environment, "ALPHA_FLEET");
   }
@@ -538,7 +566,7 @@ export class ManagerListsService {
       (page: ManagerPage, pageIndex: number, inputCursor: string | null) => {
         if (this.bindingFinancialRefreshSource) originalPages.push({ relation, page_index: pageIndex, input_cursor: inputCursor, page: structuredClone(page) });
       };
-    const context = readContext(environment);
+    const context = readContext(environment, this.config);
     const [accounts, venueAccounts, brokerSync] = await Promise.all([
       this.drain(refreshPrincipal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "accounts", ACCOUNT_FIELDS, context, capture("accounts")),
       this.drain(refreshPrincipal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, context, capture("venue_accounts")),
@@ -571,6 +599,7 @@ export class ManagerListsService {
     await this.repository.replaceBindings({
       workspaceId: refreshPrincipal.workspaceId, environment, sourceAsOf,
       completeness: completeness(accounts, venueAccounts, brokerSync), rows,
+      summary: { read_profile: snapshotReadProfile(environment, this.config) },
     });
     return requiredSnapshot(this.repository, refreshPrincipal.workspaceId, environment, "BINDINGS");
   }
@@ -632,11 +661,21 @@ export class ManagerListsError extends Error {
 }
 
 function scope(workspaceId: string, environment: AlphaFleetEnvironment) { return `${workspaceId}:${environment}`; }
-function profile(environment: AlphaFleetEnvironment) {
-  return environment === "all" ? "ALL_EXECUTION_PROFILES" : `${environment.toUpperCase()}_BINANCE_USDM`;
+const PAPER_BINANCE_PROFILE = "PAPER_BINANCE_USDM";
+/** The Paper profile this list reads: the configured read profile, else BINANCE. */
+function paperProfile(config: ControlApiConfig): string {
+  return paperReadProfileId(config) ?? PAPER_BINANCE_PROFILE;
 }
-function readContext(environment: ManagerListEnvironment): ManagerReadContext {
-  return { profileId: profile(environment) as ManagerReadContext["profileId"], mode: environment, errorPrefix: "N23" };
+function profile(environment: AlphaFleetEnvironment, config: ControlApiConfig) {
+  if (environment === "all") return "ALL_EXECUTION_PROFILES";
+  return environment === "paper" ? paperProfile(config) : `${environment.toUpperCase()}_BINANCE_USDM`;
+}
+/** Lists that contain Paper rows remember which Paper profile produced them. */
+function snapshotReadProfile(environment: AlphaFleetEnvironment, config: ControlApiConfig): string | null {
+  return environment === "paper" || environment === "all" ? paperProfile(config) : null;
+}
+function readContext(environment: ManagerListEnvironment, config: ControlApiConfig): ManagerReadContext {
+  return { profileId: profile(environment, config) as ManagerReadContext["profileId"], mode: environment, errorPrefix: "N23" };
 }
 function sourceEnvironment(environment: AlphaFleetEnvironment): ManagerListEnvironment {
   if (environment === "all") throw new ManagerListsError("BR72_BINDINGS_ENVIRONMENT_INVALID", 400);
@@ -1099,6 +1138,19 @@ export function projectionFreshnessBudget(config: ControlApiConfig): FreshnessBu
   };
 }
 
+/**
+ * No refresh ever happened for this profile: age and source time are unknown,
+ * completeness is unknown, and there are no rows. `refreshedAt` is an invalid
+ * date on purpose so freshness() reports UNKNOWN, never FRESH or STALE.
+ */
+const SOURCE_NOT_OFFERED_SNAPSHOT: ProjectionSnapshot = {
+  sourceAsOf: null, sourceCompleteness: "UNKNOWN", rowCount: 0, refreshedAt: new Date(Number.NaN), summary: {},
+};
+const EMPTY_BINDINGS_PAGE = {
+  rows: [], total_count: 0, filtered_count: 0, next_cursor: null, prev_cursor: null,
+  has_more: false, has_previous: false, applied_filters: [], applied_sort: [],
+} as const;
+
 function freshness(snapshot: ProjectionSnapshot, budget: FreshnessBudgetMs): "FRESH" | "AGING" | "STALE" | "UNKNOWN" {
   // An unusable refresh stamp is an age nobody measured. `valueOf()` gives NaN
   // and every comparison below is then false, which used to fall through to
@@ -1119,13 +1171,13 @@ function bindingItem(item: BindingProjectionRecord): BindingItem {
 }
 function envelope(
   schemaVersion: string, principal: ManagerListPrincipal, environment: AlphaFleetEnvironment,
-  snapshot: ProjectionSnapshot, page: unknown, budget: FreshnessBudgetMs,
+  snapshot: ProjectionSnapshot, page: unknown, budget: FreshnessBudgetMs, deliveryProfile: string,
 ) {
   return {
     schema_version: schemaVersion,
     record_authority: "PORTAL_PROJECTION",
     source_authority: "TRADING_SYSTEM",
-    delivery_profile: profile(environment),
+    delivery_profile: deliveryProfile,
     workspace_id: principal.workspaceId,
     environment,
     read_at: new Date().toISOString(),
@@ -1137,7 +1189,8 @@ function envelope(
     // header showed only the second beside a tier derived from the first:
     // "FRESH · 54s ago" against a 30s budget, which a reader can neither
     // check nor argue with. Publishing both makes the tier verifiable.
-    projection_refreshed_at: snapshot.refreshedAt?.toISOString() ?? null,
+    projection_refreshed_at: snapshot.refreshedAt && Number.isFinite(snapshot.refreshedAt.valueOf())
+      ? snapshot.refreshedAt.toISOString() : null,
     freshness: freshness(snapshot, budget),
     freshness_budget_ms: budget,
     completeness: snapshot.sourceCompleteness,
