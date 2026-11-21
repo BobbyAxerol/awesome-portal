@@ -192,6 +192,14 @@ for (const breakpoint of SHOT_BREAKPOINTS) {
   test.describe(`execution fixtures @ ${breakpoint.name}`, () => {
     for (const group of GROUPS) {
       test(group, async ({ page }) => {
+        // The screenshot below may take up to 60s itself, which equals the
+        // suite-wide test timeout. On a shared CI host under load the largest
+        // groups (e.g. paper-workbench at laptop) ran 50-65s and failed on the
+        // TEST timeout, not on a pixel difference (main CI 2026-11-21, three
+        // different groups across four runs, 331 of 332 passing each time).
+        // slow() triples the test timeout only; baselines and the screenshot
+        // tolerance are untouched.
+        test.slow();
         await openFixtures(page, breakpoint.width, breakpoint.height);
         const section = page.locator(`[data-group="${group}"]`);
         await section.waitFor({ state: "visible" });
