@@ -41,7 +41,7 @@
     "research_run_evidence_schema": "sha256:ac1213412f91adbfb3f76c12dc12c6943fc979e83e75b1a5de9909e7fb01b730",
     "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
   },
-  "frozen_at_commit": "14e2154f0aab254c894b418ecf43c0635aaf3eaf",
+  "frozen_at_commit": "84de4572af77817a6ba48f3cdeaae75b26357fa0",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,
