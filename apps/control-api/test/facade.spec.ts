@@ -550,6 +550,66 @@ describe("control api facade (proxy, workspaces, outbox)", () => {
     expect(response.json().runs[0].run_id).toBe("run_cross");
   });
 
+  it("scopes legacy export to the selected workspace and rejects encoded aliases", async () => {
+    const owner = await seedUser("bobby", "ADMIN");
+    expect((await inject("/api/workspaces", { headers: { cookie: owner.cookie } })).statusCode).toBe(200);
+    const workspace = await ctx.pool.query<{ workspace_id: string }>(
+      "SELECT workspace_id FROM workspaces WHERE owner_user_id = $1",
+      [owner.userId],
+    );
+    const workspaceId = workspace.rows[0]!.workspace_id;
+    await ctx.pool.query(
+      `INSERT INTO run_read_models (run_id, workspace_id, owner_user_id, status)
+       VALUES ($1, $2, $3, $4)`,
+      ["run_export_owned", workspaceId, owner.userId, "COMPLETED"],
+    );
+    const other = await seedUser("stan", "USER");
+    expect((await inject("/api/workspaces", { headers: { cookie: other.cookie } })).statusCode).toBe(200);
+    const otherWorkspace = await ctx.pool.query<{ workspace_id: string }>(
+      "SELECT workspace_id FROM workspaces WHERE owner_user_id = $1",
+      [other.userId],
+    );
+    await ctx.pool.query(
+      `INSERT INTO run_read_models (run_id, workspace_id, owner_user_id, status)
+       VALUES ($1, $2, $3, $4)`,
+      ["run_export_foreign_owner", otherWorkspace.rows[0]!.workspace_id, owner.userId, "COMPLETED"],
+    );
+    const nonOwner = await inject("/api/runs/run_export_foreign_owner/export", {
+      headers: { cookie: other.cookie },
+    });
+    expect(nonOwner.statusCode).toBe(403);
+    expect(nonOwner.json().error.code).toBe("PERMISSION_DENIED");
+    const path = "/api/runs/run_export_owned/export";
+    expect((await inject(path)).statusCode).toBe(401);
+    const denied = await inject(path, { headers: { cookie: other.cookie } });
+    expect(denied.statusCode).toBe(404);
+    expect(denied.json().error.code).toBe("RUN_NOT_FOUND");
+    const alias = await inject("/api/runs/run_export_owned/%65xport", {
+      headers: { cookie: owner.cookie },
+    });
+    expect(alias.statusCode).toBe(400);
+    const crossWrite = await inject(path, { method: "POST", headers: {
+      cookie: other.cookie, "x-portal-csrf": other.csrf,
+    } });
+    expect(crossWrite.statusCode).toBe(404);
+    const noCsrf = await inject(path, { method: "POST", headers: { cookie: owner.cookie } });
+    expect(noCsrf.statusCode).toBe(403);
+    upstream.intercept({ path, method: "POST" }).reply(201, { download_href: path });
+    const prepared = await inject(path, { method: "POST", headers: {
+      cookie: owner.cookie, "x-portal-csrf": owner.csrf,
+    } });
+    expect(prepared.statusCode).toBe(201);
+    expect(prepared.json().download_href).toBe(path);
+    upstream.intercept({ path, method: "GET" }).reply(
+      200,
+      "prepared archive",
+      { headers: { "content-type": "application/zip" } },
+    );
+    const allowed = await inject(path, { headers: { cookie: owner.cookie } });
+    expect(allowed.statusCode).toBe(200);
+    expect(allowed.body).toBe("prepared archive");
+  });
+
   it("denies USER sessions from writing runs (config) through the proxy", async () => {
     const { cookie } = await seedUser("stan", "USER");
     const response = await inject("/api/runs", {

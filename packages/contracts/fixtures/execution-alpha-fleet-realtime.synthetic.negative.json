@@ -1,0 +1,1463 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "production_config": false,
+  "cases": [
+    {
+      "id": "extra-top-level-key",
+      "rule": "a key the contract does not name",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        },
+        "jwt": "x"
+      }
+    },
+    {
+      "id": "wrong-schema-version",
+      "rule": "unknown snapshot schema",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v2",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "wrong-dataset",
+      "rule": "another dataset",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "execution_profile_observation",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "wrong-semantics",
+      "rule": "a snapshot is never an event replay",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "EVENT_REPLAY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "environment-all",
+      "rule": "the snapshot is one environment",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "all",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "fingerprint-not-a-digest",
+      "rule": "scope fingerprint is an opaque sha256",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "scope-1",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ordinal-as-number",
+      "rule": "ordinals are decimal strings",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": 7,
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ordinal-leading-zero",
+      "rule": "canonical decimal only",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "07",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "ordinal-negative",
+      "rule": "unsigned only",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "-1",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "lineage-revision-raw-head",
+      "rule": "the named lineage identity is a scope-bound digest, never the raw head revision (CR-01)",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "TEST_ONLY:fleet-r7"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "named-snapshot-other-operation",
+      "rule": "the pairing names exactly the fleet read",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFundOverviewGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "edge-source-claimed",
+      "rule": "no Edge notice source is commissioned",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "origin-edge",
+      "rule": "notices originate from the Portal publication head",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "EDGE_NOTICE",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "source-test-only",
+      "rule": "a TEST_ONLY revision is never a baseline",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "TEST_ONLY"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "stream-available-without-cursor",
+      "rule": "an available stream has a cursor",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "stream-unavailable-with-cursor",
+      "rule": "an unavailable stream keeps no cursor",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "UNAVAILABLE",
+          "reason_code": "WHOLE_FLEET_AUTHORITY_REQUIRED",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME"
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "stream-unavailable-without-reason",
+      "rule": "unavailable is always explained",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "UNAVAILABLE",
+          "resume_cursor": null
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "stream-unknown-reason",
+      "rule": "finite reasons",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "UNAVAILABLE",
+          "reason_code": "MAINTENANCE",
+          "resume_cursor": null
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "stream-other-path",
+      "rule": "the stream route is fixed",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/profiles/paper/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "heartbeat-zero",
+      "rule": "a cadence is at least a second",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 0,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "replay-window-over-five-minutes",
+      "rule": "the cursor window is capped",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300001,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "frame-bound-below-one-token",
+      "rule": "a bound under one fixed-length token could never deliver a frame",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 1024,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "frame-bound-over-one-mib",
+      "rule": "a frame is bounded",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 1048577,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "streams-per-session-zero",
+      "rule": "at least one stream",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 0
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cursor-with-space",
+      "rule": "opaque token alphabet",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "a b",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "cursor-over-4096",
+      "rule": "token length bound",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "quality-missing",
+      "rule": "the barrier states its quality",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        }
+      }
+    },
+    {
+      "id": "quality-completeness-outside-vocabulary",
+      "rule": "canonical Quality only",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "ALL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    }
+  ]
+}

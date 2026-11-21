@@ -20,10 +20,12 @@ import {
 } from "./local-query-analytics.service";
 import { Portfolio360LocalService } from "./portfolio360-local.service";
 import { ExecutionLocalReadAuthority } from "./local-read-authority";
+import { ExecutionReadScopeError } from "../execution-v2/read-scope";
 
 interface AnalyticsRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -99,10 +101,14 @@ export class ExecutionAnalyticsController {
   /** One alpha's equity in every stage it runs in, on one calendar. */
   @Get("/alphas/:alphaId/stage-drift")
   async stageDrift(@Req() request: AnalyticsRequest, @Param("alphaId") id: string, @Query() raw: unknown) {
-    const query = SparklineQuerySchema.omit({ environment: true }).safeParse(raw);
+    const query = SparklineQuerySchema.omit({ environment: true })
+      .extend({ numeric_format: z.literal("DECIMAL_STRING").optional() }).safeParse(raw);
     if (!query.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
     // No `days` means everything the mirror holds: the charts default to All.
     const authorized = await this.readAuthority.authorize(request);
+    if (query.data.numeric_format === "DECIMAL_STRING") {
+      return this.invoke(() => this.localAnalytics.stageDriftExact(authorized, id, query.data.days));
+    }
     return this.invoke(() => this.localAnalytics.stageDrift(
       authorized, id, query.data.days,
     ));
@@ -121,11 +127,17 @@ export class ExecutionAnalyticsController {
 
   @Get("/portfolios/:portfolioId/capital-ledger")
   async capitalLedger(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string, @Query() raw: unknown = {}) {
-    const environment = panelEnvironment(raw);
+    const parsed = z.object({ environment: z.enum(["paper", "sandbox", "live"]).default("paper"),
+      limit: z.string().regex(/^(?:[1-9]\d{0,2})$/).transform(Number).pipe(z.number().int().max(250)).optional(),
+      cursor: z.string().min(1).max(4096).optional() }).strict().safeParse(raw ?? {});
+    if (!parsed.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+    const { environment, ...page } = parsed.data;
     if (this.portfolio360?.enabled()) {
       const authorized = await this.readAuthority.authorize(request, environment);
-      return this.invoke(() => this.portfolio360!.capitalLedger(authorized, id, environment));
+      return this.invoke(() => this.portfolio360!.capitalLedger(authorized, id, environment, page));
     }
+    if (page.cursor !== undefined || page.limit !== undefined)
+      throw new AnalyticsProxyError("ANALYTICS_LEDGER_PAGINATION_UNAVAILABLE", 503);
     if (environment !== "paper") throw new AnalyticsProxyError("ANALYTICS_PROFILE_NOT_SUPPORTED", 404);
     return this.invoke(() => this.proxy.capitalLedger(principal(request), id));
   }
@@ -226,7 +238,7 @@ export class ExecutionAnalyticsController {
     try {
       return await operation();
     } catch (error) {
-      if (error instanceof AnalyticsProxyError) throw error;
+      if (error instanceof AnalyticsProxyError || error instanceof ExecutionReadScopeError) throw error;
       // The typed 502 stays; the operator gets the failure class and a bounded message in the log.
       ExecutionAnalyticsController.log.warn(JSON.stringify({ event: "analytics_upstream_error", error_class: error instanceof Error ? error.constructor.name : typeof error, message: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200) }));
       throw new AnalyticsProxyError("ANALYTICS_UPSTREAM_UNAVAILABLE", 502);
@@ -379,5 +391,6 @@ function principal(request: AnalyticsRequest) {
     user: request.portalUser,
     session: request.portalSession,
     workspaceId: request.portalWorkspaceId,
+    viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
   };
 }

@@ -1,0 +1,35 @@
+{
+  "phase": "P05",
+  "status": "TECHNICALLY_COMPLETE",
+  "base_revision": "9e79ec38c9a4bc3aaef39bb3e980ee85b078e7a0",
+  "scope": {
+    "included": [
+      "bounded PyArrow RecordBatch-to-Parquet writer with per-part digests and statistics",
+      "random lease-fenced scratch staging, fsync, atomic seal, reconciliation and corruption detection",
+      "research.artifact manifest/part/reference/ingest metadata authority with additive PostgreSQL migration",
+      "idempotent reservation, immutable fence, retention/pin and exact temporary-export controls",
+      "standalone Rust bounded manifest/Parquet reader with projection and relation-bound signed cursor",
+      "actual QuantBT 1.1.1 Delta technical bundle persistence/readback after compute exit",
+      "generated TypeScript synchronization for the already-published P04 QuantBT Atlas OpenAPI endpoint",
+      "P05 schema fixture, snapshot, recovery/rollback evidence and frontend handoff"
+    ],
+    "excluded": [
+      "scheduler dispatch, NATS outbox, isolated child worker, retry, cancellation or worker admission",
+      "browser route, approved HIFI composition, frontend build or visual review",
+      "legacy FastAPI artifact/run route cutover",
+      "Execution Loop, Trading System, broker, CLI, runtime container, deployment or source-data mutation"
+    ]
+  },
+  "authority": {
+    "filesystem_candidate": "Python may create only an opaque sealed-byte candidate.",
+    "durable_state": "Only Control API metadata authority may transition revisioned metadata from WRITING to SEALED.",
+    "reader": "Rust/Python readers validate bytes and expose bounded server-side pages; they do not grant browser access or decide RBAC.",
+    "no_ready_alias": "P05 has no READY state. Durable publication uses the exact state SEALED."
+  },
+  "compatibility": {
+    "legacy_artifact_paths": "unchanged until P10 named producer/read cutover",
+    "p04_atlas_generated_type": "synchronized from the already-published portal-api OpenAPI input; no new endpoint or browser behavior was invented",
+    "p03_revision_zero_rows": "remain readable compatibility rows; P05 transition guards apply only to revisioned authority rows",
+    "frontend": "UI_NOT_YET_IN_SCOPE; see frontend-handoff-claude.md"
+  }
+}

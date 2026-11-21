@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { reseedDurableMirrorCursors } from "../src/execution/durable-mirror-reseed";
 import { testConfig } from "./harness";
 
-const config = () => testConfig({
+const config = (overrides: Partial<Record<string, string>> = {}) => testConfig({
   FEATURE_EXECUTION_EDGE: "true",
   EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/test/delegation.pem",
   EXECUTION_EDGE_CA_FILE: "/run/secrets/test/ca.crt",
@@ -18,6 +18,7 @@ const config = () => testConfig({
   EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS: "120000",
   FEATURE_EXECUTION_DURABLE_MIRROR: "true",
   FEATURE_EXECUTION_DURABLE_MIRROR_READS: "false",
+  ...overrides,
 });
 
 function fakePool() {
@@ -69,8 +70,8 @@ describe("durable mirror cursor reseed", () => {
 
   it("refuses a reseed once mirror reads are active", async () => {
     const { pool } = fakePool();
-    await expect(reseedDurableMirrorCursors(pool as never, testConfig({
-      ...config(), FEATURE_EXECUTION_DURABLE_MIRROR_READS: "true",
+    await expect(reseedDurableMirrorCursors(pool as never, config({
+      FEATURE_EXECUTION_DURABLE_MIRROR_READS: "true",
     }), { mode: "DRY_RUN", runId: "prod-mirror-warmup-20260914" }))
       .rejects.toMatchObject({ code: "DURABLE_MIRROR_RESEED_REQUIRES_WRITE_ONLY_WARMUP" });
   });

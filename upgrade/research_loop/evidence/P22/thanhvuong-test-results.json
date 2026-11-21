@@ -1,0 +1,613 @@
+{
+  "phase": "P22",
+  "owner": "Thanhvuong (Claude; contributor outside D3 — backend + contract + frontend)",
+  "date": "2026-09-25",
+  "status": "IMPLEMENTED-CONTRIBUTOR (outside D3) · FAKE_REPO_AND_BROWSER_STUB_RECEIPT · migration 056 never executed · pushed, no PR · NOT_VERIFIED · REQUIRES_BOBBY_DECISION",
+  "tree": "7660572d6b188a582b4ebbdd2cdfbb74c4128026",
+  "head": "d55beca753c3047443d12f3f0671f4427d268a69",
+  "workspace": {
+    "user": "thanhvuong",
+    "branch": "feat/thanhvuong/research-p17-p21",
+    "remote": "primus-origin",
+    "base": "9ecf6f9d",
+    "code_commits": [
+      {
+        "sha": "51a944eb3128e568a7d4cd513916af6a091fce97",
+        "tree": "4b57bf93",
+        "subject": "feat(research): P22 Release Candidate publication saga and R1 approval mirror",
+        "numstat": "19 files +3077/-108"
+      },
+      {
+        "sha": "d55beca753c3047443d12f3f0671f4427d268a69",
+        "tree": "7660572d",
+        "subject": "feat(research): S11 publishes the local seal and mirrors the R1 approval",
+        "numstat": "6 files +1564/-66"
+      }
+    ],
+    "diff_numstat_base_to_head": "25 files +4641/-174 (git diff --shortstat 9ecf6f9d d55beca7); P21+P22 over apps/control-api packages/contracts apps/portal/frontend since a5455848: 32 files +7608/-145",
+    "docs_commits": [
+      "docs(research): P22 Thanhvuong packet — S11 publication + approval mirror receipt, requests, debt, rollback (a commit cannot record its own SHA; see git log)",
+      "docs(research): P22 §13 row, implementation note and contributor handoff (see git log)"
+    ],
+    "baseline": {
+      "ref": "primus-origin/docs/research-loop-plan",
+      "at_plan": "28da9470",
+      "at_packet": "85c1b113",
+      "new_commits": 2,
+      "diffstat": "13 files +260/-43",
+      "merge_base_with_branch": "a5455848",
+      "touches_p22_code_or_contract": false,
+      "touches_unified_p22_row": true,
+      "unified_p22_row_on_baseline": "BACKEND_AND_TYPED_CONTRACT_COMPLETE · PRODUCT_BROWSER_AND_REAL_PREVIEW_PENDING — Codex, packet evidence/P22/README.md (absent from tree 85c1b113), operations researchReleaseCandidatePublicationGetV1 / researchReleaseCandidatePublishV1; RF-03 row: Codex P22 WIP parked on codex/p22-wip-2026-09-24 (not on primus-origin)",
+      "migration_number_collision": "1723680000056_research-journey-descriptor-v2.sql on baseline since ea221dc2 (2026-09-23) vs 1723680000056_research-release-candidate-publication-v1.sql on this branch",
+      "merged": false
+    },
+    "fable_fix_before_commit": "trailing blank line at EOF in release-candidate-publication.service.ts (git diff --check); no behaviour change",
+    "pushes": [
+      "9ecf6f9d..<second P22 docs commit> (2 code + 2 docs commits); see git log"
+    ]
+  },
+  "contract": {
+    "openapi": "packages/contracts/openapi/research-release-candidate.openapi.json",
+    "version": "1.0.0 (not bumped; owner decides, R7)",
+    "openapi_sha256_prefix": "bfea70462aefcddf",
+    "generated_dts_sha256_prefix": "4edd818b8a86fb93",
+    "last_commit": "51a944eb",
+    "operations": [
+      "researchReleaseCandidateComposeGetV1",
+      "researchReleaseCandidateDraftPatchV1",
+      "researchReleaseCandidateLocalSealCreateV1",
+      "researchReleaseCandidatePackGetV1",
+      "researchReleaseCandidatePublishV1",
+      "researchReleaseCandidatePublishReconcileV1",
+      "researchReleaseCandidateApprovalMirrorGetV1"
+    ],
+    "etag": "mirror sends no etag; cache-control private, no-store on publish/reconcile/mirror",
+    "publish_request": "research.release-candidate-publish-request.v1 {schema_version, workspace_id?, expected_pack_digest, methodology_claim_id?} strict",
+    "migration": "apps/control-api/migrations/1723680000056_research-release-candidate-publication-v1.sql sha256 198f7905ea674212 (never executed)",
+    "canonical_fixture": false,
+    "feature_flag": "CONTROL_API_FEATURE_RESEARCH_PUBLICATION (FEATURE_RESEARCH_PUBLICATION) default false; requires FEATURE_RESEARCH_RELEASE_CANDIDATES=true"
+  },
+  "lane_note": "Lanes: persistence-vs-api = control-api specs against a FAKE in-memory repository (no Postgres on host; every DB spec incl. migration 056 fails ECONNREFUSED); api-vs-ui = frontend vitest on bodies typed by the generated d.ts; visual-fixture/browser-real = Playwright on the workspace's own vite preview 127.0.0.1:4417 with a labelled same-origin API stub (browser part real, data stub). delta-real-data, direct-vs-portal and dev-host-review were NOT RUN: no real run seeded into run_read_models (final-audit children are never mirrored, CG-P22-02), FEATURE_PROXY_PORTAL off, no dev host. Not a REAL_API receipt.",
+  "results": [
+    {
+      "gate": "git status --short at start of package B",
+      "scope": "head d55beca7",
+      "result": "PASS",
+      "note": "only the 2 A2 temporary probe files (e2e/tvp22.spec.ts, tvp22.config.ts), later copied and deleted",
+      "log_sha256_prefix": "1ef187c01dc7f852"
+    },
+    {
+      "gate": "P22-T09 git diff --stat a5455848 HEAD -- apps/control-api/src/{governance,facade,repos,execution,auth}",
+      "scope": "head d55beca7 and working tree at end",
+      "result": "PASS",
+      "note": "empty (0 bytes)",
+      "log_sha256_prefix": "e3b0c44298fc1c14"
+    },
+    {
+      "gate": "apps/control-api npm run typecheck",
+      "scope": "head d55beca7",
+      "result": "FAIL_PREEXISTING",
+      "exit": 2,
+      "note": "80 errors, all under test/ (25 files), identical to baseline 9ecf6f9d; 0 in release-candidate/publication files",
+      "log_sha256_prefix": "f17d00f9884c170b"
+    },
+    {
+      "gate": "apps/control-api npm run build",
+      "scope": "head d55beca7",
+      "result": "PASS",
+      "exit": 0,
+      "log_sha256_prefix": "0f603bbeb59ae94d"
+    },
+    {
+      "gate": "apps/control-api npm run test (full)",
+      "scope": "head d55beca7",
+      "result": "FAIL_ENVIRONMENT",
+      "exit": 1,
+      "files": 117,
+      "files_failed": 41,
+      "files_passed": 76,
+      "passed": 434,
+      "failed": 10,
+      "skipped": 388,
+      "note": "every failure environmental: 24 x ECONNREFUSED 127.0.0.1:5432 (no Postgres), teardown cascades in test/harness.ts:631, 3 x ENOENT eds08-source-continuity (pre-existing, 5d904fb8)",
+      "log_sha256_prefix": "09e53a9cb711d15f"
+    },
+    {
+      "gate": "apps/control-api npm run test -- research-release-candidate governance",
+      "scope": "head d55beca7",
+      "lane": "persistence-vs-api (fake repository) + contract",
+      "result": "PASS_NON_DB",
+      "exit": 1,
+      "files": 11,
+      "files_passed": 6,
+      "files_failed": 5,
+      "passed": 41,
+      "skipped": 61,
+      "breakdown": {
+        "research-release-candidate-publication.service.spec": 16,
+        "research-release-candidate-publication.controller.spec": 5,
+        "research-release-candidate.service.spec": 9,
+        "research-release-candidate.contract.spec": 5,
+        "research-release-candidate.controller.spec": 3,
+        "governance-token.spec": 3
+      },
+      "note": "the 5 failing files are DB specs (ECONNREFUSED): governance, governance-product, a4-governance-delegation, research-release-candidate-migration (P21), research-release-candidate-publication-migration (P22)",
+      "log_sha256_prefix": "fc2189a1c2bcde34"
+    },
+    {
+      "gate": "apps/control-api test/research-release-candidate-publication-migration.spec.ts (migration 056 on disposable PostgreSQL)",
+      "scope": "head d55beca7",
+      "lane": "persistence-vs-api (real DB)",
+      "result": "NOT_RUN",
+      "note": "beforeAll CREATE DATABASE fails with ECONNREFUSED 127.0.0.1:5432; migration 056 has never been executed anywhere",
+      "log_sha256_prefix": "fc2189a1c2bcde34"
+    },
+    {
+      "gate": "packages/contracts npm test",
+      "scope": "head d55beca7",
+      "result": "PASS",
+      "exit": 0,
+      "files": 14,
+      "passed": 177,
+      "log_sha256_prefix": "5e32a2fe513d6933"
+    },
+    {
+      "gate": "packages/contracts python3 tooling/snapshot.py --check",
+      "scope": "head d55beca7",
+      "result": "PASS",
+      "exit": 0,
+      "note": "contracts-snapshot.json matches all 198 tracked files",
+      "log_sha256_prefix": "65f68bff80347506"
+    },
+    {
+      "gate": "apps/portal/frontend npx tsc -b --noEmit",
+      "scope": "head d55beca7",
+      "result": "PASS",
+      "exit": 0,
+      "log_sha256_prefix": "e3b0c44298fc1c14"
+    },
+    {
+      "gate": "apps/portal/frontend npm run build",
+      "scope": "head d55beca7",
+      "result": "PASS",
+      "exit": 0,
+      "note": "only the pre-existing chunk-size warning",
+      "log_sha256_prefix": "1c7e1afda1d7cd98"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run",
+      "scope": "head d55beca7",
+      "lane": "api-vs-ui",
+      "result": "FAIL_KNOWN",
+      "exit": 1,
+      "files": 173,
+      "files_failed": 1,
+      "passed": 3154,
+      "failed": 1,
+      "skipped": 1,
+      "note": "the one failure is src/execution/r2Ledger.test.ts: capability-inventory ledger lacks the 3 P22 routes (CG-P22-C, reserved for Bobby); PortalShell passed this run",
+      "log_sha256_prefix": "3194e519eb106d76"
+    },
+    {
+      "gate": "apps/portal/frontend npx vitest run src/research/releaseCandidateDetail.test.tsx",
+      "scope": "head d55beca7",
+      "lane": "api-vs-ui",
+      "result": "PASS",
+      "exit": 0,
+      "passed": 61,
+      "labels": "S11-U01..U33 (P21) + S11-U34..U55 (P22; U35 each x6)",
+      "log_sha256_prefix": "d77e92ba5864899a"
+    },
+    {
+      "gate": "npx playwright test -c tvp22.config.ts --workers=1 (tvp22 alone)",
+      "scope": "head d55beca7, preview 127.0.0.1:4417",
+      "lane": "visual-fixture / browser-real (same-origin API stub)",
+      "result": "PASS",
+      "exit": 0,
+      "passed": 18,
+      "failed": 0,
+      "duration": "31.4s",
+      "receipts": 22,
+      "log_sha256_prefix": "48845f77c8d9a4d4",
+      "probe_log_sha256_prefix": "4b0a952684096986"
+    },
+    {
+      "gate": "Research suite run 1: fixtures + product + tvp20 + tvp21 + tvp22",
+      "scope": "head d55beca7, preview 127.0.0.1:4417",
+      "result": "INTERRUPTED",
+      "passed": 161,
+      "failed": 5,
+      "interrupted": 1,
+      "did_not_run": 95,
+      "note": "stopped by SIGINT after 11.5 min: tvp21 tests each burnt the 120 s timeout",
+      "log_sha256_prefix": "e072adf4633f891f"
+    },
+    {
+      "gate": "Research suite run 2: fixtures + product + tvp20 + tvp22 (--grep-invert 'P21 S11')",
+      "scope": "head d55beca7, preview 127.0.0.1:4417",
+      "lane": "visual-fixture / browser-real (stub)",
+      "result": "PASS",
+      "exit": 0,
+      "passed": 180,
+      "failed": 0,
+      "duration": "3.7m",
+      "breakdown": {
+        "fixtures": 8,
+        "product": 76,
+        "tvp20": 80,
+        "tvp22": 18
+      },
+      "log_sha256_prefix": "beec1414544bcbaa"
+    },
+    {
+      "gate": "tvp20 '304 keeps revision @1280'",
+      "result": "FLAKY",
+      "note": "failed run 1 (timeout waiting for [data-action='retry']), passed run 2 in 1.8 s"
+    },
+    {
+      "gate": "tvp21 (P21 probe) on the P22 tree, --timeout=15000",
+      "scope": "head d55beca7",
+      "result": "RETIRED",
+      "exit": 1,
+      "passed": 18,
+      "failed": 64,
+      "duration": "15.0m",
+      "note": "P21 compose stubs lack the P22-required publication object -> ReleaseCandidateDetail.tsx:1671 throws, screen never settles aria-busy; panel publish-ghost renamed publish. Fable ruling: tvp21 retired, valid receipts re-covered by tvp22/tvp22b; crash class recorded as S11-COMPOSE-SHAPE-GUARD",
+      "log_sha256_prefix": "61ccaf0f0035548e",
+      "diag_log_sha256_prefix": "605dbd2765740a4b"
+    },
+    {
+      "gate": "manual tvp22b (10 scenarios x 1280/660)",
+      "scope": "head d55beca7, preview 127.0.0.1:4417",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "exit": 0,
+      "passed": 16,
+      "receipts": 20,
+      "duration": "28.5s",
+      "note": "whole-body scan N/A / undefined / null / SECRET-SERVER-PROSE in text and DOM / bare dash cells = 0; published chip rgb(30, 123, 79) = --good; mirror border solid, ghost dashed",
+      "log_sha256_prefix": "71437b54710cbed4",
+      "probe_log_sha256_prefix": "ee233fa6f97a6001"
+    },
+    {
+      "gate": "tvp22 Q01 draft -> publish 201 -> PUBLISHED @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "GET=2 PUBLISH=1",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "tvp22 Q02 202 -> unknown -> reconcile @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "GET=3 PUBLISH=1 RECONCILE=1",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "tvp22 Q03 409 open approval @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "GET=2, no mirror",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "tvp22 Q04 401 on publish @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "writes locked, PUBLISH=1 MIRROR=0",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "tvp22 Q05 503 on publish @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "GET=1, retry enabled",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "tvp22 Q06 mirror fresh -> 503 stale @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "MIRROR=2 GET=1",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "tvp22 Q07 mirror 403 denied @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "MIRROR=1, polling stops",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "tvp22 Q08 hidden tab @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "mirrorWhileHidden=0 then 1",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "tvp22 Q09 not-readable mirror + claim radios @1280+660",
+      "lane": "visual-fixture (stub)",
+      "result": "PASS",
+      "counts": "2 radios",
+      "overflow": 0,
+      "noise": 0,
+      "bare": 0,
+      "inlineHex": 0,
+      "serverProse": false,
+      "foreign": 0,
+      "otherMutations": 0
+    },
+    {
+      "gate": "static grep scrollIntoView in src/research",
+      "result": "PASS",
+      "note": "6 raw hits: 1 doc comment (RunProgress.tsx:409) + 5 test assertions forbidding it; 0 calls in non-test code",
+      "log_sha256_prefix": "6601abfd8a5525da"
+    },
+    {
+      "gate": "static grep hex #[0-9a-fA-F]{3,6} in the 6 P22 frontend files",
+      "result": "PASS",
+      "note": "0 with and without comments",
+      "log_sha256_prefix": "6601abfd8a5525da"
+    },
+    {
+      "gate": "cleanup: temp probe files copied (.copy) and deleted; git status --short empty; 4417 free; 4317-4320 untouched",
+      "result": "PASS",
+      "log_sha256_prefix": "e654dd289c789b7e"
+    }
+  ],
+  "results_history": [
+    {
+      "gate": "package A1 (backend, uncommitted on 9ecf6f9d)",
+      "control_api_build": 0,
+      "typecheck": "80 pre-existing test-only errors",
+      "targeted_tests": "6 files pass / 5 DB files fail; 41 passed / 61 skipped",
+      "contracts": "177/177",
+      "snapshot_check": "198 files match",
+      "fe_tsc_impact": 0,
+      "logs": {
+        "control-api-test.log": "37c31f3921439e27",
+        "contracts-test.log": "bcd11397074f5676",
+        "contracts-snapshot.log": "1795177e6b3dc740",
+        "control-api-build.log": "92125fb723c62015"
+      }
+    },
+    {
+      "gate": "package A2 (frontend, uncommitted on 51a944eb)",
+      "tsc": 0,
+      "build": 0,
+      "vitest": "173 files, 3154 passed, 1 skipped, 1 failed (r2Ledger)",
+      "s11_plus_boundary": "75/75 (S11 61)",
+      "probe": "tvp22 18/18",
+      "note": "first S11-U50 run exposed a one-frame 'did not answer' flash (fixed: compose mirror used in the same render); probe found a 140 px mirror overflow at 1280 (fixed: .st/.sla cells wrap)",
+      "logs": {
+        "vitest-all.log": "b69a6213d1c23966",
+        "vitest-s11.log": "9187511c9c0189da",
+        "build.log": "a9c2cfe6d1047e70",
+        "probe-run.log": "5d253f5da8497202",
+        "shots/probe.log": "0503c3d927200151"
+      }
+    },
+    {
+      "gate": "package B (head d55beca7)",
+      "summary": "see results[]"
+    }
+  ],
+  "hifi_compare": {
+    "hifi": "upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html (a402f7b9, unchanged since P21)",
+    "hifi_published_capture": {
+      "p21-hifi-published-1280.png": "c47a59d779970d09",
+      "p21-hifi-published-660.png": "6751f37459f70cd2",
+      "note": "captured in P21; hi-fi file unchanged"
+    },
+    "product": {
+      "p22-published-1280.png": "6db421a1a036c816",
+      "p22-published-660.png": "eeceebd44f54a814",
+      "p22-draft-1280.png": "ef407162e64856f6",
+      "p22-unknown-1280.png": "75ed67fc2839d328",
+      "p22-mirror-stale-1280.png": "a8c8731e4bd708a1",
+      "p22-mirror-not-readable-1280.png": "6ba80c2593773ed0",
+      "p22-claims-1280.png": "70a2df26d1771803"
+    },
+    "deltas": "VD-P22-01…14 in thanhvuong-frontend-receipt.md §6"
+  },
+  "not_run": [
+    {
+      "gate": "migration 056 + research-release-candidate-publication-migration.spec.ts",
+      "reason": "no reachable PostgreSQL on the host; never executed (DG-02)"
+    },
+    {
+      "gate": "REAL_API_E2E_RECEIPT",
+      "reason": "FEATURE_PROXY_PORTAL off, flag FEATURE_RESEARCH_PUBLICATION false, no preview lane with both (CG-P22-05)"
+    },
+    {
+      "gate": "V11-P22-DR / delta-real-data",
+      "reason": "no real Delta final-audit run reaches run_read_models; AUDIT_OF_SELECTION children are never mirrored (CG-P22-02)"
+    },
+    {
+      "gate": "P22-T01 real path and P22-T11 seed/refresh/publish success",
+      "reason": "CG-P22-02 blocks; only the fake-repository lane ran"
+    },
+    {
+      "gate": "P22-T04 real concurrency (advisory lock)",
+      "reason": "needs PostgreSQL"
+    },
+    {
+      "gate": "direct-vs-portal",
+      "reason": "no real governance store behind the preview"
+    },
+    {
+      "gate": "dev-host-review",
+      "reason": "no dev host; workspace preview 4417 only"
+    },
+    {
+      "gate": "axe (spec 11 T14)",
+      "reason": "axe-core not in the lock file (S11-AXE)"
+    },
+    {
+      "gate": "spec 11 T10 taxonomy CHANGED in the browser",
+      "reason": "unit only (server predecessor digest comparison; FE prints server state)"
+    },
+    {
+      "gate": "spec 11 T11 SUPERSEDED in the browser",
+      "reason": "unit only (S11-U51)"
+    },
+    {
+      "gate": "mirror 'unavailable' through the product route",
+      "reason": "a PUBLISHED compose always carries a mirror (zod superRefine); unit only S11-U48 (S11-P22-MIRROR-UNAVAILABLE-ROUTE)"
+    },
+    {
+      "gate": "x-portal-csrf in the browser probe",
+      "reason": "preview has no CSRF cookie; asserted in vitest"
+    },
+    {
+      "gate": "screenshot pixel diff / copy diff 0",
+      "reason": "layout/copy compare only; VD copy awaiting Bobby (B-P22-05)"
+    },
+    {
+      "gate": "telemetry",
+      "reason": "not in scope"
+    }
+  ],
+  "evidence_store": {
+    "location": "~/tv-shots/p22/final/ (package B), ~/tv-shots/p22/a1/ (A1), ~/tv-shots/p22/a2/ (A2); not committed",
+    "hash_manifest": "~/tv-shots/p22/final/hashes.txt (265 lines, excludes itself)",
+    "logs": {
+      "head.txt": "55ea2cc68fe3efb4",
+      "status-start.txt": "1ef187c01dc7f852",
+      "t09-diff.txt": "e3b0c44298fc1c14",
+      "ca-typecheck.log": "f17d00f9884c170b",
+      "ca-build.log": "0f603bbeb59ae94d",
+      "ca-test.log": "09e53a9cb711d15f",
+      "ca-test-rc-gov.log": "fc2189a1c2bcde34",
+      "contracts-test.log": "5e32a2fe513d6933",
+      "contracts-snapshot-check.log": "65f68bff80347506",
+      "fe-tsc.log": "e3b0c44298fc1c14",
+      "fe-build.log": "1c7e1afda1d7cd98",
+      "fe-vitest-all.log": "3194e519eb106d76",
+      "fe-vitest-s11.log": "d77e92ba5864899a",
+      "preview.log": "9291f11129fb0f1f",
+      "pw-tvp22.log": "48845f77c8d9a4d4",
+      "pw-research-all-run1-interrupted.log": "e072adf4633f891f",
+      "pw-research-all-run2.log": "beec1414544bcbaa",
+      "pw-tvp21-on-p22.log": "61ccaf0f0035548e",
+      "pw-diag-tvp21-G02.log": "605dbd2765740a4b",
+      "pw-manual.log": "71437b54710cbed4",
+      "shots/probe.log": "4b0a952684096986",
+      "shots/manual.log": "ee233fa6f97a6001",
+      "static-greps.log": "6601abfd8a5525da",
+      "temp-files.sha256": "e654dd289c789b7e",
+      "ports-4317-4320-start.txt": "7aedc3fe864b09f4",
+      "ports-4317-4320-end.txt": "ba19c22564085adf"
+    },
+    "temporary_probe": {
+      "spec_tvp22": "c4640d355eed8b53",
+      "config_tvp22": "c6d48ca31456cd4b",
+      "spec_tvp22b": "69e3e757c6a84e51",
+      "config_tvp22b": "b4896067626d0ac0",
+      "config_tvp22all": "4960a20154448306",
+      "spec_tvp20_restored": "1741ddd61264b05d",
+      "spec_tvp21_restored": "e3fb71fef3235e25",
+      "committed": false,
+      "removed_after_run": true,
+      "preview_pids_killed": [
+        1595334,
+        1595365,
+        1595366
+      ],
+      "ports_4317_4320_touched": false
+    },
+    "shots_p22": {
+      "p22-draft-1280.png": "ef407162e64856f6",
+      "p22-draft-660.png": "17eef1c74a816f23",
+      "p22-published-1280.png": "6db421a1a036c816",
+      "p22-published-660.png": "eeceebd44f54a814",
+      "p22-reconciled-1280.png": "6db421a1a036c816",
+      "p22-reconciled-660.png": "eeceebd44f54a814",
+      "p22-unknown-1280.png": "75ed67fc2839d328",
+      "p22-unknown-660.png": "8fa3cf5c2a5dc19f",
+      "p22-conflict-1280.png": "a77303cfb6d86ced",
+      "p22-conflict-660.png": "c6b6d23ce5856a2b",
+      "p22-denied-1280.png": "36768962a8ffcc4c",
+      "p22-denied-660.png": "b7892f0de4cedcc2",
+      "p22-publish-unavailable-1280.png": "e05d17babe7b5601",
+      "p22-publish-unavailable-660.png": "7142560737e8c4ab",
+      "p22-mirror-stale-1280.png": "a8c8731e4bd708a1",
+      "p22-mirror-stale-660.png": "776ad9b17d3ee203",
+      "p22-mirror-denied-1280.png": "47c00b0895f10bf3",
+      "p22-mirror-denied-660.png": "707cda92c137c5ae",
+      "p22-poll-hidden-1280.png": "7056b7ee0b794d50",
+      "p22-poll-hidden-660.png": "70b01fa2f3a0ebd7",
+      "p22-mirror-not-readable-1280.png": "6ba80c2593773ed0",
+      "p22-mirror-not-readable-660.png": "522cfd421f70c748",
+      "p22-claims-1280.png": "70a2df26d1771803",
+      "p22-claims-660.png": "84d8efcf89027dad"
+    },
+    "shots_manual": {
+      "m-draft-1280.png": "ef407162e64856f6",
+      "m-published-1280.png": "7056b7ee0b794d50",
+      "m-unknown-1280.png": "2a616bcf661ef22e",
+      "m-conflict-1280.png": "a77303cfb6d86ced",
+      "m-terminal-422-1280.png": "8e4c591bae3126c0",
+      "m-publish-unavailable-1280.png": "e05d17babe7b5601",
+      "m-mirror-stale-1280.png": "064c11bd52cfc097",
+      "m-mirror-denied-1280.png": "47c00b0895f10bf3",
+      "m-mirror-not-readable-1280.png": "6ba80c2593773ed0",
+      "m-claims-1280.png": "70a2df26d1771803",
+      "note": "660 variants in hashes.txt"
+    }
+  },
+  "known_flake": [
+    "e2e tvp20 '304 keeps revision @1280' failed once in suite run 1, passed in run 2",
+    "src PortalShell RunLibrary filtered_rows flaky at baseline (A2), passed in package B"
+  ]
+}

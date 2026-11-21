@@ -1,0 +1,87 @@
+{
+  "receipt": "P24 15-screen action matrix",
+  "generated": "2026-10-09T06:40:49.196Z",
+  "base": "http://localhost:8095",
+  "rows": [
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "a11y",
+      "status": "PASS",
+      "evidence": "1440: critical/serious 0 nodes, moderate rules 0, axe 4.13.0 | 390: critical/serious 0 nodes, moderate rules 0, axe 4.13.0 [5s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "act",
+      "status": "PASS",
+      "evidence": "state change by GET-only control; /runs?q=R-WFO-023 [1s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "console",
+      "status": "PASS",
+      "evidence": "0 unexpected console errors / failed requests. GET endpoints: GET /api/admin/access/self, GET /api/auth/context, GET /api/v1/portal/registry, GET /api/v1/portal/summary, GET /api/v1/quantbt/runs, GET /api/v1/quantbt/runs/{run}/current-source/evidence, GET /api/v1/quantbt/runs/{run}/current-source/freeze, GET /api/v1/quantbt/runs/{run}/current-source/search, GET /api/v1/quantbt/runs/{run}/current-source/split, GET /api/v1/quantbt/runs/{run}/evidence, GET /api/v1/quantbt/runs/{run}/evidence/series, GET /api/v1/quantbt/runs/{run}/execute/replay, GET /api/v1/quantbt/runs/{run}/execution/records, GET /api/v1/quantbt/runs/{run}/freeze, GET /api/v1/quantbt/runs/{run}/report, GET /api/v1/quantbt/runs/{run}/search, GET /api/v1/quantbt/runs/{run}/split, GET /api/v1/quantbt/runs/{run}/windows/observations, GET /api/v1/research/alpha-versions/av_delta_rsi_polynomial_alpha_1_0_0/publication, GET /api/v1/research/alphas, GET /api/v1/research/datasets/catalog-v2, GET /api/v1/research/journey, GET /api/v1/research/quantbt/atlas, GET /api/v1/research/release-candidates/{rc}, GET /api/v1/research/release-candidates/{rc}/publication, GET /api/v1/research/runs/{run}/progress, GET /api/v1/research/runs/{run}/requested-spec [0s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "deeplink",
+      "status": "PASS",
+      "evidence": "cold context opened /runs?q=R-WFO-023 → same screen state [2s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "load",
+      "status": "PASS",
+      "evidence": "data-screen=run-library; global; /runs [2s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "nav",
+      "status": "PASS",
+      "evidence": "11/11 controls: header: + new run → /runs/new ; header: journey map → /journey ; header: attempt lineage → /alphas/delta-rsi-polynomial-alpha/lineage ; card: open evidence → /runs/rrun_ee50cb82d6de9e495e10b32323b62f8c/evidence ; card: open S1 → /runs/rrun_ee50cb82d6de9e495e10b32323b62f8c/split ; card: open S2 → /runs/rrun_ee50cb82d6de9e495e10b32323b62f8c/search ; card: open S3 → /runs/rrun_ee50cb82d6de9e495e10b32323b62f8c/freeze ; card: open S4 → /runs/rrun_ee50cb82d6de9e495e10b32323b62f8c/execute ; card: open S5 (report) → /runs/rrun_ee50cb82d6de9e495e10b32323b62f8c/report ; card: watch progress (RUNNING/QUEUED) → /runs/rrun_e4fa7eabc1bed2bcefbcb3523974e990/progress ; card: rc chip → /release-candidates/rc_06GGABY3ZPCK8HWMA762Z327M1 [27s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "print",
+      "status": "PASS",
+      "evidence": "pages=1; text-layer chars=323; shell words in PDF: 0; no-print controls visible: 0 [2s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "refresh",
+      "status": "PASS",
+      "evidence": "reload kept /research/quantbt/runs?q=R-WFO-023 · tab=[] pressed=[] [1s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "responsive",
+      "status": "PASS",
+      "evidence": "scrollWidth/clientWidth 1440:1440/1440 1280:1280/1280 390:390/390 360:360/360 [3s]"
+    },
+    {
+      "cell": "S01@-",
+      "screen": "S01",
+      "run": "R-WFO-023",
+      "check": "writes",
+      "status": "PASS",
+      "evidence": "NOT_RUN_WRITE · + new run (link, creates nothing): enabled || enumerated:  [0s]"
+    }
+  ]
+}

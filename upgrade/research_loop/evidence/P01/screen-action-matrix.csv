@@ -1,0 +1,195 @@
+screen_id,action_id,action_kind,source_locator,source_copy,source_handler,classification,production_command_candidate,browser_status
+00,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 00 Journey Map.dc.html:49,{{ c.name }} {{ c.tag }} {{ c.desc }},{{ c.href }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+00,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 00 Journey Map.dc.html:66,{{ m.hifi }},{{ m.hifiHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+00,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 00 Journey Map.dc.html:68,{{ m.mine }},{{ m.mineHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:29,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:39,attempt lineage,QuantBT 10 Attempt Lineage.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:39,journey map ↗,QuantBT 00 Journey Map.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-a-4,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:39,+ new run · preflight first,QuantBT 02 New Run Preflight.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:46,{{ so.label }},{{ so.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-button-7,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:49,{{ mo.label }},{{ mo.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:52,{{ ao.label }},{{ ao.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-button-9,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:53,group by alpha,{{ onGroup }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-button-10,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:71,{{ r.checkMark }},{{ r.onSelect }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-a-11,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:77,{{ r.rcChip }},QuantBT 11 Release Candidate and Publish.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-a-12,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:80,open evidence →,{{ r.href }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-button-13,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:120,{{ compareBtnLabel }},SOURCE_HANDLER_NOT_DECLARED,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+01,source-button-14,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 01 Run Library.dc.html:121,clear,{{ onClearSelect }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:29,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:34,Runs,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-3,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:44,{{ st.num }} {{ st.label }} {{ st.sub }},{{ st.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-4,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:61,see where this lands,QuantBT 11 Release Candidate and Publish.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-7,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:75,bound,{{ onBound }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:76,scratch,{{ onScratch }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-9,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:85,lineage →,QuantBT 10 Attempt Lineage.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-10,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:86,runs of this av_ →,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-11,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:87,import new version →,QuantBT 14 Alpha Import.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-12,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:105,full route atlas →,QuantBT 12 Mode Atlas.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-13,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:109,{{ rc.name }} {{ rc.badge }} {{ rc.desc }} {{ rc.meta }},{{ rc.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-17,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:136,inspect them in Execute Replay,QuantBT 08 S4 Execute Replay.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-20,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:147,Run Report,QuantBT 09 Run Report.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-21,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:147,Execute Replay,QuantBT 08 S4 Execute Replay.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-24,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:159,Execute Replay,QuantBT 08 S4 Execute Replay.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-a-28,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:173,Execute Replay,QuantBT 08 S4 Execute Replay.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-29,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:190,{{ sc.name }} {{ sc.badge }} {{ sc.desc }} {{ sc.meta }},{{ sc.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-30,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:201,{{ po.label }},{{ po.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-37,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:277,{{ am.label }},{{ am.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-38,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:281,{{ as.label }},{{ as.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-39,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:304,sweep,{{ pr.onSweep }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-40,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:305,pin,{{ pr.onPin }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-46,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:347,optimization_config — full surface {{ cfgSummary }} {{ cfgCaret }},{{ onToggleCfg }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+02,source-button-48,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 02 New Run Preflight.dc.html:401,{{ runBtnLabel }},{{ onRun }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:46,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:59,Runs,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-button-3,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:69,{{ playLabel }},{{ onPlay }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:70,{{ sp.label }},{{ sp.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-button-5,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:71,complete now ⇥,{{ onFinish }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:72,{{ sc2.label }},{{ sc2.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-a-7,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:91,open evidence flow →,{{ evidenceHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:136,,{{ fc.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-button-9,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:178,{{ t.label }},{{ t.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-button-10,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:181,{{ cancelLabel }},SOURCE_HANDLER_NOT_DECLARED,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-a-11,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:219,S1 split,{{ s1Href }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-a-12,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:220,S2 search,{{ s2Href }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-a-13,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:221,S3 freeze,{{ s3Href }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-a-14,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:222,S4 replay,{{ s4Href }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+03,source-a-15,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:223,S5 claim,{{ s5Href }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-1,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:71,BTCUSDT · 4h · ds@9f2c… {{ dsCaret }},{{ onToggleDs }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-2,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:116,{{ claim.cert }} {{ claim.certNote }},{{ claim.onGoBinding }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-3,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:130,{{ st.num }} {{ st.name }} {{ st.sub }},{{ st.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:143,‹,{{ onPrevFold }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:147,›,{{ onNextFold }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-7,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:154,S2 search,{{ dd.s2 }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-8,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:154,S3 freeze,{{ dd.s3 }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-9,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:154,S4 replay,{{ dd.s4 }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-10,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:154,promotion,{{ dd.s5 }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-11,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:154,journey map ↗,QuantBT 00 Journey Map.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-12,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:155,{{ copyLabel }},{{ onCopyEvidence }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-13,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:165,{{ w.label }},{{ w.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-14,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:172,{{ c.label }},{{ c.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-15,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:225,{{ vo.label }},{{ vo.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-16,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:257,search,{{ v.searchHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-17,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:257,replay,{{ v.replayHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-18,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:333,{{ g.id }} {{ g.range }},{{ g.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-19,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:452,{{ sd.label }},{{ sd.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-20,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:464,{{ ln.k }} {{ ln.v }},{{ ln.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-21,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:561,−,{{ p.onDec }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-22,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:563,+,{{ p.onInc }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-23,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:574,{{ attemptBtnLabel }},{{ onCreateAttempt }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-24,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:590,{{ r.label }},{{ r.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-25,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:607,{{ f.id }} {{ f.status }} {{ f.params }} · OOS {{ f.oosS }},{{ f.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-26,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:615,{{ l.mark }} {{ l.label }} {{ l.state }},{{ l.onToggle }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-27,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:621,{{ revealMark }} causal reveal,{{ onToggleReveal }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-28,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:651,{{ t.label }},{{ t.onPress }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-29,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:656,{{ sp.label }},{{ sp.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-31,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:680,{{ e.seq }} {{ e.ts }} {{ e.bar }} {{ e.type }} {{ e.note }},{{ e.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-32,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:707,open stage 2 · search →,{{ onGoSearch }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-33,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:737,{{ cr.link }},{{ cr.onGo }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-34,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:776,generate run report →,QuantBT 09 Run Report.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-a-35,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:776,release candidate →,QuantBT 11 Release Candidate and Publish.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-36,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:778,Send to Approval Gate,SOURCE_HANDLER_NOT_DECLARED,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-37,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:783,Register for Paper Trading,SOURCE_HANDLER_NOT_DECLARED,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+04,source-button-38,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:800,{{ at.label }},{{ at.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+05,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:28,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+05,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:33,Evidence Flow,{{ backHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+05,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:35,next: S2 Search →,QuantBT 06 S2 Search and Selection.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+05,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:42,{{ copyLabel }},{{ onCopy }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+05,source-button-5,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:50,{{ p.label }},{{ p.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+05,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:55,{{ w.label }},{{ w.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+05,source-button-7,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:77,{{ sc2.label }},{{ sc2.onPick }},PROTOTYPE_ONLY,false,NOT_BROWSER_VERIFIED
+05,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:91,{{ g.id }} {{ g.range }},{{ g.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+05,source-button-9,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 05 S1 Split.dc.html:132,{{ fl.id }} {{ fl.trainLabel }} ❖ {{ fl.testLabel }} {{ fl.digest }} frozen {{ fl.cutoff }} {{ fl.oos }},{{ fl.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:32,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:37,Evidence Flow,{{ backHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:39,next: S3 Freeze →,QuantBT 07 S3 Freeze.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:46,{{ copyLabel }},{{ onCopy }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-5,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:54,{{ m.label }},{{ m.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:59,{{ sd.label }},{{ sd.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-7,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:94,{{ cinePlayLabel }},{{ onCinePlay }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:112,{{ st.n }} {{ st.t }} {{ st.d }},{{ st.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-9,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:168,{{ a.label }},{{ a.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-10,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:170,{{ a.label }},{{ a.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-11,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:175,,{{ p.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-12,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:193,{{ a.label }},{{ a.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+06,source-button-13,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:420,{{ js.label }},{{ js.onPick }},PROTOTYPE_ONLY,false,NOT_BROWSER_VERIFIED
+06,source-button-14,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:452,{{ lr.id }} {{ lr.seed }} {{ lr.state }} {{ lr.is }} {{ lr.oos }} {{ lr.digest }} {{ lr.note }},{{ lr.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:28,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:33,Evidence Flow,{{ backHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:35,next: S4 Execute →,QuantBT 08 S4 Execute Replay.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:42,{{ copyLabel }},{{ onCopy }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-5,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:50,{{ sc.label }},{{ sc.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:55,{{ dr.label }},{{ dr.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-7,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:83,{{ d.id }} ❖ {{ d.digest }},{{ d.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:117,‹,{{ onPrevFold }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-10,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:121,›,{{ onNextFold }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-11,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:125,{{ sr.label }},{{ sr.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-12,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:156,propose new attempt →,{{ onPropose }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-button-13,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:164,{{ verifyLabel }},{{ onVerify }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+07,source-a-14,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:196,sibling attempt,QuantBT 10 Attempt Lineage.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:31,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:36,Evidence Flow,{{ backHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:38,next: Run Report →,QuantBT 09 Run Report.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:45,{{ copyLabel }},{{ onCopy }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-5,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:52,{{ r.label }},{{ r.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:55,{{ p.label }},{{ p.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-7,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:58,‹,{{ onPrevFold }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-9,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:62,›,{{ onNextFold }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-10,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:66,{{ sc2.label }},{{ sc2.onPick }},PROTOTYPE_ONLY,false,NOT_BROWSER_VERIFIED
+08,source-button-11,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:83,{{ fs.lab }},{{ fs.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-12,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:106,{{ revealMark }} causal reveal,{{ onToggleReveal }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-13,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:129,,{{ ts.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-14,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:139,{{ t.label }},{{ t.onPress }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-15,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:142,{{ sp.label }},{{ sp.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-16,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:144,{{ acrossLabel }},{{ onToggleAcross }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-18,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:198,{{ e.seq }} {{ e.ts }} {{ e.type }} {{ e.note }} {{ e.digest }},{{ e.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-19,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:231,{{ bf.label }},{{ bf.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-20,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:233,‹,{{ onBlotPrev }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-21,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:235,›,{{ onBlotNext }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+08,source-button-22,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:242,{{ b.n }} {{ b.side }} {{ b.entry }} {{ b.hold }} {{ b.pnl }} {{ b.mae }} {{ b.mfe }} {{ b.exit }},{{ b.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+09,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 09 Run Report.dc.html:30,← Hub · Stage 5 Claim,QuantBT 04 Evidence Flow.dc.html#stage=claim,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+09,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 09 Run Report.dc.html:30,Release Candidate & Publish,QuantBT 11 Release Candidate and Publish.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:42,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:48,Runs,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:64,runs →,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-4,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:65,new run →,QuantBT 02 New Run Preflight.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-5,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:66,rc & publish →,QuantBT 11 Release Candidate and Publish.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:79,{{ at.label }},{{ at.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-7,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:91,declare at New Run →,QuantBT 02 New Run Preflight.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-8,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:95,rc_ (draft),QuantBT 11 Release Candidate and Publish.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-button-9,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:100,{{ sf.label }},{{ sf.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-button-10,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:101,{{ probesLabel }},{{ onProbes }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-button-11,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:110,{{ n.id }} {{ n.status }} {{ n.spec }} {{ n.cert }} {{ n.when }},{{ n.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-button-12,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:119,{{ n.id }} {{ n.status }} {{ n.when }} {{ n.cert }} {{ n.av }} {{ n.rcChip }} cfg {{ n.cfg }} {{ n.spec }} {{ n.diff }} {{ n.note }},{{ n.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-13,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:155,open evidence →,{{ sel.evidenceHref }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+10,source-a-14,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 10 Attempt Lineage.dc.html:156,run report,QuantBT 09 Run Report.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+11,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:42,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+11,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:49,Evidence Flow,QuantBT 04 Evidence Flow.dc.html#stage=claim,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+11,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:57,run report,QuantBT 09 Run Report.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+11,source-a-4,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:64,New Run,QuantBT 02 New Run Preflight.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+11,source-a-5,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:127,{{ e.source }},{{ e.href }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+11,source-button-6,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:139,{{ copyLabel }},{{ onCopy }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+11,source-button-7,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:156,{{ publishLabel }},{{ onPublish }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+11,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:164,reset demo,{{ onReset }},PROTOTYPE_ONLY,false,NOT_BROWSER_VERIFIED
+12,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:31,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+12,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:36,Evidence Flow,QuantBT 04 Evidence Flow.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+12,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:42,open search & selection →,QuantBT 06 S2 Search and Selection.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+12,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:46,{{ tb.label }},{{ tb.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+12,source-a-5,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:66,declare →,QuantBT 02 New Run Preflight.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+12,source-a-6,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:66,replay panels →,QuantBT 08 S4 Execute Replay.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+12,source-a-7,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:114,open demo →,{{ r.demoHref }},PROTOTYPE_ONLY,false,NOT_BROWSER_VERIFIED
+12,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:143,{{ sd.label }},{{ sd.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+13,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:45,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+13,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:58,Runs,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+13,source-button-3,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:65,{{ m.label }},{{ m.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+13,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:100,{{ cs.label }},{{ cs.onPick }},PROTOTYPE_ONLY,false,NOT_BROWSER_VERIFIED
+13,source-a-5,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:128,Attempt Lineage,QuantBT 10 Attempt Lineage.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+13,source-a-6,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:132,the tree,QuantBT 10 Attempt Lineage.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+13,source-a-7,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:132,the release candidate,QuantBT 11 Release Candidate and Publish.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+13,source-button-8,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:171,{{ p.label }},{{ p.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+14,source-a-1,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:39,QuantBT Backtest,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+14,source-a-2,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:46,Journey,QuantBT 00 Journey Map.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+14,source-a-3,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:47,next: New Run →,QuantBT 02 New Run Preflight.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+14,source-button-4,CONTROL,upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:57,{{ st.num }} {{ st.label }} {{ st.sub }},{{ st.onPick }},SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+14,source-a-5,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:172,new run with this av_ →,QuantBT 02 New Run Preflight.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+14,source-a-6,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:173,lineage,QuantBT 10 Attempt Lineage.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED
+14,source-a-7,NAVIGATION_OR_LINK,upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:174,run library,QuantBT 01 Run Library.dc.html,SOURCE_SEMANTICS_UNMAPPED,false,NOT_BROWSER_VERIFIED

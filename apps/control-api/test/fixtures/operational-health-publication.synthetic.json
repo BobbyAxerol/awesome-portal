@@ -1,0 +1,22 @@
+{
+  "schema_version": "portal.internal.operation-health-publication.v1",
+  "workspace_id": "TEST_ONLY:health-workspace",
+  "source_ref": "TEST_ONLY:health-source",
+  "source_epoch": "TEST_ONLY:health-epoch",
+  "source_revision": "TEST_ONLY:health-r1",
+  "source_sequence": "1",
+  "previous_revision": null,
+  "source_as_of": "2026-10-25T00:00:00.000Z",
+  "expires_at": "2026-10-25T00:05:00.000Z",
+  "rows": [
+    {
+      "operation_id": "TEST_ONLY:op-a",
+      "target_type": "ACCOUNT",
+      "target_id": "TEST_ONLY:account-a",
+      "environment": "PAPER",
+      "workflow_version": 1,
+      "delivery_state": "AWAITING_RECEIPT",
+      "display_state": "CATCHING_UP"
+    }
+  ]
+}

@@ -37,6 +37,66 @@
       "@portal/contracts-screen-data": [
         "../../../packages/contracts/generated/execution-contract-authority.d.ts"
       ],
+      "@portal/contracts-research-alpha-import": [
+        "../../../packages/contracts/generated/research-alpha-import.d.ts"
+      ],
+      "@portal/contracts-research-preflight": [
+        "../../../packages/contracts/generated/research-preflight.d.ts"
+      ],
+      "@portal/contracts-research-dataset-index": [
+        "../../../packages/contracts/generated/research-dataset-index.d.ts"
+      ],
+      "@portal/contracts-research-foundation": [
+        "../../../packages/contracts/generated/research-foundation.d.ts"
+      ],
+      "@portal/contracts-research-progress": [
+        "../../../packages/contracts/generated/research-progress.d.ts"
+      ],
+      "@portal/contracts-research-freeze": [
+        "../../../packages/contracts/generated/research-freeze.d.ts"
+      ],
+      "@portal/contracts-research-search": [
+        "../../../packages/contracts/generated/research-search.d.ts"
+      ],
+      "@portal/contracts-research-split": [
+        "../../../packages/contracts/generated/research-split.d.ts"
+      ],
+      "@portal/contracts-research-window-execution": [
+        "../../../packages/contracts/generated/research-window-execution.d.ts"
+      ],
+      "@portal/contracts-research-evidence": [
+        "../../../packages/contracts/generated/research-evidence.d.ts"
+      ],
+      "@portal/contracts-research-current-source": [
+        "../../../packages/contracts/generated/research-current-source.d.ts"
+      ],
+      "@portal/contracts-research-run-library": [
+        "../../../packages/contracts/generated/research-run-library.d.ts"
+      ],
+      "@portal/contracts-research-run-create": [
+        "../../../packages/contracts/generated/research-run-create.d.ts"
+      ],
+      "@portal/contracts-research-replay": [
+        "../../../packages/contracts/generated/research-replay.d.ts"
+      ],
+      "@portal/contracts-research-report": [
+        "../../../packages/contracts/generated/research-report.d.ts"
+      ],
+      "@portal/contracts-research-attempt-lineage": [
+        "../../../packages/contracts/generated/research-attempt-lineage.d.ts"
+      ],
+      "@portal/contracts-research-compare": [
+        "../../../packages/contracts/generated/research-compare.d.ts"
+      ],
+      "@portal/contracts-research-run-setup": [
+        "../../../packages/contracts/generated/research-run-setup.d.ts"
+      ],
+      "@portal/contracts-research-release-candidate": [
+        "../../../packages/contracts/generated/research-release-candidate.d.ts"
+      ],
+      "@portal/contracts-research-release-candidate-publication": [
+        "../../../packages/contracts/generated/research-release-candidate-publication.d.ts"
+      ],
       "@/*": ["../../../features/roadmap-task-board/frontend/src/*"]
     }
   },

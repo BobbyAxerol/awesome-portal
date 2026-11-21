@@ -1,0 +1,431 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-current-view.v1.schema.json",
+  "title": "Private current authorized Execution view v1",
+  "description": "Uninstalled private Edge-to-Core mTLS contract. These schemas describe syntax; actual original-session/current-app/native-policy authority remains in Core. No registration/token-issue endpoint is exposed.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/CurrentViewResolve"
+    },
+    {
+      "$ref": "#/$defs/CurrentViewRecheck"
+    },
+    {
+      "$ref": "#/$defs/CurrentViewDecision"
+    },
+    {
+      "$ref": "#/$defs/CurrentViewError"
+    }
+  ],
+  "$defs": {
+    "CurrentViewOperation": {
+      "type": "string",
+      "enum": [
+        "CURRENT",
+        "HISTORY",
+        "EXPORT",
+        "STREAM",
+        "REPLAY"
+      ]
+    },
+    "CurrentViewResource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "ROOT",
+            "PORTFOLIO",
+            "ALPHA",
+            "ALPHA_VERSION",
+            "DEPLOYMENT",
+            "ACCOUNT",
+            "BINDING",
+            "USER"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        }
+      }
+    },
+    "CurrentViewDatasetBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dataset_id",
+        "source_revision",
+        "window"
+      ],
+      "properties": {
+        "dataset_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "source_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "projection_generation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "catalogue_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "window": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from_ms",
+                "to_ms"
+              ],
+              "properties": {
+                "from_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "to_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "description": "Server-selected exact dataset binding; a non-null window additionally requires from_ms < to_ms at the runtime boundary. No browser-selected source or operation-purpose fallback."
+    },
+    "CurrentViewTuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alpha_id",
+        "alpha_version_id",
+        "portfolio_id",
+        "deployment_id",
+        "account_id"
+      ],
+      "properties": {
+        "alpha_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "alpha_version_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "portfolio_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "deployment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "account_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        }
+      }
+    },
+    "CurrentViewResolve": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "original_context",
+        "workload_id",
+        "operation",
+        "resource_ref"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.current-view-resolve.v1"
+        },
+        "original_context": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$(?![\\s\\S])"
+        },
+        "workload_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "operation": {
+          "$ref": "#/$defs/CurrentViewOperation"
+        },
+        "resource_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        }
+      }
+    },
+    "CurrentViewRecheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "original_context",
+        "workload_id",
+        "operation",
+        "resource_ref",
+        "decision_digest"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.current-view-recheck.v1"
+        },
+        "original_context": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$(?![\\s\\S])"
+        },
+        "workload_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "operation": {
+          "$ref": "#/$defs/CurrentViewOperation"
+        },
+        "resource_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "decision_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        }
+      }
+    },
+    "CurrentViewDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "context_digest",
+        "decision_digest",
+        "workload_digest",
+        "principal_digest",
+        "session_digest",
+        "operation",
+        "workspace_id",
+        "environment",
+        "profile_id",
+        "resource_ref",
+        "resource",
+        "policy_revision",
+        "field_policy_ref",
+        "dataset_binding",
+        "whole_population",
+        "allowed_tuples",
+        "resources",
+        "fields",
+        "detail_fields",
+        "expires_at_ms"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.current-view-decision.v1"
+        },
+        "context_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        },
+        "decision_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        },
+        "workload_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        },
+        "principal_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        },
+        "session_digest": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        },
+        "operation": {
+          "$ref": "#/$defs/CurrentViewOperation"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "profile_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "resource_ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "resource": {
+          "$ref": "#/$defs/CurrentViewResource"
+        },
+        "policy_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "field_policy_ref": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "dataset_binding": {
+          "$ref": "#/$defs/CurrentViewDatasetBinding"
+        },
+        "whole_population": {
+          "type": "boolean"
+        },
+        "allowed_tuples": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "$ref": "#/$defs/CurrentViewTuple"
+          }
+        },
+        "resources": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "$ref": "#/$defs/CurrentViewResource"
+          }
+        },
+        "fields": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          }
+        },
+        "detail_fields": {
+          "type": "array",
+          "maxItems": 2000,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          }
+        },
+        "expires_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "description": "Original-flight current authority observation, not a transferable grant, financial attestation, source lease or source-terminal ACK. CURRENT/READ never grants STREAM. Recheck exact original context and decision on each bounded operation; context expiry/restart does not permit reconstruction from actor JSON. All digests are prefixed sha256 values. Population is exact correlated tuples or explicit whole_population, never independent ID-set joins."
+    },
+    "CurrentViewError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "code"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.current-view-error.v1"
+        },
+        "code": {
+          "type": "string",
+          "enum": [
+            "CURRENT_VIEW_CONTEXT_REQUIRED",
+            "CURRENT_VIEW_CONTEXT_EXPIRED",
+            "CURRENT_VIEW_BINDING_MISMATCH",
+            "CURRENT_VIEW_AUTHORITY_CHANGED",
+            "CURRENT_VIEW_IDENTITY_REQUIRED",
+            "CURRENT_VIEW_AUTHORITY_UNAVAILABLE",
+            "CURRENT_VIEW_OPERATION_NOT_COMMISSIONED",
+            "CURRENT_VIEW_CAPACITY",
+            "CURRENT_VIEW_WORKLOAD_NOT_AUTHENTICATED",
+            "CURRENT_VIEW_ROUTE_NOT_FOUND",
+            "CURRENT_VIEW_TRANSPORT_BUSY",
+            "CURRENT_VIEW_REQUEST_INVALID",
+            "CURRENT_VIEW_REQUEST_BYTE_LIMIT",
+            "CURRENT_VIEW_TRANSPORT_DEADLINE",
+            "CURRENT_VIEW_RESPONSE_INVALID"
+          ]
+        }
+      }
+    }
+  }
+}

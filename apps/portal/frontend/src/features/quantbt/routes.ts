@@ -41,7 +41,7 @@ export function runPath(runId: string): string {
  * - `/overview`           -> `/research/quantbt/overview` (module resolves the
  *                            default run exactly as the standalone app did)
  * - `/runs`               -> `/research/quantbt/runs`
- * - `/?new=1`             -> `/research/quantbt/new`
+ * - `/?new=1`             -> `/research/quantbt/runs/new`
  *
  * Returns `null` when the location is not a QuantBT legacy route.
  */
@@ -51,7 +51,7 @@ export function canonicalQuantBTPath(pathname: string, search = ""): string | nu
   const runId = query.get("run");
 
   if (normalised === "/" ) {
-    return query.get("new") === "1" ? `${QUANTBT_ROOT}/new` : null;
+    return query.get("new") === "1" ? `${QUANTBT_ROOT}/runs/new` : null;
   }
 
   if (normalised === "/runs") return `${QUANTBT_ROOT}/runs`;

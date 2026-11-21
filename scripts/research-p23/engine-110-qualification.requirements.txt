@@ -1,0 +1,2 @@
+quantbt-engine==1.1.0 --hash=sha256:c319b24325230df99ce1803ae03df09c15acabd834dd2f6ccd17b21e70363e62
+quantbt-native==0.4.1 --hash=sha256:f26681ad154aea38d9d0fc8f9e828a6c480176cf7f20041cbb86f06e1dd38b3d

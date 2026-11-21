@@ -1,0 +1,20 @@
+{
+  "schema_version": "research.phase-resource-cleanup.v1",
+  "phase": "P13",
+  "runtime_change": "NONE",
+  "test_resources": [
+    {
+      "resource": "research-p13-postgres-*",
+      "type": "one disposable PostgreSQL 16 tmpfs container",
+      "cleanup": "shell EXIT trap removes exactly the named container on pass/fail",
+      "result": "PASS"
+    },
+    {
+      "resource": "python:3.12.14-slim",
+      "type": "ephemeral CI-pinned test container",
+      "cleanup": "docker --rm",
+      "result": "PASS"
+    }
+  ],
+  "broad_cleanup": "NOT_RUN; no prune, volume/image deletion, restart or cache cleanup is required or permitted."
+}

@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { BRACKET_PAIRING_MS, buildScene, logicalOf, robustRange } from "./components/ReplayCandleChart";
+import { BRACKET_PAIRING_MS, buildScene, capOffScale, clampLevel, levelExcess, logicalOf, OFF_SCALE_LABELS_PER_EDGE, offScaleLabel, robustRange, TradesPrimitive } from "./components/ReplayCandleChart";
 import { resolveFocus, sceneIdOfRow, stepFill } from "./components/TradeReplayEvents";
 import { buildLog } from "./components/tradeReplayModel";
 import { legLevels, pairRoundTrips, readReplayFills, readReplayOrders } from "./components/tradeReplayModel";
@@ -226,5 +226,185 @@ describe("interval from the strategy id (DERIVED until BR-EX-80)", () => {
   it("routes the candles query to the deployment's venue", () => {
     expect(marketCandlesPath({ venue: "OKX", symbol: "ETHUSDT", interval: "30m" })).toBe("/market/venue-candles?environment=paper&venue=OKX&market=SWAP&symbol=ETHUSDT&interval=30m&limit=500");
     expect(marketCandlesPath({ symbol: "ETHUSDT", interval: "1h" })).toContain("venue=BINANCE&market=USDM");
+  });
+});
+
+describe("TradesPrimitive.autoscaleInfo — levelsInAutoscale is opt-in", () => {
+  const scene = buildScene(FILLS.slice(0, 2), ORDERS, pairRoundTrips(FILLS.slice(0, 2), ORDERS), legLevels(ORDERS));
+  const T0 = scene.markers[0]!.t;
+  const TIMES = [T0 - 3_600_000, T0, T0 + 3_600_000, T0 + 7_200_000];
+  // fills 1850 / 1800, legs TP 1800 / SL 1900; add a wide leg far from the prints so the difference is visible
+  const wide = { ...scene, legs: [...scene.legs, { ...scene.legs[0]!, id: "leg:far", level: 2150 }] };
+  const prim = (withCandles: boolean, flag?: boolean) => {
+    const p = new TradesPrimitive();
+    p.set(wide, TIMES, withCandles ? 3_600_000 : null, {} as never);
+    if (flag !== undefined) p.levelsInAutoscale = flag;
+    return p;
+  };
+  const span = (p: TradesPrimitive) => p.autoscaleInfo(-5 as never, 10 as never)!.priceRange!;
+
+  it("defaults to true and includes every in-view leg level (V1 behaviour)", () => {
+    expect(new TradesPrimitive().levelsInAutoscale).toBe(true);
+    expect(span(prim(true)).maxValue).toBeGreaterThan(2100);
+  });
+
+  it("with the flag off and candles present the legs no longer stretch the axis", () => {
+    const r = span(prim(true, false));
+    expect(r.maxValue).toBeLessThan(2100);
+    expect(r.minValue).toBeLessThanOrEqual(1800);
+    expect(r.maxValue).toBeGreaterThanOrEqual(1850);
+  });
+
+  it("with the flag off and no candles the legs stay in: they are all there is to scale by", () => {
+    expect(span(prim(false, false)).maxValue).toBeGreaterThan(2100);
+  });
+});
+
+describe("clampLevel / offScaleLabel — a pinned level is not a price", () => {
+  it("leaves a y inside the pane (edges included) untouched, with no edge", () => {
+    expect(clampLevel(120, 400)).toEqual({ y: 120, edge: null });
+    expect(clampLevel(0, 400)).toEqual({ y: 0, edge: null });
+    expect(clampLevel(400, 400)).toEqual({ y: 400, edge: null });
+  });
+  it("pins above / below the pane 6 px inside the edge and records which side", () => {
+    expect(clampLevel(-1, 400)).toEqual({ y: 6, edge: "above" });
+    expect(clampLevel(-900, 400)).toEqual({ y: 6, edge: "above" });
+    expect(clampLevel(401, 400)).toEqual({ y: 394, edge: "below" });
+    expect(clampLevel(5000, 400)).toEqual({ y: 394, edge: "below" });
+  });
+  it("labels the exact formatted level with an arrow toward the real price and says off scale", () => {
+    const leg = buildScene(FILLS, ORDERS, [], legLevels(ORDERS)).legs[0]!;
+    expect(leg.label).toBe("TP 1,800.00");
+    expect(offScaleLabel(leg.label, "above")).toBe("▲ TP 1,800.00 · off scale");
+    expect(offScaleLabel(leg.label, "below")).toBe("▼ TP 1,800.00 · off scale");
+  });
+});
+
+/* ── the drawn structure, through the primitive with a stub chart (no canvas) ──────────────────── */
+
+describe("TradesPrimitive.updateAllViews — default path draws what it always drew", () => {
+  const HOUR = 3_600_000;
+  const BAR0 = Date.parse("2026-07-18T20:00:00Z");
+  const TIMES = Array.from({ length: 12 }, (_, i) => BAR0 + i * HOUR);
+  const HEIGHT = 400;
+  const WIDTH = 600;
+  /** price → pane y: 1850 sits at 200, two pixels per unit, higher prices higher on the pane. */
+  const toY = (price: number) => 200 - (price - 1850) * 2;
+  const base = buildScene(FILLS.slice(0, 2), ORDERS, pairRoundTrips(FILLS.slice(0, 2), ORDERS), legLevels(ORDERS));
+  const bracket = base.brackets[0]!;
+  const leg = (id: string, role: "TP" | "SL", level: number) => ({ ...base.legs[0]!, id, role, level });
+  // TP 1800 (y 300) and SL 1900 (y 100) are inside the pane. TP 1000 (y 1900) and SL 2500 (y -1100) are far beyond it.
+  const scene = {
+    ...base,
+    legs: [...base.legs, leg("leg:far-tp", "TP", 1000), leg("leg:far-sl", "SL", 2500)],
+    brackets: [{ ...bracket, tp: 1000, sl: 2500, tps: [1800, 1000], sls: [1900, 2500] }],
+    trips: [...base.trips, { ...base.trips[0]!, id: "trip:far", p1: 3500 }],
+    legEnds: [...base.legEnds, { ...base.legEnds[0]!, id: "trigger:far", level: 2500 }],
+    contingencies: [{ id: "cont:1", kind: "OCO", state: "ACTIVE", t0: base.markers[0]!.t, t1: null, attention: false, title: "", card: [], levels: [
+      { level: 1800, side: "BUY", state: null, waiting: false, clientOrderId: null },
+      { level: 2500, side: "SELL", state: null, waiting: true, clientOrderId: null },
+    ] }],
+  };
+  const drawn = (levelsInAutoscale: boolean, over: Partial<typeof scene> = {}) => {
+    const prim = new TradesPrimitive();
+    prim.set({ ...scene, ...over }, TIMES, HOUR, {} as never);
+    prim.levelsInAutoscale = levelsInAutoscale;
+    prim.attached({
+      requestUpdate: () => undefined,
+      chart: { timeScale: () => ({ width: () => WIDTH, options: () => ({ barSpacing: 20 }), logicalToCoordinate: (l: number) => l * 20 }), paneSize: () => ({ height: HEIGHT }) },
+      series: { priceToCoordinate: toY },
+    } as never);
+    prim.updateAllViews();
+    return prim.drawn!;
+  };
+
+  it("default: a bracket level beyond the pane is clamped 6 px inside it, exactly as before", () => {
+    const b = drawn(true).brackets[0]!;
+    expect(b.yEntry).toBe(200);
+    expect([b.yTp, b.ySl]).toEqual([394, 6]);
+    expect(b.yTps).toEqual([300, 394]);
+    expect(b.ySls).toEqual([100, 6]);
+  });
+
+  it("default: legs and leg ends beyond the pane are skipped, not pinned; the contingency clamps its far level", () => {
+    const d = drawn(true);
+    expect(d.legs.map((l) => [l.l.id, l.edge, l.y])).toEqual([["leg:2", null, 300], ["leg:3", null, 100]]);
+    expect(d.legEnds.map((e) => [e.e.id, e.edge])).toEqual([["trigger:2", null], ["cancel:3", null]]);
+    expect(d.contingencies[0]!.ys.map((v) => v.y)).toEqual([300, 6]);
+  });
+
+  it("default: the round trip is drawn between its two fills", () => {
+    // the second thread ends at 3500, far beyond the pane: the default path clamps it 6 px inside, as before
+    expect(drawn(true).trips.map((t) => [t.y0, t.y1])).toEqual([[200, 300], [200, 6]]);
+  });
+
+  it("with candles and the flag on, levelsInAutoscale never pins: nothing carries an edge", () => {
+    const d = drawn(true);
+    expect([...d.legs, ...d.legEnds].every((x) => x.edge === null)).toBe(true);
+    expect(d.hiddenOff).toEqual({ above: 0, below: 0 });
+    expect(d.contingencies[0]!.offs).toEqual([]);
+  });
+
+  it("pinned: a bracket level beyond the scale draws no zone to the pane edge; the on-scale levels keep theirs", () => {
+    const b = drawn(false).brackets[0]!;
+    expect(b.yEntry).toBe(200);
+    expect([b.yTp, b.ySl]).toEqual([null, null]);
+    expect(b.yTps).toEqual([300]);
+    expect(b.ySls).toEqual([100]);
+  });
+
+  it("pinned: legs and leg ends beyond the pane sit on the edge with their side, each labelled while within the cap", () => {
+    const d = drawn(false);
+    expect(d.legs.map((l) => [l.l.id, l.edge, l.y, l.labelled])).toEqual([["leg:2", null, 300, true], ["leg:3", null, 100, true], ["leg:far-tp", "below", 394, true], ["leg:far-sl", "above", 6, true]]);
+    expect(d.legEnds.map((e) => [e.e.id, e.edge, e.labelled])).toEqual([["trigger:2", null, true], ["cancel:3", null, true], ["trigger:far", "above", true]]);
+    expect(d.hiddenOff).toEqual({ above: 0, below: 0 });
+  });
+
+  it("pinned: a group level beyond the scale leaves the brace and is pinned and labelled on its own", () => {
+    const c = drawn(false).contingencies[0]!;
+    expect(c.ys.map((v) => v.y)).toEqual([300]);
+    expect(c.offs).toEqual([{ level: 2500, side: "SELL", y: 6, edge: "above", labelled: true }]);
+  });
+
+  it("pinned: a round trip with an end beyond the scale is not threaded to the pane edge", () => {
+    expect(drawn(false).trips.map((t) => [t.y0, t.y1])).toEqual([[200, 300]]);
+  });
+
+  it("pinned: hundreds of levels on one edge label the nearest three and count the rest", () => {
+    const far = Array.from({ length: 300 }, (_, i) => leg(`leg:many-${i}`, "TP", 1000 - i));
+    const d = drawn(false, { legs: far, brackets: [], legEnds: [], contingencies: [], trips: [] });
+    expect(d.legs).toHaveLength(300);
+    const labelled = d.legs.filter((l) => l.labelled).map((l) => l.l.id);
+    // 1000, 999 and 998 sit nearest the pane: the lower the price the farther below it.
+    expect(labelled).toEqual(["leg:many-0", "leg:many-1", "leg:many-2"]);
+    expect(d.hiddenOff).toEqual({ above: 0, below: 297 });
+  });
+
+  it("pinned: the cap is per edge, shared by legs, leg ends and group levels", () => {
+    const above = [leg("leg:a1", "SL", 2500), leg("leg:a2", "SL", 2600)];
+    const d = drawn(false, { legs: above, brackets: [], trips: [] });
+    // above the pane: two legs, trigger:far and the group's 2500 level are four candidates; three are labelled
+    const items = [...d.legs, ...d.legEnds, ...d.contingencies.flatMap((c) => c.offs)].filter((x) => x.edge === "above");
+    expect(items).toHaveLength(4);
+    expect(items.filter((x) => x.labelled)).toHaveLength(OFF_SCALE_LABELS_PER_EDGE);
+    expect(d.hiddenOff).toEqual({ above: 1, below: 0 });
+  });
+});
+
+describe("levelExcess / capOffScale — which pinned levels are labelled", () => {
+  it("measures how far beyond the pane a y lies, zero inside it", () => {
+    expect([levelExcess(-40, 400), levelExcess(0, 400), levelExcess(399, 400), levelExcess(400, 400), levelExcess(455, 400)]).toEqual([40, 0, 0, 0, 55]);
+  });
+  it("labels every level at its true price and reports nothing hidden", () => {
+    expect(capOffScale([null, null])).toEqual({ shown: [true, true], hidden: { above: 0, below: 0 } });
+    expect(capOffScale([])).toEqual({ shown: [], hidden: { above: 0, below: 0 } });
+  });
+  it("keeps the nearest three per edge, counts the rest exactly, and breaks ties by order", () => {
+    const at = (edge: "above" | "below", excess: number) => ({ edge, excess });
+    const items = [at("above", 50), at("above", 10), at("above", 10), at("above", 10), at("above", 5), at("below", 7), null, at("below", 900)];
+    const { shown, hidden } = capOffScale(items);
+    expect(shown).toEqual([false, true, true, false, true, true, true, true]);
+    expect(hidden).toEqual({ above: 2, below: 0 });
+    expect(capOffScale(items, 1).hidden).toEqual({ above: 4, below: 1 });
   });
 });

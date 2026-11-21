@@ -1,0 +1,60 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-limits.published.synthetic.valid.json",
+    "none": "execution-limits.none.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "ratio-number",
+      "base": "published",
+      "rule": "a ratio is exact decimal text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "used_ratio"
+          ],
+          "value": 0.4123
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "state-unknown",
+      "base": "published",
+      "rule": "limit states are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "state"
+          ],
+          "value": "FINE"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "cap-no-currency",
+      "base": "published",
+      "rule": "a cap states its currency",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "items",
+            0,
+            "cap",
+            "currency"
+          ]
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

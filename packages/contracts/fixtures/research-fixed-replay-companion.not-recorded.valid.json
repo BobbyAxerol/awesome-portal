@@ -1,0 +1,23 @@
+{
+  "schema_version": "research.fixed-replay-companion-page.v1",
+  "run_id": "fixed-replay-fixture-run",
+  "scope": "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXECUTION_LEDGER",
+  "execution_profile": {
+    "id": "p04.fixed-qualification.v1",
+    "digest": null
+  },
+  "next_cursor": null,
+  "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "FIXED_OOS_CUSTODY_NOT_RECORDED"
+  },
+  "custody": "NOT_RECORDED",
+  "revision": null,
+  "manifest": null,
+  "counts": {
+    "full_source_retained": null,
+    "matching_filter": null,
+    "returned": 0
+  },
+  "rows": []
+}

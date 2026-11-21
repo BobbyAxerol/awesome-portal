@@ -1,0 +1,403 @@
+#!/usr/bin/env bash
+# RF02-B3 · isolated Research preview stack (Q6).
+#
+#   scripts/research-preview/preview.sh init       # write the host-bound env file (once)
+#   scripts/research-preview/preview.sh build      # build the four images from this checkout
+#   scripts/research-preview/preview.sh up         # migrate, bootstrap, start; records identity
+#   scripts/research-preview/preview.sh activate   # print one-time activation credentials (stdout only)
+#   scripts/research-preview/preview.sh status     # containers, images, git SHA, health
+#   scripts/research-preview/preview.sh down       # stop, keep volumes
+#   scripts/research-preview/preview.sh teardown   # stop and delete this project's volumes
+#   scripts/research-preview/preview.sh fixture on|off|status   # fixture BFF marker only; never runs docker
+#
+# Safety rails, all enforced here rather than remembered:
+#   - the compose project is always `portal-research-preview`;
+#   - the port may not be dev (8080), showcase (8081), Execution probe (8090)
+#     or stable (18081), and must be loopback-bound (compose.yaml does that);
+#   - the env file lives outside the checkout, mode 0600, and is never printed;
+#   - teardown removes only volumes labelled with this project;
+#   - `fixture` only creates/removes/reads $ENV_DIR/fixture-bff.enabled and prints the next command.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROJECT="portal-research-preview"
+ENV_DIR="${RESEARCH_PREVIEW_HOME:-$HOME/.config/portal-research-preview}"
+ENV_FILE="$ENV_DIR/preview.env"
+IDENTITY_FILE="$ENV_DIR/identity.json"
+FORBIDDEN_PORTS=" 8080 8081 8090 18081 "
+
+FIXTURE_MARKER="$ENV_DIR/fixture-bff.enabled"
+HYBRID_MARKER="$ENV_DIR/hybrid-fixture.enabled"
+NATIVE_CURRENT_MARKER="$ENV_DIR/execution-native-current.enabled"
+# Fixture BFF switch (FIXTURE_LAB lane, not acceptance evidence): only a marker file. It never runs
+# docker; the operator applies it with `build` + `up`. See deploy/research-preview/README-fixture.md.
+cmd_fixture() {
+  local action="${1:-status}"
+  [[ -f "$ENV_FILE" ]] || { echo "preview: run '$0 init' first" >&2; return 1; }
+  # Count of screen keys in the build-time manifest; the value itself is not echoed.
+  local screens screen_count=0
+  screens="$(sed -n 's/^PORTAL_EXECUTION_V2_SCREENS=//p' "$ENV_FILE" | tail -n1 | tr -d ' "')"
+  [[ -z "$screens" ]] || screen_count="$(tr ',' '\n' <<<"$screens" | grep -c .)"
+  case "$action" in
+    on)
+      mkdir -p "$ENV_DIR"
+      : >"$FIXTURE_MARKER"
+      echo "preview: fixture BFF marker set ($FIXTURE_MARKER)"
+      if [[ "$screen_count" -eq 0 ]]; then
+        echo "preview: PORTAL_EXECUTION_V2_SCREENS is empty in the env file; set it before 'build' or every screen stays on V1" >&2
+      else
+        echo "preview: PORTAL_EXECUTION_V2_SCREENS lists $screen_count screen(s)"
+      fi
+      echo "next: $0 build portal-web portal-fixture-bff && $0 up"
+      ;;
+    off)
+      rm -f "$FIXTURE_MARKER"
+      rm -f "$HYBRID_MARKER"
+      echo "preview: fixture BFF marker removed"
+      echo "next: $0 up   # recreates portal-web without the fixture locations and banner"
+      echo "then: remove the now-orphaned fixture container once (project $PROJECT only):"
+      echo "      docker rm -f ${PROJECT}-portal-fixture-bff-1"
+      ;;
+    status)
+      if [[ -f "$FIXTURE_MARKER" ]]; then echo "fixture-bff: on (marker present)"; else echo "fixture-bff: off"; fi
+      if [[ -f "$HYBRID_MARKER" ]]; then echo "hybrid fixture: on (Research API and preview session real)"; else echo "hybrid fixture: off"; fi
+      echo "PORTAL_EXECUTION_V2_SCREENS: $screen_count screen(s) in the env file"
+      echo "note: the marker only takes effect on the next '$0 up'"
+      ;;
+    hybrid-on)
+      [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview && -f "$FIXTURE_MARKER" ]] || {
+        echo 'preview: hybrid requires the fixed Research preview and the fixture marker' >&2; return 1; }
+      : >"$HYBRID_MARKER"
+      echo 'preview: hybrid marker set; apply with up portal-web after verifying control-api'
+      ;;
+    hybrid-off)
+      [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview ]] || return 1
+      rm -f "$HYBRID_MARKER"
+      echo 'preview: hybrid marker removed; apply with up portal-web'
+      ;;
+    *) echo "usage: $0 fixture on|off|status|hybrid-on|hybrid-off" >&2; return 2 ;;
+  esac
+}
+# Handled before the Docker probe below: this command must work without Docker.
+if [[ "${1:-}" == fixture ]]; then shift; cmd_fixture "$@"; exit $?; fi
+
+DOCKER=(docker)
+if ! docker info >/dev/null 2>&1; then
+  if sudo -n docker info >/dev/null 2>&1; then DOCKER=(sudo -n docker); else
+    echo "preview: cannot reach Docker directly or via passwordless sudo" >&2; exit 1
+  fi
+fi
+
+compose() {
+  [[ -f "$ENV_FILE" ]] || { echo "preview: run '$0 init' first" >&2; exit 1; }
+  local port
+  port="$(sed -n 's/^PORTAL_HTTP_PORT=//p' "$ENV_FILE")"
+  case "$FORBIDDEN_PORTS" in *" $port "*)
+    echo "preview: port $port belongs to another stack; refusing" >&2; exit 1;;
+  esac
+  [[ "$port" =~ ^[0-9]{4,5}$ ]] || { echo "preview: PORTAL_HTTP_PORT is not a port" >&2; exit 1; }
+  # sudo strips caller environment. Forward only these non-secret source
+  # stamps, including cmd_build's temporary assignment, not the whole env.
+  local compose_docker=("${DOCKER[@]}")
+  local native_env=()
+  local domain_overlay=()
+  if [[ -f "$ENV_DIR/execution-store.enabled" ]]; then
+    [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview ]] || {
+      echo 'preview: Execution store marker is restricted to the fixed shared preview' >&2; return 1; }
+    domain_overlay=(-f "$ROOT/deploy/research-preview/compose.execution-store.yaml")
+  fi
+  if [[ -f "$ENV_DIR/execution-retained.enabled" ]]; then
+    [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview && -f "$ENV_DIR/execution-store.enabled" ]] || {
+      echo 'preview: retained review requires the fixed isolated Execution store' >&2; return 1; }
+    domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.retained-review.yaml")
+  fi
+  if [[ -f "$ENV_DIR/execution-native.enabled" ]]; then
+    [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview && -f "$ENV_DIR/execution-store.enabled" ]] || {
+      echo 'preview: native review requires the fixed isolated Research Execution store' >&2; return 1; }
+    local native_file="$ENV_DIR/execution-native/runtime.env"
+    [[ -f "$native_file" && ! -L "$native_file" && "$(stat -c '%a' "$native_file")" == 600 &&
+      "$(stat -c '%u' "$native_file")" == "$(id -u)" ]] || {
+      echo 'preview: native review requires its owner-only Research environment file' >&2; return 1; }
+    native_env=(--env-file "$native_file")
+    # Last overlay overrides retained flags deliberately. The retained marker
+    # stays available for rollback; it is not an auto-restoration of grants.
+    domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.native-review.yaml")
+  fi
+  if [[ -e "$NATIVE_CURRENT_MARKER" || -L "$NATIVE_CURRENT_MARKER" ]]; then
+    [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview &&
+      -f "$ENV_DIR/execution-native.enabled" && -f "$ENV_DIR/execution-store.enabled" ]] || {
+      echo 'preview: native CURRENT requires the fixed isolated Research native review and Execution store' >&2; return 1; }
+    [[ -f "$NATIVE_CURRENT_MARKER" && ! -L "$NATIVE_CURRENT_MARKER" &&
+      "$(stat -c '%a' "$NATIVE_CURRENT_MARKER")" == 600 &&
+      "$(stat -c '%u' "$NATIVE_CURRENT_MARKER")" == "$(id -u)" ]] || {
+      echo 'preview: native CURRENT requires its owner-only regular Research opt-in marker' >&2; return 1; }
+    # Separate opt-in: the existing native review alone must not select ROOT,
+    # CURRENT or CurrentView providers. runtime.env was validated above.
+    domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.native-current.yaml")
+  fi
+  if [[ -f "$FIXTURE_MARKER" ]]; then
+    # Fixture BFF (FIXTURE_LAB lane): one private service plus an nginx variant and a banner on
+    # portal-web. The project name and port rails above/below are unchanged.
+    domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.fixture-bff.yaml")
+    if [[ -f "$HYBRID_MARKER" ]]; then
+      [[ "$ENV_DIR" == /home/bobby/.config/portal-research-preview ]] || {
+        echo 'preview: hybrid fixture is restricted to the fixed Research preview' >&2; return 1; }
+      domain_overlay+=(-f "$ROOT/deploy/research-preview/compose.hybrid-fixture.yaml")
+    fi
+  elif [[ -f "$HYBRID_MARKER" ]]; then
+    echo 'preview: hybrid fixture requires fixture-bff.enabled; refusing ambiguous routing' >&2; return 1
+  fi
+  if [[ "${DOCKER[0]}" == sudo ]]; then
+    compose_docker=(sudo -n env "PORTAL_BUILD_COMMIT=${PORTAL_BUILD_COMMIT:-unknown}" \
+      "PORTAL_BUILD_DIRTY=${PORTAL_BUILD_DIRTY:-false}" docker)
+  fi
+  "${compose_docker[@]}" compose -p "$PROJECT" --project-directory "$ROOT" --env-file "$ENV_FILE" "${native_env[@]}" \
+    -f "$ROOT/compose.yaml" \
+    -f "$ROOT/deploy/compose.research-progress.yaml" \
+    -f "$ROOT/deploy/research-preview/compose.research-preview.yaml" "${domain_overlay[@]}" "$@"
+}
+
+cmd_init() {
+  if [[ -f "$ENV_FILE" ]]; then echo "preview: $ENV_FILE exists; leaving it"; return; fi
+  local port="${RESEARCH_PREVIEW_PORT:-8095}"
+  case "$FORBIDDEN_PORTS" in *" $port "*) echo "preview: port $port is taken by another stack" >&2; exit 1;; esac
+  local gid
+  gid="$(getent group primus-market-data-readers | cut -d: -f3)"
+  [[ -n "$gid" ]] || { echo "preview: group primus-market-data-readers not found" >&2; exit 1; }
+  umask 077
+  mkdir -p "$ENV_DIR/control-api-secrets"
+  cat >"$ENV_FILE" <<ENV
+# Research preview (RF02-B3). Host-bound; never commit or print.
+PORTAL_STACK_NAME=$PROJECT
+PORTAL_HTTP_PORT=$port
+PORTAL_IMAGE_PREFIX=local/portal-research-preview
+PORTAL_IMAGE_TAG=rf02
+# AUTH_MODE=dev stands in for Cloudflare Access and is only allowed with local.
+PORTAL_ENV=local
+PORTAL_PUBLIC_ORIGIN=http://localhost:$port
+CONTROL_API_AUTH_MODE=dev
+# Bobby 2026-09-30: research-portal is a quick-look site — no login screen. The automation
+# account holds the preview's runs; Control API refuses this outside AUTH_MODE=dev + PORTAL_ENV=local.
+PREVIEW_AUTO_LOGIN_USERNAME=claude-preview
+CONTROL_API_SECRETS_DIR=$ENV_DIR/control-api-secrets
+CONTROL_API_INTERNAL_PRINCIPAL_SECRET=$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 48)
+PORTAL_HISTORICAL_DATA_MODE=required
+PORTAL_HISTORICAL_DATA_DIR=/srv/primus/historical-market-data/storage
+PORTAL_HMD_READER_GID=$gid
+CONTROL_API_FEATURE_RESEARCH_RUN_PRODUCER=true
+CONTROL_API_FEATURE_RESEARCH_PROGRESS=true
+CONTROL_API_FEATURE_RESEARCH_RUN_LIBRARY=true
+CONTROL_API_FEATURE_RESEARCH_EVIDENCE=true
+CONTROL_API_FEATURE_RESEARCH_SPLIT=true
+CONTROL_API_FEATURE_RESEARCH_SEARCH=true
+CONTROL_API_FEATURE_RESEARCH_FREEZE=true
+CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE=true
+CONTROL_API_FEATURE_RESEARCH_RETAINED_ARTIFACTS=true
+CONTROL_API_FEATURE_RESEARCH_WFO_PROFILE=true
+# FULL-02 is opened only after its exact ordinary product receipts qualify.
+CONTROL_API_FEATURE_RESEARCH_FULL02_PROFILE=false
+CONTROL_API_FEATURE_RESEARCH_FULL03_PROFILE=false
+CONTROL_API_FEATURE_RESEARCH_FULL04_PROFILE=false
+CONTROL_API_FEATURE_RESEARCH_FULL05_PROFILE=false
+CONTROL_API_FEATURE_RESEARCH_FULL06_PROFILE=false
+CONTROL_API_FEATURE_RESEARCH_REPLAY=true
+CONTROL_API_FEATURE_RESEARCH_REPORTS=true
+CONTROL_API_FEATURE_RESEARCH_LINEAGE=true
+CONTROL_API_FEATURE_RESEARCH_COMPARE=true
+CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATES=true
+CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION=true
+CONTROL_API_FEATURE_RESEARCH_IMPORTED_EXECUTION=true
+CONTROL_API_FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY=true
+CONTROL_API_FEATURE_RESEARCH_WHATIF=true
+PORTAL_FEATURE_RESEARCH_RUN_PRODUCER=true
+PORTAL_FEATURE_RESEARCH_PROGRESS=true
+PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS=true
+PORTAL_FEATURE_RESEARCH_WFO_PROFILE=true
+PORTAL_FEATURE_RESEARCH_FULL02_PROFILE=false
+PORTAL_FEATURE_RESEARCH_FULL03_PROFILE=false
+PORTAL_FEATURE_RESEARCH_FULL04_PROFILE=false
+PORTAL_FEATURE_RESEARCH_FULL05_PROFILE=false
+PORTAL_FEATURE_RESEARCH_FULL06_PROFILE=false
+PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION=true
+PORTAL_FEATURE_RESEARCH_WHATIF=true
+# Bobby 2026-09-30: preview-only long Delta WFO (2..400 trials, 1800/3600 s child).
+CONTROL_API_FEATURE_RESEARCH_PREVIEW_LONG_WFO=true
+PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO=true
+CONTROL_API_QUERY_CURSOR_KEYS_JSON={"query-k1":"$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 48)"}
+CONTROL_API_GOVERNANCE_APPLY_KEYS_JSON={"governance-k1":"$(head -c 48 /dev/urandom | base64 | tr -d '/+=\n' | head -c 48)"}
+# Execution V2 screens are a BUILD-time list (compose.yaml maps PORTAL_EXECUTION_V2_SCREENS to the
+# portal-web build arg; empty keeps every screen on V1). The full manifest, for a UI/UX review build:
+# PORTAL_EXECUTION_V2_SCREENS=fleet,archived,portfolios,alpha,workbench,sandbox,canary,live,request,account,ops,profile,overview,cockpit,shell,compare,blotter,admin,users,replay
+# (all 20 keys; only archived and replay are reserved: they are accepted but mount nothing, see v2/flags.ts.
+#  workbench, sandbox, canary, live and request are the S3 stage screens and are live.)
+# Fixture BFF (see deploy/research-preview/README-fixture.md): read only while \`preview.sh fixture on\`.
+# FIXTURE_SCALE=medium
+# FIXTURE_WRITES=refuse   # default in the overlay; "doubles" answers canned successes that store nothing
+# FIXTURE_USER_ID=
+ENV
+  chmod 600 "$ENV_FILE"
+  echo "preview: wrote $ENV_FILE (port $port)"
+}
+
+cmd_build() {
+  local services=("$@")
+  [[ ${#services[@]} -gt 0 ]] || services=(portal-api control-api portal-web roadmap-task-board-api)
+  if [[ $# -eq 0 && -f "$FIXTURE_MARKER" ]]; then services+=(portal-fixture-bff); fi
+  local service
+  for service in "${services[@]}"; do
+    # The fixture BFF image exists only while the fixture marker is set (compose.fixture-bff.yaml).
+    [[ "$service" == portal-fixture-bff && -f "$FIXTURE_MARKER" ]] && continue
+    case "$service" in portal-api|control-api|portal-web|roadmap-task-board-api) ;;
+      *) echo "preview: unsupported build service $service" >&2; return 1;;
+    esac
+  done
+  # Retain a resolvable image name BEFORE replacing a floating preview tag.
+  # An OCI index may disappear from the local image-name store once untagged,
+  # even while an old container still records that index as its .Image.
+  # C4 retains these exact rollback aliases30days; never prune them blindly.
+  local container previous alias
+  for service in "${services[@]}"; do
+    container="$(compose ps -aq "$service" | head -n1)"
+    [[ -n "$container" ]] || continue
+    previous="$("${DOCKER[@]}" inspect -f '{{.Image}}' "$container")"
+    "${DOCKER[@]}" image inspect "$previous" >/dev/null || {
+      echo "preview: original $service image is not resolvable; recover rollback before build" >&2;return 1; }
+    alias="local/portal-research-preserved-$service:${previous#sha256:}"
+    "${DOCKER[@]}" image tag "$previous" "$alias"
+  done
+  # The approved Historical Market Data reader is a code-only wheel staged into
+  # the ignored vendor/hmd-reader directory; the image refuses to build
+  # without it rather than start a portal-api that cannot read data.
+  local wheel="$ROOT/vendor/hmd-reader/primus_historical_market_data-0.1.0rc3-py3-none-any.whl"
+  [[ -f "$wheel" ]] || { echo "preview: stage the approved HMD reader wheel at $wheel" >&2; exit 1; }
+  local sha dirty=false
+  sha="$(git -C "$ROOT" rev-parse HEAD)"
+  [[ -z "$(git -C "$ROOT" status --porcelain)" ]] || dirty=true
+  PORTAL_BUILD_COMMIT="$sha" PORTAL_BUILD_DIRTY="$dirty" compose build \
+    --build-arg PORTAL_HMD_READER_REQUIRED=true "${services[@]}"
+}
+
+record_identity() {
+  local sha
+  sha="$(git -C "$ROOT" rev-parse HEAD)"
+  {
+    # A scoped up can mix images built at different commits. The checkout SHA
+    # is not image provenance and a migration filename is not an applied row.
+    printf '{\n  "project": "%s",\n  "git_commit": null,\n  "checkout_git_commit": "%s",\n  "source_pin_status": "UNVERIFIED_MIXED_IMAGES",\n  "recorded_at_utc": "%s",\n  "images": {\n' \
+      "$PROJECT" "$sha" "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    local first=1
+    for service in portal-api control-api portal-web roadmap-task-board-api quant-worker-py portal-fixture-bff; do
+      local id
+      id="$(compose ps -q "$service" | head -n1)"
+      [[ -n "$id" ]] || continue
+      local image
+      image="$("${DOCKER[@]}" inspect -f '{{.Image}}' "$id")"
+      [[ $first -eq 1 ]] || printf ',\n'
+      printf '    "%s": "%s"' "$service" "$image"
+      first=0
+    done
+    printf '\n  },\n  "migrations": null,\n  "latest_migration_in_checkout": "%s"\n}\n' \
+      "$(ls "$ROOT/apps/control-api/migrations" | tail -n1)"
+  } >"$IDENTITY_FILE"
+  chmod 600 "$IDENTITY_FILE"
+  echo "preview: identity recorded in $IDENTITY_FILE"
+}
+
+cmd_up() {
+  local sha
+  sha="$(git -C "$ROOT" rev-parse HEAD)"
+  local recreate=()
+  if [[ "${1:-}" == --force-recreate ]]; then
+    shift
+    [[ $# -gt 0 ]] || { echo "preview: force-recreate needs explicit application services" >&2; return 1; }
+    # A new OCI index can contain the same runtime config (e.g. changed build
+    # attestation). Compose may otherwise keep .Image on the previous index.
+    # Exact-image acceptance can request replacement, still with no deps/DB.
+    recreate=(--force-recreate)
+  fi
+  if [[ $# -gt 0 ]]; then
+    local service
+    for service in "$@"; do
+      [[ "$service" == portal-fixture-bff && -f "$FIXTURE_MARKER" ]] && continue
+      case "$service" in control-api|portal-web|portal-api|quant-worker-py|roadmap-task-board-api) ;;
+        *) echo "preview: scoped application rollout excludes DB/NATS/migrations/bootstrap" >&2; return 1;;
+      esac
+    done
+    if [[ " $* " == *" portal-api "* || " $* " == *" quant-worker-py "* ]]; then
+      local active_children
+      active_children="$(compose exec -T portal-postgres sh -c 'exec psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "$1"' sh "
+        SELECT count(*) FROM research.jobs j LEFT JOIN research.worker_attempts w
+          ON w.workspace_id=j.workspace_id AND w.worker_attempt_id=j.current_worker_attempt_id
+        WHERE j.state IN ('CLAIMED','RUNNING','CANCEL_REQUESTED') AND NOT COALESCE(
+          j.state='CLAIMED' AND w.state='CLAIMED' AND w.worker_id='research-producer-v1'
+          AND w.expires_at<=now() AND EXISTS (SELECT 1 FROM research.run_producers p
+            WHERE p.workspace_id=j.workspace_id AND p.run_id=j.run_id AND p.dispatch_state='PENDING'), false)
+      ")"
+      [[ "$active_children" == "0" ]] || { echo "preview: preserve in-flight children; retry rollout when idle" >&2; return 1; }
+    fi
+    # Explicit application services only: no migration/bootstrap or DB/NATS
+    # dependency restart. Before an API/worker change the operator must verify
+    # there is no in-flight admitted child; never cancel work to deploy.
+    PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build --no-deps "${recreate[@]}" "$@"
+  else
+    PORTAL_BUILD_COMMIT="$sha" compose up -d --no-build portal-web quant-worker-py
+  fi
+  # A backend-only build leaves nginx running, with its startup-resolved old
+  # Docker addresses. Re-resolve after Compose has made the new APIs healthy;
+  # never report a healthy static index while all same-origin APIs return 502.
+  compose exec -T portal-web nginx -t
+  compose exec -T portal-web nginx -s reload
+  local port
+  port="$(sed -n 's/^PORTAL_HTTP_PORT=//p' "$ENV_FILE")"
+  # While the fixture lane is on, portal-web's upstream is the fixture BFF (compose.fixture-bff.yaml), so
+  # /api/control/readyz is answered 404 by design and the Control API need not run: probe the lane instead.
+  local ready_path=/api/control/readyz
+  [[ -f "$FIXTURE_MARKER" ]] && ready_path=/__fixture/healthz
+  curl --fail --silent --show-error --retry 5 --retry-delay 1 --retry-all-errors \
+    --connect-timeout 3 --max-time 5 --output /dev/null \
+    "http://127.0.0.1:$port$ready_path"
+  curl --fail --silent --show-error --retry 10 --retry-delay 1 --retry-all-errors \
+    --connect-timeout 3 --max-time 5 --output /dev/null \
+    "http://127.0.0.1:$port/api/ready"
+  record_identity
+}
+
+cmd_activate() {
+  compose run --rm --no-deps control-api-bootstrap \
+    node dist/cli/bootstrap.js --file bootstrap-users.yaml --print-one-time-credentials
+}
+
+cmd_status() {
+  compose ps --format 'table {{.Service}}\t{{.Status}}\t{{.Ports}}'
+  [[ -f "$IDENTITY_FILE" ]] && cat "$IDENTITY_FILE"
+  local port
+  port="$(sed -n 's/^PORTAL_HTTP_PORT=//p' "$ENV_FILE")"
+  curl -fsS -o /dev/null -w "web :$port → %{http_code}\n" "http://127.0.0.1:$port/" || true
+  # Postgres size guard: a table over 5 GB is a bloat signal (see HOTFIX_REQUEST_2026-10-09_POSTGRES_CACHE_BLOAT.md)
+  "$ROOT/scripts/postgres-bloat-report.sh" --fail-over-gb 5 || echo "preview: POSTGRES SIZE WARNING above" >&2
+}
+
+cmd_down() { compose down; }
+
+cmd_teardown() {
+  compose down
+  local volumes
+  volumes="$("${DOCKER[@]}" volume ls -q --filter "label=com.docker.compose.project=$PROJECT")"
+  if [[ -n "$volumes" ]]; then
+    # shellcheck disable=SC2086
+    "${DOCKER[@]}" volume rm $volumes
+  fi
+  echo "preview: removed project $PROJECT and its volumes; dev/stable/probe untouched"
+}
+
+case "${1:-}" in
+  init) cmd_init ;;
+  build) shift; cmd_build "$@" ;;
+  up) shift; cmd_up "$@" ;;
+  activate) cmd_activate ;;
+  status) cmd_status ;;
+  down) cmd_down ;;
+  teardown) cmd_teardown ;;
+  compose) shift; compose "$@" ;;
+  *) sed -n '2,12p' "$0"; exit 2 ;;
+esac

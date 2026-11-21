@@ -1,0 +1,168 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "slot": "REGIME",
+    "result": {
+      "status": "supported",
+      "reason_codes": [],
+      "reasons": [],
+      "nearest_distance": "0",
+      "eligible_reference_count": 3,
+      "neighbor_count": 3,
+      "distinct_episode_count": 3,
+      "stage_breakdown": [
+        {
+          "stage": "Live",
+          "evidence_kind": "actual",
+          "economic_domain": "ACTUAL",
+          "account_mode": "TEST_ONLY:margin",
+          "status": "supported",
+          "reason_codes": [],
+          "neighbor_count": 3,
+          "distinct_episode_count": 3,
+          "effective_sample_size": "2.188795074265",
+          "nearest_distance": "0",
+          "reference_window_ids": [
+            "TEST_ONLY:window0",
+            "TEST_ONLY:window1",
+            "TEST_ONLY:window2"
+          ],
+          "neighbors": [
+            {
+              "reference_window_id": "TEST_ONLY:window0",
+              "distance": "0",
+              "weight": "0.574096992968",
+              "source_locator": "TEST_ONLY:reference0",
+              "manifest_hash": "sha256:b1da6cd0679e98c0d0039ce0b979c8c24042f9b619a2387814be9996fd73f0c7"
+            },
+            {
+              "reference_window_id": "TEST_ONLY:window1",
+              "distance": "0.5",
+              "weight": "0.348207427884",
+              "source_locator": "TEST_ONLY:reference1",
+              "manifest_hash": "sha256:ffa65bc22d5992cb3111a2427768572eeccd3d1fb1430640765a2837d09696cb"
+            },
+            {
+              "reference_window_id": "TEST_ONLY:window2",
+              "distance": "1",
+              "weight": "0.077695579149",
+              "source_locator": "TEST_ONLY:reference2",
+              "manifest_hash": "sha256:0e717e835d285af72478af667661042d1ff30f760f70dece12f7acae31e4b6fa"
+            }
+          ],
+          "matched_outcome_summary": {
+            "mean": "0.010330732955",
+            "median": "0.02",
+            "min": "-0.01",
+            "max": "0.03",
+            "quantiles": [
+              {
+                "probability": "0.25",
+                "value": "0.005"
+              },
+              {
+                "probability": "0.75",
+                "value": "0.025"
+              }
+            ],
+            "method": "DESCRIPTIVE_NET_TWR_LINEAR_EMPIRICAL_UNWEIGHTED_QUANTILES",
+            "cost_assumptions_ids": [
+              "TEST_ONLY:costs"
+            ],
+            "outcome_from_ms": 200,
+            "outcome_to_ms": 500
+          }
+        }
+      ],
+      "reference_window_ids": [
+        "TEST_ONLY:window0",
+        "TEST_ONLY:window1",
+        "TEST_ONLY:window2"
+      ],
+      "formula_id": "market_regime_robust_gaussian_v1_1",
+      "qualification": "RUNTIME_APPROVED",
+      "policy_version": "TEST_ONLY:policy-v1",
+      "policy_hash": "sha256:1482588070b7cae238bc24eb01f547624ad6e3b5589af6cb6b5e9d88031cfc51",
+      "approved_policy_id": "TEST_ONLY:policy-approval",
+      "feature_schema_version": "TEST_ONLY:price-only-v1",
+      "calibration_snapshot_id": "TEST_ONLY:calibration",
+      "calibration_hash": "sha256:6cb5ee63fb4ec199f9749ceaf5908a6f3c1bdafee7171b765585d01c74f3da0e",
+      "overlap_policy_id": "TEST_ONLY:overlap",
+      "horizon_ms": 100,
+      "research_binding_id": "TEST_ONLY:research-binding",
+      "bound_run_id": "TEST_ONLY:run",
+      "strategy_version": "TEST_ONLY:strategy-v1",
+      "params_hash": "sha256:9058298a74106aa16682fc3b60db980502af3ec576899366bdb8d719015ef76d",
+      "evidence_snapshot_id": "TEST_ONLY:evidence-snapshot",
+      "as_of_ms": 1000,
+      "feature_cutoff_ms": 1000,
+      "reference_cutoff_ms": 400,
+      "revision": "TEST_ONLY:regime-r1",
+      "supersedes_revision": null,
+      "preview": null
+    },
+    "provenance": {
+      "scope": {
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "live",
+        "profile_id": "TEST_ONLY:live",
+        "catalogue_digest": "sha256:794373bacd3f8fde5d193d781003d945e0c801120938fc932912847e40a7d983"
+      },
+      "binding": {
+        "subject_type": "alpha",
+        "subject_id": "TEST_ONLY:alpha",
+        "alpha_id": "TEST_ONLY:alpha",
+        "alpha_version_id": "TEST_ONLY:av1",
+        "tuple_population_digest": "sha256:491dba03b3729dec3c637a91cf59b189185b2b22f2164cac56ec0c50161307fd",
+        "partition_digest": "sha256:72c2636465441aafbdc8401ec30788adfd89b5adaf5cf07020263a1a1bec0a59",
+        "stage_filter": [
+          "LIVE"
+        ],
+        "comparable_basis_id": "TEST_ONLY:basis",
+        "individual_evidence_binding_id": "TEST_ONLY:individual-evidence"
+      },
+      "research_binding": {
+        "alpha_id": "TEST_ONLY:alpha",
+        "research_binding_id": "TEST_ONLY:research-binding",
+        "run_id": "TEST_ONLY:run",
+        "strategy_version": "TEST_ONLY:strategy-v1",
+        "params_hash": "sha256:9058298a74106aa16682fc3b60db980502af3ec576899366bdb8d719015ef76d",
+        "trade_params_hash": "sha256:be2109592ccf871b836707fe52be7266fa374095c2fd1cfd9d22267bd95fecf4",
+        "param_mapping_version": "TEST_ONLY:mapping-v1",
+        "universe_id": "TEST_ONLY:universe",
+        "venue": "TEST_ONLY:venue",
+        "data_snapshot_id": "TEST_ONLY:data",
+        "split_manifest_hash": "sha256:24a13da4f39496f3c65efe8c0d68ad5c6c69673ad7122a322520386de509687c",
+        "binding_effective_at_ms": 100,
+        "binding_created_at_ms": 80,
+        "run_completed_at_ms": 60,
+        "artifact_available_at_ms": 70,
+        "evidence_available_at_ms": 75,
+        "source_locator": "TEST_ONLY:binding-manifest"
+      },
+      "source_revision": "TEST_ONLY:source-r1",
+      "projection_generation": "TEST_ONLY:g1",
+      "source_set_digest": "sha256:d173e3d6b1f7aeba970e876e8a520fc265b973121c6bc16716ccec7ad04e16ed",
+      "source_as_of_ms": 1000,
+      "source_qualification": "SOURCE_VERIFIED",
+      "input_digest": "sha256:012b872b2c245f72380a9733395870c8967072abcdaacae4e50da99da6660bfd",
+      "calculation_revision": "TEST_ONLY:regime-calculation-v1",
+      "computed_at_ms": 1001,
+      "policy_artifact_sha256": "sha256:cd01bf221e5e94726021809aeaadea432384c2cf8e5fc60dd1ee5c8791baac2c",
+      "policy_revision": "TEST_ONLY:policy-revision1",
+      "formula_hash": "sha256:834cfca4050b7049a1f5b9af2727d6df239d4fd5435cc16e2040280534ffe309",
+      "feature_definition_hash": "sha256:58c32a43a52119ce967214777076e68355472fc5c20455808ab92c26442e422c",
+      "approval_ref": "TEST_ONLY:independent-policy-approval",
+      "approved_at_ms": 40,
+      "policy_valid_until_ms": 10000,
+      "evidence_artifact_sha256": "sha256:df26edfe219361a6fff1a14dfaa4de5e58d2cefcbd3f95c43a77fca8bab6e8fb",
+      "evidence_manifest_hash": "sha256:3ed2f5ea560e10cd787917da39c53c3f305ea99f66d833b1c5bb2fa3c7551276",
+      "population_census_digest": "sha256:0dbdf5b4b666ea4414f1e653d8e59381ff268265606c132181d4a130cdbd538b",
+      "reference_census_digest": "sha256:bf338f7819800d6e4405884f1a3c21618c94de2118cbb12000b67949891399e0",
+      "source_acceptance_ref": "TEST_ONLY:independent-source-acceptance",
+      "source_accepted_at_ms": 1000,
+      "evidence_valid_until_ms": 10000,
+      "evaluation_at_ms": 1000
+    }
+  }
+}

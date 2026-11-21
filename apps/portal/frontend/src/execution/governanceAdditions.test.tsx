@@ -111,8 +111,9 @@ describe("loop entry — the create consumer", () => {
     if (out.kind === "failed") expect(out.reason).toContain("alpha_id mystery");
   });
 
-  it("says the digest is pinned server-side — the form never carries one", () => {
-    render(<NewApprovalRequestContainer api={createFixtureApi()} />);
+  it("says the digest is pinned server-side — the form never carries one", async () => {
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    await act(async () => { render(<NewApprovalRequestContainer api={createFixtureApi()} />); });
     expect(screen.getByText(/pinned SERVER-side from the run registry/)).toBeTruthy();
     expect(document.querySelector('input[name*="digest" i], [aria-label*="digest" i]')).toBeNull();
   });
@@ -139,7 +140,7 @@ describe("live gate — its own review room (unchanged backbone)", () => {
   it("holds the capital step as a typed gap — no number is invented for real money", async () => {
     render(<GateLiveReviewContainer api={createFixtureApi()} approvalId="AP-311" />);
     await screen.findByText(/Canary Evidence Approval/);
-    expect(screen.getAllByText(/not published · BR-EX-70/).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/not published/).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText(/Approving without it approves the stage grant only/)).toBeTruthy();
     expect(screen.queryByText(/this step 20,000/)).toBeNull();
   });
@@ -156,10 +157,11 @@ describe("waivers — the register consumer", () => {
     render(<WaiversRegisterContainer api={createFixtureApi()} />);
     await awaitRows();
     expect(registerText()).toContain("Capacity at target weight");
-    expect(await screen.findByText("4 OPEN")).toBeTruthy();
-    expect(screen.getByText("1 EXPIRING")).toBeTruthy();
-    expect(screen.getByText("1 LAPSED · BLOCKING")).toBeTruthy();
-    expect(screen.getByText("2 WAIVED")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /^4\s*Open/ })).toBeTruthy();
+    expect(screen.getByText("1 expiring")).toBeTruthy();
+    expect(screen.getByText("1 lapsed · blocking")).toBeTruthy();
+    // waived is not an alarm: its exact count is on its lane
+    expect(screen.getByRole("button", { name: /^2\s*Waived/ })).toBeTruthy();
   });
 
   it("filters are SERVER queries: the page narrows and the exact filtered count follows", async () => {
@@ -168,14 +170,14 @@ describe("waivers — the register consumer", () => {
     render(<WaiversRegisterContainer api={api} />);
     await awaitRows();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "LAPSED" }));
+      fireEvent.click(screen.getByRole("button", { name: /Lapsed/ }));
     });
     await waitFor(() => {
       const rows = document.querySelectorAll("tr.exec-wv-row");
       expect(rows.length).toBe(1);
     });
     expect(spy).toHaveBeenCalledWith(expect.objectContaining({ state: "LAPSED" }));
-    expect(screen.getByText(/1 of 1 in this state/)).toBeTruthy();
+    expect(screen.getByText(/1 of 1 shown/)).toBeTruthy();
     // The LAPSED row is a blocking finding, rendered as one — state and the
     // blocking bit both came from the server row.
     const lapsedRow = document.querySelector('tr[data-state="LAPSED"]');
@@ -185,18 +187,18 @@ describe("waivers — the register consumer", () => {
 
   it("keyset forward and back walk the register without losing the totals", async () => {
     render(<WaiversRegisterContainer api={createFixtureApi()} />);
-    await screen.findByText(/register total 8/);
+    await screen.findByRole("button", { name: /^8\s*All/ });
     const older = screen.getByRole("button", { name: "older →" });
     expect((screen.getByRole("button", { name: "← newer" }) as HTMLButtonElement).disabled).toBe(true);
     await act(async () => {
       fireEvent.click(older);
     });
-    expect(await screen.findByText(/3 of 8 in this state/)).toBeTruthy();
+    expect(await screen.findByText(/3 of 8 shown/)).toBeTruthy();
     expect((screen.getByRole("button", { name: "← newer" }) as HTMLButtonElement).disabled).toBe(false);
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "← newer" }));
     });
-    expect(await screen.findByText(/5 of 8 in this state/)).toBeTruthy();
+    expect(await screen.findByText(/5 of 8 shown/)).toBeTruthy();
   });
 
   it("every row links its source decision through the gate's own route", async () => {
@@ -211,7 +213,7 @@ describe("waivers — the register consumer", () => {
     await awaitRows();
     expect(screen.getAllByText(/\d+d \d{2}:\d{2}:\d{2}/).length).toBeGreaterThan(0);
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "LAPSED" }));
+      fireEvent.click(screen.getByRole("button", { name: /Lapsed/ }));
     });
     // cn_108 due 2026-08-24, read_at 2026-08-31 → lapsed 7d, from server times.
     await waitFor(() => expect(registerText()).toContain("lapsed 7d"));
@@ -255,7 +257,7 @@ describe("the HTTP consumer — same-origin, CSRF, typed failures", () => {
 
   it("maps DUPLICATE 409 to the duplicate outcome with the existing id", async () => {
     vi.stubGlobal("fetch", async () =>
-      new Response(JSON.stringify({ error: { code: "DUPLICATE_OPEN_APPROVAL", message: "Open work exists — decide apr_01J6N29PRODUCT first." }, request_id: "r1" }), { status: 409, headers: { "content-type": "application/json" } }),
+      new Response(JSON.stringify({ error: { code: "DUPLICATE_OPEN_APPROVAL", message: "An open approval already exists for this alpha and evidence run." }, request_id: "r1", details: { approval_id: "apr_01J6N29PRODUCT" } }), { status: 409, headers: { "content-type": "application/json" } }),
     );
     const out = await api().createApprovalRequest(INPUT);
     expect(out.kind).toBe("duplicate");
@@ -317,12 +319,13 @@ describe("phase 1 · a dead submit button carries its own reason", () => {
   const submitButton = () =>
     [...document.querySelectorAll("button")].find((b) => /Submit for R1 review/.test(b.textContent ?? ""))!;
 
-  it("points at the sentence that explains the lock, and names it in the title", () => {
+  it("points at the sentence that explains the lock, and names it in the title", async () => {
     // A reason printed a few lines above a dead button is not attached to it.
     // The 25-screen sweep found this button by looking for exactly that: a
     // disabled control with no describedby, no title and no reason element
     // inside its own block.
-    render(<NewApprovalRequestContainer api={createFixtureApi()} />);
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    await act(async () => { render(<NewApprovalRequestContainer api={createFixtureApi()} />); });
     const button = submitButton();
     expect(button.disabled).toBe(true);
     const describedBy = button.getAttribute("aria-describedby");
@@ -332,7 +335,7 @@ describe("phase 1 · a dead submit button carries its own reason", () => {
      * ids, not its summary — the screen used to open with a reviewed-cast alpha
      * already chosen, so the summary was the only thing left to say.
      */
-    expect(document.getElementById(describedBy!)?.textContent).toContain("name an alpha");
+    expect(document.getElementById(describedBy!)?.textContent).toContain("Still needed: an alpha");
     expect(button.getAttribute("title")).toContain("an alpha");
 
     // With the ids named, the summary becomes the blocker and says so.

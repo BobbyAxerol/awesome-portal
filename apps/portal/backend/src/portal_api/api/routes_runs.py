@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from datetime import UTC, datetime
 from typing import Annotated, Any, Literal
 
@@ -12,6 +13,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 
 from portal_api.domain.enums import RunState
 from portal_api.domain.errors import PortalDomainError
+from portal_api.auth.internal_principal import InternalPrincipalError, require_internal_principal
+from portal_api.domain.research_run_producer import ResearchRunProducerRequest
 from portal_api.domain.requests import PortalRunRequest
 from portal_api.domain.responses import FoldPlanDocument, RowEnvelope
 from portal_api.repositories.artifacts import with_portal_provenance
@@ -204,8 +207,58 @@ def _frame_series_payload(
     }
 
 
+def _research_producer_enabled() -> bool:
+    return os.getenv("PORTAL_FEATURE_RESEARCH_RUN_PRODUCER", "false").strip().lower() == "true"
+
+
+async def _queue_research_producer(
+    payload: ResearchRunProducerRequest,
+    request: Request,
+) -> dict:
+    """Accept a P10 intent without touching the legacy ProcessPool path."""
+    if not _research_producer_enabled():
+        raise HTTPException(status_code=503, detail="research durable producer is disabled")
+    try:
+        principal = require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    if principal.role != "ADMIN" or "research_run_producer" not in principal.authn_methods:
+        raise HTTPException(status_code=403, detail="private research producer is not authorized")
+    publisher = getattr(request.app.state, "research_run_publisher", None)
+    if publisher is None:
+        raise HTTPException(status_code=503, detail="research durable producer is unavailable")
+    try:
+        await publisher.publish(
+            "quant.run.requested.research",
+            {
+                "schema_version": "research.run-producer-job.v1",
+                "run_id": payload.run_id,
+                "run_attempt_id": payload.worker_attempt_id,
+                "workspace_id": payload.workspace_id,
+                # This actor identity is copied only from the signed Control
+                # principal; it never comes from browser JSON or is rendered
+                # back to a browser. P11 may use it for lifecycle callback.
+                "actor_user_id": principal.principal_id,
+                "lease_epoch": payload.lease_epoch,
+                "request_json": payload.model_dump(mode="json"),
+            },
+        )
+    except Exception as exc:  # no false 202 if the durable broker did not accept it
+        raise HTTPException(status_code=503, detail="research durable producer is unavailable") from exc
+    return {
+        "run_id": payload.run_id,
+        "status": RunState.QUEUED.value,
+        "producer": "research.run-producer.v1",
+    }
+
+
 @router.post("", status_code=202)
-async def create_run(payload: PortalRunRequest, request: Request) -> dict:
+async def create_run(
+    payload: PortalRunRequest | ResearchRunProducerRequest,
+    request: Request,
+) -> dict:
+    if isinstance(payload, ResearchRunProducerRequest):
+        return await _queue_research_producer(payload, request)
     # Synchronous preflight: the submitted configuration must already be valid.
     preflight = request.app.state.preflight_service.run(payload)
     if not preflight.valid:
@@ -563,8 +616,30 @@ async def run_audit(run_id: str, request: Request) -> dict:
     }
 
 
-@router.get("/{run_id}/export")
-async def run_export(run_id: str, request: Request) -> FileResponse:
+def _require_export_admin(request: Request) -> None:
+    try:
+        principal = require_internal_principal(request.headers)
+    except InternalPrincipalError as exc:
+        raise HTTPException(status_code=401, detail="private service authentication failed") from exc
+    if principal.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="legacy export requires administrator access")
+
+
+@router.post("/{run_id}/export", status_code=201)
+async def prepare_run_export(run_id: str, request: Request) -> dict:
+    # The façade checks the run/workspace binding and CSRF before proxying.
+    # This private API independently requires a signed administrator.
+    _require_export_admin(request)
     _require_completed(request, run_id)
     bundle = export_bundle(_artifacts(request), run_id)
+    return {"download_href": f"/api/runs/{run_id}/export", "size_bytes": bundle.stat().st_size}
+
+
+@router.get("/{run_id}/export")
+async def run_export(run_id: str, request: Request) -> FileResponse:
+    _require_export_admin(request)
+    _require_completed(request, run_id)
+    bundle = _artifacts(request).run_directory(run_id) / "export" / f"{run_id}-export.zip"
+    if not bundle.is_file():
+        raise HTTPException(status_code=404, detail="legacy export has not been prepared")
     return FileResponse(bundle, media_type="application/zip", filename=bundle.name)

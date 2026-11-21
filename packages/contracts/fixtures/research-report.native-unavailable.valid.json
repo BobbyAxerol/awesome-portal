@@ -1,0 +1,12 @@
+{
+  "schema_version": "research.report-unavailable.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "rrun_native_report_fixture",
+  "display_label": "R-NAT-001",
+  "run_state": "READY",
+  "availability": { "state": "NOT_PUBLISHED", "reason_code": "NATIVE_REPORT_NOT_DELIVERED" },
+  "execution_profile": { "id": "p10.delta-event-driven-limit-oco-search-1h.v1", "digest": "2b69015b8975e3097cc797999188a6d6b75e29ce52fc3ad2d4c35026ab7f0d73" },
+  "as_of_utc_ms": 1790000000000,
+  "etag": "\"p18a1_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"",
+  "may_export": false
+}

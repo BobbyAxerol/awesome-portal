@@ -2,8 +2,10 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   Inject,
+  Optional,
   Param,
   Post,
   Query,
@@ -14,7 +16,7 @@ import { FastifyRequest } from "fastify";
 import { constantTimeEqual, sha256 } from "../auth/argon";
 import { csrfCookieFrom, CSRF_HEADER, originAllowed } from "../auth/cookies";
 import { ControlApiConfig } from "../config";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
@@ -27,15 +29,19 @@ import {
   IncidentCorrelateOperationRequestSchema,
   IncidentCreateRequestSchema,
   IncidentEvidenceRequestSchema,
+  IdentifierSchema,
   IncidentMitigateRequestSchema,
   IncidentResolveRequestSchema,
 } from "./contracts";
 import { IncidentService } from "./incident.service";
+import { OperationalReadService } from "./operational-read.service";
+import { incidentEligibilityQuery } from "./incident-eligibility";
 
 interface IncidentRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
-  portalSession: { sessionId: string; csrfSecretHash: string };
+  portalSession: AuthSession & { csrfSecretHash: string };
+  portalViewerWorkspaceId?: string;
 }
 
 @UseGuards(SessionGuard)
@@ -45,6 +51,7 @@ export class IncidentController {
     @Inject(IncidentService) private readonly incidents: IncidentService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
   ) {}
 
   @Post()
@@ -64,13 +71,32 @@ export class IncidentController {
   }
 
   @Get(":incident_id")
+  @Header("Cache-Control", "private, no-store")
   async detail(
     @Req() request: IncidentRequest,
     @Param("incident_id") incidentId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.incidents.detail(request.portalUser, workspaceId, incidentId);
+    const principal = {
+      user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
+    };
+    if (await this.currentReads?.mode(principal) === "SCOPED_V2") return this.currentReads!.incident(principal, incidentId);
+    return this.incidents.detail(request.portalUser, workspaceId, incidentId, principal);
+  }
+
+  @Get(":incident_id/eligibility")
+  @Header("Cache-Control", "private, no-store")
+  async eligibility(@Req() request: IncidentRequest, @Param("incident_id") incidentId: string, @Query() raw: unknown) {
+    const query = incidentEligibilityQuery.safeParse(raw);
+    if (!query.success || !IdentifierSchema.safeParse(incidentId).success)
+      throw new GovernanceError("INVALID_INCIDENT_ELIGIBILITY", "Invalid incident eligibility request.", 400);
+    const workspaceId = await this.workspace(request, query.data.workspace_id);
+    return this.incidents.eligibility(request.portalUser, workspaceId, incidentId, {
+      user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
+    });
   }
 
   @Post(":incident_id/acknowledge")

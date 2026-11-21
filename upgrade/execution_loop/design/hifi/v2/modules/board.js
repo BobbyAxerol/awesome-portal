@@ -1,0 +1,27 @@
+/* Fleet board — lifecycle swimlanes. Board.render(host,{lanes:[{k,name,dom:"sim|real|arch",cards:[{id,name,v,sub,money,unit,flags:[html],ready:{met,total},sel}]}],onOpen:function(id){}})
+   Real-funded lanes are visibly distinct (hard red outline); simulated lanes hatched; lane headers show counts only, never money totals. Cards are links, keyboard focusable, arrow keys move between cards. */
+(function(){
+var CSS=".bd{display:grid;grid-template-columns:repeat(var(--lanes,4),minmax(220px,1fr));gap:12px;min-width:calc(var(--lanes,4)*232px)}"
++".bd-l{border:1px solid var(--line-strong);background:var(--panel);display:flex;flex-direction:column;min-width:0}.bd-l>header{padding:8px 12px;background:var(--sunken);border-bottom:1px solid var(--line-strong);border-top:4px solid var(--stage-paper)}"
++".bd-l.sim>header{background:repeating-linear-gradient(135deg,var(--sunken) 0 6px,var(--panel) 6px 7px)}.bd-l.sandbox>header{border-top-color:var(--stage-sandbox)}.bd-l.canary>header,.bd-l.live>header{border-top-color:var(--stage-live)}.bd-l.real{border:2px solid var(--stage-live)}.bd-l.arch{border-style:dashed;background:var(--paper)}.bd-l.arch>header{border-top-color:var(--ink-faint)}"
++".bd-l h3{margin:0;font:500 11px/16px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}.bd-l .ds{display:flex;gap:8px;align-items:center;margin-top:4px;font:400 11px/16px var(--font-mono);color:var(--ink-faint)}"
++".bd-c{display:flex;flex-direction:column;gap:8px;padding:8px}.bd-k{display:block;background:var(--paper);border:1px solid var(--line-strong);padding:8px 10px;color:var(--ink);text-decoration:none;min-width:0}.bd-k:hover{background:var(--cell);text-decoration:none}.bd-k:focus-visible{outline:2px solid var(--accent);outline-offset:1px}.bd-k.sel{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}"
++".bd-k .a{display:flex;justify-content:space-between;gap:8px;font-weight:500}.bd-k .a span+span{color:var(--ink-faint);font:400 12px/20px var(--font-mono)}.bd-k .b{font-size:12px;color:var(--ink-faint)}.bd-k .c{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 4px;font:400 13px/18px var(--font-mono)}.bd-k .c small{font-size:10.5px;letter-spacing:.08em;color:var(--ink-faint)}"
++".bd-k .r{display:flex;gap:8px;align-items:center}.bd-k .r .t{font:400 11px/14px var(--font-mono);color:var(--ink-faint)}.bd-k .f{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.bd-e{padding:12px;color:var(--ink-faint);font-size:12px}"
++".bd-m{display:flex;gap:2px;flex:1}.bd-m i{flex:1;height:8px;background:var(--cell);border:1px solid var(--line)}.bd-m i.on{background:var(--accent);border-color:var(--accent)}";
+function css(){if(document.getElementById("bd-css"))return;var s=document.createElement("style");s.id="bd-css";s.textContent=CSS;document.head.appendChild(s)}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function card(c){var h='<a class="bd-k'+(c.sel?' sel':'')+'" href="#" data-id="'+esc(c.id)+'"><div class="a"><span>'+esc(c.name)+'</span><span>'+esc(c.v||"")+'</span></div><div class="b">'+esc(c.sub||"")+'</div>';
+ if(c.money!=null)h+='<div class="c"><span>'+c.money+'</span><small>'+esc(c.unit||"")+'</small></div>';
+ if(c.ready){h+='<div class="r"><div class="bd-m" title="'+c.ready.met+' of '+c.ready.total+' criteria met">';for(var i=0;i<c.ready.total;i++)h+='<i'+(i<c.ready.met?' class="on"':'')+'></i>';h+='</div><span class="t">'+c.ready.met+'/'+c.ready.total+'</span></div>'}
+ return h+'<div class="f">'+(c.flags||[]).join("")+'</div></a>'}
+window.Board={render:function(host,o){css();var L=o.lanes||[];host._bo=o;
+ host.innerHTML='<div class="bd" style="--lanes:'+L.length+'">'+L.map(function(l){var sim=l.dom==="sim",real=l.dom==="real",arch=l.dom==="arch";
+  return '<section class="bd-l '+l.k+(sim?' sim':'')+(real?' real':'')+(arch?' arch':'')+'" aria-label="'+esc(l.name)+'"><header><h3><span>'+(arch?'':'<span class="stage '+l.k+'" style="margin:0"><i></i></span> ')+esc(l.name)+'</span><span>'+l.cards.length+'</span></h3><div class="ds">'+
+   (sim?'<span class="flag" data-k="na">Simulated</span>':real?'<span class="flag" data-k="na" style="--c:var(--stage-live)">Real-funded</span>':'<span class="flag" data-k="na">Archive lens</span>')+'</div></header><div class="bd-c">'+(l.cards.length?l.cards.map(card).join(""):'<div class="bd-e">Nothing in this lane</div>')+'</div></section>'}).join("")+'</div>';
+ if(!host._bw){host._bw=1;host.addEventListener("click",function(e){var k=e.target.closest(".bd-k");if(!k)return;e.preventDefault();if(host._bo.onOpen)host._bo.onOpen(k.getAttribute("data-id"))});
+  host.addEventListener("keydown",function(e){var key=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].indexOf(key)<0)return;var a=document.activeElement;if(!a||!a.classList.contains("bd-k"))return;e.preventDefault();
+   var lanes=[].slice.call(host.querySelectorAll(".bd-l")),li=lanes.indexOf(a.closest(".bd-l")),cs=[].slice.call(a.closest(".bd-l").querySelectorAll(".bd-k")),ri=cs.indexOf(a),t;
+   if(key==="ArrowDown")t=cs[ri+1];else if(key==="ArrowUp")t=cs[ri-1];else{var j=li+(key==="ArrowRight"?1:-1);while(lanes[j]&&!lanes[j].querySelector(".bd-k"))j+=(key==="ArrowRight"?1:-1);if(lanes[j]){var cc=lanes[j].querySelectorAll(".bd-k");t=cc[Math.min(ri,cc.length-1)]}}
+   if(t)t.focus()})}}};
+})();

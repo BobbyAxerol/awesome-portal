@@ -19,6 +19,8 @@ import {
   managerRelationOperationPolicy,
 } from "./eds11r-manager-relation.registry";
 import { legacyHistoryWriteEnabled } from "./durable-mirror-mode";
+import { retainedReview } from "./retained-read-profile";
+import { nativeResearchReview } from "./native-review-profile";
 
 const SOURCE_CONTRACT_REVISION = MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision;
 const SOURCE_CATALOGUE_SHA256 = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
@@ -131,12 +133,14 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         carryForward?: ProfileProjectionDocument["relations"][string];
       }> = [];
       const relationCursors: DurableMirrorRelationCursor[] = [];
+      const previousRelationCursors = new Map<string, string | null>();
       for (const binding of profileProjectionCatalog(environment)) {
         let page: ManagerPage;
         let resumePoint: string | null = null;
         const resumeCursor = binding.ladder
           ? await this.repository.relationCursor(workspaceId, environment, profileId, `${binding.sourceId}:${binding.relation}`)
           : null;
+        if (binding.ladder) previousRelationCursors.set(`${binding.sourceId}:${binding.relation}`, resumeCursor);
         try {
           const drained = await this.drain(workspaceId, environment, binding, context, resumeCursor);
           page = drained.page;
@@ -226,6 +230,16 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       // carry-forward association survives it at runtime; its signature just
       // does not model extra fields.
       const isolated = enforceProfileLineage(results, "N30") as typeof results;
+      const unaccountedRelations = new Set(isolated.flatMap((item) =>
+        item.spec.binding.ladder && item.lineageRejects && Object.values(item.lineageRejects).some((count) => count > 0)
+          ? [`${item.spec.binding.sourceId}:${item.spec.binding.relation}`] : []));
+      // Rows rejected against an incomplete parent are not proven foreign.
+      // Advancing their durable source position would skip them permanently
+      // when that parent later becomes visible. Commit the prior position in
+      // the same transaction as the partial snapshot/mirror; genuinely scoped
+      // out rows (lineageScopedOut) do not hold progress.
+      const safeRelationCursors = relationCursors.map((cursor) => unaccountedRelations.has(cursor.relationKey)
+        ? { ...cursor, sourceCursor: previousRelationCursors.get(cursor.relationKey) ?? null } : cursor);
       const retainedRangeRows: DurableMirrorRetainedRangeRows = Object.fromEntries(isolated.flatMap((item) => {
         const binding = item.spec.binding;
         if (!binding.ladder || !item.page) return [];
@@ -371,7 +385,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         completeness,
         retentionSeconds: this.config.EXECUTION_LOCAL_PROJECTION_JOURNAL_RETENTION_SECONDS,
         maximumJournalEntries: this.config.EXECUTION_LOCAL_PROJECTION_MAXIMUM_JOURNAL_ENTRIES,
-        relationCursors,
+        relationCursors: safeRelationCursors,
         retainedRangeRows,
       });
       if (receipt.outcome === "QUARANTINED") {
@@ -424,6 +438,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
         { limit: SOURCE_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
         operationPolicy,
+        context.profileId,
       );
       const page = managerPage(response, binding.relation, binding.fields, context);
       items.push(...page.items);
@@ -445,6 +460,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
               workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
               { limit: page.items.length - 1, cursor },
               operationPolicy,
+              context.profileId,
             );
             const refreshed = managerPage(refresh, binding.relation, binding.fields, context);
             if (refreshed.nextCursor) tailCursor = refreshed.nextCursor;
@@ -474,7 +490,8 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     };
   }
 
-  private enabled(): boolean { return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true"; }
+  private enabled(): boolean { return this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true" &&
+    !retainedReview(this.config) && !nativeResearchReview(this.config); }
 
   /**
    * A transient upstream rejection never restarts this profile's whole cycle.
@@ -576,6 +593,9 @@ function enabledProfiles(config: ControlApiConfig): Array<{ environment: Project
     // Inert until the Edge publishes the origin and the flag turns on; its
     // transport activation is the named follow-on slice.
     { environment: "paper" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE, profileId: config.EXECUTION_EDGE_PAPER_DNSE_PROFILE_ID },
+    // OKX Paper family (owner decision 2026-11-18, staged): projects under its
+    // own profile through its own Edge transport. Inert while the flag is off.
+    { environment: "paper" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX, profileId: config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID },
     { environment: "sandbox" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX, profileId: config.EXECUTION_EDGE_SANDBOX_PROFILE_ID },
     { environment: "live" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE, profileId: config.EXECUTION_EDGE_LIVE_PROFILE_ID },
   ].filter((item) => item.enabled === "true").map((item) => ({

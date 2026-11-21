@@ -1,5 +1,5 @@
-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
-import { FastifyRequest } from "fastify";
+import { Controller, Get, Inject, Param, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { FastifyRequest, type FastifyReply } from "fastify";
 import { z } from "zod";
 import { ControlApiConfig } from "../config";
 import { AuthSession, PortalUser } from "../domain";
@@ -7,10 +7,12 @@ import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { RESOURCE_KINDS, ResourceKind, ResourceReadService } from "./resource-read.service";
+import { ExecutionReadScopeError } from "../execution-v2/read-scope";
 
 interface ResourceReadRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -46,8 +48,9 @@ export class ResourceReadController {
   }
 
   @Get("/accounts/:resource_id")
-  account(@Req() request: ResourceReadRequest, @Param("resource_id") id: string, @Query() raw: unknown) {
-    return this.read(request, "ACCOUNT", id, raw);
+  account(@Req() request: ResourceReadRequest, @Param("resource_id") id: string, @Query() raw: unknown,
+    @Res({ passthrough: true }) reply?: FastifyReply) {
+    return this.read(request, "ACCOUNT", id, raw, reply);
   }
 
   @Get("/bindings/:resource_id")
@@ -55,7 +58,9 @@ export class ResourceReadController {
     return this.read(request, "BINDING", id, raw);
   }
 
-  private async read(request: ResourceReadRequest, kind: ResourceKind, resourceId: string, raw: unknown) {
+  private async read(request: ResourceReadRequest, kind: ResourceKind, resourceId: string, raw: unknown, reply?: FastifyReply) {
+    let nativeOwnsResponse = false;
+    try {
     if (!(RESOURCE_KINDS as readonly string[]).includes(kind) || !RESOURCE_ID.test(resourceId)) {
       throw new ResourceReadError("EDS04_RESOURCE_ID_INVALID", 400);
     }
@@ -74,15 +79,38 @@ export class ResourceReadController {
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new ResourceReadError("EDS04_PROJECTION_WORKSPACE_NOT_FOUND", 404);
     }
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new ResourceReadError("WORKSPACE_NOT_FOUND", 404);
     }
-    return this.resources.read(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
-      kind,
-      resourceId,
-      query.data.environment,
-    );
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
+    if (kind === "ACCOUNT" && (!query.data.environment || query.data.environment === "paper") &&
+      this.resources.hasNativeCurrentAccount?.()) {
+      if (!reply) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+      const beforeDispatch = () => {
+        if (nativeOwnsResponse) return;
+        if (reply.raw.headersSent || reply.raw.writableEnded || reply.raw.destroyed)
+          throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+        // Only the native egress calls this after source ENTER and final Core
+        // COMMIT. Until then framework error handling still owns the response.
+        reply.hijack(); nativeOwnsResponse = true;
+      };
+      await this.resources.readNativeAccount(principal, resourceId, query.data.environment, reply.raw, beforeDispatch);
+      return;
+    }
+    const result = await this.resources.read(principal, kind, resourceId, query.data.environment);
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
+      throw new ResourceReadError("WORKSPACE_NOT_FOUND", 404);
+    }
+    return result;
+    } catch (error) {
+      // Once physical native delivery owns the response, lost source ACK or a
+      // late failure cannot trigger a framework DTO/error fallback/double send.
+      if (reply && (nativeOwnsResponse || reply.raw.headersSent || reply.raw.destroyed || reply.sent)) {
+        reply.raw.destroy(); return;
+      }
+      throw error;
+    }
   }
 }
 

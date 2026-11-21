@@ -1,0 +1,441 @@
+/* Overview, the Command Center (UXM-07 S2). The KPI strip reuses blocks.css.
+ * Tokens and type roles only; no uppercase, no raw colour. Text/fill pairs
+ * repeat ones proven by fleet.css and blocks.css. */
+.exec-ov-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-ov-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-ov-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-ov-subhead {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ov-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-ov-meta,
+.exec-ov-stream {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-ov-btn {
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ov-btn:focus-visible,
+.exec-ov-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-ov-link {
+  font: var(--exec-font-control);
+  color: var(--accent);
+}
+.exec-ov-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-ov-warnings {
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+
+/* kpis */
+.exec-ov-kpi {
+  font: var(--exec-font-kpi);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.exec-ov-kpis .exec-blk-kpi-value {
+  font: var(--exec-font-body);
+}
+.exec-ov-na {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-ov-num {
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.exec-ov-num[data-tone="positive"] {
+  color: var(--good);
+}
+.exec-ov-num[data-tone="negative"] {
+  color: var(--bad);
+}
+
+/* grids */
+.exec-ov-grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+}
+.exec-ov-grid3 {
+  display: grid;
+  /* the third panel (Contributors) is a five-column figure table: it gets the wider share so no figure has to break */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2.1fr);
+  gap: var(--space-5);
+}
+/* below 1500px (WP-F1: the Contributors table with its bars needs 640px; at 1440 the panel is 580px wide) the figure table (the last panel) takes a
+ * full row, so Needs attention and Since last visit keep a readable width and nothing scrolls inside Contributors */
+@media (max-width: 1500px) {
+  .exec-ov-grid3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .exec-ov-grid3 > :last-child {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 1100px) {
+  .exec-ov-grid2,
+  .exec-ov-grid3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* capital block */
+.exec-ov-cap {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-ov-cap th {
+  padding: 6px 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-ov-cap tr:nth-child(4) th {
+  font-weight: 600;
+  color: var(--ink);
+}
+.exec-ov-cap td {
+  padding: 6px 0;
+  text-align: right;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* triage */
+.exec-ov-what {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+.exec-ov-what-title {
+  margin: 0;
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+/* The alpha name in "Alphas in your slice" is a link to Alpha 360: link colour, same type as the plain title. */
+a.exec-ov-what-title {
+  color: var(--accent);
+}
+.exec-ov-sub {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+/* HIFI .item: flag + title, action on the right, one meta line. Fits a third-width panel. */
+.exec-ov-items {
+  margin: 0;
+  padding: 0 var(--space-3);
+  list-style: none;
+}
+.exec-ov-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-ov-item:last-child {
+  border-bottom: 0;
+}
+.exec-ov-item-t {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-ov-item-what {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.exec-ov-item-rank {
+  font: var(--exec-font-data);
+  color: var(--ink-faint);
+}
+.exec-ov-item .exec-ov-link {
+  flex: none;
+}
+.exec-ov-item[data-sla="OVERDUE"] .exec-ov-item-sla {
+  color: var(--bad);
+}
+/* Performance measure switch (disabled: FE-025). Modelled on .exec-ops-seg; disabled keeps its contrast. */
+.exec-ov-seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+}
+.exec-ov-segbtn {
+  padding: 2px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+}
+.exec-ov-segbtn:last-of-type {
+  border-right: 0;
+}
+.exec-ov-segbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-ov-segbtn:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.exec-ov-nowrap {
+  white-space: nowrap;
+}
+.exec-ov-quiet {
+  padding: var(--space-3);
+}
+.exec-ov-quiet p {
+  margin: 0;
+}
+.exec-ov-note {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+/* A count line under the stage cells sits on the cells' own left edge. */
+.exec-ov-cells ~ .exec-ov-note {
+  padding-left: 0;
+}
+.exec-ov-lines {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+/* lists, fleet cells */
+.exec-ov-list,
+.exec-ov-cells {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-ov-cells {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  padding-bottom: var(--space-3);
+}
+.exec-ov-cells li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.exec-ov-cells-cap {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ov-cells-unit {
+  color: var(--ink-faint);
+}
+.exec-ov-cell-label {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+/* One line under the title: which figures follow the context bar and which are current. */
+.exec-ov-scope {
+  margin: 4px 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+/* contributors (FE-CAT-5): the server's alpha groups, one line per economic partition */
+.exec-ov-contrib {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-ov-contrib th,
+.exec-ov-contrib td {
+  padding: 6px var(--space-2) 6px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line-soft);
+  overflow-wrap: anywhere;
+}
+/* a figure or an identifier never breaks inside the token: the table gives the column its width instead */
+.exec-ov-contrib tbody th,
+.exec-ov-contrib .exec-ov-contrib-num,
+.exec-ov-contrib .exec-ov-contrib-num * {
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+.exec-ov-contrib thead th {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-ov-contrib tbody th {
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-ov-contrib .exec-ov-contrib-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* WP-F1: Performance panel aside, SLA state stripe, digest frame, contributors bars */
+.exec-ov-markers { font: var(--exec-font-caption); color: var(--ink-faint); }
+.exec-ov-markers .exec-blk-why-btn { font: var(--exec-font-caption); }
+/* A STATE stripe, not a progress bar: no elapsed time is published, so its length says nothing; only its colour (and the text line above) does. */
+.exec-ov-sla-stripe { display: block; height: 2px; margin-top: 6px; background: var(--line-soft); }
+.exec-ov-sla-stripe[data-sla="OVERDUE"] { background: var(--bad); }
+.exec-ov-sla-stripe[data-sla="DUE_SOON"] { background: var(--warn); }
+.exec-ov-sla-stripe[data-sla="ON_TRACK"] { background: var(--good); }
+/* The digest frame (hi-fi "Since your last visit"): the lines are drawn as hatched placeholders because no baseline is published. */
+.exec-ov-digest { display: flex; flex-direction: column; gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
+.exec-ov-digest li { display: flex; align-items: center; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); }
+.exec-ov-digest li:last-child { border-bottom: 0; }
+.exec-ov-digest-line { flex: 1; height: 8px; background: repeating-linear-gradient(135deg, var(--line-soft) 0 2px, transparent 2px 6px); }
+/* Contributors: a drawn bar beside the published amount, scaled inside one partition only. */
+.exec-ov-contrib-wrap { overflow-x: auto; }
+/* The side that goes on fades (alpha only; the pinned Alpha column on the left is never faded). Same mask as the shared table wrap. */
+.exec-ov-contrib-wrap[data-more="end"] {
+  -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, var(--ink) calc(100% - 48px), transparent);
+}
+.exec-ov-contrib-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.exec-ov-bar-track { display: block; height: 4px; margin-top: 3px; background: var(--surface-2); }
+.exec-ov-bar { display: block; height: 100%; background: var(--series); }
+.exec-ov-bar[data-neg="true"] { background: var(--series-dd); }
+.exec-ov-linkbtn { padding: 0; font: var(--exec-font-caption); color: var(--accent); background: none; border: 0; cursor: pointer; text-decoration: underline; }
+.exec-ov-contrib .exec-ov-contrib-part { white-space: nowrap; overflow-wrap: normal; }
+
+/* WP-F1: table body text follows the cards.css rule (every role 13px inside a table body, face and colour kept) for the tables that are not
+ * `.exec-cards`: contributors, the capital tables. Set through the role tokens, never a size. */
+.exec-ov-contrib tbody td,
+.exec-ov-contrib tbody th,
+.exec-ov-cap td,
+.exec-ov-cap th {
+  --exec-font-data: 400 13px/18px var(--font-body);
+  --exec-font-meta: 400 13px/18px var(--font-body);
+  --exec-font-body: 400 13px/18px var(--font-body);
+  --exec-font-num: 400 13px/18px var(--font-mono);
+  --exec-font-id: 400 13px/18px var(--font-mono);
+  --exec-font-term: 400 13px/18px var(--font-mono);
+}
+/* WP-F1 (QA1 OV-01): one KPI figure size across the strip. Single figures (NAV, a one-partition tile) are the KPI size; the words around a count are captions. */
+.exec-ov-kpi-count { display: inline-flex; align-items: baseline; gap: var(--space-1); flex-wrap: wrap; }
+.exec-ov-kpi-words { font: var(--exec-font-caption); color: var(--ink-faint); }
+.exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { font: var(--exec-font-kpi); font-variant-numeric: tabular-nums; }
+/* WP-F1 (QA1 P3-07): an id reads as published in the contributors (no capitals), like the concentration legend beside it */
+.exec-ov-contrib tbody th { text-transform: none; letter-spacing: normal; }
+
+/* Visit digest (Codex package 3): bounded observations since the last "Mark as seen". */
+.exec-ov-vd { display: flex; flex-direction: column; gap: var(--space-3); }
+.exec-ov-vd-line { margin: 0; }
+.exec-ov-vd-items { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.exec-ov-vd-item { display: flex; flex-direction: column; gap: var(--space-1); padding-bottom: var(--space-3); border-bottom: 1px solid var(--line-soft); }
+.exec-ov-vd-item:last-child { border-bottom: 0; }
+.exec-ov-vd-head { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.exec-ov-vd-actions { display: flex; align-items: center; gap: var(--space-3); margin: 0; flex-wrap: wrap; }
+
+.exec-ov-contrib-who, .exec-ov-contrib-id { display: block; font-weight: 400; }
+.exec-ov-pager { display: flex; gap: var(--space-2); }
+
+/* A figure is never broken across lines; its unit is a small suffix (QA2 R1-04). */
+.exec-ov-fig { white-space: nowrap; overflow-wrap: normal; }
+.exec-ov-unit { margin-left: var(--space-1); font: var(--exec-font-caption); color: var(--ink-faint); white-space: nowrap; }
+.exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { overflow-wrap: normal; }
+
+/* QA3 R1-18: panels are sized to their content (no orphan empty bands under a short panel). */
+.exec-ov-grid2, .exec-ov-grid3 { align-items: start; }
+/* QA3 R1-14: the KPI figure never breaks and never spills its cell; the unit wraps below it when the cell is narrow. */
+.exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: var(--space-1); min-width: 0; }
+/* A long figure takes the table-number size so it never outgrows a narrow cell. */
+.exec-ov-kpis .exec-ov-fig[data-long="true"] { font: var(--exec-font-num); font-variant-numeric: tabular-nums; }
+.exec-ov-kpis .exec-ov-unit { margin-left: 0; }
+
+/* G1 (390px): the contributors table keeps the natural width of its columns and scrolls sideways inside its panel (.exec-ov-contrib-wrap),
+ * with the Alpha column pinned: a name wraps at word breaks inside a readable column, the partition label wraps at its spaces and hyphen, and the figures never break
+ * inside the token (words used to break a letter at a time). A sticky cell needs an opaque ground, the panel's own. */
+@media (max-width: 700px) {
+  .exec-ov-contrib th,
+  .exec-ov-contrib td { padding-right: var(--space-3); }
+  .exec-ov-contrib tbody th {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    min-width: 7rem;
+    max-width: 8rem;
+    white-space: normal;
+    overflow-wrap: normal;
+    background: var(--paper-raised);
+  }
+  .exec-ov-contrib thead th:first-child { position: sticky; left: 0; z-index: 1; background: var(--paper-raised); }
+  .exec-ov-contrib .exec-ov-contrib-id,
+  .exec-ov-contrib .exec-ov-contrib-who { overflow-wrap: anywhere; }
+  .exec-ov-contrib .exec-ov-contrib-part { white-space: normal; overflow-wrap: normal; min-width: 5.5rem; }
+}
+
+/* The contributors table scrolls inside its card at phone width (it is a table, not cards): the sentence under it stays visible there. */
+.exec-ov-contrib-wrap + .exec-cards-hint { display: block; }

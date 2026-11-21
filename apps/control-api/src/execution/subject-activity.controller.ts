@@ -1,4 +1,4 @@
-import { Controller, Get, HttpException, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpException, Inject, Param, Query, Req, UseGuards, Header } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { ControlApiConfig } from "../config";
@@ -25,6 +25,7 @@ interface SubjectActivityHttpRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalSession: AuthSession;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
 }
 
 /** Exact subject operations: no browser-selectable Manager relation or cursor. */
@@ -38,6 +39,7 @@ export class ExecutionSubjectActivityController {
   ) {}
 
   @Get("/alphas/:alphaId/:relation")
+  @Header("Cache-Control","private, no-store")
   alpha(
     @Req() request: SubjectActivityHttpRequest,
     @Param("alphaId") alphaId: string,
@@ -48,6 +50,7 @@ export class ExecutionSubjectActivityController {
   }
 
   @Get("/accounts/:accountId/:relation")
+  @Header("Cache-Control","private, no-store")
   account(
     @Req() request: SubjectActivityHttpRequest,
     @Param("accountId") accountId: string,
@@ -72,12 +75,12 @@ export class ExecutionSubjectActivityController {
     }
     const workspaceId = query.data.workspace_id ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? request.portalWorkspaceId;
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
-      !(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+      !(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new HttpException({ error: { code: "WORKSPACE_NOT_FOUND" } }, 404);
     }
     try {
-      return await this.activity.read(
-        { workspaceId, userId: request.portalUser.userId },
+      return await this.activity.readAuthorized(
+        { workspaceId, user: request.portalUser,session:request.portalSession,viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId },
         {
           environment: query.data.environment,
           subjectKind: kind,

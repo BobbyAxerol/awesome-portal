@@ -1,0 +1,68 @@
+{
+  "phase": "P04",
+  "status": "PASS",
+  "catalog": {
+    "schema_version": "research-engine-catalog.v1",
+    "manifest_revision": 1,
+    "catalog_sha256": "d494f214bd90f642311e469d9da7e35e1627ece5b881a3395d6fc51df26de4a9",
+    "catalog_schema_sha256": "fa8ea96f173d3009063bceedbd45c1869668dd768ad67b09565976ec138b1c35"
+  },
+  "current_release": {
+    "release_id": "er_quantbt_111",
+    "package": "quantbt-engine",
+    "version": "1.1.1",
+    "wheel_sha256": "9a1c7af724e543d8cba338206c0b2c64afe1fb3a621f21b2505454c4807b8587",
+    "dist_info_record_sha256": "6087fef28710d6d4e5d442a36a57a9e2b0ba8e78f657358563911b86845c835d",
+    "native": {
+      "package": "quantbt-native",
+      "version": "0.4.2",
+      "wheel_sha256": "e56d204778d94101b49a1259a276abf9684c689af4277f6b8d08e9d9275376d5",
+      "dist_info_record_sha256": "998c19c56c0e7f8f66269fdbf54667575ab6f9ba779ce1711e9e83dd0b1c21f9"
+    }
+  },
+  "historical_release": {
+    "release_id": "er_quantbt_108",
+    "package": "quantbt-engine",
+    "version": "1.0.8",
+    "status": "HISTORICAL_IDENTITY_RETAINED",
+    "not_installed_as_a_second_runtime": true
+  },
+  "route_surface": {
+    "public_constructor_count": 14,
+    "all_public_surface_probes_passed": true,
+    "p04_baseline_admitted_routes": ["signal_notional", "pct_equity"],
+    "not_admitted_route_count": 12,
+    "reactive_mapping": {
+      "factory": "event_driven",
+      "forced_input_mode": "strategy",
+      "standalone_reactive_constructor_invented": false
+    }
+  },
+  "evidence_contract": {
+    "schema_id": "research-run-evidence.v1",
+    "schema_sha256": "ac1213412f91adbfb3f76c12dc12c6943fc979e83e75b1a5de9909e7fb01b730",
+    "required_fields": [
+      "engine_release_id",
+      "route_id",
+      "effective_spec_digest",
+      "market_data_content_hash",
+      "report_level",
+      "selection_resolution",
+      "result_summary"
+    ],
+    "writer_state": "P05_OWNED_NOT_ACTIVE"
+  },
+  "compatibility": {
+    "advanced_fold_table_v1_columns_preserved": [
+      "fold_id",
+      "train_start",
+      "train_end",
+      "test_start",
+      "test_end",
+      "train_bars",
+      "test_bars"
+    ],
+    "quantbt_111_extra_fold_metadata": "stored only in wfo/folds_extension.v1.parquet",
+    "legacy_reader_shape_break": false
+  }
+}

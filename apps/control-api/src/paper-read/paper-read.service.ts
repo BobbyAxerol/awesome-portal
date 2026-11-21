@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { PAPER_OBSERVATION_POLICY } from "./observation-policy";
 import { Inject, Injectable, Optional } from "@nestjs/common";
-import { ControlApiConfig, querySigningKeys } from "../config";
+import { ControlApiConfig, paperReadProfileId, querySigningKeys } from "../config";
 import { PortalUser, AuthSession } from "../domain";
 import {
   CurrentSourcePrincipal,
@@ -13,13 +13,21 @@ import {
   ExecutionProductReadSource,
 } from "../execution/product-read-source";
 import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { AnalyticsProxyError, ExecutionAnalyticsProxy } from "../execution/analytics.proxy";
 import { KeysetCursorCodec, QueryContractError } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { PaperBlotterQuery } from "./contracts";
-import { ManagerPage, managerPage } from "./manager-records";
+import { ManagerPage, ManagerReadContext, managerPage, paperReadContext } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
+import { IDENTITY_NOT_READ, identityFields } from "../execution/deployment-identity";
+import { positionsBySide } from "./positions-by-side";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
+import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
+import { unpublishedVenueCalendar, type VenueCalendar } from "../execution/venue-calendar";
+import { PAPER_VENUE_CALENDAR_SOURCE, VenueCalendarSourceError, type PaperVenueCalendarSource } from "../execution/venue-calendar-source";
+import { assertPaperResponseBytes, HistoryByteBudgetError, PAPER_HISTORY_BYTE_POLICY,
+  PAPER_HISTORY_BYTE_POLICY_TOKEN, validatePaperHistoryBytePolicy, type PaperHistoryBytePolicy } from "../execution/history-byte-budget";
 import {
   oldestStageAsOfMs,
   stagePanels,
@@ -37,6 +45,11 @@ export class PaperReadError extends Error {
   }
 }
 
+function paperHistoryLimit(error: HistoryByteBudgetError): PaperReadError {
+  return new PaperReadError(error.code,
+    "This complete Paper workbench exceeds its response-byte budget. Read exact history through the paginated Execution history route.", 413);
+}
+
 interface RelationSpec {
   key: string;
   sourceId: string;
@@ -45,6 +58,8 @@ interface RelationSpec {
   limit: number;
   cursor?: string;
   localQuery?: {
+    stage?: PaperBlotterQuery["stage"];
+    deployment_id?: string; account_id?: string; alpha_id?: string;
     status?: string; venue?: string; symbol?: string; side?: "BUY" | "SELL";
     statuses?: readonly string[];
     sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
@@ -68,6 +83,12 @@ interface PaperPrincipal {
   workspaceId: string;
 }
 
+interface PaperHistoryDepth {
+  rows: Record<string, Record<string, unknown>[]>;
+  windows: Record<string, unknown>;
+  reason: string | null;
+}
+
 const DEPLOYMENT_FIELDS = [
   "deployment_id", "strategy_id", "account_id", "mode", "venue", "currency",
   "active", "portfolio_id", "created_at", "updated_at",
@@ -87,6 +108,7 @@ const SESSION_FIELDS = [
 ] as const;
 const ORDER_FIELDS = [
   "order_id", "client_order_id", "venue_order_id", "trader_id", "strategy_id", "account_id",
+  "deployment_id", "alpha_id",
   "execution_session_id", "mode", "venue", "instrument_id", "symbol", "side", "position_side",
   "order_type", "time_in_force", "quantity", "price", "trigger_price", "status", "reduce_only",
   "post_only", "submitted_at", "updated_at", "error_code", "error_message", "risk_grant_id",
@@ -165,6 +187,12 @@ const WORKBENCH_SPECS: readonly RelationSpec[] = [
   spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 200),
 ];
 
+/** The rows and state of one fetched relation, for the derived blocks that read it. */
+function relationRows(relations: readonly RelationResult[], key: string) {
+  const found = relations.find((item) => item.spec.key === key);
+  return { rows: found?.page?.items ?? null, relationState: found?.state ?? "UNAVAILABLE" } as const;
+}
+
 /**
  * The analytics envelope with every `source_facts` group emptied.
  *
@@ -194,6 +222,8 @@ export class PaperReadService {
 
   private readonly projectionWorkspaceId: string | undefined;
   private readonly paperProfileId: string | undefined;
+  private readonly readContext: ManagerReadContext;
+  private readonly historyBytePolicy: Readonly<PaperHistoryBytePolicy>;
 
   constructor(
     @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
@@ -207,6 +237,15 @@ export class PaperReadService {
     @Optional()
     @Inject(ExecutionProfileProjectionRepository)
     private readonly projection?: ExecutionProfileProjectionRepository,
+    @Optional()
+    @Inject(PAPER_HISTORY_BYTE_POLICY_TOKEN)
+    historyBytePolicy?: PaperHistoryBytePolicy,
+    @Optional()
+    @Inject(ExecutionReadScopes)
+    private readonly historyScopes?: ExecutionReadScopes,
+    @Optional()
+    @Inject(PAPER_VENUE_CALENDAR_SOURCE)
+    private readonly venueCalendarSource?: PaperVenueCalendarSource,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
@@ -214,7 +253,10 @@ export class PaperReadService {
       ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS,
     });
     this.projectionWorkspaceId = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? undefined;
-    this.paperProfileId = config.EXECUTION_EDGE_PAPER_PROFILE_ID ?? undefined;
+    this.paperProfileId = paperReadProfileId(config) ?? undefined;
+    this.readContext = paperReadContext(this.paperProfileId);
+    this.historyBytePolicy = Object.freeze({ ...(historyBytePolicy ?? PAPER_HISTORY_BYTE_POLICY) });
+    validatePaperHistoryBytePolicy(this.historyBytePolicy);
   }
 
   /**
@@ -224,13 +266,49 @@ export class PaperReadService {
    * serves that full depth instead — exact rows, declared basis, no extra
    * source fan-out (the mirror is local).
    */
-  private async timeSeriesDepth(deploymentId: string): Promise<{
-    rows: Record<string, Record<string, unknown>[]>;
-    windows: Record<string, unknown>;
-  }> {
-    const depth: { rows: Record<string, Record<string, unknown>[]>; windows: Record<string, unknown> } =
-      { rows: {}, windows: {} };
-    if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return depth;
+  private async timeSeriesDepth(principal: PaperPrincipal, deploymentId: string): Promise<PaperHistoryDepth> {
+    const absent = (reason: string | null): PaperHistoryDepth => ({ rows: {}, windows: {}, reason });
+    if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return absent(null);
+    if (principal.workspaceId !== this.projectionWorkspaceId) return absent("EXECUTION_READ_NOT_AVAILABLE");
+    if (!this.historyScopes) return absent("EXECUTION_READ_AUTHORITY_UNAVAILABLE");
+    const projection = this.projection, scopes = this.historyScopes;
+    const workspace = this.projectionWorkspaceId, profile = this.paperProfileId;
+    try {
+      // A CURRENT deployment/page capability is not HISTORY authority. The
+      // legacy raw-field depth representation has no scoped HISTORY egress
+      // yet; keep its authorized bounded CURRENT series and say so explicitly.
+      if (await scopes.selectionMode(principal) !== "LEGACY_COMPATIBILITY") return absent("EXECUTION_READ_CURRENT_ONLY");
+      const metadata = await projection.snapshotMetadata(workspace, "paper", profile);
+      const scope = await scopes.authorize(principal, { environment: "paper", profileId: profile }, {
+        action: "alpha.read", resource: { kind: "DEPLOYMENT", id: deploymentId },
+        dataset: { dataset_id: "history:manager.performance:account_equity_snapshots",
+          source_revision: metadata?.payloadDigest ?? "UNQUALIFIED_SNAPSHOT_NOT_RECORDED",
+          projection_generation: metadata?.projectionEpoch ?? "UNQUALIFIED_PROJECTION_NOT_RECORDED",
+          catalogue_revision: metadata?.sourceCatalogueSha256 ?? null, window: null },
+      });
+      // Sticky activation between routing and authorization never falls
+      // through to the old representation, even if CURRENT still succeeds.
+      if (scope.mode !== "LEGACY_COMPATIBILITY") return absent("EXECUTION_READ_ACCESS_CHANGED");
+      const outcome = await scopes.deliver(scope, async () => {
+        try { return { state: "READ" as const, depth: await this.legacyTimeSeriesDepth(projection, workspace, profile, deploymentId) }; }
+        catch (error) { return { state: "REFUSED" as const, error }; }
+      });
+      // A failed read is still a delivery: final current authority wins over
+      // a held byte-limit error derived from the protected history population.
+      if (outcome.state === "REFUSED") throw outcome.error;
+      return outcome.depth;
+    } catch (error) {
+      if (error instanceof PaperReadError) throw error;
+      // Discard any assembled depth when the FINAL authority fence fails;
+      // never return rows collected before a revoke/activation as a fallback.
+      return absent(error instanceof ExecutionReadScopeError ? error.code : "EXECUTION_READ_AUTHORITY_UNAVAILABLE");
+    }
+  }
+
+  /** Called exclusively inside the independent legacy HISTORY delivery fence. */
+  private async legacyTimeSeriesDepth(projection: ExecutionProfileProjectionRepository, workspace: string,
+    profile: string, deploymentId: string): Promise<PaperHistoryDepth> {
+    const depth: PaperHistoryDepth = { rows: {}, windows: {}, reason: null };
     /*
      * Everything the mirror holds, not a 30-day slice of it (owner,
      * 2026-09-08: the analysis charts default to All).
@@ -259,12 +337,14 @@ export class PaperReadService {
       try {
         // Full-range read: bucket extrema + closing row per series on dense
         // ranges — the whole 30 days always render, never the oldest slice.
-        const page = await this.projection.timeSeriesHistoryDownsampled(
-          this.projectionWorkspaceId, "paper", this.paperProfileId,
+        const page = await projection.timeSeriesHistoryDownsampled(
+          workspace, "paper", profile,
           `manager.performance:${relation}`,
           {
             from, entity: { field: "deployment_id", value: deploymentId },
             seriesField, valueField: "equity", targetPoints: 2_000,
+            byteBudget: { maximumBytes: this.historyBytePolicy.maximum_history_bytes,
+              maximumRowBytes: this.historyBytePolicy.maximum_row_bytes },
           },
         );
         if (page.rows.length > 0) {
@@ -286,9 +366,11 @@ export class PaperReadService {
             ...(page.downsample ? { downsample: page.downsample } : {}),
           };
         }
-      } catch {
+      } catch (error) {
+        if (error instanceof HistoryByteBudgetError) throw paperHistoryLimit(error);
         // Depth is additive: on any history failure the bounded snapshot
         // rows below still serve, exactly as before this existed.
+        depth.reason = "N33_HISTORY_UNAVAILABLE";
       }
     }
     return depth;
@@ -318,6 +400,23 @@ export class PaperReadService {
     const resolution = await this.source.resolveDeploymentScope(
       principal as CurrentSourcePrincipal, "paper", screenId, deploymentId,
     );
+    if (vnm && resolution.state === "FOUND" && this.venueCalendarSource) {
+      try {
+        return await this.venueCalendarSource.withCalendar(principal,
+          { environment: "paper", profile_id: this.paperProfileId ?? null,
+            deployment_id: resolution.scope.deploymentId, venue: resolution.scope.venue },
+          calendar => this.workbenchFromScope(principal, deploymentId, vnm, screenId, resolution, calendar));
+      } catch (error) {
+        if (error instanceof VenueCalendarSourceError)
+          throw new PaperReadError(error.code, "The venue calendar could not be verified for this read.", 503);
+        throw error;
+      }
+    }
+    return this.workbenchFromScope(principal, deploymentId, vnm, screenId, resolution, unpublishedVenueCalendar());
+  }
+
+  private async workbenchFromScope(principal: PaperPrincipal, deploymentId: string, vnm: boolean,
+    screenId: string, resolution: DeploymentScopeResolution, venueCalendar: VenueCalendar) {
     const relations = resolution.state === "FOUND"
       ? await this.fetch(principal, screenId, WORKBENCH_SPECS, resolution.scope)
       : unresolvedRelations(WORKBENCH_SPECS, resolution);
@@ -347,6 +446,10 @@ export class PaperReadService {
           ? error.code
           : "ANALYTICS_LOCAL_PROJECTION_UNAVAILABLE";
       }
+    } else if (this.analytics && this.readContext.profileId !== "PAPER_BINANCE_USDM") {
+      // The Manager-v2 analytics query is bound to the BINANCE Paper profile;
+      // for any other Paper profile it would answer about the wrong one.
+      analyticsReason = "ANALYTICS_NOT_BOUND_TO_PAPER_PROFILE";
     } else if (this.analytics) {
       try {
         // The upstream envelope carries the same fact groups; the workbench
@@ -374,7 +477,7 @@ export class PaperReadService {
         queryAnalytics === null ? analyticsReason : null,
       ),
       ...(vnm
-        ? [capability("venue.calendar", "UNAVAILABLE", ["session_shading"], "N28_VENUE_CALENDAR_NOT_ACTIVE")]
+        ? [venueCalendarCapability(venueCalendar)]
         : []),
       ...(resolution.state === "FOUND" ? [] : [capability(
         "deployment.lookup",
@@ -391,15 +494,39 @@ export class PaperReadService {
           : "N22_DEPLOYMENT_NOT_AVAILABLE",
       ),
     ];
-    const depth = await this.timeSeriesDepth(deploymentId);
-    return this.envelope(
+    // A failed exact-resource lookup must never trigger an independent
+    // historical read using only a caller-supplied deployment ID.
+    const depth = resolution.state === "FOUND" ? await this.timeSeriesDepth(principal, deploymentId) : { rows: {}, windows: {}, reason: null };
+    if (depth.reason) branches.push(capability("workbench.account-equity-history", "UNAVAILABLE", ["account_equity_snapshots"], depth.reason));
+    const response = this.envelope(
       vnm ? "execution.paper-workbench-vnm.v1" : "execution.paper-workbench.v1",
       principal,
       relations,
       {
-        deployment: deployment ?? null,
+        // FE-066: the block that names the deployment also names its Alpha and
+        // Portfolio, each nullable with a typed reason. A resolution that did
+        // not establish an exact scope read no identity: said, not guessed.
+        deployment: deployment
+          ? { ...deployment, ...identityFields(resolution.state === "FOUND" && resolution.identity
+            ? resolution.identity : IDENTITY_NOT_READ) }
+          : null,
         observation_gate: observationGate,
+        // S3-U4: Long/Short/Gross by side, exact quantity per instrument from the same
+        // rows; notional by side stays typed unavailable (E5), never a guess.
+        positions_by_side: positionsBySide(relationRows(relations, "positions")),
         query_analytics: queryAnalytics,
+        // FE-067. Typed runtime / reconciliation / sessions. The workbench screen is not bound to the
+        // sessions or reconciliation relations, so today those two are typed NOT_PUBLISHED with a reason;
+        // they publish the moment a read carries the relation (no change here).
+        stage_facts: buildStageFacts({
+          deployment: deployment ?? null,
+          sessions: paperRelationInput(relations, "sessions"),
+          reconciliation: paperRelationInput(relations, "reconciliation"),
+          reconciliationAsOf: relations.find((item) => item.spec.key === "reconciliation")?.page?.asOf ?? null,
+        }),
+        // FE-070: no calendar is inferred from local time or another market.
+        // A configured source holds its final authority fence over this response.
+        ...(vnm ? { venue_calendar: venueCalendar } : {}),
         ...scoped,
         ...depth.rows,
         ...(Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),
@@ -407,9 +534,27 @@ export class PaperReadService {
       branches,
       { resource: { kind: "DEPLOYMENT", id: deploymentId } },
     );
+    try { assertPaperResponseBytes(response, this.historyBytePolicy.maximum_response_bytes); }
+    catch (error) { if (error instanceof HistoryByteBudgetError) throw paperHistoryLimit(error); throw error; }
+    return response;
   }
 
   async blotter(principal: PaperPrincipal, query: PaperBlotterQuery) {
+    // This is the stable Paper route, not an environment-switching proxy.
+    // A stage filter may narrow Paper; it cannot silently read Live/Canary.
+    if (query.stage !== undefined && query.stage !== "PAPER") {
+      throw new PaperReadError(
+        "N22_BLOTTER_STAGE_NOT_AVAILABLE",
+        "This Blotter route only serves the Paper stage.",
+        400,
+      );
+    }
+    const scopeQuery = {
+      ...(query.stage ? { stage: query.stage } : {}),
+      ...(query.deployment_id ? { deployment_id: query.deployment_id } : {}),
+      ...(query.account_id ? { account_id: query.account_id } : {}),
+      ...(query.alpha_id ? { alpha_id: query.alpha_id } : {}),
+    };
     const opaqueCursor = query.before ?? query.after ?? query.cursor;
     const direction = query.before ? "before" as const : "after" as const;
     const sourceCursor = opaqueCursor
@@ -418,6 +563,7 @@ export class PaperReadService {
       {
         ...spec("orders", "manager.orders", "orders", ORDER_FIELDS, query.limit, sourceCursor),
         localQuery: {
+          ...scopeQuery,
           status: query.status,
           statuses: statusBucket(query.status_bucket),
           venue: query.venue,
@@ -433,7 +579,13 @@ export class PaperReadService {
       spec("reconciliation", "manager.reconciliation", "reconciliation_findings", RECONCILIATION_FIELDS, 100),
       spec("command_journal", "manager.command-journal", "command_journal", JOURNAL_FIELDS, 100),
     ];
-    const relations = await this.fetch(principal, "EXECUTION_FULL_BLOTTER_SCREEN", specs);
+    // Every branch is narrowed at the authorized source boundary, before its
+    // own limit. Joining a single orders page cannot scope the auxiliary
+    // relations correctly and would turn missing lineage into a false empty.
+    const relations = await this.fetch(principal, "EXECUTION_FULL_BLOTTER_SCREEN", specs.map((item) => ({
+      ...item,
+      localQuery: { ...scopeQuery, ...item.localQuery },
+    })));
     const orders = relations.find((item) => item.spec.key === "orders");
     const nextCursor = orders?.page?.nextCursor
       ? this.encodeCursor(orders.page.nextCursor, principal.workspaceId, query, "after")
@@ -453,12 +605,18 @@ export class PaperReadService {
           filters: {
             status: query.status ?? null,
             status_bucket: query.status_bucket ?? null,
+            stage: query.stage ?? "PAPER",
+            deployment_id: query.deployment_id ?? null,
+            account_id: query.account_id ?? null,
+            alpha_id: query.alpha_id ?? null,
             venue: query.venue ?? null,
             symbol: query.symbol ?? null,
             side: query.side ?? null,
           },
           sort: query.sort ?? "submitted_at_desc",
-          filter_allowlist: ["status", "venue", "symbol", "side"],
+          // Keep the published tuple/order exact. status_bucket remains a
+          // supported query helper/echo, not an additional canonical axis.
+          filter_allowlist: ["status", "venue", "symbol", "side", "stage", "deployment_id", "account_id", "alpha_id"],
           sort_allowlist: ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"],
           count_scope: "COMMITTED_HOT_PROJECTION",
         },
@@ -507,10 +665,17 @@ export class PaperReadService {
           ...(deploymentScope ? { deploymentScope } : {}),
         },
       );
-      const page = managerPage(response, item.relation, item.fields);
+      const page = managerPage(response, item.relation, item.fields, this.readContext);
       const normalized = this.normalizePaperRows(page.items);
       return { page: { ...page, items: normalized.items }, quarantinedOrderRows: normalized.quarantinedOrderRows };
     }));
+    // Do not turn a changed or unverifiable authority into an ordinary
+    // partial panel while returning rows from sibling relation reads.
+    const unsafe = results.find((result) => result.status === "rejected" &&
+      result.reason instanceof ExecutionReadScopeError &&
+      (result.reason.code === "EXECUTION_READ_ACCESS_CHANGED" ||
+       result.reason.code === "EXECUTION_READ_AUTHORITY_UNAVAILABLE"));
+    if (unsafe?.status === "rejected") throw unsafe.reason;
     return enforceProfileLineage(results.map((result, index) => {
       const item = specs[index];
       if (result.status === "fulfilled") {
@@ -568,7 +733,7 @@ export class PaperReadService {
       schema_version: schemaVersion,
       record_authority: "PORTAL_CONTROL",
       source_authority: "TRADING_SYSTEM",
-      delivery_profile: "PAPER_BINANCE_USDM",
+      delivery_profile: this.readContext.profileId,
       workspace_id: principal.workspaceId,
       // `*_ms` is the canonical EDS-02 wire.  The ISO aliases preserve the
       // pre-existing v1 response contract for specialised consumers until
@@ -730,6 +895,19 @@ function unresolvedRelations(
     state,
     reasonCode: resolution.reasonCode,
   }));
+}
+
+/** A workbench relation as the pure stage facts read it; a relation this read never asked for is absent, not empty. */
+function paperRelationInput(relations: readonly RelationResult[], key: string): RelationInput {
+  const item = relations.find((candidate) => candidate.spec.key === key);
+  if (!item) return absentRelation("PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN");
+  return {
+    present: true,
+    state: item.state,
+    reasonCode: item.reasonCode,
+    rows: item.page?.items ?? [],
+    absentReason: "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN",
+  };
 }
 
 function asStageRelations(relations: readonly RelationResult[]): StageRelation[] {
@@ -1015,6 +1193,14 @@ function unavailableBlotterExactQuery(
   };
 }
 
+function venueCalendarCapability(calendar: VenueCalendar) {
+  const facts = [calendar.timezone, calendar.windows, calendar.breaks, calendar.holidays, calendar.is_open, calendar.as_of];
+  const missingFacts = facts.filter(fact => fact.availability !== "AVAILABLE");
+  return capability("venue.calendar", missingFacts.length === 0 ? "AVAILABLE" :
+    missingFacts.length === facts.length ? "UNAVAILABLE" : "PARTIAL", ["session_shading"],
+    missingFacts[0]?.reason_code ?? null);
+}
+
 function capability(
   capabilityId: string,
   state: CapabilityState,
@@ -1067,10 +1253,14 @@ function blotterFingerprint(query: PaperBlotterQuery): string {
     limit: query.limit,
     status: query.status ?? null,
     status_bucket: query.status_bucket ?? null,
+    stage: query.stage ?? "PAPER",
+    deployment_id: query.deployment_id ?? null,
+    account_id: query.account_id ?? null,
+    alpha_id: query.alpha_id ?? null,
     venue: query.venue ?? null,
     symbol: query.symbol ?? null,
     side: query.side ?? null,
-    sort: query.sort,
+    sort: query.sort ?? "submitted_at_desc",
   })).digest("base64url");
 }
 

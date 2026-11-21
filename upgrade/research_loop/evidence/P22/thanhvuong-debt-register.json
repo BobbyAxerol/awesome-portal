@@ -1,0 +1,436 @@
+{
+  "phase": "P22",
+  "owner": "Thanhvuong (Claude; contributor outside D3 — backend + contract + frontend)",
+  "date": "2026-09-25",
+  "tree": "7660572d6b188a582b4ebbdd2cdfbb74c4128026",
+  "head": "d55beca753c3047443d12f3f0671f4427d268a69",
+  "open_implementation_debt": [
+    {
+      "id": "S11-P22-DECISION-MAP",
+      "audit": "A1 N1",
+      "what": "decision_outcomes mapping falls through to APPROVED_WITH_CONDITION by default; exhaustive today (R1_DECISIONS has 4 values) but silently wrong if the governance enum grows",
+      "owner": "Codex (owner of R1 enum) + Thanhvuong",
+      "state": "OPEN",
+      "evidence": "audit-A1.md N1; release-candidate-publication.service.ts mirror mapping"
+    },
+    {
+      "id": "S11-P22-APPROVAL-STATE-SNAPSHOT",
+      "audit": "A1 N3",
+      "what": "delivery_states.approval_state is a snapshot taken at delivery (CHANGES_REQUESTED -> UNKNOWN) and never refreshed; the mirror route is the live read",
+      "owner": "Codex",
+      "state": "OPEN",
+      "evidence": "audit-A1.md N3"
+    },
+    {
+      "id": "S11-P22-PRECHECK-BEFORE-RUNSYNC",
+      "audit": "A1 N5",
+      "what": "publish pre-checks read run_read_models BEFORE governance's own RunSync refresh (FEATURE_PROXY_PORTAL), so P22 may refuse RUN_NOT_MIRRORED a run governance would accept after refresh",
+      "owner": "Codex (CG-P22-05)",
+      "state": "OPEN",
+      "evidence": "audit-A1.md N5; thanhvuong-backend-requests.md CG-P22-05"
+    },
+    {
+      "id": "S11-P22-HARNESS-TABLES",
+      "audit": "A1 N7",
+      "what": "apps/control-api/test/harness.ts TEST_TABLES lacks research.release_candidate_publications_v1 (file was outside the allow-list), so DB specs do not truncate it",
+      "owner": "Codex / Thanhvuong after Bobby",
+      "state": "OPEN",
+      "evidence": "audit-A1.md N7"
+    },
+    {
+      "id": "S11-P22-MIRROR-UNAVAILABLE-ROUTE",
+      "audit": "A2 N2",
+      "what": "the S11 'unavailable' mirror state cannot be reached through the product route (a PUBLISHED compose always carries a mirror; zod superRefine); covered by unit S11-U48 only",
+      "owner": "Thanhvuong",
+      "state": "OPEN",
+      "evidence": "audit-A2.md N2; S11-U48"
+    },
+    {
+      "id": "S11-COMPOSE-SHAPE-GUARD",
+      "audit": "package B (tvp21 on P22 tree)",
+      "what": "a compose body missing a required field (e.g. publication) throws at ReleaseCandidateDetail.tsx:1671 and leaves a blank screen with aria-busy never false, instead of a typed terminal state; same class as P21",
+      "owner": "Thanhvuong",
+      "state": "OPEN (low)",
+      "evidence": "pw-tvp21-on-p22.log 61ccaf0f0035548e; pw-diag-tvp21-G02.log 605dbd2765740a4b"
+    },
+    {
+      "id": "S11-P22-R2LEDGER",
+      "audit": "A2 N1",
+      "what": "r2 capability-inventory ledger lacks the 3 P22 routes, so src/execution/r2Ledger.test.ts fails (1 FE file red); ledger reserved for Bobby",
+      "owner": "Bobby (B-P22-03) / Codex",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "fe-vitest-all.log 3194e519eb106d76; CG-P22-C"
+    },
+    {
+      "id": "S11-P22-MIGRATION-NUMBER-COLLISION",
+      "audit": "package C",
+      "what": "migration 1723680000056_research-release-candidate-publication-v1.sql shares number 056 with 1723680000056_research-journey-descriptor-v2.sql on baseline since ea221dc2; baseline also uses 057 and 060-062; must be renumbered before integration",
+      "owner": "Bobby (B-P22-02, B-P22-06) + Codex",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "git ls-tree primus-origin/docs/research-loop-plan apps/control-api/migrations (observed at 85c1b113)"
+    },
+    {
+      "id": "S11-P22-FLAG-OFF-HIDES-PUBLICATION",
+      "audit": "package C (code read at d55beca7)",
+      "what": "with FEATURE_RESEARCH_PUBLICATION=false compose does not read the publication table: a DELIVERED candidate shows state DRAFT, may_edit_draft=true, patchDraft 409 guard skipped (release-candidate.service.ts:177), seal no longer blocked by P22_ALREADY_PUBLISHED; facts are retained but hidden and INPUT becomes editable again. Proposal: keep reading publication when the flag is off and only block intake",
+      "owner": "Codex + Bobby (B-P22-07)",
+      "state": "OPEN",
+      "evidence": "thanhvuong-rollback.md §1; release-candidate.service.ts :177 :249-250 :264 :352"
+    },
+    {
+      "id": "S11-RAIL-DIGEST-WRAP",
+      "audit": "C1 follow-up",
+      "what": "at 3af31923 the rail stays on one row at 1280, but the parameter-bundle digest wraps over several lines inside the 'selected params' node, which is taller than the others; hi-fi shows short ids",
+      "owner": "Bobby (B2, with VD-P21-21)",
+      "state": "OPEN",
+      "evidence": "p21-bound-virtual-1280.png edb55a501b85aba4; railTops [337,337,337,337,337]",
+      "carried_from": "P21"
+    },
+    {
+      "id": "S11-LOCAL-DUPLICATION",
+      "what": "releaseCandidateClient.ts keeps its own call<T> and refusal mappers; baseline 0fa3c385 has a shared researchRefusal.ts (404 → notFound)",
+      "owner": "Codex merge (B1) then Thanhvuong",
+      "state": "DEFERRED_TO_INTEGRATION",
+      "carried_from": "P21"
+    }
+  ],
+  "open_debt": [
+    {
+      "id": "VD-P22-01",
+      "what": "hi-fi 'SLA 5d · 4d 21h left'; product prints server sla_due_at + expires_at and 'time left — not published', no client countdown",
+      "class": "copy",
+      "owner": "Bobby (B-P22-05)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "ReleaseCandidateDetail.tsx:219 MIRROR_LEFT_ABSENT; p22-published-1280.png 6db421a1a036c816 vs p21-hifi-published-1280.png c47a59d779970d09"
+    },
+    {
+      "id": "VD-P22-04",
+      "what": "hi-fi one-click publish vs Guide 'publish confirm'; product one click, no modal",
+      "class": "interaction",
+      "owner": "Bobby (B-P22-05)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "ReleaseCandidateDetail.tsx:164, :1273; p22-draft-1280.png ef407162e64856f6"
+    },
+    {
+      "id": "VD-P22-05",
+      "what": "no hi-fi cell for unknown outcome; product adds unknown-outcome card + reconcile button + conflict banner with FE copy",
+      "class": "layout",
+      "owner": "Bobby (B-P22-05)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "ReleaseCandidateDetail.tsx:181, :1363; p22-unknown-1280.png 75ed67fc2839d328"
+    },
+    {
+      "id": "VD-P22-06",
+      "what": "no hi-fi cell; product shows 'methodology claim to attach' radios when the server mirrors more than one claim",
+      "class": "layout",
+      "owner": "Bobby (B-P22-05)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "ReleaseCandidateDetail.tsx:169-170; p22-claims-1280.png 70a2df26d1771803"
+    },
+    {
+      "id": "VD-P22-08",
+      "what": "hi-fi outcome prose kept verbatim; the facts line prints server decision_outcomes (governance enum APPROVED/APPROVED_WITH_CONDITION/DENIED/CHANGES_REQUESTED)",
+      "class": "copy",
+      "owner": "Bobby (B-P22-05)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "hi-fi :183 vs ReleaseCandidateDetail.tsx:198"
+    },
+    {
+      "id": "VD-P22-12",
+      "what": "FE copy for RECOVERY_ACTOR_MISMATCH / NOT_RECONCILABLE / REFUSED_DOWNSTREAM",
+      "class": "copy",
+      "owner": "Bobby (B-P22-05)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "releaseCandidateClient.ts:332-336"
+    },
+    {
+      "id": "VD-P22-13",
+      "what": "SoD note moved from the seal card (P21) to the publish card, matching hi-fi :157; confirm to close",
+      "class": "copy",
+      "owner": "Bobby (B-P22-05)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "ReleaseCandidateDetail.tsx:147, :1358"
+    },
+    {
+      "id": "VD-P22-14",
+      "what": "published card adds a mono receipt digest line + approval id; hi-fi prints only the evidence digest",
+      "class": "layout",
+      "owner": "Bobby (B-P22-05)",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "evidence": "ReleaseCandidateDetail.tsx:1446; p22-published-1280.png 6db421a1a036c816"
+    }
+  ],
+  "recorded_visual_decisions_not_blocking": [
+    {
+      "id": "VD-P22-02",
+      "state": "field-driven",
+      "note": "assignee pool 'not published' until the server publishes it (CG-P22-03)"
+    },
+    {
+      "id": "VD-P22-03",
+      "state": "field-driven",
+      "note": "published_at = publication.updated_at_utc_ms, by = publication.intent_actor.username"
+    },
+    {
+      "id": "VD-P22-09",
+      "state": "field-driven",
+      "note": "pack route keeps publish/mirror ghosts; publication lives on the per-run composition"
+    },
+    {
+      "id": "VD-P22-10",
+      "state": "field-driven",
+      "note": "hi-fi YAML created_at row not rendered; the 17 server fields lack it (CG-P22-06)"
+    },
+    {
+      "id": "VD-P22-07",
+      "state": "rule-over-hifi",
+      "note": "rc_superseded is a Research fact on its own line; raw governance status unchanged (P22-T08)"
+    },
+    {
+      "id": "VD-P22-11",
+      "state": "rule-over-hifi",
+      "note": "'effective {effective_status}' printed next to raw status, never replacing it"
+    }
+  ],
+  "resolved_in_phase": [
+    {
+      "id": "P22-EOF-BLANK-LINE",
+      "what": "trailing blank line at EOF in release-candidate-publication.service.ts (git diff --check)",
+      "found_by": "Fable audit A1 N9",
+      "status": "RESOLVED",
+      "evidence": "fixed before commit 51a944eb"
+    },
+    {
+      "id": "P22-MIRROR-OVERFLOW-1280",
+      "what": "mirror card overflowed 140 px at 1280",
+      "found_by": "A2 probe",
+      "status": "RESOLVED",
+      "evidence": "mirror .st/.sla cells wrap; tvp22 overflow=0 on all 18 tests (pw-tvp22.log 48845f77c8d9a4d4)"
+    },
+    {
+      "id": "P22-U50-FLASH",
+      "what": "one-frame 'did not answer' flash before the first mirror read",
+      "found_by": "A2 S11-U50 first run",
+      "status": "RESOLVED",
+      "evidence": "compose mirror used in the same render; fe-vitest-s11.log d77e92ba5864899a 61/61"
+    },
+    {
+      "id": "S11-P22-TESTS",
+      "what": "P21 spec T02/T11/T18 now have P22 receipts",
+      "found_by": "P21 debt",
+      "status": "RESOLVED",
+      "evidence": "S11-U34..U55; tvp22 Q01-Q09; thanhvuong-frontend-receipt.md §4.2"
+    },
+    {
+      "id": "S11-T10-CHANGED-UNREACHABLE",
+      "what": "taxonomy CHANGED now reachable: server compares against the published predecessor digest",
+      "found_by": "P21 debt",
+      "status": "RESOLVED_IN_CODE",
+      "evidence": "unit only; CHANGED in the browser NOT_RUN"
+    },
+    {
+      "id": "VD-P21-01/02/04/16/20",
+      "what": "P21 ghosts replaced by real PUBLISHED chip, publish card, predecessor taxonomy, read-only INPUT after publish, real mirror status",
+      "found_by": "P22 scope",
+      "status": "SUPERSEDED_IN_CODE (Bobby closes)",
+      "evidence": "commit d55beca7"
+    }
+  ],
+  "deferred": [
+    {
+      "id": "S11-P22-MIGRATION-056-UNPROVEN",
+      "what": "migration 056 + research-release-candidate-publication-migration.spec.ts never executed",
+      "reason": "no reachable PostgreSQL on the host (ECONNREFUSED 127.0.0.1:5432)",
+      "owner": "Bobby (B-P22-02)",
+      "state": "AWAITING_DECISION"
+    },
+    {
+      "id": "S11-P22-REAL-E2E",
+      "what": "P22-T01 real path and T11 seed/refresh/publish success",
+      "reason": "AUDIT_OF_SELECTION child runs never reach run_read_models (CG-P22-02)",
+      "owner": "Codex (CG-P22-02)",
+      "state": "BLOCKED"
+    },
+    {
+      "id": "S11-AXE",
+      "what": "axe scan (spec 11 T14)",
+      "reason": "axe-core not in lock file",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "carried_from": "P21"
+    },
+    {
+      "id": "S11-REAL-API",
+      "what": "REAL_API_E2E_RECEIPT for S11 with publication",
+      "reason": "needs FEATURE_PROXY_PORTAL + FEATURE_RESEARCH_PUBLICATION on a preview lane (CG-P22-05)",
+      "owner": "Codex + Bobby",
+      "state": "AWAITING_DECISION",
+      "carried_from": "P21"
+    },
+    {
+      "id": "S11-P22-TVP21-RETIRED",
+      "what": "temporary P21 probe tvp21 is retired on the P22 tree (18 pass / 64 fail)",
+      "reason": "its compose stubs pre-date the P22 contract; valid receipts re-covered by tvp22/tvp22b (Fable ruling)",
+      "owner": "Thanhvuong",
+      "state": "RETIRED"
+    }
+  ],
+  "backend_requests": [
+    {
+      "id": "CG-P22-01",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-01",
+      "what": "Research-side methodology_claim_id on ReleaseCandidateSource / frozen core"
+    },
+    {
+      "id": "CG-P22-02",
+      "owner": "Codex",
+      "state": "OPEN (blocks real publish)",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-02",
+      "what": "mirror or dispatch path for AUDIT_OF_SELECTION final-audit child runs into public.run_read_models (blocks real publish)"
+    },
+    {
+      "id": "CG-P22-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-03",
+      "what": "assignee / approver pool on the approval mirror"
+    },
+    {
+      "id": "CG-P22-04",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-04",
+      "what": "canonical governance approval-create.v1 fixtures (success, DUPLICATE_OPEN_APPROVAL, EVIDENCE_RUN_NOT_ELIGIBLE, serialization 409) + r1-review.v1"
+    },
+    {
+      "id": "CG-P22-05",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-05",
+      "what": "preview lane with FEATURE_PROXY_PORTAL (RunSync) + both research flags for REAL_API; pre-check ordering vs RunSync"
+    },
+    {
+      "id": "CG-P22-06",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-06",
+      "what": "created_at in mirror fields/yaml or confirmation it is not one of the 17 fields"
+    },
+    {
+      "id": "CG-P22-A",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-A",
+      "what": "publication.conflicting_approval_href (same regex as mirror.href)"
+    },
+    {
+      "id": "CG-P22-B",
+      "owner": "Codex",
+      "state": "OPEN",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-B",
+      "what": "details.downstream_code in publish 409/422 error bodies"
+    },
+    {
+      "id": "CG-P22-C",
+      "owner": "Bobby / Codex",
+      "state": "REQUIRES_BOBBY_DECISION",
+      "receipt": "thanhvuong-backend-requests.md §1 CG-P22-C",
+      "what": "add the 3 P22 routes to r2_ledger/capability-inventory.v1.json"
+    }
+  ],
+  "not_opened": [
+    {
+      "what": "new governance write path (decide/revoke)",
+      "reason": "P22 only calls createApproval in-process; governance/facade/repos/execution/auth unchanged (P22-T09 empty)"
+    },
+    {
+      "what": "OpenAPI version bump",
+      "reason": "stays 1.0.0; owner decides (backend requests §3 R7)"
+    },
+    {
+      "what": "http-error.filter details for research errors (A1 N4)",
+      "reason": "downstream_code is exposed through compose publication.downstream_code; no FE need"
+    }
+  ],
+  "source_capability_blocked": [
+    "CG-P22-02"
+  ],
+  "source_capability_note": "no source-capability matrix; source absences are P22_* / GOVERNANCE_* reason codes rendered verbatim. Real publish is blocked because final-audit child runs are never mirrored (CG-P22-02)",
+  "explicit_downstream_gates": [
+    {
+      "id": "P22-FE-DG-01",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "accept or discard the P22 work done outside D3; choose between this branch and Codex WIP codex/p22-wip-2026-09-24 (claimed on baseline 85c1b113, not on primus-origin)"
+    },
+    {
+      "id": "P22-FE-DG-02",
+      "owner": "Bobby + Codex",
+      "state": "AWAITING_DECISION",
+      "what": "renumber and run migration 056 + its spec on a disposable PostgreSQL before any deploy"
+    },
+    {
+      "id": "P22-FE-DG-03",
+      "owner": "Codex",
+      "state": "OPEN",
+      "what": "mirror path for final-audit child runs (CG-P22-02)"
+    },
+    {
+      "id": "P22-FE-DG-04",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "r2 ledger entries for the 3 P22 routes (CG-P22-C)"
+    },
+    {
+      "id": "P22-FE-DG-05",
+      "owner": "Bobby",
+      "state": "AWAITING_DECISION",
+      "what": "FEATURE_RESEARCH_PUBLICATION stays false until DG-01..04 are closed (and S11-P22-FLAG-OFF-HIDES-PUBLICATION decided)"
+    }
+  ],
+  "bobby_decisions": [
+    {
+      "id": "B-P22-01",
+      "what": "accept/discard the outside-D3 P22 work; pick this branch or the Codex WIP"
+    },
+    {
+      "id": "B-P22-02",
+      "what": "review migration 056 (new grants, replacement guards, Down refuse), renumber it, run its spec"
+    },
+    {
+      "id": "B-P22-03",
+      "what": "r2 ledger entries for the 3 routes (CG-P22-C)"
+    },
+    {
+      "id": "B-P22-04",
+      "what": "CG-P22-02 final-audit child mirror path"
+    },
+    {
+      "id": "B-P22-05",
+      "what": "VD-P22-01/04/05/06/08/12/13/14"
+    },
+    {
+      "id": "B-P22-06",
+      "what": "baseline integration: 85c1b113 (plan 28da9470), migration number clash, operation name researchReleaseCandidatePublishV1 also claimed by Codex; per D1 Codex merges"
+    },
+    {
+      "id": "B-P22-07",
+      "what": "flag enablement order: only after DG-01..04; REAL_API lane needs FEATURE_PROXY_PORTAL (CG-P22-05)"
+    }
+  ],
+  "known_flake_note": "e2e tvp20 '304 keeps revision @1280' failed once (suite run 1) and passed in run 2; PortalShell RunLibrary filtered_rows flaky at baseline, passed in package B",
+  "rule_for_later_phases": {
+    "source": "Bobby 2026-09-24, Unified P19 note; applied in P20 and P21; applied in P22",
+    "rules": [
+      "each screen matches both the hi-fi and the spec; when they differ the hi-fi wins unless Bobby approves a VD exception",
+      "the frontend never picks a deviation on its own: record VD-PXX-NN in the phase note ledger and the handoff; open a new version when scope needs trimming",
+      "hard rule 3 (truthful display) outranks hi-fi copy: render the contract and record REQUIRES_BOBBY_DECISION",
+      "D3 (0fa3c385): Claude works up to P21; P22+ is Codex",
+      "P22 was done by Thanhvuong outside D3 at Vuong's request; every P22 artefact is REQUIRES_BOBBY_DECISION until Bobby accepts it"
+    ],
+    "p22_debt_for_P23": "see Unified P22 note and frontend-handoff-claude.md 'Handoff for P23 (Codex)'"
+  },
+  "audit_note": "Fable audit after each package: A1 (backend, uncommitted on 9ecf6f9d; N1-N9), A2 (frontend on 51a944eb; N1-N6), B (verification at d55beca7; tvp21 retired). Package C (docs) added S11-P22-MIGRATION-NUMBER-COLLISION and S11-P22-FLAG-OFF-HIDES-PUBLICATION from baseline and code reads."
+}

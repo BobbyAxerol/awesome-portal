@@ -1,0 +1,11 @@
+{
+  "schema_version": "research.phase-debt-register.v1",
+  "phase": "RS-01",
+  "in_scope_backend_debt": [],
+  "explicit_non_scope_follow_ups": [
+    "RS-02 owns complete current-source adapter, retained data and Screen 04-08 read-model coverage.",
+    "RS-03 owns rich generated-contract consumer integration and browser/product acceptance.",
+    "No source capability is inferred from RS-01 correctness repairs."
+  ],
+  "rollback": "Keep features dark or select the compatible R1 reader; retain all immutable source/evidence/checkpoint rows."
+}

@@ -13,7 +13,10 @@ from portal_api.adapters.market_data import (
     HistoricalMarketDataProvider,
     ManifestMarketDataProvider,
     MarketDataProvider,
+    ObservedVnCompositeProvider,
     UnavailableHistoricalMarketDataProvider,
+    VnStockDailyObservedProvider,
+    load_vn_stock_daily_qualification_runtime,
 )
 from portal_api.adapters.planning_summary import (
     PlanningSummaryAdapter,
@@ -33,6 +36,7 @@ from portal_api.api.ingress import IngressContextMiddleware, ingress_request_id
 from portal_api.api.routes_portal import router as router_portal
 from portal_api.api.routes_alphas import router as router_alphas
 from portal_api.api.routes_data import router as router_data
+from portal_api.api.routes_research_internal import router as router_research_internal
 from portal_api.api.routes_runs import router as router_runs
 from portal_api.domain.errors import PortalDomainError
 from portal_api.repositories import ArtifactRepository
@@ -45,6 +49,9 @@ from portal_api.services.data_catalog import DataCatalogService, SnapshotStore
 from portal_api.services.engine_capabilities import EngineCapabilityService
 from portal_api.services.portal_links import PortalLinksService
 from portal_api.services.portal_registry import PortalRegistryService
+from portal_api.services.research_engine_catalog import ResearchEngineCatalogService
+from portal_api.services.research_preflight_snapshot import ResearchPreflightSnapshotService
+from portal_api.services.job_broker import JobBroker, NatsJetStreamBroker
 from portal_api.services.portal_overview import (
     PortalSummaryContractError,
     PortalSummaryService,
@@ -68,9 +75,27 @@ def _default_provider() -> MarketDataProvider:
             "historical backtest/research data is disabled in this environment"
         )
     try:
-        return HistoricalMarketDataProvider(
+        primary = HistoricalMarketDataProvider(
             engine=os.getenv("PORTAL_CRYPTO_RESAMPLE_ENGINE", "duckdb"),
         )
+        from portal_api.domain.research_vn_observed_fixed_profile import vn_observed_fixed_enabled
+        if not vn_observed_fixed_enabled():
+            return primary
+        # A flag alone never grants VN availability. Read one already sealed
+        # revision through the bounded index store and exact installed source.
+        from portal_api.services.enrich_dataset_catalog import DatasetIndexStore
+        try:
+            revision, document, reason = DatasetIndexStore().read(primary._runtime.manifest_digest)
+            if document is None or revision is None:
+                primary.vn_qualification_reason = reason or "HMD_METADATA_INDEX_NOT_BUILT"
+                return primary
+            observed = VnStockDailyObservedProvider(index_document=document, index_revision=revision,
+                runtime=load_vn_stock_daily_qualification_runtime(primary._runtime.storage_root))
+            return ObservedVnCompositeProvider(primary, observed)
+        except (OSError, ValueError):
+            # VN refusal must not take away the already qualified crypto lane.
+            primary.vn_qualification_reason = "VN_OBSERVED_SOURCE_INDEX_NOT_QUALIFIED"
+            return primary
     except Exception as exc:
         if mode == "required":
             raise RuntimeError(
@@ -101,16 +126,23 @@ def create_app(
     quantbt_gateway: QuantBTGateway | None = None,
     artifact_repository: ArtifactRepository | None = None,
     portal_registry_repository: PortalRegistryRepository | None = None,
+    research_run_publisher: JobBroker | None = None,
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(application: FastAPI):
         try:
+            if application.state.research_run_publisher_connect_on_start:
+                await application.state.research_run_publisher.connect()
             yield
         finally:
             try:
                 await application.state.portal_summary_service.aclose()
             finally:
-                application.state.run_manager.shutdown()
+                try:
+                    application.state.run_manager.shutdown()
+                finally:
+                    if application.state.research_run_publisher_owned:
+                        await application.state.research_run_publisher.close()
 
     app = FastAPI(
         title="QuantBT Backtest Portal API",
@@ -149,6 +181,9 @@ def create_app(
     app.state.engine_capabilities = EngineCapabilityService(
         registry_repository.registry_root
     )
+    app.state.research_engine_catalog = ResearchEngineCatalogService(
+        registry_repository.registry_root, market_data_provider=app.state.market_data_provider
+    )
     app.state.data_catalog = DataCatalogService(registry_repository.registry_root)
     app.state.alpha_registry = AlphaRegistry(registry_repository.registry_root)
     app.state.alpha_import_service = AlphaImportService(
@@ -158,6 +193,36 @@ def create_app(
     )
     app.state.snapshot_store = SnapshotStore(
         Path(os.getenv("PORTAL_SNAPSHOT_ROOT", str(Path(os.getenv("PORTAL_ARTIFACT_ROOT", "artifacts/runs")) / "snapshots")))
+    )
+    # P10 is opt-in at both Control API and Portal deployment boundaries. The
+    # intake route does not open a broker connection while dark, which lets a
+    # Research-read deployment remain independent of NATS availability.
+    producer_enabled = os.getenv("PORTAL_FEATURE_RESEARCH_RUN_PRODUCER", "false").strip().lower() == "true"
+    app.state.research_run_publisher_owned = False
+    app.state.research_run_publisher_connect_on_start = False
+    app.state.research_run_publisher = research_run_publisher
+    if producer_enabled and research_run_publisher is None:
+        servers = [
+            item.strip()
+            for item in os.getenv("NATS_URL", "nats://portal-nats:4222").split(",")
+            if item.strip()
+        ]
+        app.state.research_run_publisher = NatsJetStreamBroker(
+            servers,
+            # The API only publishes a P10 request.  A durable consumer is
+            # owned by durable_worker_main, not by every Portal API replica.
+            consumer=None,
+        )
+        app.state.research_run_publisher_owned = True
+        app.state.research_run_publisher_connect_on_start = True
+    # P08 is a private, metadata-only source snapshot authority.  It is not a
+    # worker, browser route, direct engine caller, or activation flag: Control
+    # API remains the public BFF and owns preflight token/manifest custody.
+    app.state.research_preflight_snapshot_service = ResearchPreflightSnapshotService(
+        provider=app.state.market_data_provider,
+        snapshots=app.state.snapshot_store,
+        engine_catalog=app.state.research_engine_catalog,
+        gateway=app.state.quantbt_gateway,
     )
     app.state.preflight_service = PreflightService(
         app.state.market_data_provider,
@@ -240,6 +305,10 @@ def create_app(
     app.include_router(router_runs)
     app.include_router(router_data)
     app.include_router(router_alphas)
+    # P07's AST adapter is service-private: Control API signs every request
+    # and owns persisted source bytes/receipts.  It is deliberately not a
+    # public facade endpoint and cannot be reached through browser routes.
+    app.include_router(router_research_internal)
     return app
 
 

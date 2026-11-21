@@ -1,0 +1,57 @@
+{
+  "schema_version": "research.artifact-manifest.v1",
+  "artifact_id": "art_p05_fixture",
+  "artifact_revision": 1,
+  "workspace_id": "ws_research",
+  "run_id": "run_fixture",
+  "worker_attempt_id": "worker_fixture",
+  "lease_epoch": 7,
+  "engine": {
+    "release_id": "quantbt_1_1_1",
+    "build_ref": "wheel-sha256-pinned"
+  },
+  "input": {
+    "request_spec_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "effective_spec_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "dataset_binding_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "retention": { "class": "RESEARCH_EVIDENCE" },
+  "completed_at": "2026-09-19T12:00:00+00:00",
+  "tables": [
+    {
+      "table_kind": "trial_index",
+      "schema_version": "research.trial-index.v1",
+      "part_schema_version": "research.parquet-part.v1",
+      "schema_fingerprint": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "columns": [
+        { "name": "trial_id", "arrow_type": "string", "nullable": true },
+        { "name": "objective", "arrow_type": "decimal128(20, 8)", "nullable": true, "unit": "ratio" }
+      ],
+      "sequence_column": "seq",
+      "id_column": "trial_id",
+      "rows": 3,
+      "bytes": 512,
+      "parts": [
+        {
+          "table_kind": "trial_index",
+          "part_ordinal": 1,
+          "relative_path": "tables/trial_index/part-000001.parquet",
+          "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "rows": 3,
+          "bytes": 512,
+          "sequence_min": 1,
+          "sequence_max": 15
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "name": "selection",
+      "relative_path": "documents/selection.json",
+      "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "bytes": 44
+    }
+  ],
+  "totals": { "rows": 3, "bytes": 556 }
+}

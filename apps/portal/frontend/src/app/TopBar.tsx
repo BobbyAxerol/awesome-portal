@@ -6,37 +6,79 @@
  * has not answered we render nothing rather than defaulting to a guess — the
  * frontend does not infer which environment it is talking to (v0.5 §12.1).
  */
-import { Menu, PanelLeftClose, PanelLeftOpen, Search, Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Menu, PanelLeftClose, PanelLeftOpen, Search, SlidersHorizontal, Users } from "lucide-react";
+import { useEffect, useId, useRef, useState, type Ref } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 import { isOwnerAccess, useSession } from "../auth/session";
 import { EnvironmentBadge } from "../components/semantic";
+import { RetainedPill } from "../execution/RetainedBanner";
 import type { PortalEnvironment } from "../portal/contracts";
 import type { Breadcrumb } from "../portal/navigation";
+import { useRunLabel } from "../research/runLabels";
+import { useRunLabelRead } from "../research/useRunLabelRead";
+import { workspaceNamedHref } from "../research/ResearchScopedLink";
+import { researchRunCrumb, useRunUnknown } from "./researchRunCrumb";
 import { ADMIN_USERS_ROUTE } from "./PortalRoutes";
-import { usePreferences } from "./preferences";
+import { usePortalContext } from "./context";
+import { crumbHref } from "../execution/v2/shell/crumbReturn";
+import { v2Crumbs } from "../execution/v2/shell/roleNav";
+import { usePreferences, type PreferencesContextValue } from "./preferences";
 import { usePresentation } from "./presentation";
 
 export function TopBar({
-  breadcrumbs,
+  breadcrumbs: trail,
   environment,
   onOpenPalette,
   onToggleMobileNav,
+  navToggleRef,
+  v2,
 }: {
+  /**
+   * V2 shell chrome (WP-D), present only on a route the V2 command bar owns: the search button becomes the "Search or jump to" field
+   * (the carbon topbar hides the plain button) and the signed-in user is named. `userHref` is where the chip leads (the member's own
+   * access page) or `null` when no such page is on offer: then it is a plain statement, never a dead link.
+   */
+  v2?: { userHref: string | null };
   breadcrumbs: Breadcrumb[];
   environment: PortalEnvironment | null;
   onOpenPalette: () => void;
   onToggleMobileNav: () => void;
+  navToggleRef?: Ref<HTMLButtonElement>;
 }) {
   const preferences = usePreferences();
   const { mode: presentationMode, entityLabel, chrome } = usePresentation();
-  const { access } = useSession();
+  const { access, principal } = useSession();
+  const location = useLocation();
+  const { registry } = usePortalContext();
+  // On a V2 route the trail reads as the design writes it ("Execution / Overview"), from the same labels the rail uses.
+  const v2Trail = v2 && registry ? v2Crumbs(trail, registry.features) : trail;
+  // Compare is a screen of the Portfolios feature: its trail names it ("Execution / Portfolios / Compare"), as the design does.
+  const onCompare = v2 !== undefined && /^\/deployments\/compare\/?$/.test(location.pathname);
+  // Users is session-scoped (no registry feature): its trail is named here, as the other Administration screens' are.
+  const onUsers = v2 !== undefined && v2Trail.length === 0 && /^\/administration\/users\/?$/.test(location.pathname);
+  const breadcrumbs = onCompare ? [...v2Trail, { label: "Compare", route: null }] : onUsers ? [{ label: "Administration", route: null }, { label: "Users", route: "/administration/users" }] : v2Trail;
+  const workspaceId = new URLSearchParams(location.search).get("workspace_id") || undefined;
+  /*
+   * D1 / audit X1 and X-1: a run-scoped Research address extends the trail to
+   * `… / R-WFO-118 / Stage 1 · Split`. Subscribing to the run's label here is
+   * what repaints the crumb when the read lands after the first frame, and
+   * deriving the crumb in one place is what keeps the shell and the screens
+   * from writing the same run two different ways.
+   */
+  const runCrumb = researchRunCrumb(location.pathname);
+  useRunLabel(runCrumb?.runId);
+  /* G3: Stages 1–4 make no read that carries the label, so the shell asks the Run Library for it. */
+  useRunLabelRead(runCrumb?.needsLabelRead ? runCrumb.runId : null, workspaceId);
+  const runUnknown = useRunUnknown(runCrumb?.runId);
+  const crumbTail = entityLabel ?? runCrumb?.screen ?? null;
 
   return (
     <header className="portal-topbar">
       <button
         type="button"
         className="portal-icon-btn lg:hidden"
+        ref={navToggleRef}
         aria-label="Open navigation"
         onClick={onToggleMobileNav}
       >
@@ -57,27 +99,55 @@ export function TopBar({
         Quant Ecosystem Portal
       </Link>
 
-      <span className="portal-workspace mono" title="The prototype has a single workspace">
+      <span className="portal-workspace mono portal-wide-only" title="The prototype has a single workspace">
         Default Workspace
       </span>
 
-      {environment ? <EnvironmentBadge environment={environment} /> : null}
+      {environment ? (
+        v2 ? (
+          // The summary's environment is the PORTAL deployment's, not an Execution mode; on an Execution screen it says so.
+          <span className="portal-env-wrap" title="The Portal deployment's environment, from the summary. It is not an Execution environment: that is in the context bar.">
+            <span className="portal-env-prefix">Portal</span>
+            <EnvironmentBadge environment={environment} />
+          </span>
+        ) : (
+          <EnvironmentBadge environment={environment} />
+        )
+      ) : null}
+      <RetainedPill />
 
-      <nav aria-label="Breadcrumb" className="portal-breadcrumbs">
+      <nav aria-label="Breadcrumb" className={runCrumb ? "portal-breadcrumbs portal-breadcrumbs--run" : "portal-breadcrumbs"}>
         {breadcrumbs.map((crumb, index) => (
-          <span key={`${crumb.label}-${index}`} className="portal-crumb">
+          <span
+            key={`${crumb.label}-${index}`}
+            className={[
+              "portal-crumb",
+              runCrumb && index > 0 ? "portal-crumb--run-context" : "",
+              !runCrumb && !crumbTail && index === breadcrumbs.length - 1 ? "portal-crumb--current" : "",
+            ].filter(Boolean).join(" ")}
+          >
             {index > 0 ? <span aria-hidden="true" className="portal-crumb-sep">/</span> : null}
-            {crumb.route ? <Link to={crumb.route}>{crumb.label}</Link> : <span>{crumb.label}</span>}
+            {crumb.route ? <Link to={workspaceNamedHref(v2 ? crumbHref(crumb.route, location.pathname, location.search) : crumb.route, workspaceId)} {...(v2 ? { title: crumb.label } : {})}>{crumb.label}</Link> : <span {...(v2 ? { title: crumb.label } : {})}>{crumb.label}</span>}
           </span>
         ))}
         {/* §4.3 product locator tail: `Deployments / Paper / Carry v3.2`. The
             entity name comes from the screen that resolved it (via the
             presentation context) — the shell cannot know fixture display
             names, and would otherwise print ids or nothing. */}
-        {entityLabel ? (
-          <span className="portal-crumb">
+        {runCrumb ? (
+          <span className="portal-crumb portal-crumb--current">
             <span aria-hidden="true" className="portal-crumb-sep">/</span>
-            <span>{entityLabel}</span>
+            {runUnknown ? (
+              <span title={runCrumb.runId} className="mono" data-run-unknown="">{runCrumb.label}</span>
+            ) : (
+              <Link to={workspaceNamedHref(runCrumb.route, workspaceId)} title={runCrumb.runId} className="mono">{runCrumb.label}</Link>
+            )}
+          </span>
+        ) : null}
+        {crumbTail ? (
+          <span className={runCrumb ? "portal-crumb portal-crumb--run-screen" : "portal-crumb portal-crumb--current"}>
+            <span aria-hidden="true" className="portal-crumb-sep">/</span>
+            <span className={runCrumb ? "portal-crumb-tail" : undefined} title={runCrumb ? crumbTail : undefined}>{crumbTail}</span>
           </span>
         ) : null}
       </nav>
@@ -92,68 +162,16 @@ export function TopBar({
           {chrome.price.symbol} <b data-tone={chrome.price.up ? "good" : "bad"}>{chrome.price.value}</b> <span data-tone={chrome.price.up ? "good" : "bad"}>{chrome.price.up ? "▲" : "▼"}</span>
         </span>
       ) : null}
-      <button type="button" className="portal-search-btn" onClick={onOpenPalette}>
+      <button type="button" className="portal-search-btn" onClick={onOpenPalette} data-v2-search={v2 ? "" : undefined} title={v2 ? "Search or jump to (Ctrl K)" : undefined}>
         <Search size={13} aria-hidden="true" />
-        <span>Search</span>
+        <span className="portal-search-label">{v2 ? "Search or jump to" : "Search"}</span>
         <kbd className="mono">⌘K</kbd>
       </button>
+      {v2 && principal ? <UserChip username={principal.username} role={principal.role} href={v2.userHref} /> : null}
 
-      {/* The appearance control shows the EFFECTIVE workspace appearance
-          (EL-V2-01 §4.1). On an Execution route the workspace is Carbon by
-          the owner override, not by preference, so the control says so and is
-          disabled — a selector still claiming "Research Light" around a Carbon
-          canvas was the owner-rejected state this replaces. The stored
-          preference is untouched and resumes on the next Research route. */}
-      {presentationMode === "execution-carbon" ? (
-        <label
-          className="portal-pref mono"
-          title="Execution routes always use the Carbon workspace. Your theme preference still applies to Research and Planning."
-        >
-          <span className="sr-only">Theme</span>
-          <select value="execution-carbon" disabled aria-label="Theme (Execution Carbon, route-set)">
-            <option value="execution-carbon">Execution Carbon</option>
-          </select>
-        </label>
-      ) : presentationMode === "governance-light" ? (
-        <label
-          className="portal-pref mono"
-          title="Governance routes always use the light review room (owner, 2026-08-30). Your theme preference still applies to Research and Planning."
-        >
-          <span className="sr-only">Theme</span>
-          <select value="governance-light" disabled aria-label="Theme (Governance Light, route-set)">
-            <option value="governance-light">Governance Light</option>
-          </select>
-        </label>
-      ) : (
-        <label className="portal-pref mono">
-          <span className="sr-only">Theme</span>
-          <select
-            value={preferences.theme}
-            onChange={(event) =>
-              preferences.set("theme", event.target.value === "operations" ? "operations" : "research")
-            }
-            aria-label="Theme"
-          >
-            <option value="research">Research Light</option>
-            <option value="operations">Operations Dark</option>
-          </select>
-        </label>
-      )}
+      <ThemeControl preferences={preferences} presentationMode={presentationMode} />
 
-      <label className="portal-pref mono">
-        <span className="sr-only">Density</span>
-        <select
-          value={preferences.density}
-          onChange={(event) =>
-            preferences.set("density", event.target.value as typeof preferences.density)
-          }
-          aria-label="Density"
-        >
-          <option value="comfortable">Comfortable</option>
-          <option value="compact">Compact</option>
-          <option value="operational">Operational</option>
-        </select>
-      </label>
+      <DensityControl preferences={preferences} />
 
       {/* Account administration, next to the other session controls rather than
           in the registry-driven nav. Shown only once the server has answered
@@ -171,19 +189,214 @@ export function TopBar({
          * to push this bar onto two lines. Found by looking at the recorded
          * screen, not by a test.
          */
-        <Link className="portal-icon-btn" to={ADMIN_USERS_ROUTE} title="Users & Access" aria-label="Users & Access">
+        <Link className="portal-icon-btn portal-admin-link" to={ADMIN_USERS_ROUTE} title="Users & Access" aria-label="Users & Access">
           <Users size={15} />
         </Link>
       ) : null}
 
-      <label className="portal-pref-check mono" title="Show or hide modules that are not built yet">
-        <input
-          type="checkbox"
-          checked={preferences.showCommissioned}
-          onChange={(event) => preferences.set("showCommissioned", event.target.checked)}
-        />
-        Planned modules
-      </label>
+      <PlannedModulesControl preferences={preferences} />
+
+      <DisplayMenu
+        preferences={preferences}
+        presentationMode={presentationMode}
+        showUsersLink={isOwnerAccess(access)}
+      />
     </header>
+  );
+}
+
+/**
+ * The signed-in user (design: "BOBBY · MANAGER"). The words are the session's own: the username and the role the principal
+ * carries, shown as a statement; what the member may do comes from their grants, which the title says. A link only when the shell
+ * has a page of the member's own access to lead to.
+ */
+export function UserChip({ username, role, href }: { username: string; role: string; href: string | null }) {
+  const text = `${username} · ${role}`;
+  const title = "Signed-in user and session role. Display only: access comes from your grants.";
+  return href === null ? (
+    <span className="portal-user-chip" data-v2-user title={title}>{text}</span>
+  ) : (
+    <Link className="portal-user-chip" data-v2-user to={href} title={`${title} Opens your access.`}>{text}</Link>
+  );
+}
+
+type PresentationModeName = ReturnType<typeof usePresentation>["mode"];
+
+/*
+ * (<=720px the bar keeps ONE crumb, marked `portal-crumb--current`; the rest of
+ * the trail is reachable from the navigation drawer.)
+ *
+ * The three shell preferences are written once and mounted twice: inline in
+ * the bar at >=721px, and inside the Display menu at <=720px (W3A). Only one
+ * of the two is ever visible — the other is `display: none`, so it is also out
+ * of the accessibility tree.
+ */
+function ThemeControl({
+  preferences,
+  presentationMode,
+}: {
+  preferences: PreferencesContextValue;
+  presentationMode: PresentationModeName;
+}) {
+  /* The appearance control shows the EFFECTIVE workspace appearance
+     (EL-V2-01 §4.1). On an Execution route the workspace is Carbon by the
+     owner override, not by preference, so the control says so and is disabled
+     — a selector still claiming "Research Light" around a Carbon canvas was
+     the owner-rejected state this replaces. The stored preference is
+     untouched and resumes on the next Research route. */
+  if (presentationMode === "execution-carbon") {
+    return (
+      <label
+        className="portal-pref mono"
+        title="Execution routes always use the Carbon workspace. Your theme preference still applies to Research and Planning."
+      >
+        <span className="sr-only">Theme</span>
+        <select value="execution-carbon" disabled aria-label="Theme (Execution Carbon, route-set)">
+          <option value="execution-carbon">Execution Carbon</option>
+        </select>
+      </label>
+    );
+  }
+  if (presentationMode === "governance-light") {
+    return (
+      <label
+        className="portal-pref mono"
+        title="Governance routes always use the light review room (owner, 2026-08-30). Your theme preference still applies to Research and Planning."
+      >
+        <span className="sr-only">Theme</span>
+        <select value="governance-light" disabled aria-label="Theme (Governance Light, route-set)">
+          <option value="governance-light">Governance Light</option>
+        </select>
+      </label>
+    );
+  }
+  return (
+    <label className="portal-pref mono">
+      <span className="sr-only">Theme</span>
+      <select
+        value={preferences.theme}
+        onChange={(event) =>
+          preferences.set("theme", event.target.value === "operations" ? "operations" : "research")
+        }
+        aria-label="Theme"
+      >
+        <option value="research">Research Light</option>
+        <option value="operations">Operations Dark</option>
+      </select>
+    </label>
+  );
+}
+
+function DensityControl({ preferences }: { preferences: PreferencesContextValue }) {
+  return (
+    <label className="portal-pref mono">
+      <span className="sr-only">Density</span>
+      <select
+        value={preferences.density}
+        onChange={(event) =>
+          preferences.set("density", event.target.value as typeof preferences.density)
+        }
+        aria-label="Density"
+      >
+        <option value="comfortable">Comfortable</option>
+        <option value="compact">Compact</option>
+        <option value="operational">Operational</option>
+      </select>
+    </label>
+  );
+}
+
+function PlannedModulesControl({ preferences }: { preferences: PreferencesContextValue }) {
+  return (
+    <label className="portal-pref-check mono" title="Show or hide modules that are not built yet">
+      <input
+        type="checkbox"
+        checked={preferences.showCommissioned}
+        onChange={(event) => preferences.set("showCommissioned", event.target.checked)}
+      />
+      Planned modules
+    </label>
+  );
+}
+
+/**
+ * Display menu (<=720px). One disclosure button that holds what the laptop bar
+ * shows inline: workspace, Theme, Density, Planned modules and, for the owner,
+ * Users & Access. Enter/Space open it (native button), Esc closes it and
+ * returns focus to the button, Tab walks the controls in order, and focus
+ * leaving the menu closes it. The panel is mounted only while open, so the
+ * controls are never duplicated in the accessibility tree.
+ */
+function DisplayMenu({
+  preferences,
+  presentationMode,
+  showUsersLink,
+}: {
+  preferences: PreferencesContextValue;
+  presentationMode: PresentationModeName;
+  showUsersLink: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  return (
+    <div
+      ref={rootRef}
+      className="portal-display"
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.stopPropagation();
+          setOpen(false);
+          buttonRef.current?.focus();
+        }
+      }}
+      onBlur={(event) => {
+        const next = event.relatedTarget as Node | null;
+        if (open && next && rootRef.current && !rootRef.current.contains(next)) setOpen(false);
+      }}
+    >
+      <button
+        ref={buttonRef}
+        type="button"
+        className="portal-display-btn"
+        aria-label="Display"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        title="Display: theme, density, workspace"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <SlidersHorizontal size={16} aria-hidden="true" />
+      </button>
+      {open ? (
+        <div id={panelId} className="portal-display-panel" role="group" aria-label="Display">
+          <div className="portal-display-row">
+            <span className="portal-display-key mono">Workspace</span>
+            <span className="portal-workspace mono" title="The prototype has a single workspace">
+              Default Workspace
+            </span>
+          </div>
+          <ThemeControl preferences={preferences} presentationMode={presentationMode} />
+          <DensityControl preferences={preferences} />
+          <PlannedModulesControl preferences={preferences} />
+          {showUsersLink ? (
+            <Link className="portal-display-link" to={ADMIN_USERS_ROUTE} onClick={() => setOpen(false)}>
+              <Users size={15} aria-hidden="true" /> Users &amp; Access
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
   );
 }

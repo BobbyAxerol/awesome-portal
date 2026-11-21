@@ -1,0 +1,2744 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Exact existing pending recall preview, submit and same-key status",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/pending-recalls/preview": {
+      "post": {
+        "operationId": "executionPendingControlPreviewV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+              "allOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                }
+              ]
+            },
+            "description": "Must equal intent.business_payload.idempotency_key."
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Must equal the configured Portal public origin."
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Must equal the __Host-portal_csrf cookie and its digest must match this current session."
+          }
+        ],
+        "description": "Default-dark named pending recall control. Requires exact capital.apply_pending or capital.cancel_remaining, current membership/grants/DENY, original recall and recipient, environment and qualified source profile. Origin/CSRF and matching idempotency header required. Preview rolls back; submit requires current preview digest and fresh step-up. Durable correlation commits before source APPLY. Retained preview cannot mutate. No new recall, amount, funding, physical transfer or automatic resend.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PendingControlIntent"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Typed rollback preview or durable pending-control status; not commissioning.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PENDING_CONTROL_NOT_FOUND: unknown/hidden/wrong workspace are indistinguishable.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/pending-recalls": {
+      "post": {
+        "operationId": "executionPendingControlSubmitV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+              "allOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                }
+              ]
+            },
+            "description": "Must equal intent.business_payload.idempotency_key."
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Must equal the configured Portal public origin."
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Must equal the __Host-portal_csrf cookie and its digest must match this current session."
+          }
+        ],
+        "description": "Default-dark named pending recall control. Requires exact capital.apply_pending or capital.cancel_remaining, current membership/grants/DENY, original recall and recipient, environment and qualified source profile. Origin/CSRF and matching idempotency header required. Preview rolls back; submit requires current preview digest and fresh step-up. Durable correlation commits before source APPLY. Retained preview cannot mutate. No new recall, amount, funding, physical transfer or automatic resend.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PendingControlSubmit"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Typed rollback preview or durable pending-control status; not commissioning.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PENDING_CONTROL_NOT_FOUND: unknown/hidden/wrong workspace are indistinguishable.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "executionPendingRecallDiscoveryV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+              "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+            }
+          },
+          {
+            "name": "resource_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PORTFOLIO",
+                "DEPLOYMENT"
+              ]
+            }
+          },
+          {
+            "name": "resource_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+              "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "description": "FE-062. Local-only, bounded (<=100 items) discovery of still-open recalls this Portal controlled on the exact resource: original_recall_id, currency, recipient, last known amounts and the five CAS counters. Requires independent current audit.read and exact current TS target membership, authorized BEFORE any private row read. No upstream lookup/write, no recovery. Untracked recalls (never controlled through the Portal) are not discoverable here; that needs a qualified source read and is stated in untracked_recalls.",
+        "responses": {
+          "200": {
+            "description": "Open recalls of the Portal pending-control history for this exact resource.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingRecallDiscovery"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PENDING_CONTROL_NOT_FOUND: unknown/hidden/wrong workspace are indistinguishable.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/pending-recalls/{id}": {
+      "get": {
+        "operationId": "executionPendingControlStatusV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^ecm_[a-f0-9]{32}(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+              "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+            }
+          }
+        ],
+        "description": "Local-only retained status. Requires independent current audit.read and exact current TS target membership, not the original mutation grant or expired send proof. No upstream lookup/write; hidden/wrong-workspace/not-found normalize to404.",
+        "responses": {
+          "200": {
+            "description": "Typed rollback preview or durable pending-control status; not commissioning.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PENDING_CONTROL_NOT_FOUND: unknown/hidden/wrong workspace are indistinguishable.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/pending-recalls/{id}/reconcile": {
+      "post": {
+        "operationId": "executionPendingControlReconcileV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^ecm_[a-f0-9]{32}(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "x-portal-idempotency-key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+              "allOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                }
+              ]
+            },
+            "description": "Request idempotency key; does not replace the stored original source intent key."
+          },
+          {
+            "name": "Origin",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Must equal the configured Portal public origin."
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Must equal the __Host-portal_csrf cookie and its digest must match this current session."
+          }
+        ],
+        "description": "Verified lookup of the original same-key intent only; never resend. Requires independent current audit.read, Origin/CSRF and request idempotency. Source-dark/unverified remains unknown. Accepted-obligation service recovery does not impersonate an expired human session.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PendingControlQuery"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Typed rollback preview or durable pending-control status; not commissioning.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PENDING_CONTROL_NOT_FOUND: unknown/hidden/wrong workspace are indistinguishable.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingControlProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "PendingControlIntent": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.pending-recall-intent.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+            "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+          },
+          "resource": {
+            "$ref": "#/components/schemas/PendingControlResource"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "expected_policy_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              }
+            ]
+          },
+          "business_payload": {
+            "$ref": "#/components/schemas/PendingControlBody"
+          }
+        },
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "resource",
+          "environment",
+          "expected_policy_revision",
+          "business_payload"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "const": "PORTFOLIO"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "business_payload": {
+                  "properties": {
+                    "recipient_kind": {
+                      "const": "PORTFOLIO"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "business_payload": {
+                  "properties": {
+                    "recipient_kind": {
+                      "const": "DEPLOYMENT_ACCOUNT"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "description": "Named continuation of an existing recall only. Portal metadata and opaque policy revision stay outside exact pma.operator-control.v1. PORTFOLIO maps to PORTFOLIO; DEPLOYMENT maps to DEPLOYMENT_ACCOUNT. Runtime additionally requires recipient_deployment_id === resource.id; portable JSON Schema does not express arbitrary sibling-value equality. Five source CAS are int64 decimal STRINGS, never JS numbers. No amount, new recall, actor, URL or trusted source context can be supplied."
+      },
+      "PendingControlSubmit": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/PendingControlIntent"
+          },
+          "preview_digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}(?![\\s\\S])"
+          }
+        },
+        "required": [
+          "intent",
+          "preview_digest"
+        ]
+      },
+      "PendingControlQuery": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+            "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+          }
+        },
+        "required": [
+          "workspace_id"
+        ]
+      },
+      "PendingControlPreview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.pending-recall-preview.v1"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "APPLY_PENDING",
+              "CANCEL_REMAINING"
+            ]
+          },
+          "original_recall_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+          },
+          "allowed": {
+            "type": "boolean"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PENDING_CONTROL_NOT_QUALIFIED",
+                  "PENDING_CONTROL_CONTEXT_INVALID",
+                  "PENDING_CONTROL_CONTEXT_EXPIRED",
+                  "PENDING_CONTROL_PREVIEW_CHANGED",
+                  "PENDING_CONTROL_IDEMPOTENCY_CONFLICT",
+                  "PENDING_CONTROL_NOT_FOUND",
+                  "PENDING_CONTROL_CAPACITY_EXCEEDED",
+                  "PENDING_CONTROL_RECEIPT_UNVERIFIED",
+                  "PENDING_CONTROL_UNAVAILABLE"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "preview_digest": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "profile_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+                "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prediction": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingControlPrediction"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "business_applied": {
+            "const": false
+          },
+          "reserved": {
+            "const": false
+          }
+        },
+        "required": [
+          "schema_version",
+          "operation",
+          "original_recall_id",
+          "allowed",
+          "reason_code",
+          "preview_digest",
+          "expires_at_ms",
+          "profile_ref",
+          "prediction",
+          "business_applied",
+          "reserved"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "allowed": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason_code": {
+                  "type": "null"
+                },
+                "preview_digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[a-f0-9]{64}(?![\\s\\S])"
+                },
+                "expires_at_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "profile_ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+                  "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+                },
+                "prediction": {
+                  "$ref": "#/components/schemas/PendingControlPrediction"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "reason_code": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING_CONTROL_NOT_QUALIFIED",
+                    "PENDING_CONTROL_CONTEXT_INVALID",
+                    "PENDING_CONTROL_CONTEXT_EXPIRED",
+                    "PENDING_CONTROL_PREVIEW_CHANGED",
+                    "PENDING_CONTROL_IDEMPOTENCY_CONFLICT",
+                    "PENDING_CONTROL_NOT_FOUND",
+                    "PENDING_CONTROL_CAPACITY_EXCEEDED",
+                    "PENDING_CONTROL_RECEIPT_UNVERIFIED",
+                    "PENDING_CONTROL_UNAVAILABLE"
+                  ]
+                },
+                "preview_digest": {
+                  "type": "null"
+                },
+                "expires_at_ms": {
+                  "type": "null"
+                },
+                "profile_ref": {
+                  "type": "null"
+                },
+                "prediction": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Rollback-only source PREVIEW. allowed=true requires a complete source-derived prediction and expiring context; allowed=false requires a typed reason and all context/prediction fields null. business_applied and reserved are always false. No reservation, mutation or transfer occurs."
+      },
+      "PendingControlStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.pending-recall-status.v1"
+          },
+          "family": {
+            "const": "PENDING_RECALL_CONTROL"
+          },
+          "command_id": {
+            "type": "string",
+            "pattern": "^ecm_[a-f0-9]{32}(?![\\s\\S])"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "APPLY_PENDING",
+              "CANCEL_REMAINING"
+            ]
+          },
+          "original_recall_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+          },
+          "resource": {
+            "$ref": "#/components/schemas/PendingControlResource"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "profile_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+            "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+          },
+          "delivery": {
+            "type": "string",
+            "enum": [
+              "PREPARED",
+              "SENDING",
+              "ACKNOWLEDGED",
+              "DELIVERY_UNKNOWN",
+              "FAILED_BEFORE_SEND"
+            ]
+          },
+          "business": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "UNKNOWN",
+                  "WAITING_ENCUMBRANCE",
+                  "PARTIALLY_APPLIED_CANCELLED",
+                  "CANCELLED",
+                  "REJECTED",
+                  "APPLIED"
+                ]
+              },
+              "business_applied": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "amounts": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PendingControlAmounts"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "receipt": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PendingRecallReceipt"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "blockers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "allOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                    },
+                    {
+                      "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                    }
+                  ],
+                  "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+                },
+                "maxItems": 128
+              }
+            },
+            "required": [
+              "state",
+              "business_applied",
+              "amounts",
+              "receipt",
+              "blockers"
+            ]
+          },
+          "economic_cash_changed": {
+            "const": false
+          },
+          "physical_transfer_performed": {
+            "const": false
+          },
+          "projection": {
+            "const": "UNKNOWN"
+          },
+          "venue": {
+            "const": "NOT_APPLICABLE"
+          },
+          "next_action": {
+            "type": "string",
+            "enum": [
+              "QUERY_SAME_INTENT",
+              "REVIEW_RECEIPT",
+              "REVIEW_BLOCKER"
+            ]
+          },
+          "authority": {
+            "type": "string",
+            "enum": [
+              "OWNER_VERIFIED",
+              "TEST_ONLY"
+            ]
+          },
+          "created_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "updated_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+          },
+          "recipient_account_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "FE-063 (R-2c). Owning recipient account bound by the verified ORIGINAL intent and equal to the verified authorization recipient; non-null exactly when resource.kind is DEPLOYMENT, null for a PORTFOLIO recipient. Not a live source lookup, not browser-supplied after submission, never inferred from a label. Absent on pre-upgrade bodies, which are incomplete under this schema."
+          }
+        },
+        "required": [
+          "schema_version",
+          "family",
+          "command_id",
+          "operation",
+          "original_recall_id",
+          "resource",
+          "environment",
+          "profile_ref",
+          "delivery",
+          "business",
+          "economic_cash_changed",
+          "physical_transfer_performed",
+          "projection",
+          "venue",
+          "next_action",
+          "authority",
+          "created_at_ms",
+          "updated_at_ms",
+          "currency",
+          "recipient_account_id"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "business": {
+                  "properties": {
+                    "state": {
+                      "const": "UNKNOWN"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "delivery": {
+                  "enum": [
+                    "PREPARED",
+                    "SENDING",
+                    "DELIVERY_UNKNOWN",
+                    "FAILED_BEFORE_SEND"
+                  ]
+                },
+                "business": {
+                  "properties": {
+                    "business_applied": {
+                      "type": "null"
+                    },
+                    "amounts": {
+                      "type": "null"
+                    },
+                    "receipt": {
+                      "type": "null"
+                    },
+                    "blockers": {
+                      "maxItems": 0
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "delivery": {
+                        "const": "FAILED_BEFORE_SEND"
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "next_action": {
+                        "const": "REVIEW_BLOCKER"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "next_action": {
+                        "const": "QUERY_SAME_INTENT"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "else": {
+              "properties": {
+                "delivery": {
+                  "const": "ACKNOWLEDGED"
+                },
+                "business": {
+                  "properties": {
+                    "amounts": {
+                      "$ref": "#/components/schemas/PendingControlAmounts"
+                    },
+                    "receipt": {
+                      "$ref": "#/components/schemas/PendingRecallReceipt"
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "business": {
+                        "properties": {
+                          "state": {
+                            "const": "APPLIED"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "business": {
+                        "properties": {
+                          "business_applied": {
+                            "const": true
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "business": {
+                        "properties": {
+                          "business_applied": {
+                            "const": false
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "business": {
+                        "properties": {
+                          "state": {
+                            "const": "WAITING_ENCUMBRANCE"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "then": {
+                    "properties": {
+                      "next_action": {
+                        "const": "QUERY_SAME_INTENT"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "next_action": {
+                        "const": "REVIEW_RECEIPT"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "resource": {
+                  "properties": {
+                    "kind": {
+                      "const": "DEPLOYMENT"
+                    }
+                  }
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "recipient_account_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "allOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                    },
+                    {
+                      "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                    }
+                  ],
+                  "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "recipient_account_id": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Separate PENDING_RECALL_CONTROL family, not a new economic action. ACKNOWLEDGED iff source business is known. WAITING may have cumulative applied > 0 and continues QUERY_SAME_INTENT; terminal known states REVIEW_RECEIPT. UNKNOWN has no receipt/economics/blockers and queries except FAILED_BEFORE_SEND reviews its blocker. Physical transfer and economic cash change are false; no venue/projection confirmation is inferred. Runtime additionally checks chronology, exact source correlation, amount partitions and monotonicity. TEST_ONLY fixtures are not source qualification. Required currency is the exact immutable original intent unit, published only after current authority and original identity/hash validation. Historical stored status bytes remain unchanged and may omit currency; they are not served directly. Corrupt/unverifiable original intent refuses rather than guessing a unit. Pre-upgrade HTTP bodies without currency are incomplete under this public schema."
+      },
+      "PendingControlBody": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "pma.operator-control.v1"
+              },
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "APPLY_PENDING",
+                  "CANCEL_REMAINING"
+                ]
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  }
+                ]
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              "command_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              "expected_versions": {
+                "$ref": "#/components/schemas/PendingControlVersions"
+              },
+              "recipient_kind": {
+                "const": "PORTFOLIO"
+              }
+            },
+            "required": [
+              "schema_version",
+              "operation",
+              "idempotency_key",
+              "currency",
+              "reason",
+              "command_id",
+              "expected_versions",
+              "recipient_kind"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "schema_version": {
+                "const": "pma.operator-control.v1"
+              },
+              "operation": {
+                "type": "string",
+                "enum": [
+                  "APPLY_PENDING",
+                  "CANCEL_REMAINING"
+                ]
+              },
+              "idempotency_key": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._:-]{8,128}$",
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  }
+                ]
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              "command_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              "expected_versions": {
+                "$ref": "#/components/schemas/PendingControlVersions"
+              },
+              "recipient_kind": {
+                "const": "DEPLOYMENT_ACCOUNT"
+              },
+              "recipient_account_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              "recipient_deployment_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              }
+            },
+            "required": [
+              "schema_version",
+              "operation",
+              "idempotency_key",
+              "currency",
+              "reason",
+              "command_id",
+              "expected_versions",
+              "recipient_kind",
+              "recipient_account_id",
+              "recipient_deployment_id"
+            ]
+          }
+        ],
+        "discriminator": {
+          "propertyName": "recipient_kind"
+        }
+      },
+      "PendingControlVersions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "budget": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 19,
+            "pattern": "^(?:0|[1-9][0-9]{0,17}|9223372036854775807|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6])(?![\\s\\S])"
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 19,
+            "pattern": "^(?:0|[1-9][0-9]{0,17}|9223372036854775807|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6])(?![\\s\\S])"
+          },
+          "parent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 19,
+            "pattern": "^(?:0|[1-9][0-9]{0,17}|9223372036854775807|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6])(?![\\s\\S])"
+          },
+          "book": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 19,
+            "pattern": "^(?:0|[1-9][0-9]{0,17}|9223372036854775807|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6])(?![\\s\\S])"
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 19,
+            "pattern": "^(?:0|[1-9][0-9]{0,17}|9223372036854775807|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6])(?![\\s\\S])"
+          }
+        },
+        "required": [
+          "budget",
+          "source",
+          "parent",
+          "book",
+          "command"
+        ]
+      },
+      "PendingControlResource": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PORTFOLIO",
+              "DEPLOYMENT"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+            "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ]
+      },
+      "PendingControlAmounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "requested": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?![\\s\\S])"
+          },
+          "applied": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?![\\s\\S])"
+          },
+          "pending": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?![\\s\\S])"
+          },
+          "cancelled": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?![\\s\\S])"
+          },
+          "rejected": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?![\\s\\S])"
+          }
+        },
+        "required": [
+          "requested",
+          "applied",
+          "pending",
+          "cancelled",
+          "rejected"
+        ],
+        "description": "Exact decimal strings; runtime additionally proves requested = applied + pending + cancelled + rejected without floating-point arithmetic."
+      },
+      "PendingControlPrediction": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "WAITING_ENCUMBRANCE",
+              "PARTIALLY_APPLIED_CANCELLED",
+              "CANCELLED",
+              "REJECTED",
+              "APPLIED"
+            ]
+          },
+          "amounts": {
+            "$ref": "#/components/schemas/PendingControlAmounts"
+          },
+          "delta": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?![\\s\\S])"
+          },
+          "versions": {
+            "$ref": "#/components/schemas/PendingControlVersions"
+          },
+          "blockers": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "allOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                },
+                {
+                  "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                }
+              ],
+              "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+            },
+            "maxItems": 128
+          }
+        },
+        "required": [
+          "state",
+          "amounts",
+          "delta",
+          "versions",
+          "blockers"
+        ]
+      },
+      "PendingRecallReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "control_receipt_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+          },
+          "latest_receipt_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+          },
+          "latest_operation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "IMMEDIATE_DECREASE",
+                  "RECALL_PARTIAL",
+                  "RECALL_FULL",
+                  "APPLY_PENDING",
+                  "CANCEL_REMAINING"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_operation_availability": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "latest_operation_reason": {
+            "anyOf": [
+              {
+                "const": "SOURCE_OPERATION_NOT_PUBLISHED"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_event_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+          },
+          "original_payload_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}(?![\\s\\S])"
+          },
+          "versions": {
+            "$ref": "#/components/schemas/PendingControlVersions"
+          }
+        },
+        "required": [
+          "control_receipt_id",
+          "latest_receipt_id",
+          "latest_operation",
+          "latest_operation_availability",
+          "latest_operation_reason",
+          "source_event_id",
+          "original_payload_sha256",
+          "versions"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "latest_operation_availability": {
+                  "const": "AVAILABLE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "latest_operation": {
+                  "type": "string",
+                  "enum": [
+                    "IMMEDIATE_DECREASE",
+                    "RECALL_PARTIAL",
+                    "RECALL_FULL",
+                    "APPLY_PENDING",
+                    "CANCEL_REMAINING"
+                  ]
+                },
+                "latest_operation_reason": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "latest_operation": {
+                  "type": "null"
+                },
+                "latest_operation_reason": {
+                  "const": "SOURCE_OPERATION_NOT_PUBLISHED"
+                }
+              }
+            }
+          }
+        ],
+        "description": "Original control receipt and original payload digest are immutable correlation. Latest owning recall receipt can differ. Linked receipt operation may be NOT_PUBLISHED; never infer it from the queried original operation. Parsing this DTO does not authenticate PM."
+      },
+      "PendingRecallDiscoveryQuery": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+            "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+          },
+          "resource_kind": {
+            "type": "string",
+            "enum": [
+              "PORTFOLIO",
+              "DEPLOYMENT"
+            ]
+          },
+          "resource_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])",
+            "description": "At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip."
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          }
+        },
+        "required": [
+          "workspace_id",
+          "resource_kind",
+          "resource_id",
+          "environment"
+        ],
+        "description": "Exact resource only (PORTFOLIO or DEPLOYMENT), no wildcard, no global discovery."
+      },
+      "PendingRecallDiscoveryItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "original_recall_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "allOf": [
+              {
+                "type": "string",
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+              },
+              {
+                "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+              }
+            ],
+            "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+          },
+          "recipient_account_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "WAITING_ENCUMBRANCE",
+              "UNKNOWN"
+            ]
+          },
+          "amounts": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingControlAmounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PendingControlVersions"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_receipt_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512,
+                "allOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                  },
+                  {
+                    "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                  }
+                ],
+                "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_known_command_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^ecm_[a-f0-9]{32}(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unresolved_command_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^ecm_[a-f0-9]{32}(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_operation": {
+            "type": "string",
+            "enum": [
+              "APPLY_PENDING",
+              "CANCEL_REMAINING"
+            ]
+          },
+          "updated_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "original_recall_id",
+          "currency",
+          "recipient_account_id",
+          "state",
+          "amounts",
+          "versions",
+          "latest_receipt_id",
+          "last_known_command_id",
+          "unresolved_command_id",
+          "last_operation",
+          "updated_at_ms"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "WAITING_ENCUMBRANCE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "amounts": {
+                  "$ref": "#/components/schemas/PendingControlAmounts"
+                },
+                "versions": {
+                  "$ref": "#/components/schemas/PendingControlVersions"
+                },
+                "latest_receipt_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "allOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                    },
+                    {
+                      "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])[\\s\\S]*[^\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000](?![\\s\\S])"
+                    }
+                  ],
+                  "description": "Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee."
+                },
+                "last_known_command_id": {
+                  "type": "string",
+                  "pattern": "^ecm_[a-f0-9]{32}(?![\\s\\S])"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "amounts": {
+                  "type": "null"
+                },
+                "versions": {
+                  "type": "null"
+                },
+                "latest_receipt_id": {
+                  "type": "null"
+                },
+                "last_known_command_id": {
+                  "type": "null"
+                },
+                "unresolved_command_id": {
+                  "type": "string",
+                  "pattern": "^ecm_[a-f0-9]{32}(?![\\s\\S])"
+                }
+              }
+            }
+          }
+        ],
+        "description": "One still-open recall this Portal controlled. WAITING_ENCUMBRANCE: last KNOWN source receipt shows an open remainder (cumulative applied may already be > 0); amounts and the five exact CAS counters are that receipt's and become the starting expected_versions, which the next preview rechecks against the source and which a later source change makes stale. UNKNOWN: a control was sent but no receipt is known; amounts/versions are null, never zero-filled. A terminal known outcome closes the recall, so it is not listed."
+      },
+      "PendingRecallDiscovery": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.pending-recall-discovery.v1"
+          },
+          "family": {
+            "const": "PENDING_RECALL_CONTROL"
+          },
+          "coverage": {
+            "const": "PORTAL_CONTROLLED_RECALLS_ONLY"
+          },
+          "untracked_recalls": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason_code": {
+                "const": "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED"
+              }
+            },
+            "required": [
+              "availability",
+              "reason_code"
+            ]
+          },
+          "resource": {
+            "$ref": "#/components/schemas/PendingControlResource"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "policy_revision": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "PUBLISHED"
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "allOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "const": "POLICY_NOT_CURRENT"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "reason_code"
+                ]
+              }
+            ],
+            "discriminator": {
+              "propertyName": "availability"
+            },
+            "description": "The exact opaque policy revision the preview/submit validate expected_policy_revision against, read from the same current access context (availability PUBLISHED, value). When the actor's workspace has no reviewed/current policy the value is absent with reason_code POLICY_NOT_CURRENT; a client must then keep the control form shut and never invent a revision. A later policy change makes a previously served value stale (PENDING_CONTROL_CONTEXT_INVALID / POLICY_REVISION conflict), so re-read before each preview."
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingRecallDiscoveryItem"
+            },
+            "maxItems": 100
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "schema_version",
+          "family",
+          "coverage",
+          "untracked_recalls",
+          "resource",
+          "environment",
+          "policy_revision",
+          "items",
+          "truncated",
+          "observed_at_ms"
+        ],
+        "description": "Local read-only discovery for ONE exact authorized resource, from the Portal's own pending-control history only (coverage PORTAL_CONTROLLED_RECALLS_ONLY). It is NOT a census of source recalls: a recall nobody controlled through the Portal is absent, and untracked_recalls states that as NOT_PUBLISHED / RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED. original_recall_id is unique within items (runtime-enforced; JSON Schema uniqueItems cannot express a key-only uniqueness). truncated=true means more open recalls matched than the finite page holds and items are the newest. observed_at_ms is Portal evaluation time. Authorization: exact current audit.read plus TS-accepted correspondence on the resource, before any private row; hidden/wrong-workspace/unknown normalize to 404."
+      },
+      "PendingControlProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "PENDING_CONTROL_NOT_QUALIFIED",
+                  "PENDING_CONTROL_CONTEXT_INVALID",
+                  "PENDING_CONTROL_CONTEXT_EXPIRED",
+                  "PENDING_CONTROL_PREVIEW_CHANGED",
+                  "PENDING_CONTROL_IDEMPOTENCY_CONFLICT",
+                  "PENDING_CONTROL_NOT_FOUND",
+                  "PENDING_CONTROL_CAPACITY_EXCEEDED",
+                  "PENDING_CONTROL_RECEIPT_UNVERIFIED",
+                  "PENDING_CONTROL_UNAVAILABLE",
+                  "PENDING_CONTROL_INPUT_INVALID",
+                  "POLICY_PENDING",
+                  "CURRENT_ACTOR_AUTHORITY_REQUIRED",
+                  "ACCESS_DENIED",
+                  "DELEGATION_CEILING_EXCEEDED",
+                  "SELF_PRIVILEGE_CHANGE_DENIED",
+                  "PROTECTED_OWNER_CHANGE_DENIED",
+                  "OWNER_RECOVERY_NOT_APPROVED",
+                  "POLICY_REVISION_CONFLICT",
+                  "GRANT_REVISION_CONFLICT",
+                  "TS_MEMBERSHIP_NOT_ACCEPTED",
+                  "TS_MEMBERSHIP_REVISION_CONFLICT",
+                  "SOURCE_RELATION_NOT_QUALIFIED",
+                  "RESEARCHER_FIELD_POLICY_PENDING",
+                  "IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",
+                  "RECEIPT_NOT_QUALIFIED",
+                  "RECEIPT_BINDING_MISMATCH",
+                  "RECEIPT_REVISION_CONFLICT",
+                  "RECEIPT_PAYLOAD_CONFLICT",
+                  "STEP_UP_REQUIRED",
+                  "STEP_UP_REJECTED",
+                  "ACCESS_RESOURCE_NOT_FOUND",
+                  "ACCESS_RETRY_REQUIRED",
+                  "ACCESS_SCOPE_LIMIT_EXCEEDED",
+                  "ACCESS_CURSOR_INVALID",
+                  "ORIGIN_MISSING",
+                  "ORIGIN_DENIED",
+                  "CSRF_MISSING",
+                  "CSRF_INVALID",
+                  "SESSION_REQUIRED",
+                  "WORKSPACE_PROVISIONING_CONFLICT",
+                  "PORTAL_AUTHORITY_UNAVAILABLE",
+                  "REQUEST_REJECTED",
+                  "PORTAL_READ_STORE_UNAVAILABLE",
+                  "INTERNAL_ERROR"
+                ],
+                "description": "Closed vocabulary (FE-061). A value outside it is a contract violation, not a new code; the consumer must not invent copy for it."
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "public_copy_key": {
+            "type": "string"
+          },
+          "safe_next_action": {
+            "type": "string",
+            "enum": [
+              "QUERY_SAME_INTENT",
+              "REVIEW_BLOCKER"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

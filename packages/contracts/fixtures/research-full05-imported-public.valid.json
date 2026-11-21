@@ -1,0 +1,124 @@
+{
+  "scope": "SANITIZED_PUBLIC_CONTRACT_FIXTURE_NOT_ACTIVATION_PROOF",
+  "run_id": "rrun_a9addaaf275b763bcaa87d51edc12ad1",
+  "source_digest": "bd8a5b68e9a72023069731020a3e890463609eecb1565ef8c9ed713a87ebd2ac",
+  "profile": {
+    "profile_id": "p10.imported-wfo-temporal-1h.v1",
+    "state": "ENABLED",
+    "reason_code": null,
+    "refusals": [],
+    "engine_release_id": "er_quantbt_111",
+    "execution_route": "signal_notional",
+    "protocol": "advanced",
+    "optimization_mode": "mode_1_decay",
+    "optimization_schedule": "global",
+    "requested_spec_versions": [
+      "research.requested-spec.v2"
+    ],
+    "timeframe": "1h",
+    "trial_count": {
+      "min": 3,
+      "max": 3
+    },
+    "trial_default": 3,
+    "trial_scope": "GLOBAL_STUDY",
+    "max_total_trials": null,
+    "seed_policy": "LOCKED",
+    "random_seed": 42,
+    "max_span_days": 3650,
+    "fold_bounds": {
+      "min": 2,
+      "max": 16
+    },
+    "frequencies": [
+      "weekly",
+      "monthly",
+      "quarterly"
+    ],
+    "window_modes": [
+      "expanding",
+      "rolling"
+    ],
+    "parameter_policy": "DECLARED_SEARCH_WITH_PINS",
+    "allowed_pin_names": [
+      "len_atr1",
+      "len_atr2",
+      "len_vol",
+      "rsi_l",
+      "rvol",
+      "signalLength",
+      "slpercent",
+      "window"
+    ],
+    "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+    "inner_constraints": null,
+    "temporal_guards": {
+      "policy": "V1_ABSENT_V2_EXPLICIT",
+      "defaults": {
+        "label_horizon_bars": 0,
+        "purge_bars": 0,
+        "embargo_bars": 0
+      },
+      "max_bars": 10000,
+      "zero_semantics": "ZERO_APPLIES_NO_TEMPORAL_GUARD"
+    },
+    "independent_holdout": false,
+    "budget": {
+      "scope": "DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE",
+      "recipe_digest": "52c61c96c615a47536d49587210840169fe854b7abb025d1681eb3285eb5ce1c",
+      "profile_digest": "30a040a681faedc107a6d0d93323b64b01344143179dd66cc4fba315aa126383",
+      "qualification": "PRODUCT_RUN_QUALIFIED",
+      "memory_bytes": 4294967296,
+      "cpu_seconds": 120,
+      "wall_seconds": 240,
+      "scratch_bytes": 134217728,
+      "io_bytes": 536870912,
+      "file_bytes": 16777216,
+      "fd_limit": 128,
+      "planning_max_bars": 100000,
+      "max_warmup_bars": 4096,
+      "queue_class": "HEAVY",
+      "resource_class": "p10-delta-wfo-v1",
+      "preview_override": false
+    }
+  },
+  "provenance": {
+    "source_adapter_id": "full05.quantbt-imported-wfo-temporal-1h.v1",
+    "profile_id": "full05.imported-wfo-temporal-1h.v1",
+    "engine_version": "1.1.1",
+    "source_manifest_digest": "7c0a3448479b2dbee046cd6e97aa9ffaecec4423e847a989113b58e17c9b3650",
+    "source_transform_digest": "fc3cda2cfdae2fd8310e2ca6d2b7bf6f1da86fdbce65f6ab3ccda0023d63569f",
+    "retained_import_digest": "4ee4a9a13afb2648d0968d5940ce6555f88a433f378ed54d14596e524a8a207e",
+    "requested_spec_digest": "4ac80ff41974b14a2ca35c56be5877e812bcb24eb5f1328a880ce8b1f66d307b",
+    "effective_spec_digest": "4a097d3e2ca7452b1f74212a0cef42a1036b51b7b2b63a26a144250e9cf101f7",
+    "dataset_binding_digest": "8668e08548ed39281d9da83144e9cf5cd17ec0e0480f5e95fd2288a4eda6b24c",
+    "retained_at_utc_ms": 1791279853421
+  },
+  "parameter_authority": {
+    "schema_version": "research.parameter-authority.v1",
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "declared": {
+      "hash_scope": "PARAMS_DIGEST",
+      "names": [
+        "rvol",
+        "rsi_l",
+        "window",
+        "len_vol",
+        "len_atr1",
+        "len_atr2",
+        "slpercent",
+        "signalLength"
+      ]
+    },
+    "code_fixed": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "IMPORTED_SOURCE_PUBLISHES_NO_CODE_FIXED_VALUE_LIST",
+      "values": [],
+      "hash_scope": "SOURCE_CODE_SHA256",
+      "code_digest": "bd8a5b68e9a72023069731020a3e890463609eecb1565ef8c9ed713a87ebd2ac",
+      "specification_digest": "87abdf519b6b78627e23f05a63f0aac93f5a69b4f08a4c27c0e3228590858929",
+      "adapter_contract_digest": "b4fb03ec7c02707cd91f13d7e6392ca3c51721389d7cddba57a4492ab93593a6"
+    }
+  }
+}

@@ -59,6 +59,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Sticky current Core selects the independent exact Live reader before legacy reads. SCOPED_V2 requires current qualified DEPLOYMENT/LIVE audit, governance.live.read and LIVE_ROOT purpose before protected SQL. No fabricated Portfolio or predecessor, owner/read_all/decide shortcut or source-screen call. One SAME flight fences successful metadata and held errors after exact local equality, source and LAST Core/session/clock checks. Historical approval expiry is not read expiry; stored approval is not current TS acceptance, execution or activation. */
         get: operations["executionGateLiveReviewV1"];
         put?: never;
         post?: never;
@@ -83,6 +84,12 @@ export interface components {
             reason_code: string | null;
             /** @constant */
             retryable: false;
+            lineage_rejects?: {
+                [key: string]: number;
+            };
+            lineage_scoped_out?: {
+                [key: string]: number;
+            };
         };
         Scalar: string | number | boolean | null | (string | number | boolean | null)[];
         ManagerRecord: {
@@ -143,6 +150,32 @@ export interface components {
             };
             unavailable_branches: components["schemas"]["UnavailableBranch"][];
         } & (unknown & unknown & unknown);
+        /** @description Availability of comparisons over the authorized balance set in one complete snapshot; AVAILABLE does not mean in sync. */
+        ComparisonCapability: {
+            /** @constant */
+            capability_id: "derived.differences";
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+            relations: "derived.differences"[];
+            /** @enum {unknown} */
+            reason_code: null | "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED" | "ACCOUNT_COMPARISON_INCOMPLETE";
+            /** @constant */
+            retryable: false;
+        } & ({
+            /** @constant */
+            state?: "AVAILABLE";
+            reason_code?: null;
+        } | {
+            /** @constant */
+            state?: "PARTIAL";
+            /** @constant */
+            reason_code?: "ACCOUNT_COMPARISON_INCOMPLETE";
+        } | {
+            /** @constant */
+            state?: "UNAVAILABLE";
+            /** @enum {unknown} */
+            reason_code?: "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED" | "ACCOUNT_COMPARISON_INCOMPLETE";
+        });
         AccountRead: {
             /** @constant */
             schema_version: "execution.account-broker-360.v1";
@@ -174,7 +207,7 @@ export interface components {
                 username: components["schemas"]["Identifier"];
                 roles: ("ADMIN" | "USER")[];
             };
-            capabilities: components["schemas"]["Capability"][];
+            capabilities: ((components["schemas"]["Capability"] & unknown) | components["schemas"]["ComparisonCapability"])[];
             data: {
                 [key: string]: components["schemas"]["ManagerRecord"][];
             };
@@ -191,7 +224,7 @@ export interface components {
         approval: {
             approval_id: components["schemas"]["identifier"];
             /** @constant */
-            gate: "R2";
+            gate: "LIVE_GATE";
             subject_type: string;
             subject_id: components["schemas"]["identifier"];
             subject_label: string;
@@ -200,8 +233,8 @@ export interface components {
             target_label: string;
             requester: components["schemas"]["portal_actor"];
             creator: components["schemas"]["portal_actor"];
-            /** @constant */
-            status: "PENDING";
+            /** @enum {unknown} */
+            status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
             policy_version: string;
             quorum_met: number;
             quorum_required: number;
@@ -214,9 +247,59 @@ export interface components {
             expires_at: components["schemas"]["date_time"];
             created_at: components["schemas"]["date_time"];
             updated_at: components["schemas"]["date_time"];
-            portfolio_id: components["schemas"]["identifier"];
-            currency: string;
+            portfolio_id: components["schemas"]["identifier"] | null;
+            currency: string | null;
         };
+        /** @description Same-read immutable child manifest pins, with distinct named Portal-only R1/R2/Live commands. AVAILABLE permits planning, not a per-verb policy bypass. Live remains blocked until an explicit immutable predecessor policy is published. Never Trading System execution authority. */
+        DecisionContext: {
+            /** @enum {unknown} */
+            gate: "R1" | "R2" | "LIVE_GATE";
+            workspace_id: string;
+            approval_id: string;
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            evidence_hashes: string[] | null;
+            /** @enum {unknown} */
+            command_type: "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION" | "GOVERNANCE_LIVE_DECISION";
+            /** @enum {unknown} */
+            request_schema_version: "governance.r1-decision-plan-request.v1" | "governance.r2-decision-plan-request.v1" | "governance.live-decision-plan-request.v1";
+            /** @constant */
+            plan_path: "/api/v1/execution/commands/plans";
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "BLOCKED";
+                /** @enum {unknown} */
+                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE" | "R2_APPROVAL_REQUIRED" | "LIVE_PARENT_NOT_PUBLISHED" | "R1_LINEAGE_UNPUBLISHED" | "R1_NOT_APPROVED" | "R1_EXPIRED" | "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED";
+            } & unknown;
+            /** @constant */
+            source_side_effect_requested: false;
+        } & (unknown & unknown & unknown & unknown);
+        /** @description At most 50 accepted, parent/workspace/profile-bound capture choices; no Manager relations/cursors. Null currency is unrecorded, never USDT by default. Capture creates a Portal review, not execution authorization. Retained/source-off/stale/outage profiles are blocked. */
+        CaptureContext: {
+            /** @enum {unknown} */
+            action: "R2_CREATE" | "PAPER_EXIT_CREATE";
+            workspace_id: string;
+            parent_approval_id: string;
+            expected_parent_version: number;
+            expected_projection_digest: string | null;
+            availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "BLOCKED";
+                /** @enum {unknown} */
+                reason_code: null | "GOVERNANCE_CAPABILITY_REQUIRED" | "ADMIN_ROLE_REQUIRED" | "APPROVAL_NOT_PENDING" | "APPROVAL_EXPIRED" | "EVIDENCE_HASH_LIMIT_EXCEEDED" | "R2_EXECUTION_DECISION_NOT_COMMISSIONED" | "R1_APPROVAL_REQUIRED" | "R1_EVIDENCE_INCOMPLETE" | "R2_ACCEPTED_LINEAGE_UNAVAILABLE" | "R2_REVIEW_CLOSED" | "CAPTURE_RETAINED_REVIEW_READ_ONLY" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "CAPTURE_PROJECTION_UNAVAILABLE" | "CAPTURE_PROJECTION_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_STALE" | "CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE" | "R2_RISK_GRANT_SOURCE_UNAVAILABLE" | "R2_PORTFOLIO_SCOPE_NOT_FOUND" | "CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND" | "PAPER_VENUE_UNAVAILABLE" | "R2_APPROVAL_REQUIRED" | "LIVE_PARENT_NOT_PUBLISHED" | "R1_LINEAGE_UNPUBLISHED" | "R1_NOT_APPROVED" | "R1_EXPIRED" | "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED";
+            } & unknown;
+            candidates: {
+                deployment_id: string;
+                portfolio_id: string;
+                risk_grant_id: string | null;
+                currency: string | null;
+            }[];
+            candidates_truncated: boolean;
+            /** @constant */
+            currency_semantics: "REVIEWER_REQUESTED_NOT_FX_CONVERSION";
+            /** @constant */
+            source_side_effect_requested: false;
+        } & (unknown & unknown);
         review_actor: {
             user_id: components["schemas"]["identifier"];
             username: string;
@@ -259,6 +342,8 @@ export interface components {
         };
         review_data: {
             approval: components["schemas"]["approval"];
+            decision_context?: components["schemas"]["DecisionContext"];
+            capture_context?: components["schemas"]["CaptureContext"];
             actor: components["schemas"]["review_actor"];
             r1_reference: components["schemas"]["r1_reference"] | null;
             /** @enum {unknown} */
@@ -271,14 +356,16 @@ export interface components {
             plan_author: string | null;
             evidence_manifest: components["schemas"]["evidence_manifest"] | null;
             eligibility: components["schemas"]["eligibility"];
+            decision_evidence_manifest?: components["schemas"]["evidence_manifest"];
         };
         /**
          * Portal Execution Governance R2 Review v1
          * @description Read-only, workspace-bound active R2 review with the immutable capital-preview scope. This document is not an R2 decision or execution authorization.
          */
-        "execution-governance-r2-review.v1.schema": {
+        "governance-live-decision-review.v1.schema": {
             /** @constant */
-            schema_version: "governance.r2-review.v1";
+            schema_version: "governance.live-decision-review.v1";
+            workspace_id?: string;
             /** @constant */
             record_authority: "PORTAL";
             /** @constant */
@@ -302,7 +389,7 @@ export interface components {
                 approval: {
                     approval_id: components["schemas"]["identifier"];
                     /** @constant */
-                    gate: "R2";
+                    gate: "LIVE_GATE";
                     subject_type: string;
                     subject_id: components["schemas"]["identifier"];
                     subject_label: string;
@@ -311,8 +398,8 @@ export interface components {
                     target_label: string;
                     requester: components["schemas"]["portal_actor"];
                     creator: components["schemas"]["portal_actor"];
-                    /** @constant */
-                    status: "PENDING";
+                    /** @enum {unknown} */
+                    status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
                     policy_version: string;
                     quorum_met: number;
                     quorum_required: number;
@@ -325,8 +412,8 @@ export interface components {
                     expires_at: components["schemas"]["date_time"];
                     created_at: components["schemas"]["date_time"];
                     updated_at: components["schemas"]["date_time"];
-                    portfolio_id: components["schemas"]["identifier"];
-                    currency: string;
+                    portfolio_id: components["schemas"]["identifier"] | null;
+                    currency: string | null;
                 };
                 r1_reference: {
                     approval_id: components["schemas"]["identifier"];
@@ -365,6 +452,8 @@ export interface components {
                 };
                 review_data: {
                     approval: components["schemas"]["approval"];
+                    decision_context?: components["schemas"]["DecisionContext"];
+                    capture_context?: components["schemas"]["CaptureContext"];
                     actor: components["schemas"]["review_actor"];
                     r1_reference: components["schemas"]["r1_reference"] | null;
                     /** @enum {unknown} */
@@ -377,6 +466,7 @@ export interface components {
                     plan_author: string | null;
                     evidence_manifest: components["schemas"]["evidence_manifest"] | null;
                     eligibility: components["schemas"]["eligibility"];
+                    decision_evidence_manifest?: components["schemas"]["evidence_manifest"];
                 };
             };
         };
@@ -402,7 +492,7 @@ export interface components {
                 /** @constant */
                 composition: "PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS";
             };
-            governance_backbone: components["schemas"]["execution-governance-r2-review.v1.schema"];
+            governance_backbone: components["schemas"]["governance-live-decision-review.v1.schema"];
             current_source: components["schemas"]["ProfileRead"];
             derived_branches: {
                 capability_id: string;
@@ -414,6 +504,87 @@ export interface components {
             source_side_effect_requested: false;
             /** @constant */
             production_command_active: false;
+            workspace_id?: string;
+        };
+        /** @description Finite stored Portal LIVE_GATE under current exact DEPLOYMENT/LIVE audit, independent governance.live.read and reviewed LIVE_ROOT purpose. No Portfolio or R1/R2 predecessor was captured or fabricated. Historical expiry is metadata, not current read authority. Manifest integrity is local stored-byte verification, not TS acceptance, broker state or runtime commissioning; source facts stay separately unavailable. Runtime additionally verifies timestamp ordering, exact workspace/parent/target and original manifest. No private actor/prose/hash preimage. */
+        LiveParentReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.live-parent.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+                /** @constant */
+                runtime_activation_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                /** @constant */
+                environment: "LIVE";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "LIVE_GATE";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            /** @constant */
+            family: "LIVE_GATE";
+            accepted_manager_facts: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION";
+            };
+            /** @description Read in the SAME REPEATABLE READ READ ONLY snapshot as approval. Block is omitted when LIVE_BLOCKERS is not authorized. blocker_count 0 <=> blocker_summary null (AVAILABLE). approval_id/approval_version MUST equal approval.approval_id/approval_version (runtime consumer check; not expressible across properties in JSON Schema). ABSENT is typed absence, never zero blockers or a clear gate. */
+            blockers?: unknown & ({
+                /** @constant */
+                availability: "AVAILABLE";
+                /** @constant */
+                basis: "SAME_READ_SNAPSHOT_AS_APPROVAL";
+                approval_id: string;
+                approval_version: number;
+                blocker_count: number;
+                blocker_summary: string | null;
+            } | {
+                /** @constant */
+                availability: "ABSENT";
+                /** @enum {string} */
+                reason_code: "BLOCKER_SUMMARY_NOT_PUBLIC" | "BLOCKER_FIELDS_INVALID";
+            });
+        };
+        CommandProblem: {
+            error: {
+                code: string;
+                message: string;
+            };
+            request_id: string;
+            public_copy_key?: string;
+            /** @enum {string} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
         };
     };
     responses: never;
@@ -468,6 +639,8 @@ export interface operations {
         parameters: {
             query?: {
                 environment?: "paper" | "sandbox" | "live";
+                /** @description Optional workspace; the server trims surrounding whitespace before validating its length. */
+                workspace_id?: string;
             };
             header?: never;
             path: {
@@ -477,7 +650,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Exact Account/Broker 360 read across current profiles */
+            /** @description Bounded Account/Broker 360 read; ambiguous or incomplete identity remains typed partial rather than an arbitrarily selected profile. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -499,13 +672,74 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Portal live gate joined to Live-profile facts */
+            /** @description Legacy Live review OR finite current-authorized stored LIVE_GATE root. Separate source facts stay typed unavailable. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["governance-live-review.v1.schema"];
+                    "application/json": components["schemas"]["governance-live-review.v1.schema"] | components["schemas"]["LiveParentReadV2"];
+                };
+            };
+            /** @description Strict finite input invalid. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authenticated Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session lifecycle denied; no parent detail returned. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
         };

@@ -1,6 +1,8 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_POOL, CONTROL_API_CONFIG } from "../tokens";
+import type { ControlApiConfig } from "../config";
+import { retainedReview } from "../execution/retained-read-profile";
 
 export interface Workspace {
   workspaceId: string;
@@ -18,7 +20,8 @@ interface WorkspaceRow {
 
 @Injectable()
 export class WorkspacesRepository {
-  constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool | PoolClient) {}
+  constructor(@Inject(CONTROL_API_POOL) private readonly pool: Pool | PoolClient,
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig) {}
 
   async findByMembership(userId: string): Promise<Workspace[]> {
     const result = await this.pool.query<WorkspaceRow>(
@@ -63,17 +66,24 @@ export class WorkspacesRepository {
     const existing = await this.personalWorkspace(userId);
     if (existing) return existing.workspaceId;
     const workspaceId = newUlid("ws");
-    await this.pool.query(
-      `INSERT INTO workspaces (workspace_id, name, owner_user_id)
-       VALUES ($1, $2, $3)`,
+    // One statement is atomic for both a Pool and a caller-owned PoolClient:
+    // a membership refusal must not leave a committed owner-only workspace.
+    // This does not change personal-workspace selection, deduplicate concurrent
+    // provisioning, or establish an actor/session-generation authority fence.
+    const result = await this.pool.query<{ workspace_id: string }>(
+      `WITH created AS (
+         INSERT INTO workspaces (workspace_id, name, owner_user_id)
+         VALUES ($1, $2, $3)
+         RETURNING workspace_id
+       ), member AS (
+         INSERT INTO workspace_members (workspace_id, user_id, role)
+         SELECT workspace_id, $3, 'OWNER' FROM created
+         RETURNING workspace_id
+       )
+       SELECT workspace_id FROM member`,
       [workspaceId, `${username}'s workspace`, userId],
     );
-    await this.pool.query(
-      `INSERT INTO workspace_members (workspace_id, user_id, role)
-       VALUES ($1, $2, 'OWNER')`,
-      [workspaceId, userId],
-    );
-    return workspaceId;
+    return result.rows[0].workspace_id;
   }
 
   async isMember(workspaceId: string, userId: string): Promise<boolean> {
@@ -82,5 +92,19 @@ export class WorkspacesRepository {
       [workspaceId, userId],
     );
     return result.rowCount !== null && result.rowCount > 0;
+  }
+
+  /** GET authority only. Never use this for Research, Governance decide or writes. */
+  async canReadExecution(workspaceId: string, userId: string, environment?: string): Promise<boolean> {
+    if (!retainedReview(this.config)) return this.isMember(workspaceId, userId);
+    if (workspaceId !== this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
+      (environment !== undefined && !["paper", "sandbox", "live", "all", "canary"].includes(environment))) return false;
+    const result = await this.pool.query(`SELECT 1 FROM portal_users u WHERE u.user_id=$2
+      AND u.status='ACTIVE' AND NOT u.must_change_password AND (
+        EXISTS(SELECT 1 FROM portal_owner_anchor a WHERE a.anchor_id='PORTAL_OWNER' AND a.user_id=u.user_id)
+        OR EXISTS(SELECT 1 FROM workspace_members m WHERE m.workspace_id=$1 AND m.user_id=u.user_id)
+        OR EXISTS(SELECT 1 FROM execution_retained_review_access g WHERE g.workspace_id=$1 AND g.user_id=u.user_id
+          AND g.revoked_at IS NULL AND g.expires_at>now()))`,[workspaceId,userId]);
+    return Boolean(result.rowCount);
   }
 }

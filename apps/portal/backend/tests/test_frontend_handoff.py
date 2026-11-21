@@ -112,13 +112,13 @@ def test_registry_fixture_is_the_public_document_with_computed_digest() -> None:
 
 def test_registry_fixture_exposes_revision_6_delivery_contract() -> None:
     document = _fixture("registry.public.json")
-    assert document["revision"] == 6
+    assert document["revision"] == 9
     execution_screens = [
         screen
         for screen in document["screens"]
         if screen["screen_id"].startswith("EXECUTION_")
     ]
-    assert len(execution_screens) == 22
+    assert len(execution_screens) == 23
     shadow = {
         "EXECUTION_ALPHA_FLEET_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},
         "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN": {"query_enabled", "projection_ingestion_enabled"},

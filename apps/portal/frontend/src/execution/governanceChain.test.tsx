@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { GateR1Review, REQUEST_CHANGES_NOTE_REASON } from "./screens/GateR1Review";
+import { GateR1Review, REQUEST_CHANGES_NOTE_REASON, REQUEST_CHANGES_NO_CONDITION_REASON } from "./screens/GateR1Review";
 import { GateR2Review } from "./screens/GateR2Review";
 import { R1EvidenceSmoke, R2CriteriaSmoke, R2FitSmoke, R2StagesSmoke, R1_POLICY_CHIP } from "./lab/governanceDemo";
 import { ApprovalInbox, type ApprovalRow, type DecidedRow } from "./screens/ApprovalInbox";
@@ -120,11 +120,22 @@ describe.each(ROLES)("role matrix · %s", (role) => {
 });
 
 describe("sticky decision bar", () => {
-  it("prints the first lock inline and folds the rest behind a count", () => {
+  it("shows the ONE reason that matters beside the buttons, and the rest one click away (still in the page)", () => {
     r1({ actorId: "u_minh", actor: "Minh", locks: ["EXPIRED"], eligibility: NONE });
     const bar = screen.getByRole("region", { name: /Gate R1 decision/ });
+    const main = bar.querySelector("[data-reason='main']")!;
+    expect(main.textContent).toMatch(/\S/);
+    const more = bar.querySelector("details.exec-decision-bar-more") as HTMLDetailsElement;
+    expect(more, "the other reasons fold behind one count").not.toBeNull();
+    expect(more.open).toBe(false);
+    expect(more.querySelector("summary")!.textContent).toMatch(/\d+ more reasons?/);
+    // nothing is dropped: every other reason is in the page, and none repeats the main one
+    const texts = [...more.querySelectorAll("li")].map((li) => li.textContent);
+    expect(texts.length).toBeGreaterThan(0);
+    expect(new Set([main.textContent, ...texts]).size).toBe(texts.length + 1);
     expect(within(bar).getByText(/self-approval prohibited/)).toBeTruthy();
-    expect(within(bar).getByText(/more reasons?/)).toBeTruthy();
+    expect(within(bar).getByText(/This request expired/)).toBeTruthy();
+    fireEvent.click(more.querySelector("summary")!);
     expect(bar.className).toContain("exec-decision-bar");
   });
   it("carries the reviewer note into the decision reason", async () => {
@@ -258,7 +269,7 @@ describe("Approval Inbox rail and strip", () => {
       <ApprovalInbox onCopyProvenance={vi.fn()} page={{ rows: [row()], totalCount: 1 }} decided={{ rows: [decided()], totalCount: 1, hasMore: false }} counts={{ pending: 1, overdue: 0, dueSoon: 0 }} filter="INBOX" />,
     );
     expect(screen.queryByRole("button", { name: /Full history/ })).toBeNull();
-    expect(screen.getByText(/full history loaded · 1 decisions/)).toBeTruthy();
+    expect(screen.getByText(/last 30 days · 1 decision/)).toBeTruthy();
     unmount();
     const onOlder = vi.fn();
     render(
@@ -286,6 +297,11 @@ describe("Approval Inbox rail and strip", () => {
     expect(btn().getAttribute("title")).toBe(REQUEST_CHANGES_NOTE_REASON);
     cleanup();
     r1({ eligibility: { ...ALL, canRequestChanges: true }, note: "holdout coverage is too thin", onRequestChanges });
+    // a reason alone is not enough: the schema also needs at least one remediation condition
+    expect(btn()).toHaveProperty("disabled", true);
+    expect(btn().getAttribute("title")).toBe(REQUEST_CHANGES_NO_CONDITION_REASON);
+    cleanup();
+    r1({ eligibility: { ...ALL, canRequestChanges: true }, note: "holdout coverage is too thin", onRequestChanges, conditions: [{ text: "extend the holdout by 30 days", owner: "Minh", blocking: true }] });
     expect(btn()).toHaveProperty("disabled", false);
     fireEvent.click(btn());
     expect(onRequestChanges).toHaveBeenCalled();
@@ -312,7 +328,7 @@ describe("Approval Inbox rail and strip", () => {
   it("counts Mine over the whole queue and ticks toward the next SLA breach", async () => {
     render(<ApprovalInboxContainer api={createFixtureApi()} />);
     await screen.findByText("AP-352");
-    expect(screen.getByRole("button", { name: "Mine (3)" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Mine\s*3$/ })).toBeTruthy();
     expect(screen.getByText(/next SLA breach in/)).toBeTruthy();
   });
 });
@@ -333,6 +349,7 @@ describe("zero fabricated write path", () => {
     expect(writes.sort()).toEqual(["applyPlan", "planDecision"]);
     // REQUEST_CHANGES is a published verb since N09 (governance-approval-workflow
     // schema); containers may send it, and only through planDecision.
-    expect(src.match(/decide\("REQUEST_CHANGES"|run\("REQUEST_CHANGES"/g)?.length).toBe(2);
+    // R1 only: R2 and the live gate have no commissioned decision executor, so their containers never plan anything (FE-GOV-02).
+    expect(src.match(/decide\("REQUEST_CHANGES"|run\("REQUEST_CHANGES"/g)?.length).toBe(1);
   });
 });

@@ -11,7 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The owner account roster. */
+        /**
+         * The owner account roster, whole or one keyset page.
+         * @description With no query the whole roster is returned as before (the transition for the V1 Users screen: no `page`, no `counts`). Sending any of `limit`, `cursor`, `q`, `role` or `state` makes the read a keyset page: ordered by `username` (unique), at most `limit` accounts (default 50, maximum 200), `page` states the limit, the returned count and the next opaque cursor, and `counts` are exact and taken in the same statement as the rows. A cursor is signed, expires, and is bound to the owner it was given to and to the exact filters and limit it was issued for.
+         */
         get: operations["listAccounts"];
         put?: never;
         /** Create an invited account. Deliberately mints no credential. */
@@ -220,6 +223,11 @@ export interface components {
             /** @description Pin the next operation to this. It changes on every lifecycle write and on nothing else. */
             account_revision: number;
             locked: boolean;
+            /**
+             * Format: date-time
+             * @description OPTIONAL, roster reads only (FE-CAT-8). The instant of the account's most recent successful sign-in, as the Portal's own session record states it (the creation instant of its newest session). Omitted = this producer does not publish it; null = the account has never signed in. Never a guess, never the last request time, never copied from an identity provider. It is a published timestamp and authorizes nothing. Lifecycle history entries (state_before, state_after) never carry it.
+             */
+            last_sign_in_at?: string | null;
         };
         LifecycleHistoryEntry: {
             operation_id: string;
@@ -273,12 +281,18 @@ export interface components {
             expires_at: string | null;
         };
         Error: {
-            error?: {
+            error: {
                 /** @description STEP_UP_REQUIRED, STALE_ACCOUNT_REVISION, IDEMPOTENCY_KEY_PAYLOAD_CONFLICT, ACTIVATION_ALREADY_ISSUED, OWNER_ANCHOR_PROTECTED, ACCOUNT_NOT_FOUND, USERNAME_TAKEN, USERNAME_INVALID. */
                 code: string;
                 message: string;
+                /**
+                 * @deprecated
+                 * @description Historical nested location retained for compatibility. New responses publish request_id at the top level.
+                 */
                 request_id?: string;
             };
+            /** @description Public request correlation identifier emitted by the existing error filter; not an operation or application receipt. */
+            request_id?: string;
         };
         GrantedCapability: {
             /** @enum {string} */
@@ -329,6 +343,40 @@ export interface components {
              */
             external_effect: "NONE";
         };
+        /** @description has_more is true exactly when next_cursor is a string; returned_count equals the accounts returned and never exceeds limit. */
+        RosterPage: {
+            limit: number;
+            returned_count: number;
+            has_more: boolean;
+            next_cursor: string | null;
+        };
+        /** @description Exact, from the same statement as the page. total, by_state, by_role, locked and awaiting_first_password count the whole roster; matching counts the accounts the filters select. */
+        RosterCounts: {
+            total: number;
+            matching: number;
+            by_state: {
+                INVITED: number;
+                ACTIVE: number;
+                DISABLED: number;
+                ARCHIVED: number;
+            };
+            by_role: {
+                ADMIN: number;
+                USER: number;
+            };
+            locked: number;
+            awaiting_first_password: number;
+        };
+        /** @description `page` and `counts` are present together, and only on a paged read. */
+        AccountRoster: {
+            /** @constant */
+            schema_version: "portal.account-roster.v1";
+            /** @constant */
+            record_authority?: "PORTAL_CONTROL";
+            accounts: components["schemas"]["AccountSummary"][];
+            page?: components["schemas"]["RosterPage"];
+            counts?: components["schemas"]["RosterCounts"];
+        };
     };
     responses: never;
     parameters: never;
@@ -340,26 +388,46 @@ export type $defs = Record<string, never>;
 export interface operations {
     listAccounts: {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: number;
+                /** @description The `page.next_cursor` of the previous page, unchanged. Opaque. */
+                cursor?: string;
+                /** @description Case-insensitive contains over username and display name. */
+                q?: string;
+                role?: "ADMIN" | "USER";
+                state?: "INVITED" | "ACTIVE" | "DISABLED" | "ARCHIVED";
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Every account, sanitized. */
+            /** @description Sanitized accounts: all of them without a query, one page with one. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @constant */
-                        schema_version: "portal.account-roster.v1";
-                        /** @constant */
-                        record_authority?: "PORTAL_CONTROL";
-                        accounts: components["schemas"]["AccountSummary"][];
-                    };
+                    "application/json": components["schemas"]["AccountRoster"];
+                };
+            };
+            /** @description ROSTER_QUERY_INVALID (a limit outside 1..200, an unknown key, role or state) or ROSTER_CURSOR_INVALID (a forged or malformed cursor). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description ROSTER_CURSOR_CHANGED (the cursor was issued for another owner, filter or limit) or ROSTER_CURSOR_EXPIRED. Reload the roster from its first page. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
                 };
             };
         };
@@ -414,6 +482,15 @@ export interface operations {
             };
             /** @description Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -511,6 +588,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     issueActivation: {
@@ -564,6 +650,15 @@ export interface operations {
             };
             /** @description Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -629,6 +724,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     disableAccount: {
@@ -680,6 +784,15 @@ export interface operations {
             };
             /** @description Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -745,6 +858,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     archiveAccount: {
@@ -796,6 +918,15 @@ export interface operations {
             };
             /** @description Stale revision, replayed key with a different payload, an activation already live, or the owner anchor protected. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -941,6 +1072,15 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getAccessActivity: {
@@ -999,6 +1139,15 @@ export interface operations {
             };
             /** @description STALE_GRANT_REVISION or GRANT_ALREADY_REVOKED. */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

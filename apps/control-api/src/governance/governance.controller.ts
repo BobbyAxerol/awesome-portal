@@ -2,8 +2,10 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   Inject,
+  Optional,
   Param,
   Post,
   Query,
@@ -31,12 +33,14 @@ import {
 } from "../operations/contracts";
 import { ExecutionOperationsService } from "../operations/operations.service";
 import { OperationsWorkflowService } from "../operations/workflow.service";
+import { OperationalReadService } from "../operations/operational-read.service";
+import { OperationalReadError } from "../operations/current-operational-read";
 import {
-  ApplyOperationRequestSchema,
+  PortalApplyOperationRequestSchema,
   ApprovalCreateRequestSchema,
   approvalHistoryQuery,
   approvalListQuery,
-  DecisionPlanRequestSchema,
+  PortalDecisionPlanRequestSchema,
   PaperExitApplyOperationRequestSchema,
   PaperExitDecisionPlanRequestSchema,
   governanceConditionsQuery,
@@ -45,6 +49,16 @@ import { GovernanceError, GovernanceService } from "./governance.service";
 import { PaperExitService } from "./paper-exit.service";
 import { GovernanceReviewCaptureService } from "./review-capture.service";
 import { R2CaptureSchema, PaperExitCreateSchema, SandboxReviewNoteSchema } from "./review-capture.contracts";
+import { ExecutionReadScopes } from "../execution-v2/read-scope";
+import { ExecutionCommandService } from "../execution-v2/command.service";
+import { commandId } from "../execution-v2/command.contract";
+import { CommandHttpError,commandHttpCall } from "../execution-v2/command.error";
+import { PositiveParentReads } from "./positive-parent.service";
+import { LiveParentReads } from "./live-parent.service";
+import { StageActionEligibilityService } from "./stage-action-eligibility.service";
+import { stageActionEligibilityQuery } from "./stage-action-eligibility";
+import { approvalRequestLookupQuery } from "./approval-request-lookup";
+import { paperExitParentQuery } from "./paper-exit-parent";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -63,12 +77,18 @@ export class GovernanceController {
     @Inject(OperationsWorkflowService) private readonly operationWorkflow: OperationsWorkflowService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(ExecutionCommandService) private readonly trustedCommands?: ExecutionCommandService,
+    @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
+    @Optional() @Inject(PositiveParentReads) private readonly positiveParents?: PositiveParentReads,
+    @Optional() @Inject(LiveParentReads) private readonly liveParents?: LiveParentReads,
+    @Optional() @Inject(StageActionEligibilityService) private readonly stageEligibility?: StageActionEligibilityService,
   ) {}
 
   @Get("/governance/review-capture-capabilities")
   async captureCapabilities(@Req() request: GovernanceRequest, @Query("workspace_id") workspace?: string) {
-    await this.workspace(request, workspace);
-    return this.captures.capabilities(request.portalUser);
+    const workspaceId = await this.workspace(request, workspace);
+    return this.captures.capabilities(request.portalUser, workspaceId);
   }
 
   @Post("/governance/r2/capture")
@@ -99,16 +119,24 @@ export class GovernanceController {
   }
 
   @Get("/operations")
+  @Header("Cache-Control", "private, no-store")
   async operationsQueue(
     @Req() request: GovernanceRequest,
     @Query() query: Record<string, unknown>,
   ) {
+    const workspaceId = await this.workspace(request, query.workspace_id);
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.currentReads) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.currentReads.queue(principal, query);
+    }
     const parsed = OperationQueueQuerySchema.safeParse(query);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_OPERATION_QUEUE_QUERY", "Invalid operation queue query.", 400);
     }
-    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
-    return this.operationWorkflow.list(request.portalUser, workspaceId, parsed.data);
+    return this.compatibleOperationParent(request, workspaceId,
+      () => this.operationWorkflow.list(request.portalUser, workspaceId, parsed.data));
   }
 
   @Post("/operations/:operation_id/acknowledge")
@@ -201,6 +229,7 @@ export class GovernanceController {
       taskId,
       { ...parsed.data, workspace_id: workspaceId },
       this.requestId(request),
+      { user: request.portalUser, session: request.portalSession, workspaceId, viewerWorkspaceId: request.portalWorkspaceId },
     );
   }
 
@@ -231,7 +260,7 @@ export class GovernanceController {
     @Query() query: Record<string, unknown>,
   ) {
     const workspaceId = await this.workspace(request, query.workspace_id);
-    return this.governance.list(request.portalUser, workspaceId, approvalListQuery(query));
+    return this.governance.list(request.portalUser, workspaceId, approvalListQuery(query), request.portalSession);
   }
 
   @Post("/governance/approvals")
@@ -257,6 +286,45 @@ export class GovernanceController {
     );
   }
 
+  /** FE-068: advisory own per-action eligibility BEFORE the click (verdict + reason_class + step-up state). */
+  @Get("/governance/stage-action-eligibility")
+  @Header("Cache-Control", "private, no-store")
+  async stageActionEligibility(@Req() request: GovernanceRequest, @Query() query: Record<string, unknown>) {
+    const parsed = stageActionEligibilityQuery.safeParse(query);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_STAGE_ACTION_ELIGIBILITY_QUERY", "Invalid stage action eligibility query.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    if (!this.stageEligibility) {
+      throw new GovernanceError("STAGE_ACTION_ELIGIBILITY_NOT_CONFIGURED", "Stage action eligibility is unavailable.", 503);
+    }
+    return this.stageEligibility.read(request.portalUser, request.portalSession, workspaceId);
+  }
+
+  /** FE-069: read-only "what would a replay of this request_key do?" for the caller's own requests. */
+  @Get("/governance/approvals/request-lookup")
+  @Header("Cache-Control", "private, no-store")
+  async approvalRequestLookup(@Req() request: GovernanceRequest, @Query() query: Record<string, unknown>) {
+    const parsed = approvalRequestLookupQuery.safeParse(query);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_APPROVAL_REQUEST_LOOKUP", "Invalid approval request lookup.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.governance.lookupApprovalRequest(request.portalUser, request.portalSession, { ...parsed.data, workspace_id: workspaceId });
+  }
+
+  /** RV-10: the R2 parent of a deployment as the capture context the Paper exit request is bound to. Read-only. */
+  @Get("/governance/paper-exit/parent")
+  @Header("Cache-Control", "private, no-store")
+  async paperExitParent(@Req() request: GovernanceRequest, @Query() query: Record<string, unknown>) {
+    const parsed = paperExitParentQuery.safeParse(query);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_PAPER_EXIT_PARENT_QUERY", "Invalid Paper exit parent query.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.governance.paperExitParent(request.portalUser, request.portalSession, workspaceId, parsed.data.deployment_id);
+  }
+
   @Get("/governance/waivers")
   async conditionsRegister(
     @Req() request: GovernanceRequest,
@@ -267,6 +335,7 @@ export class GovernanceController {
       request.portalUser,
       workspaceId,
       governanceConditionsQuery(query),
+      request.portalSession,
     );
   }
 
@@ -276,7 +345,7 @@ export class GovernanceController {
     @Query() query: Record<string, unknown>,
   ) {
     const workspaceId = await this.workspace(request, query.workspace_id);
-    return this.governance.history(request.portalUser, workspaceId, approvalHistoryQuery(query));
+    return this.governance.history(request.portalUser, workspaceId, approvalHistoryQuery(query), request.portalSession);
   }
 
   @Get("/governance/approvals/:approval_id/r1")
@@ -286,26 +355,40 @@ export class GovernanceController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.governance.detail(request.portalUser, workspaceId, approvalId);
+    return this.governance.detail(request.portalUser, workspaceId, approvalId, request.portalSession);
   }
 
   @Get("/governance/approvals/:approval_id/r2")
+  @Header("Cache-Control", "private, no-store")
   async r2(
     @Req() request: GovernanceRequest,
     @Param("approval_id") approvalId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.governance.r2Detail(request.portalUser, workspaceId, approvalId);
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.positiveParents.detail(principal,"R2",approvalId);
+    }
+    return this.governance.r2Detail(request.portalUser, workspaceId, approvalId, request.portalSession);
   }
 
   @Get("/governance/approvals/:approval_id/live")
+  @Header("Cache-Control", "private, no-store")
   async live(
     @Req() request: GovernanceRequest,
     @Param("approval_id") approvalId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
+    const principal={user:request.portalUser,session:request.portalSession,workspaceId,
+      viewerWorkspaceId:request.portalWorkspaceId};
+    if(await this.readScopes?.coreSelectionMode(principal)==="SCOPED_V2"){
+      if(!this.liveParents)throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.liveParents.detail(principal,approvalId);
+    }
     return this.governance.liveDetail(
       request.portalUser,
       request.portalSession,
@@ -315,13 +398,20 @@ export class GovernanceController {
   }
 
   @Get("/governance/exit-reviews/:review_id")
+  @Header("Cache-Control", "private, no-store")
   async exitReview(
     @Req() request: GovernanceRequest,
     @Param("review_id") reviewId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.paperExit.detail(request.portalUser, workspaceId, reviewId);
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.positiveParents.detail(principal,"PAPER_EXIT",reviewId);
+    }
+    return this.paperExit.detail(request.portalUser, workspaceId, reviewId, request.portalSession);
   }
 
   @Post("/commands/plans")
@@ -372,7 +462,7 @@ export class GovernanceController {
         400,
       );
     }
-    const parsed = DecisionPlanRequestSchema.safeParse(body);
+    const parsed = PortalDecisionPlanRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_DECISION_PLAN", "Invalid decision plan request.", 400);
     }
@@ -381,6 +471,7 @@ export class GovernanceController {
       request.portalUser,
       {
         workspaceId,
+        commandType: parsed.data.command_type,
         requestKey: parsed.data.request_key,
         approvalId: parsed.data.target.approval_id,
         expectedApprovalVersion: parsed.data.expected_approval_version,
@@ -430,10 +521,17 @@ export class GovernanceController {
         request.portalUser,
         workspaceId,
         operationId,
+        execution.data.request_key,
         this.requestId(request),
       );
     }
-    const parsed = ApplyOperationRequestSchema.safeParse(body);
+    if (body !== null && typeof body === "object" &&
+        (body as Record<string, unknown>).schema_version === "execution.command-apply-request.v1") {
+      // Typed 400 instead of the generic INVALID_APPLY_REQUEST: a missing/bad request_key is the
+      // one thing an older client of this route will get wrong (BE-P13 added it).
+      throw new GovernanceError("INVALID_EXECUTION_COMMAND_APPLY", "Invalid execution command apply request.", 400);
+    }
+    const parsed = PortalApplyOperationRequestSchema.safeParse(body);
     if (!parsed.success) {
       throw new GovernanceError("INVALID_APPLY_REQUEST", "Invalid apply request.", 400);
     }
@@ -444,29 +542,71 @@ export class GovernanceController {
       operationId,
       parsed.data.apply_token,
       this.requestId(request),
+      parsed.data.schema_version === "governance.r2-decision-apply-request.v1" ? "GOVERNANCE_R2_DECISION"
+        : parsed.data.schema_version === "governance.live-decision-apply-request.v1" ? "GOVERNANCE_LIVE_DECISION"
+          : "GOVERNANCE_R1_DECISION",
     );
   }
 
   @Get("/operations/:operation_id")
+  @Header("Cache-Control", "private, no-store")
   async operation(
     @Req() request: GovernanceRequest,
     @Param("operation_id") operationId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    const execution = await this.operations.operationOrNull(
-      request.portalUser,
-      workspaceId,
-      operationId,
-    );
-    if (execution) return execution;
-    const paperExit = await this.paperExit.operationOrNull(
-      request.portalUser,
-      workspaceId,
-      operationId,
-    );
-    if (paperExit) return paperExit;
-    return this.governance.operation(request.portalUser, workspaceId, operationId);
+    if (operationId.startsWith("ecm_")) {
+      // These durable intents already retain immutable workspace/resource/env
+      // lineage. Reuse exact audit authorization and current delivery fences;
+      // a GET must never reconcile, dispatch or amend an operation.
+      const id = commandId.safeParse(operationId);
+      if (!id.success) throw new CommandHttpError("COMMAND_INPUT_INVALID", "Check the command fields.", 400);
+      return commandHttpCall(async () => {
+        if (!this.trustedCommands) throw new Error("TRUSTED_COMMAND_READER_NOT_INSTALLED");
+        return this.trustedCommands.status({ user_id: request.portalUser.userId,
+          session_id: request.portalSession.sessionId, session_generation: request.portalSession.sessionVersion }, workspaceId, id.data);
+      });
+    }
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2") {
+      if (!this.positiveParents) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      const parent = await this.positiveParents.operationOrNull(principal, operationId);
+      if (parent !== null) return parent;
+      // Only a positively classified F0 ID reaches its UNCHANGED reader. No
+      // catch/fallback after parent selection, absence, collision or safe error.
+      if (!this.currentReads) throw new OperationalReadError("OPERATIONAL_READ_NOT_CONFIGURED");
+      return this.currentReads.workflow(principal, operationId);
+    }
+    return this.compatibleOperationParent(request, workspaceId, async () => {
+      const execution = await this.operations.operationOrNull(
+        request.portalUser,
+        workspaceId,
+        operationId,
+      );
+      if (execution) return execution;
+      const paperExit = await this.paperExit.operationOrNull(
+        request.portalUser,
+        workspaceId,
+        operationId,
+      );
+      if (paperExit) return paperExit;
+      return this.governance.operation(request.portalUser, workspaceId, operationId);
+    });
+  }
+
+  private async compatibleOperationParent<T>(request: GovernanceRequest, workspaceId: string, read: () => Promise<T>): Promise<T> {
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalWorkspaceId };
+    const fence = async () => {
+      if (await this.readScopes?.coreSelectionMode(principal) === "SCOPED_V2")
+        throw new GovernanceError("OPERATIONS_SCOPED_PARENT_NOT_COMMISSIONED", "Scoped operation records are not commissioned.", 503);
+    };
+    await fence();
+    const result = await read();
+    await fence();
+    return result;
   }
 
   private async workspace(request: GovernanceRequest, raw: unknown): Promise<string> {

@@ -34,6 +34,19 @@ describe("Alpha Fleet — entry screen for WF 2a (smoke until BR-EX-49)", () => 
     fireEvent.click(grid);
     expect(screen.queryByText("dep_live")).toBeNull();
   });
+  it("keeps table semantics, a keyboard toggle and independent navigation links", () => {
+    render(<AlphaFleet demo={fleetSmoke()} />);
+    const row = screen.getByText("Grid v2.1").closest("tr")!;
+    expect(row.getAttribute("role")).toBeNull();
+    expect(row.getAttribute("tabindex")).toBeNull();
+    const toggle = within(row).getByRole("button", { name: "Deployments for Grid v2.1" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    // Avoid jsdom navigation while still exercising the bubbling guard.
+    const link = within(row).getAllByRole("link")[0];
+    link.addEventListener("click", e => e.preventDefault());
+    fireEvent.click(link); expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.click(toggle); expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  });
   it("never sums currencies: VND and USDC stay beside their own figures", () => {
     render(<AlphaFleet demo={fleetSmoke()} />);
     expect(screen.getAllByText("VND").length).toBeGreaterThanOrEqual(2);

@@ -36,6 +36,9 @@
       "scope": "system",
       "cli_forms": [],
       "meta": "Portal-curated task; source operation not published",
+      "display_name": "System health",
+      "description": "Read-only system health check, selectable by mode; no source operation is published for it.",
+      "scope_label": "System",
       "params": [
         {
           "key": "mode",
@@ -73,6 +76,9 @@
       "scope": "account · alpha",
       "cli_forms": [],
       "meta": "cli/__main__.py:1570",
+      "display_name": "Alpha / account inspect",
+      "description": "Read-only inspection of an alpha or an account for a mode.",
+      "scope_label": "Account · Alpha",
       "params": [
         {
           "key": "alpha_id",
@@ -117,6 +123,9 @@
       "scope": "portfolio · account",
       "cli_forms": [],
       "meta": "cli/__main__.py:1636",
+      "display_name": "Capital history",
+      "description": "Read-only history of capital movements for a portfolio or an account, limited to a bounded number of rows.",
+      "scope_label": "Portfolio · Account",
       "params": [
         {
           "key": "portfolio_id",
@@ -171,6 +180,9 @@
       "scope": "portfolio · account · alpha",
       "cli_forms": [],
       "meta": "cli/__main__.py:2034",
+      "display_name": "Performance and NAV",
+      "description": "Read-only performance and NAV figures for a portfolio, an account or an alpha.",
+      "scope_label": "Portfolio · Account · Alpha",
       "params": [
         {
           "key": "portfolio_id",
@@ -222,6 +234,9 @@
       "scope": "alpha",
       "cli_forms": [],
       "meta": "cli/__main__.py:2079",
+      "display_name": "Sizing explanations",
+      "description": "Read-only history of position-sizing explanations for an alpha and symbol, limited to a bounded number of rows.",
+      "scope_label": "Alpha",
       "params": [
         {
           "key": "alpha_id",
@@ -273,6 +288,9 @@
       "scope": "account · venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1655",
+      "display_name": "Broker bindings and exposure",
+      "description": "Read-only view of the broker binding and exposure behind an external account reference, for a mode and venue.",
+      "scope_label": "Account · Venue",
       "params": [
         {
           "key": "external_account_ref",
@@ -324,6 +342,9 @@
       "scope": "venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1936",
+      "display_name": "Redis inspection",
+      "description": "Direct Redis trading-state inspection; the Portal forbids direct Redis access, so this task cannot be run from here.",
+      "scope_label": "Venue",
       "params": [
         {
           "key": "mode",
@@ -368,6 +389,9 @@
       "scope": "portfolio",
       "cli_forms": [],
       "meta": "cli/__main__.py:1592",
+      "display_name": "Create portfolio",
+      "description": "Creates a portfolio from an id, name, base currency and initial state, with a recorded reason.",
+      "scope_label": "Portfolio",
       "params": [
         {
           "key": "portfolio_id",
@@ -433,6 +457,9 @@
       "scope": "portfolio",
       "cli_forms": [],
       "meta": "cli/__main__.py:1592",
+      "display_name": "Portfolio state",
+      "description": "Changes the state of a portfolio, with a recorded reason.",
+      "scope_label": "Portfolio",
       "params": [
         {
           "key": "portfolio_id",
@@ -487,6 +514,9 @@
       "scope": "portfolio · account",
       "cli_forms": [],
       "meta": "cli/__main__.py:1617",
+      "display_name": "Change allocation",
+      "description": "Changes the capital allocated to an account within a portfolio (allocated and maximum capital, movement type), with a recorded reason.",
+      "scope_label": "Portfolio · Account",
       "params": [
         {
           "key": "portfolio_id",
@@ -562,6 +592,9 @@
       "scope": "system",
       "cli_forms": [],
       "meta": "cli/__main__.py:1842",
+      "display_name": "Config plan and apply",
+      "description": "Plans and applies a declarative configuration artifact, with a recorded reason.",
+      "scope_label": "System",
       "params": [
         {
           "key": "config_artifact_id",
@@ -606,6 +639,9 @@
       "scope": "deployment",
       "cli_forms": [],
       "meta": "cli/__main__.py:1612",
+      "display_name": "Deployment state",
+      "description": "Changes the state of a deployment, with a recorded reason.",
+      "scope_label": "Deployment",
       "params": [
         {
           "key": "deployment_id",
@@ -660,6 +696,9 @@
       "scope": "venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1783",
+      "display_name": "Trading state",
+      "description": "Sets the trading state for a mode and venue, with a recorded reason.",
+      "scope_label": "Venue",
       "params": [
         {
           "key": "mode",
@@ -721,6 +760,9 @@
       "scope": "alpha · venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1783",
+      "display_name": "Risk profile",
+      "description": "Sets the risk profile applied to an alpha for a mode and venue, with a recorded reason.",
+      "scope_label": "Alpha · Venue",
       "params": [
         {
           "key": "alpha_id",
@@ -786,6 +828,9 @@
       "scope": "alpha",
       "cli_forms": [],
       "meta": "cli/__main__.py:1570",
+      "display_name": "Register alpha",
+      "description": "Registers an alpha from a registration artifact, with a recorded reason.",
+      "scope_label": "Alpha",
       "params": [
         {
           "key": "alpha_id",
@@ -840,6 +885,9 @@
       "scope": "account",
       "cli_forms": [],
       "meta": "cli/__main__.py:1690",
+      "display_name": "Account policy",
+      "description": "Updates the policy of an account at an expected revision, with a recorded reason.",
+      "scope_label": "Account",
       "params": [
         {
           "key": "account_id",
@@ -901,6 +949,9 @@
       "scope": "account · alpha · venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1690",
+      "display_name": "Seed paper account",
+      "description": "Seeds a paper account for an alpha on a venue with a starting amount and currency, with a recorded reason.",
+      "scope_label": "Account · Alpha · Venue",
       "params": [
         {
           "key": "alpha_id",
@@ -983,6 +1034,9 @@
       "scope": "account · venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1690",
+      "display_name": "Broker account sync",
+      "description": "Synchronises an account with its broker for a mode and venue, with a recorded reason.",
+      "scope_label": "Account · Venue",
       "params": [
         {
           "key": "account_id",
@@ -1044,6 +1098,9 @@
       "scope": "account · venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1690",
+      "display_name": "Reconcile positions",
+      "description": "Reconciles the positions of an account with the broker for a mode and venue, optionally syncing first and optionally applying the result.",
+      "scope_label": "Account · Venue",
       "params": [
         {
           "key": "account_id",
@@ -1119,6 +1176,9 @@
       "scope": "account · venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1690",
+      "display_name": "Reconcile open orders",
+      "description": "Reconciles the open orders of an account with the broker for a mode and venue, optionally syncing first and optionally applying the result.",
+      "scope_label": "Account · Venue",
       "params": [
         {
           "key": "account_id",
@@ -1194,6 +1254,9 @@
       "scope": "account · venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1655",
+      "display_name": "Aggregate physical reconcile",
+      "description": "Reconciles positions for a broker binding (external account reference) for a mode, venue and domain, optionally syncing first.",
+      "scope_label": "Account · Venue",
       "params": [
         {
           "key": "external_account_ref",
@@ -1269,6 +1332,9 @@
       "scope": "account · alpha · venue",
       "cli_forms": [],
       "meta": "cli/__main__.py:1985",
+      "display_name": "Emergency close",
+      "description": "Emergency close for an account or alpha on a mode and venue; needs the typed word CLOSE and two-person approval.",
+      "scope_label": "Account · Alpha · Venue",
       "params": [
         {
           "key": "account_id",
@@ -1334,6 +1400,9 @@
       "scope": "system",
       "cli_forms": [],
       "meta": "Portal-curated task; source operation not published",
+      "display_name": "Shared testnet hard reset",
+      "description": "Host-level hard reset of the shared testnet; blocked in the Portal and not exposed.",
+      "scope_label": "System",
       "params": [],
       "typed_confirm_word": "BINANCE_TESTNET_ONLY",
       "authority": {
@@ -1363,6 +1432,9 @@
       "scope": "system",
       "cli_forms": [],
       "meta": "Portal-curated task; source operation not published",
+      "display_name": "Lab reset",
+      "description": "Host-level reset of the lab environment; blocked in the Portal and not exposed.",
+      "scope_label": "System",
       "params": [],
       "typed_confirm_word": null,
       "authority": {

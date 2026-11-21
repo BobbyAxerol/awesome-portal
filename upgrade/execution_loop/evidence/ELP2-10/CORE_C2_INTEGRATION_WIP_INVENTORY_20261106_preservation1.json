@@ -1,0 +1,2937 @@
+{
+  "schema": "portal.c2.integration-wip-inventory.v1",
+  "head": "2faa8968fddbde59b2e59525e334ba3d83886144",
+  "exclusions": [
+    "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATION_WIP_INVENTORY_20261106_preservation1.json"
+  ],
+  "entries": [
+    {
+      "path": "apps/control-api/src/app.module.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 55096,
+      "mode": 436,
+      "sha256": "ab6160fdd6dcdfbd36fe52b215dd6af95325620a5b11ec7b3719003ae51b985e"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-a1-source-intake.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4108,
+      "mode": 436,
+      "sha256": "f69abf36014e73aac869e12c87b9a3f2cc55b5750771b82dac813d8d4fbf664b"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-a2-manifest-draft.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2795,
+      "mode": 436,
+      "sha256": "a3a4a4cdd1c39917c028ecb9134f3b6ec4b35428de3e998c63bb5f5354576b77"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-b1-preflight.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6887,
+      "mode": 436,
+      "sha256": "2a72c6609b7db2d29b2b5f6614c6ac51effa77549c3db31fa3fb9d50ca0b90a4"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-b1-stage.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4154,
+      "mode": 436,
+      "sha256": "e5919fab9b806b0325c946b5cad70d8b552b54dcc6431fb49e5281168e8e35b5"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-b2-custody.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3460,
+      "mode": 436,
+      "sha256": "4532bb16acc884b3c5a27c5c34ad28558ba35c6c5ac9ef172785839563ed3c71"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-b2-custody.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 11844,
+      "mode": 436,
+      "sha256": "5876da6e714441ed45bbc022d84e06644dd2eb2dd99833976032577c3094fbe0"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-b2-dry-run.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5211,
+      "mode": 436,
+      "sha256": "576e123f1cf70cbdc208f279def666addc4e3bb6728c3780f508f3f007019ca7"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-b2-publication-preflight.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4088,
+      "mode": 436,
+      "sha256": "5a29bf5b979633d5ef65b1a48b40bf0aae42e15a47c48fd108c413bff2cac38b"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-block-new-fence-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5705,
+      "mode": 436,
+      "sha256": "a1834c592ff192394e978cd3cbf2bb7da878960d2c2cdc31bc78c81c82af7f63"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-block-new-procedure-acl-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 8387,
+      "mode": 436,
+      "sha256": "462f2de49946800423f326af62d7cb32b88ee1422d22b6cced7dd392f16719f8"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-block-new-procedure-core-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6456,
+      "mode": 436,
+      "sha256": "cd33a1d2b7627d4a2dcbf633631dda2b0bab07ca97afc9483e5f956de4fa1dcc"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-custodied-issuer-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4905,
+      "mode": 436,
+      "sha256": "bd5400d4b7b27f4c55b9b70f788798039681607fc3f77c2f373a9cae3e3bd31c"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-custodied-terminal-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5684,
+      "mode": 436,
+      "sha256": "e5654b26783350aa16a6e633f6cbd1140ac7603b32dc7299acb4b4a92b20e948"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-custody-append-contention.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1760,
+      "mode": 436,
+      "sha256": "bf970125df62870c164280274a495ecae5477c1924b0f7f4a307e01b3b78f25b"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-custody-pending-error.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 295,
+      "mode": 436,
+      "sha256": "2d45510455ac011587656bf328a6929bfee964b89c5e9490b0d709e4c682daa5"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-delivery-obligation-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6435,
+      "mode": 436,
+      "sha256": "caeddead23601720e2082a0631f6e09a20c660b6177a6826611bd1fa679f608a"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-delivery-procedure-acl-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 10577,
+      "mode": 436,
+      "sha256": "04c82994c7ac37c1af7ee3fcbfe47b0f67cc28c3b90bc1fa73a7e0784e6e1e6a"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-human-issuer-composition.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 12302,
+      "mode": 436,
+      "sha256": "50d84886c8e24b63ba3f1045c7f978168541406b52a66204c86550da051d8e73"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-human-issuer-upgrade-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 10970,
+      "mode": 436,
+      "sha256": "5e3abc674c8d68213c5c01f3e697a3fd8a193615a08db4c674978b282199cf57"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p5-revision-outbox.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7263,
+      "mode": 436,
+      "sha256": "5bccd29dff016fb93708a45df318973dae77db2d9d3ec95cd1663433ba16d45f"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p5-revision-outbox.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5920,
+      "mode": 436,
+      "sha256": "2f68026a4eff8adf801746834e9f6a11f1213a45fcdd1fa56519379fc23bc744"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-acceptance.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1727,
+      "mode": 436,
+      "sha256": "9e6aa7c4adb5807d4a8a6b19d63f035de2089384f078af474dcb3eff1ec5ae1d"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-acceptance.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 17444,
+      "mode": 436,
+      "sha256": "80509d43bcd680818b633b8ae1cb5f509d6d8a356ce4d53ec1cc6208163a2743"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-bound-lease-definer-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2592,
+      "mode": 436,
+      "sha256": "41f5296c6cf211f1bbe04a58ce674221c02be5b25d5a525ae6ac644bda097987"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-bound-lease-fence-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5115,
+      "mode": 436,
+      "sha256": "d1accc3e61ce536341b624a8f2741f9d713046cb33d5867248af19bdbf39fecf"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-delivery-definer-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3246,
+      "mode": 436,
+      "sha256": "887dc98c851ae681316ff4f0123bfeaabbbccbd0166799ab229f36f5aff2aee9"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-delivery-fence-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2975,
+      "mode": 436,
+      "sha256": "d150a7d3cc36643a0e802de46bff9c2e244cc27aeeaebae7ffe1b3cda1b5be7d"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-emergency-reduction-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5377,
+      "mode": 436,
+      "sha256": "9e0e3a6f0a607416f950438ae96674425e2a0197a3a94d846040e2db73a40d53"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-http-delivery-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5634,
+      "mode": 436,
+      "sha256": "a84841f492446d4a3472e912e9570982ef85a9500517c4f7a768eddef0f9ccaa"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-issuer-fence-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 13530,
+      "mode": 436,
+      "sha256": "72a2f69d0578fcc059d479372dc146be604b8306748b0b37400397edf2b5a2f0"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-legacy-lease-trigger-definer-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3506,
+      "mode": 436,
+      "sha256": "aba03f64fcd7b72115f6f716da7e04e30318adba6a6f1591d27f3417ab8d97c1"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-locked-registration-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5073,
+      "mode": 436,
+      "sha256": "2a4290c44ab3bcc26d29d9e1250b1472a499738fa02dd4c9ec4b48970079ba3d"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-owner-auth-attestation-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3863,
+      "mode": 436,
+      "sha256": "55fdfd8f286674689683e091aa9834b2f823c12c194b06b02eab25a8dd4ec0dc"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-owner-confirm-signer-candidate.controller.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2767,
+      "mode": 436,
+      "sha256": "bcc74ea7994a2f9b00200ea755909e797407dc5753fb5827d0008631519b4666"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-owner-confirm-signer-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 12557,
+      "mode": 436,
+      "sha256": "6a87b10c4a2aa1ea50572fb7710dea783e93db79cc84e91c8711cf37bbb5b9d8"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-owner-confirmation-proof.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3886,
+      "mode": 436,
+      "sha256": "4c338acf93333436f6e2c4dda991faf04118fb3630e2ee9fe7501a2a33837083"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-owner-intent-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2956,
+      "mode": 436,
+      "sha256": "6c29c72cca26a802dd05188412579f6e06a8c5bbb0ebd796d9db466cee7e0734"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-owner-intent-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 13657,
+      "mode": 436,
+      "sha256": "bde0c849fe6db73b1112349092dd86b9fa13b425778e240ca5326ab2e0e10aa1"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-owner-witness-custody-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2109,
+      "mode": 436,
+      "sha256": "3a0bbe6b7ee8b6c063ced3c840c0c85a8b5d9b2f30899195330cd4eac3c47a7c"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-owner-witness-custody-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 16640,
+      "mode": 436,
+      "sha256": "7e8031832ffe2cd67b5d9f3c0f0f95004d12665e91b03b8f51cafc7602920982"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-record-link-upgrade-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2922,
+      "mode": 436,
+      "sha256": "ee5ac146e7192df1dc2b93fa2e088c4a1460a499a096df4d37e5396b46b06e1c"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-record-lock-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 665,
+      "mode": 436,
+      "sha256": "a7db0786bcb4fda25ec55b2bfd81e84edd124110991c9bb5e52a4e90bcf8d1cf"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-record-lock-definer-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3413,
+      "mode": 436,
+      "sha256": "4d957cfda9b7ff9c0e5d02e2c36ee2292e4d6de8bf2d12b2ac47c9967ba1f1a1"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-registered-source-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4694,
+      "mode": 436,
+      "sha256": "745a7dc99c722c4adf2b0b3c21790899d1996d41313efceaaf1b2e4068ea11f5"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-registration-read-lock-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 628,
+      "mode": 436,
+      "sha256": "0f445a7c51d9f9036bdb8b80f201422b5870b93cc055b82f3f1b4c9bf25f934b"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-registration-read-lock-definer-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3474,
+      "mode": 436,
+      "sha256": "dd434027f83b990a944243b1983f3a757a11328ec768991b068140a926f79720"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-registration-table-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2161,
+      "mode": 436,
+      "sha256": "a806e9ad2da5d945c4ebe7a31d920365764b3fe7b87351e435749a1c837b6f1c"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-registration-writer-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 9983,
+      "mode": 436,
+      "sha256": "2d33a7f7fca4b373adbe584a4c9bf6e0eb6902f239f4c9d92b3453f6c85be41d"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-review-candidate.composition.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2344,
+      "mode": 436,
+      "sha256": "e94d193f7d9b973582b2a10e971a0bc710fdf6df96b4618d01ac8fc21919bdb7"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-review-candidate.controller.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5549,
+      "mode": 436,
+      "sha256": "8085d6f00c58c3eb6f3d5e5b061e79faaad9f4fe84ca208f18f574a362aa759a"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-review-candidate.service.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 16666,
+      "mode": 436,
+      "sha256": "a5a587c7d8367104e48a93d43eee748d1d74044d0dc3243f9030e55012cd105c"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-review-lock-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1231,
+      "mode": 436,
+      "sha256": "feea7cdd7bf219bcfbf094a6474ed82f816afa677698c023e94ba4ca1729d8fc"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-review-lock-definer-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4448,
+      "mode": 436,
+      "sha256": "26af999afc10c9af117d87103a15d854f30cb53af3c64949eae78cb4e8facfa0"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-review-runtime.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6585,
+      "mode": 436,
+      "sha256": "4497b2b06c20aaae3e30f5f6804dc3d4a00fe6b05d5d28c5004bab74e5290e73"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p7-schema-observation.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 12471,
+      "mode": 436,
+      "sha256": "97bc5c4cb93d7e23661e5c35f942694775536a85e0f7951ee0c26205a7efbc72"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-p8-public-key.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2939,
+      "mode": 436,
+      "sha256": "08a46c907b8037f784bd40b16802097b37956af280f312f688a278ee42705307"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/c2-public-trust-preflight.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7655,
+      "mode": 436,
+      "sha256": "538b210d6ca6def156d4ed7b3d9c0d28e72d6fc9dbf829f6d3731bb2f620340e"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/command-source-assertion.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 73773,
+      "mode": 436,
+      "sha256": "1f66f44215f9a50fac91ecb36512e64fab9e96a5e96c9bbf2aa89ffa140329f9"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/command-status-ack-census.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1773,
+      "mode": 436,
+      "sha256": "5d3f378c126e82009168e16949bd43d1dc3f60705c70ab67ba4c7ffd8ca6ec87"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/command-status-preparations.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 11726,
+      "mode": 436,
+      "sha256": "86da77c528fc60ac17888c59378c5735d9e1c2c00333ac64d8fd75c64be287ee"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/current-human-c2-unentered-unknown-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1803,
+      "mode": 436,
+      "sha256": "dda4e2655cb1a8d07be4d61bb099b3111da6df9908576876f6c83c307e07ddd7"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/current-human-candidate.sql",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 33488,
+      "mode": 436,
+      "sha256": "efdfc8d3246acbd81df170cbdb5440925148d97abd0b0aa16f20c69fc17d7189"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/current-human-candidate.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 155429,
+      "mode": 436,
+      "sha256": "ccc2f6b084a3c847761109f41f7cf75e61464528f9a518e93b35d83a2191888c"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/current-human-drain-counts.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3490,
+      "mode": 436,
+      "sha256": "f334811c7d3ba2a10974a45d6f4b0f1e93119739e99283e7333130cb6da3e635"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/current-human-recovery-client.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 8000,
+      "mode": 436,
+      "sha256": "3c9c03f88cce567e9411acd83a37095f3d96b401e985f16e84b5124bcd86e239"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/current-human-transport.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 10506,
+      "mode": 436,
+      "sha256": "c5fe3f48eff835bf2bdca071a77488daf93c252fdda1f1c02c5efe3c035518a2"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-c2-inventory.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7480,
+      "mode": 436,
+      "sha256": "130eccacb990d46ee2c5a5b4431c7b28eb1cc56644cdd749f3ebf47648a13ca6"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-c2-journal-authentication-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1089,
+      "mode": 436,
+      "sha256": "e6cc1cb27ebdfe4f42f3a1da4498fad13a9ac9a281f6e77e81e27a64626d0c08"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-c2-journal-authenticator-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2811,
+      "mode": 436,
+      "sha256": "2cccd9231195eb4027d8365de3a077e807d5a3b998259c8e71feb609c7854e18"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-c2-original-recovery.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 13192,
+      "mode": 436,
+      "sha256": "08089198e88a5e9826f37eccd74a93caa46df51e62a89a71d2312ce91affed53"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-c2-source-proof-vault.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4850,
+      "mode": 436,
+      "sha256": "efb09cfcb8a62dc87ca5876d2b8a82fe92fc3875112bf5bffbd6e219ca8044ec"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-authority-journal-upgrade-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2941,
+      "mode": 436,
+      "sha256": "836eac70f18bcc4528488d68817f3e9192b14e13ffd40c34f739dbc86e7a5dfe"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-authority-nologin-upgrade-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3780,
+      "mode": 436,
+      "sha256": "d0fd73b5c6bd05dc5c28c3eff9522ef9fd9442aafc130633e9a6b182b109cd70"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-authority-reader.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 12098,
+      "mode": 436,
+      "sha256": "7442b3ce7e585bb731d3210e282ee31fd31a638037f409cf4c026fcbcc95e7c9"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-authority.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3577,
+      "mode": 436,
+      "sha256": "116293cf504dec713f6a64f33e1519517a6283c691c94fdbf83f9fe3eb99433d"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-authority.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 35540,
+      "mode": 436,
+      "sha256": "18105232d8661bce184344be89252e46a7c34efae4b661fef441aa8196c8f055"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-closed-observation-upgrade-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4416,
+      "mode": 436,
+      "sha256": "7e206a6ac9c9a4a94c7238e0d830af67c485dd01d40df9f496d10db2286682d4"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-fresh-witness.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7732,
+      "mode": 436,
+      "sha256": "a03624ee7b9b270dd369ccd78f2e41c051062b30e6b2398ccaae76695c9722e5"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-read-lock-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 705,
+      "mode": 436,
+      "sha256": "a0ffaec1ae0c57f94066d907087ed267e9a3fb03b6edd71ac814ff406516b12a"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-checkpoint-signed-anchor.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6090,
+      "mode": 436,
+      "sha256": "4dc2aa35c433dce900595cb7d2658b32aa5bf3fb00cf499525715b502e99f598"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-core-quiescence.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 9442,
+      "mode": 436,
+      "sha256": "bd2cc0f097bff0af151d132f717698f94409f1759cb1c5ff1d7f7397f1de6254"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-independent-custody-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2820,
+      "mode": 436,
+      "sha256": "061a51a18d17fc10631e9226f0c08e36c6ba160bd409155490a56e9a5addd2d0"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-independent-custody-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 52829,
+      "mode": 436,
+      "sha256": "7cfba9f03915bb1e5bf2cdb42b907ab427e661bcb13c2e648ec01c226d7520a0"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-independent-custody-journal-upgrade-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3746,
+      "mode": 436,
+      "sha256": "f3e1fa2186cea826c558f47e4e673a7889f773a4cdb81c7937a32aab55561010"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-inventory.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 9524,
+      "mode": 436,
+      "sha256": "89862b9630492fc968ad58422759695482317bb5ce88722b408619753521c8ff"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-local-database-quarantine-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7453,
+      "mode": 436,
+      "sha256": "363ab62a692fdb7dcc4de023c01fc6d0886d9e6fd61736d52ce2eb1de19bdac8"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-local-generation-c2-extension-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 10024,
+      "mode": 436,
+      "sha256": "37b8a0ce400cb7d09009ebdba15d96acd4f379f5e52454020ae24dc435bac05c"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-local-generation-delivery-extension-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 11543,
+      "mode": 436,
+      "sha256": "0b3c5e8633379e9a0c047164093659454d6e509c2f6450d33f85ae91896a4249"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-local-generation-fence-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 14495,
+      "mode": 436,
+      "sha256": "de44ec0cb5b46252c9653b66673b163e3807669a04eecf2f34702c78e1e87b6a"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-local-generation-public-extension-candidate.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 13988,
+      "mode": 436,
+      "sha256": "a7b4656480b773d34bb156fe0fa137e433030054e5cc111d4701fa1c06223a89"
+    },
+    {
+      "path": "apps/control-api/src/execution-v2/restore-local-writer-quarantine-candidate.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6434,
+      "mode": 436,
+      "sha256": "2f7271b518576eda62c47c5432d2e7cd6f2f332308a7da0ad3cf927ede55f7ec"
+    },
+    {
+      "path": "apps/control-api/src/main.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 7575,
+      "mode": 436,
+      "sha256": "543201313922c1d3d06bd8d747dd15508d5ae5bf995390af46951e7129e1e970"
+    },
+    {
+      "path": "apps/control-api/test/c2-a1-source-intake.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5190,
+      "mode": 436,
+      "sha256": "058efeca2bd6dbb6d26fa943d15b0f37539506810c9eea5ba3ac7e465937456d"
+    },
+    {
+      "path": "apps/control-api/test/c2-a2-manifest-draft.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3088,
+      "mode": 436,
+      "sha256": "e72293d38b1c3f0462add54ab1ff103b45c86dda78947300c1f2ba3cb2800d0d"
+    },
+    {
+      "path": "apps/control-api/test/c2-b1-preflight.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6033,
+      "mode": 436,
+      "sha256": "6b1e1c3c3b339af01997dc5b82d8d03370f814cc048615fc76137ea6bce688ac"
+    },
+    {
+      "path": "apps/control-api/test/c2-b1-stage.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5140,
+      "mode": 436,
+      "sha256": "8ba8d4ab607523218b73a2f1f736f9e61faf317a2783385779195d32b73087ec"
+    },
+    {
+      "path": "apps/control-api/test/c2-b2-custody-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5891,
+      "mode": 436,
+      "sha256": "f265588c4c776b09ff760b42f2cd4667104eb595a0ae0272591c53c77d05ff0a"
+    },
+    {
+      "path": "apps/control-api/test/c2-b2-custody.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 12032,
+      "mode": 436,
+      "sha256": "574a2fac093ac19f309e9a9bc310a1188fe44a2a179e9c2b4a89bcf46f81bea8"
+    },
+    {
+      "path": "apps/control-api/test/c2-b2-dry-run.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6156,
+      "mode": 436,
+      "sha256": "af15ea5a979d7413595838b9fd5687f32d67b90f9df33b4bc916521988f50bab"
+    },
+    {
+      "path": "apps/control-api/test/c2-b2-publication-preflight.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6267,
+      "mode": 436,
+      "sha256": "f14a508a47dd57d1526c1a7f699c4a5cb2d2f8cecc747eb115d0b73a184c8c69"
+    },
+    {
+      "path": "apps/control-api/test/c2-delivery-obligation-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 11189,
+      "mode": 436,
+      "sha256": "4bf82827c60b1b154037f22c56a241bd11504fa7b1f0e5296d090db14a504b33"
+    },
+    {
+      "path": "apps/control-api/test/c2-delivery-procedure-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 24962,
+      "mode": 436,
+      "sha256": "53e03308468701d90790b04d3cc8c2798cd7e5e6d101b1d1f60be71a8697376c"
+    },
+    {
+      "path": "apps/control-api/test/c2-historical-candidate-rehearsal.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 11227,
+      "mode": 436,
+      "sha256": "f9dbfa4bdd3661ba8aa0750900793f01a0e3a46d272c2f7e7a761782ca54fdaf"
+    },
+    {
+      "path": "apps/control-api/test/c2-human-issuer-composition.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 16765,
+      "mode": 436,
+      "sha256": "08b47297556c4f8dba86bb8323054f547e83dc9f4e20df986af8c22d631c2b0b"
+    },
+    {
+      "path": "apps/control-api/test/c2-owner-issuer-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 56366,
+      "mode": 436,
+      "sha256": "b6ddab91f6486a284a966c2823a525840d6661bd53253fe17928893f41fce27f"
+    },
+    {
+      "path": "apps/control-api/test/c2-p5-revision-outbox-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 11401,
+      "mode": 436,
+      "sha256": "bc1d2ea8aa101c3c56a1e2859f958ff0e9dfb3b60f031521e7f5579f3eb77439"
+    },
+    {
+      "path": "apps/control-api/test/c2-p5-revision-outbox.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4489,
+      "mode": 436,
+      "sha256": "6162fcd8bc8576261667f4f92fe738b1764a74d450714916995a5efdc1e51960"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-acceptance-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 20271,
+      "mode": 436,
+      "sha256": "e7c80d471a8f2daa46305c7a1d8c11940ebc549858d075852d40777a62125680"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-acceptance.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 10053,
+      "mode": 436,
+      "sha256": "a599123ed93ef37b2eef5cc601cbcdfa85bc05dbf1349ab96af24f29024ac08c"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-app-module.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7503,
+      "mode": 436,
+      "sha256": "12e72fa2cfa9470360d5ab0867efcfb03ca32189fe33264acbc45ba0dac1e280"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-emergency-reduction-candidate-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 9889,
+      "mode": 436,
+      "sha256": "4f30199d3bca068ce79785be78ab451ef2ad4e7ff1ecaea9c77d1161dd5543cc"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-emergency-reduction-candidate.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4140,
+      "mode": 436,
+      "sha256": "5eef058a4ab077157914f2816ef57fe17afe7cb84fbd588c6ef0088eee60242e"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-locked-registration-candidate.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5170,
+      "mode": 436,
+      "sha256": "69421f84cdae9e897a9b0068d86617307b26d69515895a9baf9d94bd65a70722"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-owner-auth-attestation-candidate.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2864,
+      "mode": 436,
+      "sha256": "f98adab4cf299816705aca2df420375811f33b6a37f97e4a93fc05c114b6d5f8"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-owner-confirmation-proof.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3391,
+      "mode": 436,
+      "sha256": "a4578df1f62d1cd001dfdd3ea95bc8ee96b9f8107035bee2a101a76a0c88b1e7"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-owner-intent-candidate-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 107991,
+      "mode": 436,
+      "sha256": "7087f2b84b1699857f3e19f72dd35f70840e42974c005bbc1ee530a6f00e48f1"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-owner-intent-candidate.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 8726,
+      "mode": 436,
+      "sha256": "6913cb34c7d20a626385b45f56a98ce6fda4fa2785ff51e67590c1a621f461a3"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-record-link-upgrade-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7143,
+      "mode": 436,
+      "sha256": "f1affc6cbab377087c68ab8f700f6df3434ca90d264d15ffbb53d5a3b39b9f1d"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-registered-source-candidate.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5314,
+      "mode": 436,
+      "sha256": "9967f53a3c6570db71c3bff333de7939e270af1475db7912e9a389ccb1389088"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-registration-writer-candidate.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5282,
+      "mode": 436,
+      "sha256": "774d8daa64f946e3619697aafcdb85c6ffc9d8631dc6add9994c0297b2845c64"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-review-candidate-codec.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3848,
+      "mode": 436,
+      "sha256": "a1729bc7f338de9707e225338d162042d2885c0ed1d995f2bc1c9e37b4ebcf4e"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-review-candidate-composition.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3206,
+      "mode": 436,
+      "sha256": "94a1ed7779fc24380f8df9699220b01730d81af41bcc9b6b932f72bc5319883b"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-review-candidate-http.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 8374,
+      "mode": 436,
+      "sha256": "ccc44de7387da9a0e03bbaad645e42b728eb2137e31a8ed75dd4a34957c6787f"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-review-candidate.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 22584,
+      "mode": 436,
+      "sha256": "f720d014a2270e755c8b6b31a33527903933d9e3fb587f3e03bd9062c550348e"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-review-runtime.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6316,
+      "mode": 436,
+      "sha256": "5675f0fd0db7187384fe9c3825d986e6683728c45917d06f15eebe686ee882a4"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-schema-observation-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 28501,
+      "mode": 436,
+      "sha256": "6aaa00eed865d0283361b68009477152286e7156cdfbbb11605793d3f20d78b4"
+    },
+    {
+      "path": "apps/control-api/test/c2-p7-test-only-registry-writer.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2339,
+      "mode": 436,
+      "sha256": "5769de6e4b153bde6443c7496e0164ba248bf2225fec5612186f6ade4f78ba95"
+    },
+    {
+      "path": "apps/control-api/test/c2-p8-public-key.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3609,
+      "mode": 436,
+      "sha256": "82ea25be55442053d2ca83ed0e746ceba0f9cdeaeee68bb1fc40b3402a243260"
+    },
+    {
+      "path": "apps/control-api/test/c2-public-trust-preflight.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5791,
+      "mode": 436,
+      "sha256": "1a40a89971a87c1546ebfb7a27b5884b4f8ef6ff1d57ba9e91cc3a3d878b7c02"
+    },
+    {
+      "path": "apps/control-api/test/c2-public-trust-research.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1796,
+      "mode": 436,
+      "sha256": "d491ac08e910f177d33af75be3ebc6468ea5ca80298d76b71b86ff51b58760ee"
+    },
+    {
+      "path": "apps/control-api/test/c2-unentered-unknown-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7572,
+      "mode": 436,
+      "sha256": "c36fa5093f8918a25cf9498fb293c6411987cb5173f9c961b5e758cff4544dfe"
+    },
+    {
+      "path": "apps/control-api/test/command-source-assertion-pg.spec.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 73007,
+      "mode": 436,
+      "sha256": "d0b03ae718a9aa319fbbaadfe57bfb55ec450774afd9711f430bf6ced5108586"
+    },
+    {
+      "path": "apps/control-api/test/command-source-assertion.spec.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 74163,
+      "mode": 436,
+      "sha256": "367693246de14aebf8d12ff66edb0a15e32fe3afd5a06b5fb1f9af5670e69d25"
+    },
+    {
+      "path": "apps/control-api/test/command-status-ack-census-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 10609,
+      "mode": 436,
+      "sha256": "6302cadce7418b17a5b18dda2a808813fb1b73bb576a6fe97db8baf7b62f19c0"
+    },
+    {
+      "path": "apps/control-api/test/current-human-drain-counts.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2738,
+      "mode": 436,
+      "sha256": "bc8744a75b92c8f83b0399249e2b2f62c9af2b1a4106604cd8de9336abe81bb2"
+    },
+    {
+      "path": "apps/control-api/test/elp210-current-human-candidate.spec.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 92960,
+      "mode": 436,
+      "sha256": "d61b8185c430c7df809f4074e4ccf12cafd8a71ca6eed8098357a7f6dd94de7f"
+    },
+    {
+      "path": "apps/control-api/test/elp210-current-human-transport.spec.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 21334,
+      "mode": 436,
+      "sha256": "32774695e96bddb4947c985b8925ff45f74713f879bb04361bf11de1646e7010"
+    },
+    {
+      "path": "apps/control-api/test/elp210-recovery-failure-boundaries.spec.ts",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 13004,
+      "mode": 436,
+      "sha256": "d65652c4e80f0d89853b2f17c791a31ca84401d3ee0675aebe39eae849c3ddba"
+    },
+    {
+      "path": "apps/control-api/test/fixtures/restore-quarantine-sessions-test-only.sql",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1249,
+      "mode": 436,
+      "sha256": "f56fa8a2a96fd7472d2c012052c4d505f398b825b47f9878c6556f9b5bdb6234"
+    },
+    {
+      "path": "apps/control-api/test/legacy-dr-guard-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2638,
+      "mode": 436,
+      "sha256": "e389f243cb1685390b2cb3fbd36f182333e41052c551bf3263ce3f953bdf010d"
+    },
+    {
+      "path": "apps/control-api/test/restore-authority-upgrade-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 13234,
+      "mode": 436,
+      "sha256": "5982776647ebddbaf6322598528e95fd41f08ff65782060a17ba26bf403ef603"
+    },
+    {
+      "path": "apps/control-api/test/restore-c2-journal-authenticator-candidate.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2892,
+      "mode": 436,
+      "sha256": "7e8e7c9fceb295e8976b5f0b2ff8e7397551ac0739a42fbf8dcf574176f735e8"
+    },
+    {
+      "path": "apps/control-api/test/restore-c2-original-recovery.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5956,
+      "mode": 436,
+      "sha256": "56132ee245c44a7d78e85802a881b41ffaa70793e961398a7eb3484299593ffe"
+    },
+    {
+      "path": "apps/control-api/test/restore-c2-source-proof-vault.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2504,
+      "mode": 436,
+      "sha256": "63569e3133791b704b0e7d6f5268afbc88575573f5fef82b7a4979f0230a4281"
+    },
+    {
+      "path": "apps/control-api/test/restore-checkpoint-authority-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 82305,
+      "mode": 436,
+      "sha256": "ef7de1fa6466763ace784af769a3f794250eac0aa5f89a511e77014f7367909f"
+    },
+    {
+      "path": "apps/control-api/test/restore-checkpoint-authority.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 8344,
+      "mode": 436,
+      "sha256": "c6bd825c18faea41804e428b267e970d0024e16c802a624586ce626de16e8a61"
+    },
+    {
+      "path": "apps/control-api/test/restore-core-quiescence-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 22363,
+      "mode": 436,
+      "sha256": "f69ba036694dfa709792c4adc430a8bbb5979da19dd1aeda5767d22cbeded41c"
+    },
+    {
+      "path": "apps/control-api/test/restore-core-quiescence.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 10807,
+      "mode": 436,
+      "sha256": "f4bbd6c5a333fcca0457224d1388c2af42b737dd3b29802ef87f5439f3818e14"
+    },
+    {
+      "path": "apps/control-api/test/restore-independent-custody-candidate-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 95378,
+      "mode": 436,
+      "sha256": "cb7c2e14efa7b4e1451f3217772de35df1ebdd1dc3a8c72ce2722cab8a0af7b1"
+    },
+    {
+      "path": "apps/control-api/test/restore-inventory-rls-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7394,
+      "mode": 436,
+      "sha256": "d9db359964663540d2f4060f1433d0a40c42850e9c3ce01511a389b76024836f"
+    },
+    {
+      "path": "apps/control-api/test/restore-inventory.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 8431,
+      "mode": 436,
+      "sha256": "0642cf702f074add1366cd8a0fe0389a289e6e586d752c9eee28d4bcb0295ba3"
+    },
+    {
+      "path": "apps/control-api/test/restore-local-database-quarantine-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6973,
+      "mode": 436,
+      "sha256": "9214277ba89889abb3e3f3e26e22f720152ab60809f6d950031e58be8ac1a3ed"
+    },
+    {
+      "path": "apps/control-api/test/restore-local-generation-c2-extension-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 13563,
+      "mode": 436,
+      "sha256": "54ee20c63c3649fe935d6bc568d3ed08c2ae2e5d786cc06b6e8681a4039fd4db"
+    },
+    {
+      "path": "apps/control-api/test/restore-local-generation-delivery-extension-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 12448,
+      "mode": 436,
+      "sha256": "8a7ac833b94d99cdf83d7ad5e08ed87d23f5314b1d7ed8dbd0dd76258cfb9eec"
+    },
+    {
+      "path": "apps/control-api/test/restore-local-generation-fence-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 22078,
+      "mode": 436,
+      "sha256": "21c55fe5cd435523478d3bf28bc101e0991ed95cb43f5e8a6d81261d08d57bd8"
+    },
+    {
+      "path": "apps/control-api/test/restore-local-writer-quarantine-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6957,
+      "mode": 436,
+      "sha256": "c6e009dd95384fc9dc5c5c5f70cc476c96fd5c861f2bad31c4d3be1d79e3c5e4"
+    },
+    {
+      "path": "apps/control-api/test/restore-quarantine-sessions-pg.spec.ts",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5393,
+      "mode": 436,
+      "sha256": "0711acd2c3dbfb8bfe4dd94c8609925cc5944d99346431220489c530e40d56e7"
+    },
+    {
+      "path": "deploy/images/control-api-c2-research-candidate.Dockerfile",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1755,
+      "mode": 436,
+      "sha256": "5fd35df14534607f462af0908d788cd74ce6bc96c25b1439d6f9a690eab7f2d2"
+    },
+    {
+      "path": "scripts/build-c2-static-public-bundle.mjs",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5426,
+      "mode": 436,
+      "sha256": "aaa3b8cd243881df3700b1d2c769b61526c9ebadd221268f11c8cf674330ef64"
+    },
+    {
+      "path": "scripts/research-udb/c2-integration-inventory.mjs",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5048,
+      "mode": 436,
+      "sha256": "0a59f8bfd354cc2cd45f047cec0d00c6fc4613cd842c1934adf7bb7e56f0d714"
+    },
+    {
+      "path": "scripts/research-udb/c2-integration-inventory.test.mjs",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3469,
+      "mode": 436,
+      "sha256": "e0bb57fcd05367aa7d0206b82ee8000c0f46ec8be5af598f60772dee7feb9562"
+    },
+    {
+      "path": "scripts/research-udb/legacy-dr-guard.mjs",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 1555,
+      "mode": 436,
+      "sha256": "fa1368d38890b22f19fd95f5f14aa53313417a9ab0242932d0208020d39fd802"
+    },
+    {
+      "path": "scripts/research-udb/legacy-dr-guard.test.mjs",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 1591,
+      "mode": 436,
+      "sha256": "bacabff1f583eb07ecd1ef9c03912682dee1fbe5b97aa05f40c3ae1249da3839"
+    },
+    {
+      "path": "scripts/test-elp2-c2-custody-pg.sh",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2168,
+      "mode": 436,
+      "sha256": "c7962898756b8e3ca082807bd04331587efc291f350272cad62e009f3f9f4f13"
+    },
+    {
+      "path": "scripts/test-elp2-c2-historical-clone.sh",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3112,
+      "mode": 436,
+      "sha256": "a21723ca2091c54a95c003b9c45901a75c492060fb518941cc22e056c67cff14"
+    },
+    {
+      "path": "scripts/test-elp2-c2-p5-pg.sh",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2147,
+      "mode": 436,
+      "sha256": "1a687b45c4c3471898eb85d939cfa5433ef1f4c1cf05ce791f0b0acb57b5a6d9"
+    },
+    {
+      "path": "scripts/test-elp2-c2-p7-pg.sh",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3886,
+      "mode": 436,
+      "sha256": "daa31f5783e43c1812dc355ab0a3e9e505aa54b3ca3b347ae544c9f3e15f60da"
+    },
+    {
+      "path": "scripts/test-elp2-current-human-pg.sh",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2094,
+      "mode": 436,
+      "sha256": "cc00ebfd92b9501074a6a16232c43f6cb9f2e311844835db478651c515a9472c"
+    },
+    {
+      "path": "scripts/test-elp2-independent-custody-pg.sh",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2457,
+      "mode": 436,
+      "sha256": "83a59ce01c88d510b8a9aa90163b395fc5f8de3c498f457ff743c8eb269522d6"
+    },
+    {
+      "path": "scripts/test-elp2-restore-checkpoint-pg.sh",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2589,
+      "mode": 436,
+      "sha256": "6cb5ec3096b69873b1b1b5d78d620b108f5e29e3b2606ce51ff5214a20604bf7"
+    },
+    {
+      "path": "scripts/test-elp2-restore-inventory-rls.sh",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6501,
+      "mode": 436,
+      "sha256": "e3c911cb0adc61d810d4477fb3398d5a26e5fa4ede8b3a7a5ccb38b359719138"
+    },
+    {
+      "path": "upgrade/UNIFIED_IMPLEMENTATION_PLAN.md",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 1647264,
+      "mode": 436,
+      "sha256": "272004c07586c96c0e6a03f17d236e11bac5124a892cb360d7468c6a4c195b84"
+    },
+    {
+      "path": "upgrade/execution_loop/FRONTEND_BACKEND_SYNC.md",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 412047,
+      "mode": 436,
+      "sha256": "a5964bb81d125328baab39b9edad4a9fd8a4f2de07b2ed078016955d767c47d8"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_0515_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3865,
+      "mode": 436,
+      "sha256": "e6dc84aad4f57fe5b2869af4085ded5324d083e08a2671c8db910336851549f6"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_0600_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3502,
+      "mode": 436,
+      "sha256": "aa9947e4364e2f5ea90adf0ed156e55f7515cba1d1c6727240caf24abb47cc44"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_0630_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4250,
+      "mode": 436,
+      "sha256": "b744c327548316a1415f78d5e237cec5c67175a40eb0a0dbff89d2c1e6ce9849"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_0700_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4247,
+      "mode": 436,
+      "sha256": "e9df6de1b012ccd970cf9ddfc1d48e2eed09bd285f0e860bd14e99203ac4f1f4"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_0725_PROGRESS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2996,
+      "mode": 436,
+      "sha256": "79aa0f3f1ec2fb310240bbe9417327712e9056c094b53a34e6c1c3d8b267f6a3"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_0730_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1612,
+      "mode": 436,
+      "sha256": "e2b125dcf61f75b3f26155c06b0a96baf0a5a7af73fb989ddeab9aba63b8ccd3"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_1200_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2352,
+      "mode": 436,
+      "sha256": "b70455690b4499e54903fee6dcc752a1df8da37b9cab7e9a63d31737b11b89ac"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_ASSERTION_REVALIDATION_BINDING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3177,
+      "mode": 436,
+      "sha256": "52088cc8fa2874682c6d642acc82592114d00ca1539e7505588d58594e8a0bd6"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_B2_CUSTODY_DEPENDENCY_PIN_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2475,
+      "mode": 436,
+      "sha256": "9c9add62f63371129a2d18d59eddbf1321bc8a34560704d2c66db947a6aa2947"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_B2_SINGLE_B1_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1893,
+      "mode": 436,
+      "sha256": "14be41f9e85f3150cd1456ee11c69441b27f6509383faa343e4e5b7f722c9315"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_B2_VERIFIER_SNAPSHOT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2057,
+      "mode": 436,
+      "sha256": "2604bc3918229b5458970c059ccadcdd2ff7032ded5a4fb2df2cdabc55f6d97f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_BIDIRECTIONAL_ORIGINAL_CENSUS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3007,
+      "mode": 436,
+      "sha256": "d7b2a42da2248fe26c5ccab1b1609d6601607a790250135574bc34a520cb25f8"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_BLOCK_NEW_RECOVERY_PROGRESS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5595,
+      "mode": 436,
+      "sha256": "a858d85868a39a28d8d6b7e360f58b6d2d07e0077d447d836c7c7bd97b1c643f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_BOUNDED_CELL_RETAKES_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5035,
+      "mode": 436,
+      "sha256": "2540c253f9141a640d2c571fc0fc43b56c85593b312eba0f82f5b2978ba06feb"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CHECKPOINT_AND_B1_STAGING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5417,
+      "mode": 436,
+      "sha256": "30ddc9005f08b3912e8e7f721892dec92fc8522f8dc6d8186e2c20fbba271ea7"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CHECKPOINT_CAPTURE_PROVENANCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3663,
+      "mode": 436,
+      "sha256": "23a56e452792d77e55f6de79cc95e733d86ab1739b22b692f22993d56cf50c33"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CHECKPOINT_COLUMN_ACL_AND_ROUTINES_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3564,
+      "mode": 436,
+      "sha256": "cee6951d366d05372c7631ccbdcf9183db737d7796d13fd373271eef340000a6"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CHECKPOINT_INPUT_SNAPSHOT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1766,
+      "mode": 436,
+      "sha256": "e9c0f7ff458b6355d0df9972881831717b3d32d99d2795813dfe2949534f2563"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_COMPOSITION_CUSTODY_KEY_BINDING_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3973,
+      "mode": 436,
+      "sha256": "196ed9bc31ad8bcc49c7dbd0252da09be19e3ff5e1fa3f675a4761106e08436f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CONSOLIDATED_PROGRESS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6089,
+      "mode": 436,
+      "sha256": "0b4d158ec7b3bdd542f73258f2ff0edbb98c66eff9c6f537b6cd64206e1b7a06"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CURRENT_HUMAN_DISPOSABLE_REGRESSION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1622,
+      "mode": 436,
+      "sha256": "fc9c58478b74773e7325789d42b80ad82d0bd92b03949fb77ba36f7fbe1382eb"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODIED_ISSUER_RESUME_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5026,
+      "mode": 436,
+      "sha256": "abe061da634b864fbc74790eddb7c157dca93630a2286016e0fa96e4f84cac74"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODIED_TERMINAL_TRANSPORT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4496,
+      "mode": 436,
+      "sha256": "a93272642012d240caf445c3d52ca52db37ebf039cb7025f3b1eb81c29fce0cb"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_AUTHENTICATED_JOURNAL_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5491,
+      "mode": 436,
+      "sha256": "1659af8a9a5b6611daa94317e2017f0042bb06989ad488a78d88089e69d07f79"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_BOUNDED_WRITER_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3523,
+      "mode": 436,
+      "sha256": "c43887180ed687e9b737526c38152004f277213fa8334759163d27d27f959a72"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_CONTENTION_RETRY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3952,
+      "mode": 436,
+      "sha256": "9bb944e61bb899e5810501157c5ea3abf2f146f75dc897f635d02ac4ec062f19"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_ENTER_CAPACITY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3006,
+      "mode": 436,
+      "sha256": "8fccd796c221daac4e9dd5e3e6d0b5ff760ba48a8842bb6226a1e6aa7b2fecc4"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_PER_LEASE_BINDING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5744,
+      "mode": 436,
+      "sha256": "7bfc01fc71708055065b2be25c6d989669d0c896d001db35b9eb9ba4b5a28608"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_PREFLIGHT_RACE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2759,
+      "mode": 436,
+      "sha256": "a6aeb173caecedec6a3603405d5cbc0554396bc54b6053556e3a090cd62e529c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_SOURCE_POOL_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2057,
+      "mode": 436,
+      "sha256": "69259b9e86ec858c60880b30e171393d67735f9834628af34fcd24e960636841"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_TERMINAL_BINDING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3208,
+      "mode": 436,
+      "sha256": "825e99bb02e90412ade185ab4e1f715775ae6a92125361a1fbbad344d853fb06"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_CUSTODY_UNKNOWN_RECOVERY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2854,
+      "mode": 436,
+      "sha256": "d0a68859d6fe3e62b7785533dbbed87f903cbd978768df611d97ef7b13d181f8"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_DELIVERY_FENCE_FOLLOWTHROUGH_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3203,
+      "mode": 436,
+      "sha256": "aac0d70d13879ff83991e1f5f6722a7923b09f2776e65ebc206f09d1895d4e03"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_DRAIN_DELIVERY_CENSUS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3727,
+      "mode": 436,
+      "sha256": "bbb8887eee755bd7d5117bec2b134ada4112ea12c45cc448ab8268801425c402"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_ENTER_PROOF_RECOVERY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6028,
+      "mode": 436,
+      "sha256": "5cc615bd5afda818c4037d24a176aedb176a2f847a117746af8be83e806c24f4"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_FROZEN_LOCAL_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3882,
+      "mode": 436,
+      "sha256": "b91613cb18870100f2953efe31736c361588e6304740afcecbca2f2e3a1cb277"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_GENERIC_ISSUER_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3404,
+      "mode": 436,
+      "sha256": "336398d1f5c2a020cc5d24b6abcab94112650705a3cfd50b5a348b7e57f6756d"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_HISTORICAL_CLONE_REHEARSAL_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5828,
+      "mode": 436,
+      "sha256": "eecff608ba419894a2bac8bf30e9f1f45ce456fe35cfd35d81faa00dd3dc87eb"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_HUMAN_CANDIDATE_PINS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3279,
+      "mode": 436,
+      "sha256": "c91eb57774b0a2e5483fe90d5bd025e1f0f88b94a88958c9515fe54a109d855f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATED_TEST_TYPECHECK_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2393,
+      "mode": 436,
+      "sha256": "438221a3686326bc05a9c2c37486270082bc5e7d49e4edfb4438b4951a6c09d2"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATION_TYPECHECK_REVIEW_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3339,
+      "mode": 436,
+      "sha256": "61ee1bd74a7d0361b9c21436c1a3074978367e9f069ed04407911ace0c7eee26"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATION_WIP_INVENTORY_20261106.json",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 101509,
+      "mode": 384,
+      "sha256": "7a8f906fd857caf3ae66f98aa5b01ef47cbef2c0013c2f634dccdab87e6e4110"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_INTEGRATION_WIP_INVENTORY_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6102,
+      "mode": 436,
+      "sha256": "f7bced3c5d15f8e9630aa6753a0eb9b1a56dbe7699c6cc9ad33310550f8eccec"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_INVENTORY_REAL_CANDIDATE_SCHEMA_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2185,
+      "mode": 436,
+      "sha256": "27fa5683c83e5e418b06c511dac41d0e7d1eef9cfffca2cc8ea4fc4c7d0005bf"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_FUNCTION_DRIFT_GUARD_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3532,
+      "mode": 436,
+      "sha256": "434c1290011a47a2c28d29e2105f77f311a464323a3a7b35e118600dda9c167c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_INTERNAL_CUSTODY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3914,
+      "mode": 436,
+      "sha256": "7d49392fba8614fe5c4927f19ac7936b1bb6217b2ed258dacc2ce1bcc9be5470"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_P7_FAIL_CLOSED_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2409,
+      "mode": 436,
+      "sha256": "c30b11242f728134b29dff8f5dd2c10415fbc09b056d4522539fd8f3c2f72e75"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_PARTIAL_SCHEMA_GUARD_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4653,
+      "mode": 436,
+      "sha256": "c3f69a085c1ca6116ccaabd0b967c78742de4638c0ca9608d8ba9c18ed1e8b8f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_ISSUER_UPGRADE_DDL_RACE_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3896,
+      "mode": 436,
+      "sha256": "78482e88542c8df3e41537ce7497219b95d2b23dc8ac010172ad09ce042012ae"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_JWKS_BYTE_CORRECTION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1381,
+      "mode": 436,
+      "sha256": "eca0c97359c09c37b900f2da2fcb8d21c7010aff0f01ac5a2337266ed0babfde"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_LEGACY_DR_PARTIAL_SCHEMA_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2748,
+      "mode": 436,
+      "sha256": "bc819662dc3c07aaf9fef5f39ff56f87f009f696ea5f5a6619bd67cb4635481d"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_LOCAL_FENCE_COLUMN_GRANTS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4380,
+      "mode": 436,
+      "sha256": "a5ed81769e8e535000f039b19ae42a3be3f51286045e3d14d6e4128a457ed62a"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_LOCAL_FENCE_ROLE_ESCALATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2889,
+      "mode": 436,
+      "sha256": "948c2ff8a81b5d80842e957fd969165a6f1db4e27d42de61068a0c958e1ff33f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_LOCAL_STOP_WRITES_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4328,
+      "mode": 436,
+      "sha256": "b29d51b89ce943e99dc5969531e0866a8f7c471193cf545ea62db49b0db4b6ab"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_OWNER_REVALIDATION_SESSION_LOCK_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2716,
+      "mode": 436,
+      "sha256": "e8fb33173b8935a13e059f02ce6701a1024cfad94b65c12f82b7ee59db564633"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P3_P7_LOCAL_TESTS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4270,
+      "mode": 436,
+      "sha256": "7fab8bbb337c3235ec760ada3ddc3db172b61e72d472995e625c7b755ab4802c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P5_ACL_AND_Q3_FOLLOWTHROUGH_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2737,
+      "mode": 436,
+      "sha256": "c08bd21068968931b1e642d40572d64b25914a13078cbed271ed92d167f164a7"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P5_FENCE_AND_ORIGINAL_RECOVERY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2604,
+      "mode": 436,
+      "sha256": "965fe973582f6957861538d551464a5fa7773c715a0512b37e952776269a37f8"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P5_P6_AND_O1_OBSERVATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3250,
+      "mode": 436,
+      "sha256": "b47d0305af33c4d5350ba039fb0ee5b26eff35d9650884558a94f2ef140ac08c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_AUTHENTICATED_ISSUER_WIRING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4550,
+      "mode": 436,
+      "sha256": "73514dc08b5e31cabf6adea9f974877fc29ecd5939fd13bc9c4949f57b9f1ce7"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_BOBBY_SCOPE_DECISION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1063,
+      "mode": 436,
+      "sha256": "a8bf7a2bf57d78472cfb0d92e0c4ca9ed70558ccb7b0d06a6a1c5ff88f378fe4"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_BOUND_LEASE_DB_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4025,
+      "mode": 436,
+      "sha256": "b2dc6592a01cd89058888a800ae72c83c758929c99f4ef5a079311b0a01c3c5c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_COMPOSED_PG_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2015,
+      "mode": 436,
+      "sha256": "c2eeb95411ecf5d91e822e084b6914d7431673a9b3fef1d2a86ebdc453b0da5e"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_CONFIRM_AMBIGUOUS_RECOVERY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1961,
+      "mode": 436,
+      "sha256": "d7c5a1cd2282ad021a3e01f5c296d8c5988306a456985da6cfee1d7eff2a27ac"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_CURRENT_RETAKE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3373,
+      "mode": 436,
+      "sha256": "ed9618b5ad78d9c2cf0286893fae1da2a77bc87ca9eb0bec73b23459a039e254"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_DELIVERY_PROCEDURE_REVOKE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3159,
+      "mode": 436,
+      "sha256": "9d85546366c3bd5a87fa5265299c71a1bfcc55e36575cb590f19bbb39a78b7a5"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_DELIVERY_REVOKE_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2635,
+      "mode": 436,
+      "sha256": "773f45d3a414768496db34023739a30de9413b18c96c47ccb6352b07153947ae"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_EMERGENCY_PATH_CONSOLIDATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3799,
+      "mode": 436,
+      "sha256": "7601e82aa33a42d6bfaea858cc44c2a3f6a6997aa6a048785750745da78ded27"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_ENCRYPTED_WITNESS_CUSTODY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4312,
+      "mode": 436,
+      "sha256": "8f8283580f9e5cbc19eed7cf62f20e31586ccfe47a96601bd8d598bdd2d4f562"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_FENCE_POSTGRES_REGRESSION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2496,
+      "mode": 436,
+      "sha256": "1e5a2b506fbb857e7ae54e2475b92e7e8ce2b8f5f6f48e4cf4ce0f25e7eb1a32"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_FORGED_REVIEW_COUNTEREXAMPLE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3422,
+      "mode": 436,
+      "sha256": "6070f674f5924a968b42dd7d31bdc3beef8e615993c24dcf0d30ef182a223b58"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_GRAPH_METHOD_PINS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4117,
+      "mode": 436,
+      "sha256": "719b8d4ce2feb41401305a7202f753beaad7b1984050cf37bf555c5442966408"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_HTTP_DELIVERY_CELL_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3539,
+      "mode": 436,
+      "sha256": "30e6143da039fcd7417b1abd59bc920cbc90d8b5b60cb399edf9cc27ec85d95f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_HTTP_POSTGRES_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1676,
+      "mode": 436,
+      "sha256": "dae022f90c45386f3796a7a040f8263b0c445e954ce5fd4165191051468b5c4e"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_INDEPENDENT_AUTH_ATTESTATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4745,
+      "mode": 436,
+      "sha256": "a38e53ddc6ea868eea0bef76cfa3f284d1d02afba17f9b84c2afb7fb7a200aef"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_INDEX_STATE_OBSERVATION_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3192,
+      "mode": 436,
+      "sha256": "642f60ecac5f6a6a3a86f976d4e87e3af12e98b301b4f9096b3f62b43fb604e7"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_INTENT_RECORD_LINK_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3205,
+      "mode": 436,
+      "sha256": "b5912cdd95e436b8964c400c736ff3232ab4b64d80b2ed73f352f4e9dfc5a3e0"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_INTENT_RECOVERY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5038,
+      "mode": 436,
+      "sha256": "dc201f19b3673dc3c63e97a3483b58c25bba6094a4c6fa5755139329898ee7e2"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_INTENT_REGISTRATION_ATOMICITY_GAP_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1865,
+      "mode": 436,
+      "sha256": "18c8c93016b3723f50483efd986cf590efd29f90d36f4d1f704fe88dddca48d3"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_INTENT_REGISTRATION_ATOMIC_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3063,
+      "mode": 436,
+      "sha256": "6dce12933b488a5ecaf0d625379c6a85a6526f788b49de53d914bce53b83b5f0"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_ISSUER_FENCE_RETRY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3709,
+      "mode": 436,
+      "sha256": "c617965e7567879e3be18cdadcbde29f8db1874e6a5d1460f38bd1acca95993c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_ISSUER_KEYED_LOCKS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2387,
+      "mode": 436,
+      "sha256": "213178ab0f7c1ab4a2b40ad3b2f7c3b1c6b1c6fe0bf1ffd38edc28591b35bcca"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_LEGACY_TRIGGER_ROLE_BOUNDARY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2936,
+      "mode": 436,
+      "sha256": "ab51b917ddbd73f1de1d18034ed9dd7f7381a133edda76d67b6c7be2131e52ce"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_LIMITED_LOGIN_DEFINER_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2891,
+      "mode": 436,
+      "sha256": "ddc7504cea5d36c5008738d10c0454bf8bfc2962257864bccb3b536b3299a238"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_LIMITED_LOGIN_REVOKE_RACE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2243,
+      "mode": 436,
+      "sha256": "4e80ff6c02c1508de0c93f5064a3e546c3ca1c30178ec03d9531d2038aa46fdf"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_LINK_FORWARD_REHEARSAL_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3089,
+      "mode": 436,
+      "sha256": "5fc5b151c8b6b5a28c630587d69275f0f18decceaf06e05378d5e4baa8d3d3bb"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_OWNER_CONFIRMATION_VERIFIER_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3883,
+      "mode": 436,
+      "sha256": "901ada75f37f43b336b3b5d1a6a1e8c12fc6ff64ae9896832bbd8de3662d8ae1"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_OWNER_CONFIRM_SIGNER_CANDIDATE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6222,
+      "mode": 436,
+      "sha256": "581777d4b8334f18c1749639b75ddd30874f27464c8f7a768912caa35d02ded0"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_PRECREATE_RESERVATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4016,
+      "mode": 436,
+      "sha256": "f08f32bd4fc6c4eeff9aa9347fa480854fb1533369e1c74d75b8de4615eebe7b"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_PRIVATE_REVIEW_BOOTSTRAP_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3066,
+      "mode": 436,
+      "sha256": "4ae9d8c0e03ce6788b5c35c40ead17a8d1fec398e8628e4460b5f04dd4c8760c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_PROOF_COPY_LIFETIME_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2310,
+      "mode": 436,
+      "sha256": "7a2acee5e647c32ef7a2c485cd4336f9fdbf3247e3df8b533ee9bc2538e41f9c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RECORD_LOCK_CANDIDATE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3170,
+      "mode": 436,
+      "sha256": "a89baf7a9273586f3de753e6f0165fd8e1ef081c02358f81d636525253e29ed7"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RECORD_VERIFIER_PINS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2863,
+      "mode": 436,
+      "sha256": "c19e08057413a167a83f79122d463080394fb716067b7ef05f50b557a6b9f503"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RECOVERY_REACHABLE_ACL_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5036,
+      "mode": 436,
+      "sha256": "0b585cb8267cd6de05667ce638a6310f190946c56ae5036d87132df3dae78bbc"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RECOVER_RESERVATION_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3638,
+      "mode": 436,
+      "sha256": "ebcc14ce597a2565ed063d9fbe494c5fb183fdce75b367c8207e4983c8ca9d65"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_REGISTRATION_READ_LOCK_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3180,
+      "mode": 436,
+      "sha256": "cc3c1fff031ffe0b658d326a3195f441c4c7ee8390ce74630622ede8e0c2b7d5"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_REGISTRY_REVOKE_SPLIT_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3223,
+      "mode": 436,
+      "sha256": "b093250ffd241f89ea0303bf32c9578453847cc86557b38195f07a3505bef1d8"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_REPLICATION_ROLE_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2750,
+      "mode": 436,
+      "sha256": "ed38389b8c63c3fc51ab3a1a0b16a77843ab58f2b88a87be9f69377c12759e81"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RESEARCH_COMPOSITION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3557,
+      "mode": 436,
+      "sha256": "383f139b80e388bcf733265ef7e4ef216e7002c24dc8278880f2273ff966d5e0"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RESERVATION_AUTH_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3310,
+      "mode": 436,
+      "sha256": "8aa64245a8761f273965735ad386c02fe9384ae787312bf3cd25f86204cab3df"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RESTRICTED_COMPOSITION_AND_COLUMN_PRIVILEGES_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4123,
+      "mode": 436,
+      "sha256": "46c6bf29b08be3d242dfc1c28bdd342d1c96490487fb828c7868ea81a3d9d39a"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RESTRICTED_ROLE_OBSERVATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1664,
+      "mode": 436,
+      "sha256": "f050538d0bc146c1a6a3e5c740123c77a98833271ca13aa340b59307e2473811"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RESTRICTED_ROLE_POLICY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2359,
+      "mode": 436,
+      "sha256": "8efff12846f6084fba598ac94b87ab2cd72974e8f5490839f4e5d5ab246a25f3"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_RETAINED_INTENT_RETRY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3314,
+      "mode": 436,
+      "sha256": "081042965720c14a6a3b4c88e5f1e7e92013fe65f5a9122d94b61ed97008fa37"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_REVIEW_LOCK_DEFINER_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2527,
+      "mode": 436,
+      "sha256": "acc351a11d2eb3fcfccd7c551f63158eb23e5572cb1799ba898545cf46088490"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_REVIEW_LOCK_WRITER_WIRING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4172,
+      "mode": 436,
+      "sha256": "e1845422483cfb2f070b619d6c2a3dcd575d3100efc01fd8f0fd675a95a499f7"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_REVOCATION_ROLE_FIX_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2766,
+      "mode": 436,
+      "sha256": "7c6452cc6f960e8bf87a9d1551d6e2f4c1669f882845bd0c9122a3ea649c84c6"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_ROLE_OBSERVATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2336,
+      "mode": 436,
+      "sha256": "81ddf49d022e5e60b41fa7e4bf09bf1eb0a8167fd95069b00f4b4ab67a906303"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_SCHEMA_OBSERVATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2346,
+      "mode": 436,
+      "sha256": "16e256e4ab58f42e796b6b31685e35c51b0a6e78a3bf40c153d80e1959b367c3"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_STATUS_INTEGRATION_RETAKE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5031,
+      "mode": 436,
+      "sha256": "dc3fe412ddc1f0aab49f1cafaed69f8afb4f49d7d43ce2380aa1b5b7dd46c33b"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_TERMINAL_COMPOSITION_PINS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4322,
+      "mode": 436,
+      "sha256": "5e539bf7a30f5e74dbd428919b311efbe8310a22c5145e9e1d4a3cdaa727bb03"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_UNSIGNED_HTTP_BYPASS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2719,
+      "mode": 436,
+      "sha256": "0019824b632a3857fcadd4117620c8dc2ff95da966a703a18e4b972787608edc"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_WITNESS_RESERVATION_TIEOUT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3214,
+      "mode": 436,
+      "sha256": "80f82240277d3af4660ce1cd220e0c67526e540997e4109cbee9bfe2fa3f03ff"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P7_WITNESS_WRITER_ADMISSION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3510,
+      "mode": 436,
+      "sha256": "eae602d46559875d41d03ad58a1079c586e40c74d858820e73461fbfb9e84bc1"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_P8_PUBLIC_KEY_PREFLIGHT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3756,
+      "mode": 436,
+      "sha256": "57494c62558a4824f92d94c233787983246c966b5f610c6f60dc6baae6f2d0b2"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_PINNED_DELIVERY_SCHEMA_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3330,
+      "mode": 436,
+      "sha256": "44e85eb2e7a3a4a59a5d41b2a0e74798511330ab48f736304f3c3ab68daee7e6"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_PINNED_PUBLIC_P7_RETAKE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2997,
+      "mode": 436,
+      "sha256": "7b4bb8b5bebe2fb5dcb3e8736a815a9ea59b006b21f2b09b1d84f196d20eccb5"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_PREPARATION_FOLLOWTHROUGH_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6227,
+      "mode": 436,
+      "sha256": "62eda08e5fb8ebedb1729a768cd46acd896d8e5ec3b457cfa0d467653e013791"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_PREPARED_ISSUER_CUSTODY_COMPOSITION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2927,
+      "mode": 436,
+      "sha256": "f44d71b49e68097c5161f0eb0b1015017628b39b5b5be0abebc38094bc358fed"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_QUALIFICATION_IMPACT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 11123,
+      "mode": 436,
+      "sha256": "0e8ea3d160ad72b6707fa9fa807b448091502e956e600b433ed47ec9b3d39730"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ACTIVATION_AUTHORITY_INVENTORY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3905,
+      "mode": 436,
+      "sha256": "8afca4d12cfddf5c32611561d27ee3b8a27654bb6e9ee7ee7c9834738777a457"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ACTUAL_ASSERTION_CUSTODY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5214,
+      "mode": 436,
+      "sha256": "8cc97358c3193279b22e7d2fb683eaecd7ccb290ab7b3b3800ae1ab97caff49d"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_AUTHORITY_JOURNAL_GUARDS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4073,
+      "mode": 436,
+      "sha256": "7a99431cb43f51a8ffc58733c868f1ed8d3a6089d80da679dd3b91b26d6f1fc7"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_AUTHORITY_READBACK_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4136,
+      "mode": 436,
+      "sha256": "ca514885e2bf164899b3ce78a77e3664a4bde64a4bf9523bcbab0012522c77e5"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_AUTHORITY_STALLED_READER_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3677,
+      "mode": 436,
+      "sha256": "eee1ca4069750840c46f4589f904aee2160c3ecfbc05f0bef105f86426bd7d4c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_BINDING_LOCK_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1832,
+      "mode": 436,
+      "sha256": "45dda9f265707738487f1c612900faf0d4d5a7c0f624e1f1fd340155d4f45fef"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CAPTURED_INVENTORY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2740,
+      "mode": 436,
+      "sha256": "dfbb0d625b5c2da7023f9bfbd9d37a9f20bc316e4706a845a07d7f6c04a4a594"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CLOSED_DB_CHECKPOINT_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4400,
+      "mode": 436,
+      "sha256": "7abfe90a25b9e1d21ee353704195a096ca486b9cd23aaa90a4d684270775e070"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CLOSED_OBSERVATION_JOURNAL_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4476,
+      "mode": 436,
+      "sha256": "2b2178e0a33924c519e675d5993867f11b37d341f3dfdceddcfc4b3a0b516813"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CLOSED_PIN_RETRY_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2601,
+      "mode": 436,
+      "sha256": "a4931104e80bb29805583ccc4b920111925eb5387a075537548279be0f403c68"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_CUSTODY_PATH_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2539,
+      "mode": 436,
+      "sha256": "e2aa23b34facf842da0412cfb63655ab4abf4e30b638d9bb9b369eb11215f4de"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_DRAINED_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2351,
+      "mode": 436,
+      "sha256": "f027d306129d175c389d4ea06384a70f8d7c129e626346af3b14ecaef2fbdd2f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_FRESH_WITNESS_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4464,
+      "mode": 436,
+      "sha256": "a16b1d2afeb7ea6608edb766a81f3c4996e4684489e4b6b188ebe67563039183"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_GUARD_FUNCTION_DRIFT_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5434,
+      "mode": 436,
+      "sha256": "aa4f0ba5122808d0355af4e6979b63a93c3e1fed79c01b0093cc9f50015dac96"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_HUMAN_KEY_BINDING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3067,
+      "mode": 436,
+      "sha256": "d50b0fe3a818e43a1bb1e2624b3f60116a43a716db172764ce0a972e3084eae3"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ISSUER_BINDING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3474,
+      "mode": 436,
+      "sha256": "22509cdb9bf23871229b1ca1a8dfc07a8f6a8da810b72cbe4914e8f5bcd975be"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_JOURNAL_UPGRADE_PREPARATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4263,
+      "mode": 436,
+      "sha256": "7181548edfcfd516ddbf81f9ae05b507b201690a7f2713aa38b4515cea0b1767"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_LOCAL_DATABASE_QUARANTINE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3301,
+      "mode": 436,
+      "sha256": "84fdf0456fe66ce1b2629273d53ff266d482b19f620de5eedac4d04e84606e3b"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_LOCAL_PUBLIC_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 7555,
+      "mode": 436,
+      "sha256": "e22e7d7d5791c7969eb1b9553552ceeb63d9e14c455de05c0bb020e837a3af9c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_LOCAL_WRITER_QUARANTINE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3980,
+      "mode": 436,
+      "sha256": "a803746b255665e96646838ae4ed9d55fe8f2b5f333caf62f997fe01d6de73e6"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_NOINHERIT_REPLICATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3998,
+      "mode": 436,
+      "sha256": "0a8cf6f212b79fde9b002beeb74854d27bbb08b04c6093dca968534c68f1b4b6"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_NOLOGIN_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4379,
+      "mode": 436,
+      "sha256": "d6cd53e3247a42369e02401f516d68705b8bf38b2c0f6c094ce2e5176208823f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_NOLOGIN_UPGRADE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3011,
+      "mode": 436,
+      "sha256": "e6589f1edd08e3828b0c4d1bc7e6926a8c0f645b7458f48ad8dc72f40c065ead"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_OBSERVER_ORDERING_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3391,
+      "mode": 436,
+      "sha256": "fa5c05c62577bab0f5202f70c46be076b90a43f5cd2a867b90d69f132fce3a70"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ORIGINAL_ASSERTION_TIEOUT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3307,
+      "mode": 436,
+      "sha256": "98c4efe81a3c75b51dcce0a418d8260b00ab24e7fd6a28cb3da1bcd5c56b69be"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_ORIGINAL_BINDING_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3625,
+      "mode": 436,
+      "sha256": "0c85ef015490eda116e620539adde5a7d4573c7aeabd05d80dda5a290596ff68"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_P7_GUARD_COVERAGE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2899,
+      "mode": 436,
+      "sha256": "f0f0d4e8c032aa5351db31f97800fb560b8955b3c81457752a452ad8b426972f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_PREPARED_XACT_CENSUS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3727,
+      "mode": 436,
+      "sha256": "f9dadaff7b4605cdf6b4cd38e194f97787a393dbcf0cde5406e799b686a8f70f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_SIGNED_CHECKPOINT_ANCHOR_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3917,
+      "mode": 436,
+      "sha256": "bd63e33eb5766618159c48f45b0260c349cc5b88a00abeb7914999bab374fe21"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_SOURCE_TRUST_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4012,
+      "mode": 436,
+      "sha256": "81b60300b7038bf3657cae4596922a3c2332cec35983aaef567a9256a5b5cb24"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TERMINAL_COHERENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2377,
+      "mode": 436,
+      "sha256": "ad969e7925142aa1d41d2acf456dc38e45abebe238e06ac2f2a5457fa5a1fafc"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TERMINAL_PROOF_TIEOUT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2947,
+      "mode": 436,
+      "sha256": "4233a5999e56232060701c46b8b0fb4699b163ac3ec55e3d65e5d0b0ff5805d4"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TIEOUT_NEGATIVES_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2999,
+      "mode": 436,
+      "sha256": "9ce70e030fe757ede793c351f149cedf43113dc08c5ce6f0efdca716d44d1dad"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_TLS_SNAPSHOT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4078,
+      "mode": 436,
+      "sha256": "bdd3b05eddd2f9399e982b460c1dee7ac96b4dc44432a8c885e94d52fce00575"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RECOVERY_UNENTERED_ROLLBACK_TIEOUT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3221,
+      "mode": 436,
+      "sha256": "604637f414de733fac23198b84dd301508bba848143862b7335d31a78d9ab43b"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_REGISTRATION_EXPIRY_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2694,
+      "mode": 436,
+      "sha256": "3260c31672363ca71f9d0a592d90a47fd82ee18e7adf7e4aa220627604b65681"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RESEARCH_PUBLIC_ISSUER_PREPARATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1202,
+      "mode": 436,
+      "sha256": "cccae14014f6314efaf9198659dc90ad5faf812206e5cfca26bd1a4cba60ee79"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RESEARCH_PUBLIC_TRUST_PREPARATION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2162,
+      "mode": 436,
+      "sha256": "4d079796568375321ee2409e4afb6b13d2dc6f843f09dfe9d35361a85236a0d3"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RESOLVER_CUSTODY_BINDING_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2723,
+      "mode": 436,
+      "sha256": "2e1241b818b8856b688ba99a0b605763ba3a0ffc2a64655266493e175ab11c7a"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RESTORED_DATABASE_CENSUS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3702,
+      "mode": 436,
+      "sha256": "42c4013fb27099805c000521b62761e34b5999c1a24224ca28fffbc65f246d76"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RETAINED_ORIGINAL_CENSUS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3617,
+      "mode": 436,
+      "sha256": "9397a1e408fa4fb7cadd276c99380f357aa3c557a4bfaa4754f52bdb8ec8fba6"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_RETAINED_SOURCE_PROOF_CANDIDATE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3997,
+      "mode": 436,
+      "sha256": "684282df0aaa5c544f772cb12c9626420161939421716dba3094a9346191a992"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_REVOKE_REGRESSION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1246,
+      "mode": 436,
+      "sha256": "43b2f8667f3840118a2f9b67f2bcaa499e7ac00920b0422909dd7bd7f31ae60d"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_REVOKE_ROLE_NEUTRAL_CANDIDATE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2964,
+      "mode": 436,
+      "sha256": "16f5fd2b6a2f7b430bbbe3e221b427f53e3ef7efd82d81edc4ee9659efe62e81"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_SEAL_SCOPE_P8_PROGRESS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5055,
+      "mode": 436,
+      "sha256": "b96d000e1ecb64678fcc33f837eda9f8c24f07c9a52e142dc264cfe381561b5f"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_SOURCE_INTEGRATION_REVIEW_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4336,
+      "mode": 436,
+      "sha256": "542fa1a0fbfa630a8b5357dd088fde124a16233641fff5fa68f4bfe03d737614"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_TRIGGER_BYPASS_CALLER_FENCE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3793,
+      "mode": 436,
+      "sha256": "731dfdfbad1ead3d24249b47a1d7d7a387a83bcf260d4e07cf7a2a5c441ea0a7"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_C2_TYPECHECK_DISPOSITION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2930,
+      "mode": 436,
+      "sha256": "ba042dbb3a30612f30e36fe523e0363896ddf08887da44efd02aa66ba29b5690"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_P7_INTEGRATED_SOURCE_COMPILE_20261106.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3987,
+      "mode": 436,
+      "sha256": "0bdb6382035a7f4e49a2166a94a4314a052e277c85ce0bf25de143b597c31474"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_STATUS_ATOMIC_RESTORED_CONSUME_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 4014,
+      "mode": 436,
+      "sha256": "c02eecf2236d1d0a890fa16a81902c0738b9a6006c721184fed28ad23b34bf32"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_STATUS_RECOVERY_CANDIDATE_RETAKE_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2656,
+      "mode": 436,
+      "sha256": "a529a7e6bbe7b6e6f21f69bdb258bc97c9093002c735743855f0d7927b5daa2a"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_STATUS_RESTORED_LINK_CENSUS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3767,
+      "mode": 436,
+      "sha256": "be8764c0005f006803860465ed4e5c1e43a370a727c8e3b5d38888fc1eefe211"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_TO_EDGE_A2_STATIC_R1_RETURN_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3412,
+      "mode": 436,
+      "sha256": "a9971d36848de5792f51824f013ba4b81a04783c60f8db2e9bff0b0e3c5683f4"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_TO_EDGE_A2_TS_REVIEW_FOLLOWTHROUGH_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3259,
+      "mode": 436,
+      "sha256": "790d983d1dce669e2244e87108b16ccc6913d807834d7ca20399882c8c983766"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_A2_CHECKPOINT_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3654,
+      "mode": 436,
+      "sha256": "6da6a07179967f3790c14b297b453fc523460a935c269dc96f4b0d282551ef32"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_STATIC_TRUST_PARTIAL_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3677,
+      "mode": 436,
+      "sha256": "4f559cff60cc002b4c0e61192b19bfc44b2f3a7f7df02eed038d1665e8a8b653"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_TO_EDGE_C2_TRUST_DEADLINE_EXTENSION_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2999,
+      "mode": 436,
+      "sha256": "a76ec04f201baf13efa83b1d61064f03a84f1b94355a6a733fa22a3082802ea4"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/CORE_V2_RESTORE_INVENTORY_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 6627,
+      "mode": 436,
+      "sha256": "fb35f231c4790b99d070a4fdb6b8b2835bd183f0bc1a7001490a833bfd4da5f3"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_CORE03_SOURCE_COMPARISON_20261104.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2420,
+      "mode": 420,
+      "sha256": "59e78dc76b0c93e48a244e0788889572b93a051b5e5ca364bca659006bedb00e"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_ANSWERS_C2_UNSEALED_20261104.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2340,
+      "mode": 420,
+      "sha256": "f19dae8e705aad6d7142b58c574d091cf6163194ec50fc14025c94c21b25ff41"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_C2_SEALED_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3435,
+      "mode": 420,
+      "sha256": "4a1157da632bb89586af11657b31f71aadecc36024929a0084f0d45b15f3d75c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_P3_P5_Q3_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 16153,
+      "mode": 420,
+      "sha256": "ad50194a72c784b2c195c9703f4cad68c0511292de8897475ba1d18dc93de66b"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_RELAY_TS_STATIC_VERIFICATION_ASKS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 25655,
+      "mode": 420,
+      "sha256": "97042c423e11f9ebd9a86534063a3cc5da8d10dadda575f70bd59feeb5ec9191"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_A2_STATIC_R1_REQUEST_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1794,
+      "mode": 420,
+      "sha256": "25adf20b1447da27ee3400f6670134bacd5f56c0bced8026a3de18513229fe4c"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_A2_DEADLINE_AND_SEMANTICS_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 3208,
+      "mode": 420,
+      "sha256": "8656b3f494770172dc8126f07d9d630abc448be9f9e04400534f606b566b73d9"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_A2_PRIORITY_REQUEST_20261104.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1814,
+      "mode": 420,
+      "sha256": "b382284e0f6ce2269e9ea51203910ebd5678e81f9cd36af63296c278c9cee7c4"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_COMPLETE_DELIVERY_REQUEST_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 5945,
+      "mode": 420,
+      "sha256": "d8286389ac5cb3e5843df7374d8cc3904590732c528bf721255a3e1ffeda9c9b"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_C2_PORTAL_STATIC_TRUST_REQUEST_20261105.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2333,
+      "mode": 420,
+      "sha256": "1f52dcc7930a61215ccc73d7fbc08ac8b454a97424673a2693e77ba66716e0fd"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md",
+      "kind": "tracked",
+      "state": "present",
+      "size_bytes": 201885,
+      "mode": 436,
+      "sha256": "86edbe1ba2004ffc36c79711085d70854a4ce7a8cdf940d38e42bba657f69081"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_TS_C2_B1_COVER_20261104.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 1438,
+      "mode": 420,
+      "sha256": "c024b25749939eff3465356269caba4e6e7a7443901257b829246add6733b7a5"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_TS_C2_PM_AUTHORITY_COVER_20261104.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 2765,
+      "mode": 384,
+      "sha256": "3043bc72f5e89d99b199c8f7b3cdd31f98fd5425d5fc5689647cf0130ebfbcca"
+    },
+    {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/TS_C2_PM_AUTHORITY_HANDOFF_R2_20261104.md",
+      "kind": "untracked",
+      "state": "present",
+      "size_bytes": 38336,
+      "mode": 384,
+      "sha256": "c2ccfd2fba2c57e8930cf516b0302f03f1b9ea3663149a3d9df7082162beba77"
+    }
+  ]
+}

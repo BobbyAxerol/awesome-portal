@@ -1,0 +1,15 @@
+{
+  "schema_version": "research.native-route-result.v1",
+  "execution_route": "event_driven",
+  "authority": "PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL",
+  "input_protocol": "DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1",
+  "clock": "KNOWN_CLOSE_NEXT_BAR_CLOSE",
+  "position_unit": "CONTRACT_QUANTITY",
+  "target_notional": "2000",
+  "fees": {"state": "AVAILABLE", "total": "2.0260000000000007", "reason_code": null},
+  "funding": {"state": "AVAILABLE", "total": "0", "reason_code": null},
+  "cost_scope": "FULL_CHILD_TAPE",
+  "fills_count": 2,
+  "orders_count": 3,
+  "replay_authority": "RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS"
+}

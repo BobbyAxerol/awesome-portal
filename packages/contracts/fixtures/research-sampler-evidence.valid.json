@@ -1,0 +1,17 @@
+{
+  "schema_version": "research.sampler-evidence.v1",
+  "requested_configuration": {
+    "state": "AVAILABLE", "scope": "RUN_REQUESTED_SPEC", "reason_code": null,
+    "source_ref": "IMMUTABLE_RUN_REQUESTED_OPTIMIZER_CONFIG_V1",
+    "requested_spec_digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "optimization_config": {}, "random_seed": 42
+  },
+  "internal_trace": {
+    "state": "NOT_PUBLISHED", "reason_code": "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_SAMPLER_INTERNAL_TRACE",
+    "source_ref": "QUANTBT_1_1_1_RETAINED_NATIVE_WFO_RESULT_V2"
+  },
+  "observed_trials": {
+    "state": "AVAILABLE", "scope": "RETAINED_SOURCE_TRIAL_ROWS_NOT_SAMPLER_INTERNAL_TRACE",
+    "source_ref": "SEALED_RETAINED_TRIAL_LEDGER_V1", "source_trial_count": 12
+  }
+}

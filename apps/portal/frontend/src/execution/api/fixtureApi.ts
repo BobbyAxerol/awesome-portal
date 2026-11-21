@@ -11,6 +11,7 @@
  * the ones in the mapping, not the ones in `fetch`. A fixture that returned
  * finished `ApprovalRow` objects would test nothing.
  */
+import { stageVersionedSearch, v1GovernanceParent, v1Versioned } from "../v2/readers/dispatch";
 import CC_SNAPSHOT_BUSY from "../../../../../../packages/contracts/fixtures/execution-command-center.busy.valid.json";
 import PAPER_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-paper-overview.ready.valid.json";
 import SANDBOX_OVERVIEW_READY from "../../../../../../packages/contracts/fixtures/execution-sandbox-overview.ready.valid.json";
@@ -98,8 +99,9 @@ import type {
   ConditionsPage,
   WaiverQuery,
 } from "./ports";
-import { unavailable } from "./ports";
+import { isPaperExitDecision, unavailable } from "./ports";
 import type { CapitalPreviewInput, InsightBatchInput, DecisionPlan } from "./ports";
+import { readPaperWorkbenchProfile } from "../v2/readers/paperRead";
 
 /** Wire-shaped, snake_case, exactly as the endpoint will send it. */
 /* The five pending rows of the Approval Inbox hi-fi, and they are the cast's.
@@ -406,7 +408,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     };
   };
 
-  return {
+  const self: ExecutionApi = {
     /* N29-FE-01 lab/test port — serves the canonical contract fixtures. */
     async getReviewCaptureCapabilities() { return unavailable("PORTAL_REVIEW_CAPTURE_REQUIRES_AUTHENTICATED_BFF"); },
     async captureR2() { return unavailable("PORTAL_REVIEW_CAPTURE_REQUIRES_AUTHENTICATED_BFF"); },
@@ -470,7 +472,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getPaperWorkbenchProfile(_deploymentId: string, variant: "paper" | "vnm" = "paper") {
       const blocked = gate<ProfileEnvelope>("getPaperWorkbenchProfile");
       if (blocked) return blocked;
-      return fixtureRead(variant === "vnm" ? PAPER_WORKBENCH_VNM_PARTIAL : PAPER_WORKBENCH_PARTIAL, readProfileEnvelope, "The paper workbench");
+      return fixtureRead(variant === "vnm" ? PAPER_WORKBENCH_VNM_PARTIAL : PAPER_WORKBENCH_PARTIAL, readPaperWorkbenchProfile, "The paper workbench");
     },
     async getQueryAnalytics(_subject: "alphas" | "portfolios" | "deployments", _subjectId: string, _options: { sourceFacts?: boolean } = {}) {
       const blocked = gate<QueryAnalytics>("getQueryAnalytics");
@@ -494,12 +496,16 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         "The live review",
       );
     },
+    getGovernanceParent: (kind, id, workspaceId) => v1GovernanceParent(self, kind, id, workspaceId),
     async getAccountBroker360(_accountId: string) {
       return unavailable("N28_FULL_EXPOSURE_POPULATION_NOT_PUBLISHED: the full exposure population is not published; this screen stays typed unavailable.");
     },
     async getAlpha360Resource(alphaId: string) {
       const blocked = gate<ProfileEnvelope>("getAlpha360Resource");
       return blocked ?? fixtureRead(resourceFixture("alpha", alphaId), readProfileEnvelope, "The alpha resource");
+    },
+    async getAlpha360ResourceVersioned(alphaId: string) {
+      return gate<never>("getAlpha360ResourceVersioned") ?? v1Versioned(await self.getAlpha360Resource(alphaId));
     },
     async getPortfolio360Resource(portfolioId: string) {
       const blocked = gate<ProfileEnvelope>("getPortfolio360Resource");
@@ -524,9 +530,14 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getMarketContextCandles() { return unavailable("Trading System market candles are not part of the fixture set."); },
     async getObservedTimeline() { return unavailable("The observed timeline BFF is not part of the fixture set."); },
     async getManagerRelationPage() { return unavailable("The Manager relation BFF is not part of the fixture set."); },
+    async getManagerSeries() { return unavailable("The Manager series is not part of the fixture set."); },
+    async getManagerDataset() { return unavailable("The Manager dataset is not part of the fixture set."); },
     async getEquitySparklines() { return unavailable("The fleet equity sparklines are not part of the fixture set."); },
     async getStageDrift() { return unavailable("The alpha stage drift is not part of the fixture set."); },
     async getSubjectActivity() { return unavailable("The retained subject activity BFF is not part of the fixture set."); },
+    async getSubjectActivityVersioned(query) {
+      return gate<never>("getSubjectActivityVersioned") ?? v1Versioned(await self.getSubjectActivity(query));
+    },
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
       return blocked ?? fixtureRead(ALPHA_FLEET, readAlphaFleet, "The Alpha Fleet");
@@ -701,6 +712,8 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const detail = readGateR2Detail({
         ...R2_DETAIL,
         approval: { ...(R2_DETAIL.approval as object), approval_id: approvalId },
+        // The synthetic context follows the requested approval, as the approval row does.
+        decision_context: { ...(R2_DETAIL.decision_context as object), approval_id: approvalId },
       });
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
@@ -754,6 +767,29 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         : unavailable("The live full operations response could not be read.");
     },
 
+    /*
+     * The version-aware stage reads: the fixture lab only has the V1 bodies, so
+     * each answers its V1 fixture as a `v1` read (same rule as getGovernanceParent).
+     * A request the http port would refuse without sending (bad panel, cursor
+     * with no panel) is refused here too, so a screen under the lab sees the
+     * same behaviour.
+     */
+    async getSandboxCertificationVersioned(deploymentId) {
+      return gate<never>("getSandboxCertificationVersioned") ?? v1Versioned(await self.getSandboxCertification(deploymentId));
+    },
+
+    async getCanaryVersioned(deploymentId) {
+      return gate<never>("getCanaryVersioned") ?? v1Versioned(await self.getCanaryControlRoom(deploymentId));
+    },
+
+    async getLiveFullVersioned(deploymentId, versionedOptions) {
+      const blocked = gate<never>("getLiveFullVersioned");
+      if (blocked) return blocked;
+      const query = stageVersionedSearch(versionedOptions);
+      if (!query.ok) return unavailable(query.reason);
+      return v1Versioned(await self.getLiveFullOperations(deploymentId));
+    },
+
     async listOperations(query) {
       const blocked = gate<never>("listOperations");
       if (blocked) return blocked as Result<never>;
@@ -790,6 +826,47 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       return result
         ? { ok: true as const, value: result }
         : unavailable("The triage response could not be read.");
+    },
+
+    // The V2 reads are served by the e2e BFF double through the HTTP client; the lab port has no V2 fixture.
+    async listOperationalQueueV2() {
+      return unavailable("The V2 operations queue is not served by the fixture port.");
+    },
+    async getIncidentRootV2() {
+      return unavailable("The V2 incident root is not served by the fixture port.");
+    },
+    // The FE-062 / FE-068 / FE-069 reads are served by the e2e BFF double through the HTTP client; the lab port has no fixture for them.
+    async getPendingRecallDiscovery() {
+      return unavailable("The pending recall discovery is not served by the fixture port.");
+    },
+    // A command route: the lab port never answers one (a fixture is not a connected source).
+    async previewPendingControl() {
+      return unavailable("PENDING_CONTROL_NOT_CONNECTED: the fixture port answers no command route.");
+    },
+    async getStageActionEligibility() {
+      return unavailable("The stage action eligibility is not served by the fixture port.");
+    },
+    async getPaperExitParent() {
+      return unavailable("The Paper exit parent is not served by the fixture port.");
+    },
+    async getSelfEligibilityBatch() {
+      return unavailable("The eligibility batch is not served by the fixture port.");
+    },
+    async getSelfContext() {
+      return unavailable("The self context is not served by the fixture port.");
+    },
+    async getVisitDigest() {
+      return unavailable("The visit digest is not served by the fixture port.");
+    },
+    async markVisitDigestSeen() {
+      return { kind: "unavailable" as const, reason: "The visit digest is not served by the fixture port, so nothing was sent." };
+    },
+    // A password never goes to a fixture: the lab port answers without reading the input.
+    async postSessionStepUp() {
+      return { kind: "unavailable" as const, reason: "The session step-up is not served by the fixture port." };
+    },
+    async lookupApprovalRequest() {
+      return unavailable("The request lookup is not served by the fixture port.");
     },
 
     async getIncident() {
@@ -990,7 +1067,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
         : unavailable("The binding exposure response could not be read.");
     },
 
-    async getPaperExit(reviewId: string) {
+    async getPaperExit(reviewId: string, _workspaceId?: string) {
       const blocked = gate<ReturnType<typeof readPaperExitDetail>>("getPaperExit");
       if (blocked) return blocked as Result<never>;
       const detail = readPaperExitDetail({
@@ -1021,8 +1098,10 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
           applyToken: blockers.length > 0 ? null : `gat1.fixture.${id}.${"a".repeat(43)}`,
           blockers: blockers.map((code) => ({ code })),
           warnings: [],
+          kind: isPaperExitDecision(input.decision) ? "PAPER_EXIT" : (input.gate ?? "R1"),
+          authority: null,
           expectedApprovalVersion: input.expectedApprovalVersion,
-          riskTier: "R1",
+          riskTier: input.gate === "R2" ? "R2" : "R1",
         },
       };
     },
@@ -1061,4 +1140,5 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       };
     },
   };
+  return self;
 }

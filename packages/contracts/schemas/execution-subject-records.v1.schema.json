@@ -1,0 +1,448 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-subject-records.v1.schema.json",
+  "title": "Retained subject orders/fills page, LEGACY_COMPATIBILITY body (portal.execution.subject-records.v1)",
+  "description": "One keyset page of an alpha's or account's orders or fills from the Portal retained current window (not authoritative replay, not total history). `state` AUTHORITATIVE_EMPTY means the retained window holds no row for this subject; UNAVAILABLE means the relation was not published. `values` carries the relation's own published fields as strings/numbers/null; a missing key is absent, never zero. `timeframe.derived` provenance DERIVED_STRATEGY_ID_SUFFIX is a parse of the strategy id, not a source fact. In SCOPED_V2 the same route answers portal.execution.subject-records.v2 (execution-scoped-records.openapi.json), whose `values` are restricted to the reviewed scoped field set. The cursor is Portal-signed, bound to user, snapshot and limit; a stale one is 409.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "logical_operation_id",
+    "authority",
+    "source_authority",
+    "history_semantics",
+    "environment",
+    "profile_id",
+    "resource",
+    "timeframe",
+    "source_health",
+    "coverage",
+    "state",
+    "page",
+    "records",
+    "projection"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.subject-records.v1"
+    },
+    "logical_operation_id": {
+      "enum": [
+        "executionAlphaOrdersV1",
+        "executionAlphaFillsV1",
+        "executionAccountOrdersV1",
+        "executionAccountFillsV1"
+      ]
+    },
+    "authority": {
+      "const": "PORTAL_SGP_RETAINED_CURRENT_WINDOW"
+    },
+    "source_authority": {
+      "const": "TRADING_SYSTEM_CURRENT_SOURCE"
+    },
+    "history_semantics": {
+      "const": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY"
+    },
+    "environment": {
+      "enum": [
+        "paper",
+        "sandbox",
+        "live"
+      ]
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id",
+        "resolution"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "alpha",
+            "account"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "resolution": {
+          "enum": [
+            "EXACT_ACCOUNT_ID",
+            "PUBLISHED_STRATEGY_ID",
+            "PUBLISHED_ALPHA_ID",
+            "DERIVED_REQUESTED_STRATEGY_ID"
+          ]
+        }
+      }
+    },
+    "timeframe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "provenance",
+        "source_field"
+      ],
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "4h",
+                "1d"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provenance": {
+          "enum": [
+            "PUBLISHED_SOURCE",
+            "DERIVED_STRATEGY_ID_SUFFIX",
+            "UNAVAILABLE"
+          ]
+        },
+        "source_field": {
+          "anyOf": [
+            {
+              "enum": [
+                "timeframe",
+                "bar_interval",
+                "interval",
+                "resolution"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "source_health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availability",
+        "freshness",
+        "completeness",
+        "as_of_ms"
+      ],
+      "properties": {
+        "availability": {
+          "enum": [
+            "AVAILABLE",
+            "UNAVAILABLE"
+          ]
+        },
+        "freshness": {
+          "enum": [
+            "FRESH",
+            "AGING",
+            "STALE",
+            "UNKNOWN"
+          ]
+        },
+        "completeness": {
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNKNOWN"
+          ]
+        },
+        "as_of_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "retained_row_count",
+        "oldest_observed_at_ms",
+        "newest_observed_at_ms",
+        "source_completeness",
+        "source_window"
+      ],
+      "properties": {
+        "retained_row_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "oldest_observed_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "newest_observed_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_completeness": {
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNKNOWN"
+          ]
+        },
+        "source_window": {
+          "const": "CURRENT_SOURCE_CURSOR_TRAVERSAL"
+        }
+      }
+    },
+    "state": {
+      "enum": [
+        "AVAILABLE",
+        "PARTIAL",
+        "AUTHORITATIVE_EMPTY",
+        "UNAVAILABLE"
+      ]
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "limit",
+        "maximum_page_rows",
+        "returned_count",
+        "has_more",
+        "next_cursor"
+      ],
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500
+        },
+        "maximum_page_rows": {
+          "const": 500
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^kc1\\.",
+              "maxLength": 4096
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "records": {
+      "type": "array",
+      "maxItems": 500,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "record_id",
+          "values"
+        ],
+        "properties": {
+          "record_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "values": {
+            "$ref": "#/$defs/Row"
+          }
+        }
+      }
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "epoch_id",
+        "sequence",
+        "source_as_of_ms",
+        "received_at_ms",
+        "last_successful_refresh_at_ms"
+      ],
+      "properties": {
+        "epoch_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "source_as_of_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_ms": {
+          "type": "integer",
+          "minimum": -8640000000000000,
+          "maximum": 8640000000000000
+        },
+        "last_successful_refresh_at_ms": {
+          "type": "integer",
+          "minimum": -8640000000000000,
+          "maximum": 8640000000000000
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "UNAVAILABLE"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "AUTHORITATIVE_EMPTY"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "records": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "UtcEpochMs": {
+      "type": "integer",
+      "minimum": -8640000000000000,
+      "maximum": 8640000000000000
+    },
+    "Row": {
+      "type": "object",
+      "maxProperties": 64,
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "oneOf": [
+              {
+                "type": "string",
+                "maxLength": 8192
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}

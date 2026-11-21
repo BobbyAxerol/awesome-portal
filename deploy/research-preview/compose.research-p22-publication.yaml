@@ -1,0 +1,67 @@
+# OL-05 · isolated P22 publication stack.
+# Apply only through scripts/research-preview/p22-publication.sh. The project,
+# volumes and loopback port are independent from the shared :8095 preview.
+services:
+  portal-web:
+    ports:
+      - "127.0.0.1:${PORTAL_HTTP_PORT:-8097}:80"
+    mem_limit: 100000000
+    memswap_limit: 100000000
+    pids_limit: 64
+  portal-api:
+    mem_limit: 800000000
+    memswap_limit: 800000000
+    pids_limit: 128
+    environment:
+      PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: ${PORTAL_FEATURE_RESEARCH_RUN_PRODUCER:-false}
+      PORTAL_FEATURE_RESEARCH_PROGRESS: ${PORTAL_FEATURE_RESEARCH_PROGRESS:-false}
+      PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS: ${PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS:-false}
+      PORTAL_FEATURE_RESEARCH_WFO_PROFILE: ${PORTAL_FEATURE_RESEARCH_WFO_PROFILE:-false}
+  control-api:
+    mem_limit: 650000000
+    memswap_limit: 650000000
+    pids_limit: 128
+    environment:
+      FEATURE_RESEARCH_RUN_PRODUCER: ${CONTROL_API_FEATURE_RESEARCH_RUN_PRODUCER:-false}
+      FEATURE_RESEARCH_PROGRESS: ${CONTROL_API_FEATURE_RESEARCH_PROGRESS:-false}
+      FEATURE_RESEARCH_RETAINED_ARTIFACTS: ${CONTROL_API_FEATURE_RESEARCH_RETAINED_ARTIFACTS:-false}
+      FEATURE_RESEARCH_WFO_PROFILE: ${CONTROL_API_FEATURE_RESEARCH_WFO_PROFILE:-false}
+      FEATURE_RESEARCH_CURRENT_SOURCE: ${CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE:-false}
+      FEATURE_RESEARCH_EVIDENCE: ${CONTROL_API_FEATURE_RESEARCH_EVIDENCE:-false}
+      FEATURE_RESEARCH_SPLIT: ${CONTROL_API_FEATURE_RESEARCH_SPLIT:-false}
+      FEATURE_RESEARCH_SEARCH: ${CONTROL_API_FEATURE_RESEARCH_SEARCH:-false}
+      FEATURE_RESEARCH_FREEZE: ${CONTROL_API_FEATURE_RESEARCH_FREEZE:-false}
+      FEATURE_RESEARCH_REPLAY: ${CONTROL_API_FEATURE_RESEARCH_REPLAY:-false}
+      FEATURE_RESEARCH_REPORTS: ${CONTROL_API_FEATURE_RESEARCH_REPORTS:-false}
+      FEATURE_RESEARCH_LINEAGE: ${CONTROL_API_FEATURE_RESEARCH_LINEAGE:-false}
+      FEATURE_RESEARCH_COMPARE: ${CONTROL_API_FEATURE_RESEARCH_COMPARE:-false}
+      FEATURE_RESEARCH_RELEASE_CANDIDATES: ${CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATES:-false}
+      FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: ${CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION:-false}
+  portal-postgres:
+    mem_limit: 900000000
+    memswap_limit: 900000000
+    pids_limit: 128
+  portal-nats:
+    mem_limit: 150000000
+    memswap_limit: 150000000
+    pids_limit: 64
+  roadmap-task-board-api:
+    mem_limit: 200000000
+    memswap_limit: 200000000
+    pids_limit: 64
+  portal-minio:
+    mem_limit: 300000000
+    memswap_limit: 300000000
+    pids_limit: 128
+  quant-worker-py:
+    mem_limit: 1500000000
+    memswap_limit: 1500000000
+    pids_limit: 128
+  control-api-migrate:
+    mem_limit: 350000000
+    memswap_limit: 350000000
+    pids_limit: 64
+  control-api-bootstrap:
+    mem_limit: 350000000
+    memswap_limit: 350000000
+    pids_limit: 64

@@ -1,0 +1,59 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.entity-search.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "query": {
+      "q": "carry",
+      "kinds": [
+        "alpha",
+        "portfolio",
+        "account",
+        "operation",
+        "incident",
+        "approval"
+      ],
+      "limit": 8
+    },
+    "groups": [
+      {
+        "kind": "alpha",
+        "total_matched": null,
+        "rows": [],
+        "state": "NOT_COMMISSIONED"
+      },
+      {
+        "kind": "portfolio",
+        "total_matched": null,
+        "rows": [],
+        "state": "NOT_COMMISSIONED"
+      },
+      {
+        "kind": "account",
+        "total_matched": null,
+        "rows": [],
+        "state": "NOT_COMMISSIONED"
+      },
+      {
+        "kind": "operation",
+        "total_matched": null,
+        "rows": [],
+        "state": "NOT_COMMISSIONED"
+      },
+      {
+        "kind": "incident",
+        "total_matched": null,
+        "rows": [],
+        "state": "NOT_COMMISSIONED"
+      },
+      {
+        "kind": "approval",
+        "total_matched": null,
+        "rows": [],
+        "state": "NOT_COMMISSIONED"
+      }
+    ]
+  }
+}

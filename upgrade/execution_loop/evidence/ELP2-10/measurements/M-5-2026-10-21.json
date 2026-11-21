@@ -1,0 +1,96 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-5",
+  "sub": "coexistence B0/B1/B2 (Portal side B1, B2)",
+  "title": "TS / DL / Research coexistence, Portal-side stages",
+  "status": "READY_NEEDS_WINDOW",
+  "lane": "NOT_RUN",
+  "run_kind": "ABSOLUTE_MEASUREMENT",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 11.58,
+    "loadavg_5m_at_capture": 11.14
+  },
+  "started_at": null,
+  "ended_at": null,
+  "started_at_ms": null,
+  "ended_at_ms": null,
+  "duration_ms": null,
+  "workload": {
+    "target_lane": "REAL_READ_QUALIFIED",
+    "owner_of_plan": "Edge / TS / DL (EPG10-01 measurement-plan.json); Claude supplies the plan skeleton, the Portal stages and the readiness check",
+    "command": "node scripts/measure/m5-coexistence-window.mjs --authorization A.json --authorization-sha256 sha256:... --repin R.json --repin-max-age-ms N --plan P.json --plan-sha256 sha256:... --repetition-id repN --stage B1|B2 --header-file ~/secret/session.hdr [--id-map ids.json] [--metric-map map.json]",
+    "stop_conditions": "STOP_429 / STOP_5XX_RATE / STOP_NETWORK_RATE / STOP_OVERLOAD / STOP_SIGNAL / window end - 5 s; offered peak above window max_rps refuses to start"
+  },
+  "resource_limits": null,
+  "stop_conditions": [],
+  "results": {
+    "ready": [
+      {
+        "path": "scripts/measure/m5-coexistence-window.mjs",
+        "sha256": "sha256:f2877246d5c39f4c1123d70b8f150cd867732244c47e1711632692c154342ba6"
+      },
+      {
+        "path": "scripts/measure/lib/window.mjs",
+        "sha256": "sha256:78917fb2aa754958cae9a6904aa9db340e48beded6403f7578c14ced727dfd2e"
+      },
+      {
+        "path": "scripts/measure/lib/replay.mjs",
+        "sha256": "sha256:bb24eb98c267546d9aa2d231837b563e4401381577fe31fd6c942becded07d5e"
+      },
+      {
+        "path": "scripts/measure/lib/stage.mjs",
+        "sha256": "sha256:84c891f587023b67c2049be23054f8c9e4df7428499f32ef15476b35251d7d47"
+      },
+      {
+        "path": "scripts/measure/workloads/read-sets.v1.json",
+        "sha256": "sha256:83809ec2950c1bb471077b62a45a0cc5780107f9aef6937a37b788bd27fd704f"
+      },
+      {
+        "path": "scripts/execution-v2/qualification-readiness.mjs",
+        "sha256": "sha256:0a607935db48cbddf9511a6e378958a738e035b4476c36f9ce139278079afd91"
+      }
+    ],
+    "driver_selftest": {
+      "path": "upgrade/execution_loop/evidence/ELP2-10/measurements/M-5-driver-selftest-2026-10-21.json",
+      "sha256": "sha256:4d18e6ef5f3e98b4e9dcf84c4797f7acc6d0173f79c9e8b7c4c83e9e80309a25",
+      "lane": "FIXTURE_LAB"
+    },
+    "refusals_proven_by_tests": "scripts/measure/measure.test.mjs (node --test): missing/mismatched/expired/wrong-measurement/wrong-lane/local-origin authorisation, offered peak above max_rps, non-GET workload",
+    "missing": [
+      "window + authorisation record from the grantor and its sha256",
+      "14 budget groups decomposed to scalar bounds with approval_ref (Edge/TS/DL)",
+      "the pinned coexistence plan (workload/config/hardware, counterbalanced stage orders, minimum_duration_ms)",
+      "M-0 read-only repin inside --repin-max-age-ms (lease root + user, competing jobs empty)",
+      "Core009 composed",
+      "a real temporary session and an id-map for the fixture ids"
+    ],
+    "unmet": [
+      "upgrade/execution_loop/evidence/ELP2-10/CORE009_INTEGRATION_RETURN_2026-10-21.md section 2: integration prepared; hook, image build and runtime readback PENDING; installed image sha256:7b2c7f34... is NOT Core009"
+    ],
+    "window_request": "upgrade/execution_loop/evidence/ELP2-10/measurements/WINDOW_REQUESTS_2026-10-21.md section 1 (M-5)"
+  },
+  "resources": null,
+  "cleanup": null,
+  "limitations": [],
+  "notes": [],
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:1172397231de9624621acd1359c398032af1c10f408c82fbe91e6daf74bfbf4e"
+}

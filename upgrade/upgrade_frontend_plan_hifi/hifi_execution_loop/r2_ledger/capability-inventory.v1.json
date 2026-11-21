@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
- "generated_at": "2026-09-10",
- "route_count": 137,
+ "generated_at": "2026-10-20",
+ "route_count": 283,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -10,8 +10,199 @@
   "INTENTIONALLY_UNEXPOSED"
  ],
  "taxonomy_gap": "The R2-0 enum has no class for a route that is published, healthy and has no consumer. Six such routes are recorded as INTERACTION_READ with unused_capability=true. Codex to decide whether to add PUBLISHED_UNCONSUMED.",
- "edge_command_count_zero_because": "No command plane exists: issueCommand/sendCommand/commandPlane/EDGE_COMMAND/postToEdge appear nowhere in apps/control-api/src or the Rust crates. Every mutation route writes locally.",
+ "edge_command_activation_note": "ELP2-07 adds one named EDGE_COMMAND dispatch route, default source-dark. No verified source adapter is mounted or activated; TEST_ONLY component receipts are not runtime financial authority. route_count counts this ledger, not the separate repository-wide live route census.",
  "routes": [
+  {"route":"GET /api/v1/execution/orders/:order_id/detail","controller":"execution-v2/sibling-source-dark.controller.ts","interaction_class":"INTERACTION_READ","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"Source-dark route shell: authenticated workspace check and typed 503 only; no positive source, field authority or native HTTP custody commissioned."},
+  {"route":"GET /api/v1/execution/accounts/:account_id/profile","controller":"execution-v2/sibling-source-dark.controller.ts","interaction_class":"INTERACTION_READ","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"Conditional identity-only native-custody projection from separately qualified Manager CURRENT. Uncommissioned source remains typed 503; no connected acceptance or financial fields claimed."},
+  {"route":"GET /api/v1/execution/reconciliation","controller":"execution-v2/sibling-source-dark.controller.ts","interaction_class":"INTERACTION_READ","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"Source-dark route shell: authenticated workspace check and typed 503 only; no positive source, field authority or native HTTP custody commissioned."},
+  {"route":"GET /api/v1/execution/obligations","controller":"execution-v2/sibling-source-dark.controller.ts","interaction_class":"INTERACTION_READ","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"Source-dark route shell: authenticated workspace check and typed 503 only; no positive source, field authority or native HTTP custody commissioned."},
+  {"route":"GET /api/v1/execution/deployments/:deployment_id/equity-projection/source","controller":"equity-projection/equity-projection-source.controller.ts","interaction_class":"INTERACTION_READ","consumer":"NONE_YET","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"R-C V2 source contract (execution.analytics.equity-projection.source.v2). Dark: producer is SourceNotCommissionedPort, field authority deny-all, route unmounted unless equityProjectionSource is SOURCE_DARK. No real source, no consumer screen. Entry added with the route so the inventory stays exact."},
+  {"route":"GET /api/v1/execution/governance/approvals/:approval_id/evidence","controller":"approval-evidence/approval-evidence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"WP-K approval evidence (portal.execution.approval-evidence.v1, executionApprovalEvidenceGetV1). Dark: producer is SourceNotCommissionedApprovalEvidencePort (every section omitted), field authority deny-all, route unmounted unless approvalEvidence is SOURCE_DARK. Frontend reader apps/portal/frontend/src/execution/v2/readers/approvalEvidence.ts. Entry added with the route so the inventory stays exact."},
+  {"route":"GET /api/v1/execution/visit-digest","controller":"command-center/visit-digest.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"Six-package support3 FE-024: current authorized bounded observations compared with Portal user/workspace baseline. GET has no writes; no hidden historical rows or inferred resolutions. Source-only, consumer pending."},
+  {"route":"POST /api/v1/execution/visit-digest/seen","controller":"command-center/visit-digest.controller.ts","interaction_class":"PORTAL_MUTATION","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"Six-package support3 FE-024: Origin/CSRF/current membership and reader authority, exact snapshot revision and baseline-version CAS; retries same revision are idempotent; no Edge command or financial effect."},
+  {"route":"GET /api/admin/profile-access/v2/eligibility","controller":"execution-v2/access.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"C3 FE-015/037/038: finite advisory own current eligibility only; SessionGuard plus active workspace membership, existing action/resource grammar, conservative full source dependency closure and LAST Core/session fence. No grant directory, entity existence, step-up capability or command commissioning inferred; no owner-all menu aliases. Disposable synthetic/PG tests are not installed-source qualification."},
+  {"route":"GET /api/admin/profile-access/v2/self-navigation","controller":"execution-v2/access.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"C3 FE-015/037/038: current own menu projection from exact existing permissions and complete Core graph; bounded candidates fail closed, no hidden resources/grants/IDs returned. Self-entry SELF_ONLY route remains absent until consumer router; navigation is not data or command authority. No source activation or frontend acceptance implied."},
+  {"route":"POST /api/v1/execution/pending-recalls/preview","interaction_class":"PORTAL_MUTATION","evidence":"Original ELP2-REQ-07-002 pending-control: rollback-only source prediction for existing recall, exact current capital.apply_pending/capital.cancel_remaining and native per-action correspondence. No reservation/new recall/new amount. Default source unqualified; retained POST denied.","controller":"execution-v2/pending-control.controller.ts","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex"},
+  {"route":"POST /api/v1/execution/pending-recalls","interaction_class":"EDGE_COMMAND","evidence":"Original ELP2-REQ-07-002 pending-control: durable original-key custody/event/product audit before one source APPLY; genuine current actor/step-up/exact action and PM parent/recipient COMMIT fencing required. No activation or financial-source replacement; default provider unqualified.","controller":"execution-v2/pending-control.controller.ts","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex"},
+  {"route":"GET /api/v1/execution/pending-recalls/:id","interaction_class":"INTERACTION_READ","evidence":"Original ELP2-REQ-07-002 pending-control: bounded local Core status, versioned current independent TS-accepted audit.read before private decode and LAST source/Core body/error fence; no source call/write. Hidden/unknown/wrong workspace404; retained GET stays in Core workspace.","controller":"execution-v2/pending-control.controller.ts","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex"},
+  {"route":"POST /api/v1/execution/pending-recalls/:id/reconcile","interaction_class":"PORTAL_MUTATION","evidence":"Original ELP2-REQ-07-002 pending-control: independent current audit/Origin/CSRF and idempotency header; service-only same-original-key lookup, never APPLY/resend or expired human impersonation. UNKNOWN cannot erase known receipt, original control distinct from linked latest recall receipt; retained POST denied.","controller":"execution-v2/pending-control.controller.ts","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex"},
+  {"route":"POST /api/v1/execution/instance-registrations/preview","controller":"execution-v2/instance-registration.controller.ts","interaction_class":"PORTAL_MUTATION","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-07 instance-registration: exact Portfolio/environment deployment.register and distinct current source correspondence; real owning rollback-only preview required. Default source-dark, retained profile refuses POST. Synthetic tests are not installed-source authority; consumer owner-held."},
+  {"route":"POST /api/v1/execution/instance-registrations","controller":"execution-v2/instance-registration.controller.ts","interaction_class":"EDGE_COMMAND","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-07 instance-registration: separate named register family, durable attempt/event/product audit before any source APPLY; no capital union, funding/binding/activation or canonical identity inference. Current step-up/exact source acceptance required; default unqualified, no runtime command activation."},
+  {"route":"GET /api/v1/execution/instance-registrations/:id","controller":"execution-v2/instance-registration.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-07 instance-registration: local Core correlation status; independent current exact TS-accepted audit.read before protected decode and LAST source/Core body/error fences. Original send TTL is not read authority; hidden/missing/wrong-workspace404, no source call or write. Retained GET uses actual Core workspace."},
+  {"route":"POST /api/v1/execution/instance-registrations/:id/reconcile","controller":"execution-v2/instance-registration.controller.ts","interaction_class":"PORTAL_MUTATION","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-07 instance-registration: current independent audit/CSRF/Origin before same-original-key service lookup and final disclosure fence; no resend, new key or expired human impersonation. Retained mutations remain refused; installed authenticated source/provider qualification is separate."},
+  {"route":"GET /api/v1/execution/operations/f0","controller":"operations/f0-read.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 f0-current-audit-read collection: current exact TS-accepted audit before five-predicate own-intent census; whole delegation/DENY graph, signed current-bound cursor, finite rows and final session/grant fence for success and refusal. No mixed queue, source call, relay, grant or business write. TEST_ONLY PG/HTTP correctness is not source commissioning or owner-held consumer acceptance."},
+  {"route":"GET /api/v1/execution/operations/f0/:operation_id/apply-attempts/:request_key","controller":"operations/f0-read.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"BE-P13 (route ADDED 2026-10-20): read-only recovery of an F0 apply answer by request_key after a lost response (NONE / FOUND / CONFLICT). F0 apply is DENIED-only, so the stored answer is the constant COMMAND_RELAY_DISABLED denial. Keyed by the session actor; the named operation's exact target needs current TS-accepted audit.read BEFORE the attempt row is read and again after the last await. No source call, relay, grant or write. Pure in-memory service tests; PG/HTTP not run in the authoring lane."},
+  {"route":"GET /api/v1/execution/operations/f0/:operation_id","controller":"operations/f0-read.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 f0-current-audit-read: finite retained BLOCKED intent; creator/workspace ceiling plus current exact TS-accepted audit.read and final authority fence. No generic family fallback, relay, source refresh or business/audit write. Synthetic/disposable correctness is not source commissioning or owner-held consumer acceptance."},
+  {"route":"GET /api/v1/execution/manager/score-view","controller":"execution-v2/manager-score-revision.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-06 explicit authorized ORIGINAL/RESTATED historical view; current resource/field and exact retained-source binding, no GET calculation/ACK or operational-current relabel. Consumer owner-held; synthetic/disposable correctness is not source commissioning."},
+  {"route":"GET /api/v1/execution/technical/service-heartbeats","controller":"execution/service-heartbeats.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 exact retained heartbeat technical DTO; current maintenance ROOT and exact dataset publication, independent Core/storage eligibility, bounded opaque paging and safe source-clock absence. Synthetic-source actual-PG HTTP proof is separate from source/runtime commissioning. Consumer not assigned."},
+  {"route":"GET /api/v1/execution/manager/score-revisions","controller":"execution-v2/manager-score-revision.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-06 immutable scoped history enumeration with actual retained counts/predecessors and two-way opaque cursors; null availability remains explicit for unavailable custody. Current grants and policy govern historical reads. Consumer not assigned; no runtime source activation."},
+  {"route":"GET /api/v1/execution/runtime-manifest/v2","controller":"execution/scoped-runtime-manifest.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 positive-readers: explicit finite local technical observations; Core per-profile maintenance and independent storage access fences; V1 unchanged. TEST_ONLY component proof, consumer not assigned, no source/runtime commissioning."},
+  {"route":"POST /api/v1/execution/capital-commands/preview","controller":"execution-v2/command.controller.ts","interaction_class":"PORTAL_MUTATION","owner":"codex","test_owner":"codex","evidence":"ELP2-07: named capital preview; default unqualified and retained mutation guard; TEST_ONLY component proof is not runtime authority."},
+  {"route":"POST /api/v1/execution/capital-commands","controller":"execution-v2/command.controller.ts","interaction_class":"EDGE_COMMAND","owner":"codex","test_owner":"codex","evidence":"ELP2-07: source-dark trusted dispatch; current policy/step-up/TS authority required. No source adapter activated; no generic CLI."},
+  {"route":"GET /api/v1/execution/capital-commands/:id","controller":"execution-v2/command.controller.ts","interaction_class":"INTERACTION_READ","owner":"codex","test_owner":"codex","evidence":"ELP2-07: local durable status only; exact current accepted report grant, no send, no source query."},
+  {"route":"GET /api/v1/execution/capital-commands/:id/workflow","controller":"execution-v2/command.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-07/08 capital-workflow-read: one immutable original receipt projected with current exact TS-accepted audit authority before private decode and after final I/O; independent reviewer and full DENY ancestry; null source cutoff, private/no-store. No command-source lookup/send/recover or ledger write. Local correctness is separate from source commissioning; consumer owner-held."},
+  {"route":"GET /api/v1/execution/capital-commands","controller":"execution-v2/command.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"ELP2-04 finite-account-command-readers: finite exact-resource/environment status collection with current TS-accepted audit authority before SQL and after I/O; full delegation ancestry, opaque current-bound cursor, no mixed-queue total, send, lookup, recovery, write or ACK. Disposable HTTP/PG proof remains separate from source commissioning and unassigned consumer acceptance."},
+  {"route":"POST /api/v1/execution/capital-commands/:id/reconcile","controller":"execution-v2/command.controller.ts","interaction_class":"PORTAL_MUTATION","owner":"codex","test_owner":"codex","evidence":"ELP2-07: authoritative lookup of same intent only, no resend; current accepted report authority and CSRF required."},
+  {"route":"GET /api/v1/execution/manager/fund-overview","controller":"execution-v2/manager-model.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"evidence":"ELP2-06: scoped qualified projection; Fund requires whole-population authority. SOURCE_CONTRACT_NOT_RUNTIME_ACCEPTANCE; consumer not assigned.","owner":"codex","test_owner":"codex"},
+  {"route":"GET /api/v1/execution/manager/fleet","controller":"execution-v2/manager-model.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"evidence":"ELP2-06: full authorized query before paging, exact decimal and partition; no generic browser source selectors.","owner":"codex","test_owner":"codex"},
+  {"route":"GET /api/v1/execution/manager/portfolios/:id/overview","controller":"execution-v2/manager-model.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"evidence":"ELP2-06: exact Portfolio grant or explicit restricted capability, not legacy/admin fallback; selected source still unqualified.","owner":"codex","test_owner":"codex"},
+  {"route":"GET /api/v1/execution/manager/alphas/:id/overview","controller":"execution-v2/manager-model.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"evidence":"ELP2-06: authorized Alpha-version-Portfolio grain plus deployment/account children; fixture-only component proof.","owner":"codex","test_owner":"codex"},
+  {"route":"GET /api/v1/execution/manager/accounts/:id/overview","controller":"execution-v2/manager-model.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"evidence":"ELP2-06: exact Account read and authorized source tuples before joins/totals; no custody or technical authority inferred.","owner":"codex","test_owner":"codex"},
+  {"route":"GET /api/v1/execution/manager/deployments/:id/overview","controller":"execution-v2/manager-model.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"evidence":"ELP2-06: owned Alpha collection then exact deployment tuple; no invented alpha.read-on-Deployment grant.","owner":"codex","test_owner":"codex"},
+  {
+   "route": "POST /api/admin/profile-access/v2/grants/:id/preview-revoke",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: current-authorized advisory revoke before/after; obligations continue; no write or TS revocation claim.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/admin/profile-access/v2/effective",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: current own scoped policy; no default production grants. Consumer not assigned.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/profile-access/v2/preview",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: advisory scoped ceiling/diff; CSRF/origin; never TS business activation.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/profile-access/v2/proposals",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: current delegation ceiling, proof, CAS and immutable receipt; TS authority pending until qualified acceptance.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/admin/profile-access/v2/proposals/:id",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: current-authorized proposal state and original receipt; hidden id safe404.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/profile-access/v2/grants/:id/revoke",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: exact current resource/environment revoke, proof/CAS/idempotency; no TS revoke claim.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/admin/profile-access/v2/step-up",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: own current password/session proof for delegated users; no capability granted.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/admin/profile-access/v2/audit",
+   "controller": "execution-v2/access.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND", "unused_capability": true,
+   "evidence": "ELP2-03: scoped subject audit before page/count; signed actor/policy/limit-bound keyset cursor.",
+   "owner": "codex", "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/auth/profile",
+   "controller": "auth/profile.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "ELP2-02: own identity/current app rights; typed unmapped TS identity, no secrets; consumer not assigned.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "PATCH /api/auth/profile",
+   "controller": "auth/profile.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "ELP2-02: self display-name allowlist, CSRF/origin, CAS/idempotency and transactional current-session fence.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/execution/retained-review",
+   "controller": "execution/retained-review.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "UDB-03: Core-authorized retained-review context, permissions, current source refusal and local coverage; Claude rich-screen handoff.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/windows/analytics",
+   "controller": "research/window-execution.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "WEX-02: complete retained per-window descriptive analytics; Claude consumer handoff, no pre-execution Holdout values.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/windows/observations",
+   "controller": "research/window-execution.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "WEX-03: completed window/fold observations, exact actor/revision cursor, 200 rows/1 MiB.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/execution/records",
+   "controller": "research/window-execution.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "WEX-04: original engine order/fill/lifecycle journal; source absences explicit, not broker history.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/windows/compare",
+   "controller": "research/window-execution.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "WEX-03: same explicit window and optional fold of two completed runs; no forward filling or sampled-input analytics.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/window-execution/batches",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "WORKER",
+   "unused_capability": false,
+   "evidence": "WEX-04: worker infrastructure route, never a browser surface — private live lease/fencing and exact sealed P05 parts/proof; idempotent bounded append.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/window-execution/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "WORKER",
+   "unused_capability": false,
+   "evidence": "WEX-04: worker infrastructure route, never a browser surface \u2014 full normalized digest/count/chronology and immutable DB finalization, not a browser write.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
   {
    "route": "GET /api/admin/profile-access",
    "controller": "admin/governance-grants.controller.ts",
@@ -765,6 +956,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/execution/operations/incidents/:incident_id/eligibility",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "DEBT-UXM07-042: additive current-only advisory for EXISTING Portal ADMIN incident workflow. Single scoped incident/EXISTS read; pre/post current mode, membership, session and ADMIN fences. SCOPED_V2 refuses INCIDENT_SCOPED_PARENT_NOT_COMMISSIONED; no new grant action, maintenance alias or TS/resume authority. Focused contract/unit/disposable-PG tests; Claude consumer still pending.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "GET /api/v1/execution/orders/:orderId/funnel",
    "controller": "execution/analytics.controller.ts",
    "interaction_class": "INTERACTION_READ",
@@ -1394,8 +1595,747 @@
    "evidence": "BE-R2-8: authenticated HTTP + fresh-PG writer/readback + canonical schema/FE reader tests. Typed client exists; no product capture form is claimed or deployed.",
    "owner": "codex",
    "test_owner": "codex"
-  }
+  },
+  {
+   "route": "GET /api/v1/research/journey",
+   "controller": "research/foundation.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P09 serves the immutable Journey descriptor plus P02 inspection-only cursor semantics through one session/workspace-scoped same-origin read. It has no write, worker, source-data, engine or Execution authority; Claude owns the first mounted S00 product receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/quantbt/atlas",
+   "controller": "research/foundation.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P09 reads the already-loaded P04 manifest through a bounded signed private GET and exposes current/historical, route and mode facts only. It cannot import or dispatch QuantBT; Claude owns the first mounted S12 product receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/preflights",
+   "controller": "research/preflight.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P08 creates one bounded, immutable Research preflight manifest from a caller-scoped requested_spec. It does not create a run, start a worker, expose raw market rows, or reserve compute. The typed Screen 02/05 consumer exists; P09 owns the first product-route receipt and P10 owns run creation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/runs",
+   "controller": "research/run-create.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P10 accepts only one canonical, caller-scoped New Run request after rechecking the P08 opaque manifest, immutable P04 binding and server-owned admission predicate. It persists the intent before the private signed Portal hop; browser input has no worker lease, source path, broker, execution or CLI authority. Claude owns the Screen 02 typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/run-producer/p04-delta/install",
+   "controller": "research/p04-delta-binding.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P10 ADMIN-only setup verifies or installs the one source-controlled immutable P04 Delta binding. The request has no code, source, path, digest, dependency or adapter selector; it cannot turn an imported AlphaVersion into executable Python. Claude may surface the typed state but does not choose the binding.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/preflights/:preflight_token",
+   "controller": "research/preflight.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P08 reopens only the caller-and-workspace-scoped immutable preflight metadata behind its opaque token. It is an explicit interaction read, not a raw snapshot, replay, worker, or run API. The typed Screen 02/05 consumer exists; P09 owns the first product-route receipt and P10 owns run creation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/datasets/declaration-estimates",
+   "controller": "research/dataset-index.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "DR-08/09: workspace-bound, CSRF-protected estimate from immutable indexed timestamps and server AlphaVersion warmup. Reuses the P08 planner; no prices, token, run or admission grant. Claude owns S02 binding and browser acceptance.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/runs/version-options",
+   "controller": "research/run-setup.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "BR-S02-06: actor/workspace-fenced immutable AlphaVersion compatibility before dataset selection. Shared binding/flag predicate; no HMD read, replacement claim, preflight token or run grant. Claude owns typed S02 route-summary consumption and browser acceptance.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/runs/setup-options",
+   "controller": "research/run-setup.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "S02 2026-10-05: actor/workspace and immutable Alpha adapter-bound current configuration facts. Distinct from engine catalogue, not a run grant. Claude owns frontend consumption and product browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/runs/window-suggestions",
+   "controller": "research/run-setup.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "S02 2026-10-05: CSRF-protected read-only bounded index rank/select hint, exact context/revision/profile fence, no job, token, HMD scan, price or calendar authority. Claude must explicitly apply and re-estimate before fresh preflight.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/datasets/catalog-v2",
+   "controller": "research/dataset-index.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "B7: named indexed catalog, workspace membership, installed approved reader and explicit immutable timestamp metadata; GET never builds or scans market data. Claude owns S02 consumer acceptance.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/datasets/:dataset_id/symbols",
+   "controller": "research/dataset-index.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "B7: bounded metadata-only symbol search; signed cursor binds workspace/dataset/query/limit and exact catalog snapshot, 200-row cap, honest unknown/truncated source states.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/datasets/:dataset_id/bar-metadata",
+   "controller": "research/dataset-index.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "B7: exact indexed half-open window/warmup counts from timestamp metadata only; no price, holdout value, preflight token or admission. Out-of-index windows are typed absent, never source-scanned on GET.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/datasets",
+   "controller": "research/dataset-catalog.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "W4 CG-P08-04: bounded read-only research dataset catalog (datasets, timeframes, availability, symbols with month-partition coverage) from the approved historical reader's storage names through a signed private GET. No data file is opened and no path or price is returned. Screen 02's data step consumes it.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/research/alphas",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 publishes the bounded, caller-specific registry envelope for Screen 14. The generated client and fixture composition exist; P09 alone owns mounting the product route and its browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/alphas/import/parse",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 bounded same-origin source custody: the server accepts one capped module and returns only a read-only mirror/opaque receipt. The typed Screen 14 client exists; P09 owns product-route activation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/alphas/import/gates",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 records seven ordered server gates over the exact opaque source receipt; a failure makes remaining gates SKIPPED. The typed Screen 14 client exists; P09 owns product-route activation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/alphas/import/register",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 creates or replays an immutable DRAFT AlphaVersion only from current passing server evidence. The typed Screen 14 client exists; P09 owns product-route activation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/alphas/:alpha_version_id/activate",
+   "controller": "research/alpha-import.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P07 ADMIN-only CAS activation. may_activate is server-derived from this exact policy, while P09 owns the first mounted product-route/browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/runs/:runId/progress",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P11 same-origin snapshot read projects only the committed structured worker journal under session/workspace scope. It has no source path, worker lease, broker, CLI or raw-console authority; Claude owns the S03 consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/runs/:runId/requested-spec",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "W2 CG-P11-07 read-only clone source: the immutable requested_spec of a run the session/workspace may read, fetched only when the user opens New Run from a failed/cancelled run (?from=). A clone is a fresh preflight + NEW intent; this read creates, retries or mutates nothing.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/research/runs/:runId/events",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P11 bounded SSE read replays persisted sequence facts and has typed terminal/backpressure frames. It is session/workspace checked and deliberately exposes neither internal lease fields nor a browser retry/command protocol; Claude owns S03 stream cleanup evidence.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/runs/:runId/console",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P11 returns at most 500 explicit structured console observations from the immutable progress journal. It never parses or returns raw stdout, source paths, full logs or worker connection metadata; Claude owns the S03 bounded console-ring receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/runs/:runId/cancel",
+   "controller": "research/progress.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P11 ADMIN-only, CSRF/origin-protected cancellation first wins the Control API durable-job CAS, then attempts a narrow private marker for the exact current lease. It cannot retry, start a worker, alter a sealed artifact or become a generic CLI route; Claude owns the S03 cancel-race receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/reserve",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "P05 retained artifact reservation: exact research_progress_writer principal, current P06 lease/fencing, feature gate and workspace scope; never browser or general CLI authority.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "P05 retained artifact seal is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing and manifest/part digest validation only.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/current-source/batches",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "W1 RS-02 current-source row ingest is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing, a SEALED P05 artifact of the same revision and manifest digest, per-kind payload schemas, at most 200 rows and 1,000,000 bytes per batch.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/current-source/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "W1 RS-02 current-source seal is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing, Delta WFO execution profile only; requested/effective/dataset digests come from run_producers, never from the body.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/child-audit/batches",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "B8 full available source audit custody: exact worker principal/live lease, original P05 revision and digest, admitted profile, bounded 200-row/1,000,000-byte batches and append-only source-file identity; never browser authority.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/child-audit/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "B8 immutable audit finalization: same fenced artifact/profile source binding, exact full available file row count/hash/ordinals; original P05 seal and sampled witnesses remain unchanged. Worker-principal internal ingress (infrastructure, auth required), never a browser route.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/child-audit-companion",
+   "controller": "research/child-audit-companion.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "B8 named same-origin audit companion for S08, generated handoff: workspace/run/revision/filter-bound opaque cursor, <=200 rows, exact source-retained/dropped/filter counts. Legacy samples stay typed; frontend browser acceptance remains separate.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/what-if/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "W5a A10c WHATIF_GRID seal is forbidden to browser and general CLI by design: exact worker principal, current lease/fencing, what-if execution profile only; the results must answer exactly the admitted evaluations from the diagnostic run's own SEALED P05 artifact (PostgreSQL trigger); immutable once written; the frozen parent run is never written.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /internal/research/progress/events",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "P11 infrastructure-only private callback: it requires the short-lived signed research_progress_writer principal and the exact current P10/P06 lease before materialising a worker journal event. It is forbidden to browser, facade, Execution Edge, source database and CLI callers by design.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/sources/imported",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER_ONLY",
+   "unused_capability": false,
+   "evidence": "E17 exact imported-source custody: signed research_progress_writer principal, enabled imported profile, current job/worker/lease and immutable run/version/source digest binding before bounded source bytes are returned. Browser, facade and general CLI are forbidden by design from reaching this route. Covered by research-e17-imported-execution.spec.ts and the real producer-child receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs",
+   "controller": "research/run-library.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P12 bounded same-origin persisted Run Library reader: signed opaque keysets, exact workspace-scoped totals, trigger-maintained search projection and explicit legacy/metric absence. It cannot scan artifacts/Parquet, read a worker/source database or create a run; Claude owns the S01 typed product consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/alpha-catalogue",
+   "controller": "research/run-library.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "FE-069 workspace run-alpha catalogue: authorized repeatable-read pages, bounded size, signed workspace/page-size cursor, no artifact reads. Consumer integration and browser evidence remain Claude's work.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/sparkline",
+   "controller": "research/run-library.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P12 lazy Screen-01 sparkline boundary validates the session/workspace-scoped run ID and returns at most 24 exact decimal strings. Current P12 refuses artifact/Parquet reads, so an unavailable series is explicit rather than a fabricated curve; Claude owns placeholder and browser evidence.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/evidence",
+   "controller": "research/evidence.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P13 bounded same-origin Evidence Flow Hub reads only one immutable Portal projection under session/workspace scope. It never starts QuantBT, scans an artifact/Parquet dataset, exposes worker or lease identity, or lets the browser choose a revision; Claude owns the Screen 04 rich typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/evidence/series",
+   "controller": "research/evidence.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P13 lazy named Evidence Flow chart read returns one at-most-192-value exact-decimal series bound to the Hub revision. It rejects relation/cursor/path/worker input and represents source absence as a typed empty series; Claude owns Screen 04 drilldown, revision rejection and browser evidence.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/split",
+   "controller": "research/split.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P14 bounded same-origin Split reader returns one immutable current-P04 chronology projection under session/workspace scope. It retains typed non-publication for advanced folds, purge/embargo, strict selection, source seal and holdout unlock; it never reads snapshot/Parquet data, exposes a worker/lease/path, returns a holdout result or creates an action channel. Claude owns Screen 05 typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/search",
+   "controller": "research/search.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P15 bounded same-origin Search reader consumes only the immutable P10/P14 current-P04 projection. It publishes the exact fixed parameter profile plus typed study/ledger/diagnostic absences; it cannot start an optimizer, infer a trial from progress, scan worker/artifact/Parquet data, expose a cursor/lease/source path, or create an action channel. Claude owns Screen 06 typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/freeze",
+   "controller": "research/freeze.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P16 bounded same-origin Freeze reader consumes one immutable P10/P14 current-P04 receipt and returns only three retained digest-binding checks. It never reads source artifact bytes, starts a worker or diagnostic, changes frozen parameters, exposes source/custody inputs, or creates a command path. Claude owns Screen 07 typed consumer and browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/freeze/verify",
+   "controller": "research/freeze.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "P16 explicit same-origin CSRF/origin-protected verify. It re-reads the retained bindings and (W5a A10a, FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY) re-hashes the run's sealed P05 artifact through the private observer, appending one immutable bounded receipt (research.artifact_byte_receipts_v1). It never rewrites an expected digest, opens no path for the browser, queues no diagnostic and has no command effect; PARTIAL_MATCH is never 'chain intact'.",
+   "owner": "codex",
+   "test_owner": "claude"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/current-source/freeze/what-if/evaluate",
+   "controller": "research/whatif.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "W5a A10c explicit same-origin CSRF/origin-protected 'evaluate grid' action (FEATURE_RESEARCH_WHATIF). Admits at most one bounded DIAGNOSTIC Research job (own attempt, DIAGNOSTIC_OF_RUN run, ≤81 unique evaluations, deduplicated by grid key) through the P10 producer → P06 claim → Portal child path; never on a GET, mount or slider move; never writes the frozen parent run.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/execute/replay",
+   "controller": "research/replay.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P17 bounded same-origin route-aware replay reader consumes only the immutable P13 OOS equity sample receipt under session/workspace scope. Its signed opaque cursors bind workspace/run/revision and select retrospective equity samples only; it never starts QuantBT, reads source/worker/artifact/Parquet paths, exposes custody values or cursor inputs, synthesizes order/fill/trade/position/candle history, or creates a command channel. Claude owns the Screen 08 typed consumer and browser/HiFi receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/report",
+   "controller": "research/report.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P18 session/workspace-scoped immutable Report reader returns a Portal-sealed P13--P17 fixed-profile core plus a separate mutable annotation source. It never reruns QuantBT, reads an artifact/source path, exposes an opaque replay cursor or treats an annotation as frozen proof; Claude owns Screen 09 print/browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/report/exports",
+   "controller": "research/report.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P18 same-origin CSRF/origin-protected request creates at most one caller-owned bounded JSON/CSV transform job for a sealed report revision. It never starts a QuantBT run, modifies business evidence, opens a source/archive path or accepts a browser filename.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/report/exports/:jobId",
+   "controller": "research/report.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P18 caller-owned export status is workspace- and user-bound. It exposes no worker lease, source path, raw artifact metadata or bytes before READY; foreign job IDs are indistinguishable from absent ones.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/report/exports/:jobId/download",
+   "controller": "research/report.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P18 authenticated bounded download reads only a caller-owned READY row after SHA-256 verification. Server-derived JSON/CSV attachment names, private no-store headers and a 512 KiB hard limit prevent path/CSV/scratch-disk exposure; it has no command or compute effect.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/alphas/:alphaId/lineage",
+   "controller": "research/lineage.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P19 bounded same-origin Attempt Lineage reader returns only scoped Portal-persisted Alpha/version/attempt/run/exposure facts and server-normalized immutable semantic diffs. It cannot submit, fork, reproduce or upgrade a run; choose a promotion from lifecycle/recency/metrics; reset a gate; read QuantBT/worker/artifact/source storage; or expose raw config, paths, credentials, leases or cursors. Claude owns Screen 10 typed product/browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/alphas/:alphaId/compare",
+   "controller": "research/compare.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P20 bounded same-origin Compare reader scopes all run IDs to one Alpha/workspace and returns attempts, market small multiples, or an exact two-run pair only. A mismatched ComparisonContractKey is REFUSED with pair:null; correlation is Portal-derived only from sealed local exact-timestamp raw returns with formula/version/n/missing-policy disclosure. It cannot read a browser-supplied relation/cursor/source path, start QuantBT, mutate evidence, choose/publish/promote a run, approve a gate, or issue an Execution command. Claude owns Screen 13 typed product/browser receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/release-candidate",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P21 same-origin Screen-11 composer reads a bounded Portal-persisted run/Alpha/selection/audit/evidence view and returns exactly 17 source-built fields plus 12 evidence items. It does not expose a source relation/cursor/path/worker identity, invoke QuantBT, or represent a local seal as delivery or approval; Claude owns the typed S11 consumer and browser/HiFi receipt.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "PATCH /api/v1/quantbt/runs/:runId/release-candidate/draft",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P21 same-origin CSRF/origin-protected actor-local declaration CAS. It changes only bounded known-limitations/proposed-use-restrictions under source-fingerprint and revision fences; it cannot seal, publish, approve, start QuantBT, change a bound Alpha/version, or call Execution.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/release-candidate/seal",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P21 same-origin CSRF/origin-protected local seal stores one idempotent immutable Portal evidence pack and retention pins. Its only returned lifecycle is NOT_DELIVERED/NOT_APPROVED; P22 owns all downstream publication, Governance and Execution effects.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/release-candidates/:releaseCandidateId",
+   "controller": "research/release-candidate.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P21 workspace-scoped immutable local pack read returns frozen 17/12 evidence plus a separately typed downstream delivery/approval state. It exposes neither a generic research relation nor any mutable approval surface; a foreign RC is indistinguishable from absent.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/evidence",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named retained-current-source Evidence Hub read: session/workspace scoped Portal-local sealed QuantBT 1.1.1 Advanced WFO facts only. It does not invoke QuantBT, reopen private P05 bytes, expose a relation/artifact/lease input, or replace P13 fixed-run v1.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/evidence/series",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named lazy current-source series read returns at most 192 retained/derived exact-decimal points. Sampling metadata is server-owned; the browser cannot request a raw relation, a source path, an artifact cursor or a recomputation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/split",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named Split read maps only retained Advanced WFO fold facts and exact typed data-use absences. It cannot infer purge, embargo, holdout access or source semantics not published by the engine.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/search",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named Search drill-down returns the bounded retained trial/candidate ledger with private no-store relation-bound cursors. It cannot start an optimizer, scan P05 directly or turn a trial choice into a mutation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/freeze",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "AUTO_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named Freeze read verifies immutable Portal-retained manifest, row-count and batch-receipt facts. GET never reopens private source artifact bytes, changes frozen selection or queues a what-if evaluation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/replay",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "RS-02 named Replay drill-down returns retained research-model observations and opaque relation-bound playheads, private/no-store. It never fabricates broker orders, fills or candles and does not claim execution state.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/replay/transitions",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "W5b P17 close-target transition ledger for Screen 08: retained bars whose accepted position changed, keyset over the original bar ordinal (sparse, never renumbered), with the account's own fee and a replay seek cursor; private/no-store. Target transitions settled at the close, never fills or a trade pairing; reads only the sealed local relation and starts no compute.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/current-source/replay/child-audit",
+   "controller": "research/current-source.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "P17-T14 child audit for Screen 08: one fold's QuantBT strategy-isolation records (strategy_lifecycle_table rows, <= 64) read from the sealed local FOLD row by its original fold id, with the original audit ordinal, candidate id and seed; ETag, private. Reads no source bytes and starts no compute.",
+   "owner": "claude",
+   "test_owner": "claude"
+  },
+  {
+   "route": "GET /api/v1/research/release-candidates/:releaseCandidateId/publication",
+   "controller": "research/release-candidate-publication.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P22 durable actor-bound publication state and authorized read-only existing-R1 mirror, private/no-store. No approval decision or Execution command.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/research/alpha-versions/:alphaVersionId/publication",
+   "controller": "research/alpha-version-publication.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "OL-13 named member-scoped lookup for the latest delivered Release Candidate publication of one Alpha version. Typed NOT_PUBLISHED absence; private/no-store; the browser never scans candidates.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/research/release-candidates/:releaseCandidateId/publish",
+   "controller": "research/release-candidate-publication.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "P22 strict same-origin CSRF-protected existing-R1 create request with immutable intent, exact source pin, idempotent retry and receipt reconciliation.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/fixed-replay/batches",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER",
+   "unused_capability": false,
+   "evidence": "B8 fresh fixed OOS: bounded authenticated live-worker P05-manifest-bound immutable batches; never browser, shell or direct source access.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/fixed-replay/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER",
+   "unused_capability": false,
+   "evidence": "B8 fresh fixed OOS: exact P05/profile/OOS proof, complete contiguous source population, immutable seal and typed source absence. Worker-principal internal ingress (infrastructure, auth required), never a browser route.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/replay/observations",
+   "controller": "research/fixed-replay-companion.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": false,
+   "evidence": "B8 named fixed-OOS market/account page: session/workspace, UTC/exact decimal, bounded cursor/exact ordinal, custody and legacy absence. Generated handoff; frontend/browser acceptance remains independent.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "GET /api/v1/quantbt/runs/:runId/final-audit",
+   "controller": "research/final-audit.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "Pinned final-audit named read: session/workspace, private/no-store, exact immutable target and verified custody. Never creates a job; generated consumer awaits frontend integration.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /api/v1/quantbt/runs/:runId/final-audit",
+   "controller": "research/final-audit.controller.ts",
+   "interaction_class": "PORTAL_MUTATION",
+   "consumer": "TYPED_FRONTEND_PORT",
+   "unused_capability": true,
+   "evidence": "Pinned final-audit producer intent: existing ADMIN authority, same-origin CSRF, actor-bound idempotency, shared utility admission, exact snapshot/config/selection pins; no optimizer or reselection.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
+   "route": "POST /internal/research/progress/artifacts/audit/seal",
+   "controller": "research/progress-ingress.controller.ts",
+   "interaction_class": "INTENTIONALLY_UNEXPOSED",
+   "consumer": "INTERNAL_WORKER",
+   "unused_capability": false,
+   "evidence": "Authenticated worker-only infrastructure ingress: current lease/fence, original target and P05 bytes verified before immutable audit receipt. Browser access forbidden.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {"route":"GET /api/admin/profile-access/v2/eligibility/batch","controller":"execution-v2/access.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-068: bounded multi-resource self-eligibility with a typed step-up state; same session, membership and Core fences as the single read; no new auth mechanism. Claude BE-P5; PostgreSQL paths not run."},
+  {"route":"GET /api/v1/execution/governance/approvals/request-lookup","controller":"governance/governance.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-069: read of an idempotent create by request_key, keyed by the requester so another actor's key looks like none; writes nothing. Claude BE-P5; PostgreSQL paths not run."},
+  {"route":"GET /api/v1/execution/governance/paper-exit/parent","controller":"governance/governance.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"RV-10: the R2 parent of one deployment as the PAPER_EXIT_CREATE capture context (the pins POST /governance/paper-exit/create is bound to); same producer as the R2 review's capture_context, typed BLOCKED reasons, NONE when the deployment has no R2; governance.r2.read plus session and membership fences; writes nothing. Claude RV-10 follow-up; PostgreSQL paths not run."},
+  {"route":"GET /api/v1/execution/manager/fleet/realtime-snapshot","controller":"execution-v2/alpha-fleet-realtime.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"BE-P17 (ELP2-09 scoped): named snapshot for alpha_fleet_overview with its replay cursor, scope fingerprint and typed source health; no store, whole-population authority recheck; edge_notice_source is NOT_COMMISSIONED so no delta is invented. PostgreSQL paths not run."},
+  {"route":"GET /api/v1/execution/manager/fleet/stream","controller":"execution-v2/alpha-fleet-realtime.controller.ts","interaction_class":"AUTO_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"BE-P17 (ELP2-09 scoped): bounded SSE of ScopedRealtimeFrame (dense ordinals, heartbeat, cursor sr1 replay window 300s, per-poll and per-write authority recheck). Dark until a stream.subscribe grant is issued (STREAM_AUTHORITY_NOT_GRANTED). PostgreSQL paths not run."},
+  {"route":"GET /api/v1/execution/governance/stage-action-eligibility","controller":"governance/governance.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-068: stage-action eligibility before the click; canary.* and live.* are NOT_COMMISSIONED because no Portal route exists. Claude BE-P5; PostgreSQL paths not run."},
+  {"route":"GET /api/v1/execution/manager/series","controller":"execution-v2/manager-series.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-013/033: exact NAV/Net PnL/Return series and an aligned comparison with typed refusal on mixed currency; the source is MISSING today so every subject is UNAVAILABLE (SERIES_SOURCE_NOT_PUBLISHED). Claude BE-P4."},
+  {"route":"GET /api/v1/execution/pending-recalls","controller":"execution-v2/pending-control.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-062: exact-resource discovery of open pending recalls the Portal controlled (PORTAL_CONTROLLED_RECALLS_ONLY); untracked recalls typed NOT_PUBLISHED. Claude BE-P5; PostgreSQL paths not run."},
+  {"route":"GET /api/admin/profile-access/v2/self-context","controller":"execution-v2/access.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-057/058/038: the caller's own default authorized workspace (RESOLVED / AMBIGUOUS / NONE / UNAVAILABLE from genuine memberships), a self-only entry route and the typed REVISE_BINDING no-operation branch; session fenced first, private no-store, no query. Claude BE-P7; PostgreSQL paths not run."},
+  {"route":"GET /api/v1/execution/controls","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"B3 typed absence (portal.execution.controls.v1): the contract's own no-source body (envelope only, every section omitted); session + Execution read access to the workspace, no source, no Edge, no database read. Unmounted unless the AppModule key typedAbsence is SOURCE_DARK (retained-review profile only). Frontend reader siblings.generated.ts#controls."},
+  {"route":"GET /api/v1/execution/alphas/:alpha_id/lifecycle","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"B3 typed absence (portal.execution.alpha-lifecycle.v1, executionAlphaLifecycleGetV1): no-source body, every section omitted; invalid id or query answers the published 404 because AlphaLifecycleProblem has no query-invalid code. Unmounted unless typedAbsence is SOURCE_DARK. Frontend reader readers/alphaLifecycle.ts."},
+  {"route":"GET /api/v1/execution/operations/incidents/:incident_id/children","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"B3 typed absence (portal.execution.incident-children.v1): no-source body, every section omitted; no incident is looked up. Unmounted unless typedAbsence is SOURCE_DARK. Frontend reader readers/incidentChildren.ts."},
+  {"route":"GET /api/v1/execution/portfolios/:portfolio_id/members","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"B3 typed absence (portal.execution.portfolio-members.v1): no-source body, no member listed, role_label never stated. Unmounted unless typedAbsence is SOURCE_DARK. Frontend reader siblings.generated.ts#portfolio-members."},
+  {"route":"GET /api/v1/execution/blotter/summary","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"BK1 typed absence (portal.execution.blotter-summary.v1, executionBlotterSummaryGetV1): envelope and the validated environment echoed; status_buckets and funnel omitted (NO_SOURCE), no bucket, count or zero stated; a request naming no environment answers the published 404. Session + Execution read access to the workspace, no source, no Edge, no database read. Unmounted unless the AppModule key typedAbsence is SOURCE_DARK (retained-review profile only). Frontend reader siblings.generated.ts#blotter-summary."},
+  {"route":"GET /api/v1/execution/cost-events","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"BK1 typed absence (portal.execution.cost-events.v1, executionCostEventsGetV1): envelope and the validated subject echoed; events and totals omitted, no amount or currency stated; a request naming no subject answers the published 404. Session + Execution read access to the workspace, no source, no Edge, no database read. Unmounted unless the AppModule key typedAbsence is SOURCE_DARK (retained-review profile only). Frontend reader siblings.generated.ts#cost-events."},
+  {"route":"GET /api/v1/execution/grants","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"BK1 typed absence (portal.execution.grants.v1, executionGrantsGetV1): envelope and the validated subject echoed; items omitted, no grant or reservation stated; no subject answers the published 404. Session + Execution read access to the workspace, no source, no Edge, no database read. Unmounted unless the AppModule key typedAbsence is SOURCE_DARK (retained-review profile only). Frontend reader siblings.generated.ts#grants."},
+  {"route":"GET /api/v1/execution/limits","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"BK1 typed absence (portal.execution.limits.v1, executionLimitsGetV1): envelope and the validated subject echoed; items omitted, no used_ratio, state or cap stated; no subject answers the published 404. Session + Execution read access to the workspace, no source, no Edge, no database read. Unmounted unless the AppModule key typedAbsence is SOURCE_DARK (retained-review profile only). Frontend reader siblings.generated.ts#limits."},
+  {"route":"GET /api/v1/execution/recovery-events","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"BK1 typed absence (portal.execution.recovery-events.v1, executionRecoveryEventsGetV1): envelope and the validated subject echoed; events omitted, no recovery or quality event stated; no subject answers the published 404. Session + Execution read access to the workspace, no source, no Edge, no database read. Unmounted unless the AppModule key typedAbsence is SOURCE_DARK (retained-review profile only). Frontend reader siblings.generated.ts#recovery-events."},
+  {"route":"GET /api/v1/execution/reports","controller":"typed-absence/typed-absence.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"BK1 typed absence (portal.execution.report-snapshots.v1, executionReportSnapshotsGetV1): envelope and the validated subject echoed; items omitted, no snapshot, hash or source cut stated; no subject answers the published 404. Session + Execution read access to the workspace, no source, no Edge, no database read. Unmounted unless the AppModule key typedAbsence is SOURCE_DARK (retained-review profile only). Frontend reader siblings.generated.ts#report-snapshots."}
  ],
  "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",
- "code_inventory_updated_at": "2026-09-12"
+ "code_inventory_updated_at": "2026-10-03"
 }

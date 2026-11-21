@@ -20,7 +20,7 @@ function producer(repository: object) {
     clearTimeout:(timer:{id:ReturnType<typeof setTimeout>})=>clearTimeout(timer.id),
     setInterval:()=>({unref(){}}),clearInterval:()=>undefined,
     require:(id:string)=>{
-      if(id==="@nestjs/common") return {Inject:noop,Injectable:noop};
+      if(id==="@nestjs/common") return {Inject:noop,Injectable:noop,Optional:noop};
       if(id==="../tokens") return {CONTROL_API_CONFIG:"test"};
       if(id==="./profile-projection.repository") return {ExecutionProfileProjectionRepository:class {}};
       if(id==="./profile-projection.catalog") return {

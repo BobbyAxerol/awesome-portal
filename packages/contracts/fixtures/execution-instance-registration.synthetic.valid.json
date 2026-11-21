@@ -1,0 +1,105 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "intent": {
+    "schema_version": "portal.execution.instance-registration-intent.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "resource": {
+      "kind": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio"
+    },
+    "environment": "paper",
+    "expected_policy_revision": "TEST_ONLY:portal-policy",
+    "business_payload": {
+      "schema_version": "pma.management-command.v1",
+      "operation": "REGISTER_INSTANCE",
+      "idempotency_key": "TEST_ONLY:registration-0001",
+      "reason": "TEST_ONLY registry fixture, not a business receipt",
+      "expected_version": "0",
+      "expected_policy_revision": "9007199254740993",
+      "parameters": {
+        "alpha_slug": "TEST_ONLY:alpha-version",
+        "venue": "TEST_ONLY:venue",
+        "account_type": "MARGIN",
+        "currency": "USDT"
+      }
+    }
+  },
+  "preview_blocked": {
+    "schema_version": "portal.execution.instance-registration-preview.v1",
+    "operation": "REGISTER_INSTANCE",
+    "allowed": false,
+    "reason_code": "REGISTRATION_NOT_QUALIFIED",
+    "preview_digest": null,
+    "expires_at_ms": null,
+    "profile_ref": null,
+    "business_applied": false,
+    "reserved": false
+  },
+  "unknown": {
+    "schema_version": "portal.execution.instance-registration-status.v1",
+    "family": "INSTANCE_REGISTRATION",
+    "command_id": "ecm_00000000000000000000000000000021",
+    "operation": "REGISTER_INSTANCE",
+    "resource": {
+      "kind": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio"
+    },
+    "environment": "paper",
+    "profile_ref": "TEST_ONLY:paper",
+    "delivery": "DELIVERY_UNKNOWN",
+    "business": {
+      "state": "UNKNOWN",
+      "business_applied": null,
+      "receipt": null,
+      "source_instance_ref": null
+    },
+    "canonical_identity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "SOURCE_CANONICAL_ACCOUNT_DEPLOYMENT_PAIR_NOT_PUBLISHED",
+      "account_id": null,
+      "deployment_id": null
+    },
+    "projection": "UNKNOWN",
+    "venue": "NOT_APPLICABLE",
+    "next_action": "QUERY_SAME_INTENT",
+    "authority": "TEST_ONLY",
+    "created_at_ms": 1792300000000,
+    "updated_at_ms": 1792300000000
+  },
+  "registry_applied": {
+    "schema_version": "portal.execution.instance-registration-status.v1",
+    "family": "INSTANCE_REGISTRATION",
+    "command_id": "ecm_00000000000000000000000000000021",
+    "operation": "REGISTER_INSTANCE",
+    "resource": {
+      "kind": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio"
+    },
+    "environment": "paper",
+    "profile_ref": "TEST_ONLY:paper",
+    "delivery": "ACKNOWLEDGED",
+    "business": {
+      "state": "APPLIED",
+      "business_applied": true,
+      "receipt": {
+        "kind": "PM_REGISTRY_RECEIPT",
+        "key": "TEST_ONLY:source-namespaced-key",
+        "version": "1"
+      },
+      "source_instance_ref": "TEST_ONLY:opaque-instance-token"
+    },
+    "canonical_identity": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "SOURCE_CANONICAL_ACCOUNT_DEPLOYMENT_PAIR_NOT_PUBLISHED",
+      "account_id": null,
+      "deployment_id": null
+    },
+    "projection": "UNKNOWN",
+    "venue": "NOT_APPLICABLE",
+    "next_action": "REVIEW_RECEIPT",
+    "authority": "TEST_ONLY",
+    "created_at_ms": 1792300000000,
+    "updated_at_ms": 1792300000000
+  }
+}

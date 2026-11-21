@@ -1,0 +1,753 @@
+/* Portfolios register and Portfolio 360 (UXM-07 S2). Tokens and type roles
+ * only; no uppercase, no raw colour. Every rule that sets both a text and a
+ * fill colour reuses a pair already proven by fleet.css, cards.css or dock.css. */
+.exec-pf-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-pf-v2 > * {
+  min-width: 0;
+}
+.exec-pf-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-pf-h1 {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-pf-sub,
+.exec-pf-crumb {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+/* The back link reads as on Account 360 and Alpha 360: accent ink, an arrow, one word. */
+.exec-pf-crumb a {
+  color: var(--accent);
+}
+.exec-pf-crumb a::before {
+  content: "\2190\00a0";
+}
+.exec-pf-fresh,
+.exec-pf-ctrls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-pf-score {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-pf-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+div.exec-pf-banner {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.exec-pf-banner-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+/* The reason a disabled control is off, printed under it (hi-fi .why) so touch and sighted readers get it too. */
+.exec-pf-btnwhy {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.exec-pf-why {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-pf-banner[data-tone="info"] {
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-color: var(--line);
+}
+
+/* panels, toolbars */
+.exec-pf-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-pf-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-pf-spacer {
+  flex: 1;
+}
+/* Column heads sort above 660px (CardsTable sortKey); the card layout has no head row, so its sort control shows there only. */
+.exec-pf-sortset {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-pf-field {
+  display: inline-flex;
+  min-width: 0;
+}
+.exec-pf-input,
+.exec-pf-select {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 5px 8px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-pf-input {
+  width: 240px;
+  max-width: 100%;
+}
+.exec-pf-input::placeholder {
+  color: var(--ink-faint);
+}
+.exec-pf-btn,
+.exec-pf-segbtn,
+.exec-pf-link-btn {
+  display: inline-block;
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  text-decoration: none;
+}
+.exec-pf-btn[data-variant="primary"],
+.exec-pf-link-btn[data-variant="primary"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-pf-btn:disabled,
+.exec-pf-segbtn:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-pf-input:focus-visible,
+.exec-pf-select:focus-visible,
+.exec-pf-btn:focus-visible,
+.exec-pf-segbtn:focus-visible,
+.exec-pf-link-btn:focus-visible,
+.exec-pf-tab:focus-visible,
+.exec-pf-pop summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-pf-seg {
+  display: inline-flex;
+}
+.exec-pf-segbtn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-pf-count {
+  margin-left: var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-pf-pop {
+  position: relative;
+}
+.exec-pf-pop summary {
+  list-style: none;
+}
+.exec-pf-pop summary::-webkit-details-marker {
+  display: none;
+}
+.exec-pf-menu {
+  position: absolute;
+  z-index: 8;
+  right: 0;
+  top: 100%;
+  display: grid;
+  gap: 4px;
+  min-width: 220px;
+  margin-top: 2px;
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-pf-menuitem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-pf-selbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+
+.exec-pf-btn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-pf-panel[data-density="compact"] .exec-cards tbody td {
+  height: 24px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+/* The register fits the page (hi-fi: cell padding 5px, th may wrap, "Not
+ * available" and "Not published" take two lines, Owner is narrow). Scoped to
+ * the panel so no other CardsTable changes. Above 660px only: the cards below
+ * it have their own rules in cards.css. */
+@media (min-width: 661px) {
+  .exec-pf-panel .exec-cards thead th {
+    padding: 6px 5px;
+    white-space: normal;
+    vertical-align: bottom;
+  }
+  .exec-pf-panel .exec-cards tbody td {
+    padding: 6px 5px;
+  }
+  .exec-pf-panel .exec-cards td[data-l="Manager"] {
+    max-width: 104px;
+    white-space: normal;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-name {
+    max-width: 280px; /* five unpublished measure columns are gone: the name has the room */
+  }
+  .exec-pf-panel .exec-cards .exec-pf-id {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-np,
+  .exec-pf-panel .exec-cards .exec-pf-na {
+    display: inline-block;
+    max-width: 104px;
+    white-space: normal;
+    text-align: right;
+  }
+  .exec-pf-panel .exec-cards td[data-l="Manager"] .exec-pf-na,
+  .exec-pf-panel .exec-cards td[data-l="Domain"] .exec-pf-na {
+    text-align: left;
+  }
+  .exec-pf-panel .exec-cards .exec-pf-alloc .exec-flag {
+    white-space: normal;
+  }
+}
+/* table cells */
+.exec-pf-check {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-strong);
+}
+.exec-pf-name {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.exec-pf-title {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-pf-id {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-pf-domain,
+.exec-pf-alloc {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+}
+/* Allocated capital is a right-aligned numeric column: the amount lines up with its neighbours, chip or no chip. */
+.exec-pf-alloc {
+  align-items: flex-end;
+}
+/* A timestamp under a figure: one line, never broken inside the date. */
+.exec-pf-stamp {
+  display: block;
+  white-space: nowrap;
+}
+/* A flow's effective time: mono, one line. */
+.exec-pf-flow-time {
+  font: var(--exec-font-id);
+  white-space: nowrap;
+}
+.exec-pf-envs,
+.exec-pf-dim,
+.exec-pf-na,
+.exec-pf-note,
+.exec-pf-np {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-pf-fe {
+  white-space: nowrap;
+}
+.exec-pf-note {
+  margin: 0;
+  color: var(--ink-soft);
+}
+/* G1: a typed absence in a cell is two short words on one line (the column keeps its width for the figures beside it); its reason is behind the disclosure. */
+.exec-pf-panel .exec-cards td .exec-pf-na[data-absent] { display: inline-block; max-width: none; white-space: nowrap; }
+.exec-pf-colnotes-lead { color: var(--ink-soft); }
+.exec-pf-ccylist {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.exec-pf-money {
+  white-space: nowrap;
+}
+.exec-pf-num {
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.exec-pf-num[data-tone="negative"] {
+  color: var(--bad);
+}
+.exec-pf-unit {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-pf-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-pf-count-line {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-pf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  white-space: normal;
+}
+.exec-pf-empty p {
+  margin: 0;
+}
+.exec-pf-rules summary {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.exec-pf-rules-table {
+  margin-top: var(--space-2);
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-pf-rules-table th,
+.exec-pf-rules-table td {
+  padding: 4px var(--space-3) 4px 0;
+  text-align: left;
+  border-top: 1px solid var(--line-soft);
+}
+.exec-pf-rules-table th {
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-pf-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* Portfolio 360 layout */
+.exec-pf-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.exec-pf-main[data-docked="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-pf-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.exec-pf-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-pf-tab {
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.exec-pf-tab:hover {
+  color: var(--ink);
+}
+.exec-pf-tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.exec-pf-tabpanel {
+  padding-top: var(--space-3);
+  min-width: 0;
+}
+.exec-pf-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.exec-pf-grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+  align-items: start;
+}
+.exec-pf-grid2 > * {
+  min-width: 0;
+}
+.exec-pf-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
+}
+.exec-pf-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+.exec-pf-kpi-label {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-pf-kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+.exec-pf-kpi-value {
+  font: var(--exec-font-kpi);
+  color: var(--ink);
+}
+.exec-pf-kpi-value .exec-pf-num {
+  font: var(--exec-font-kpi);
+}
+.exec-pf-kpi-note {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-pf-env {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.exec-pf-env-title {
+  margin: 0;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-pf-statements {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-pf-statements th,
+.exec-pf-statements td {
+  padding: 5px 0;
+  text-align: left;
+  border-top: 1px solid var(--line-soft);
+}
+.exec-pf-statements th {
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-pf-statements td {
+  text-align: right;
+}
+.exec-pf-statements th {
+  text-transform: none;
+  letter-spacing: normal;
+}
+.exec-pf-statements tr.exec-pf-grp th {
+  padding: 5px var(--space-2);
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+}
+.exec-pf-statements tr[data-total="true"] th,
+.exec-pf-statements tr[data-total="true"] td {
+  font-weight: 500;
+  color: var(--ink);
+}
+.exec-pf-cap {
+  text-align: left;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-pf-chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.exec-pf-chart[data-stale="true"] {
+  opacity: 0.7;
+}
+.exec-pf-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-pf-attn {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-pf-attn > li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-pf-attn > li:last-child {
+  border-bottom: 0;
+}
+.exec-pf-attn-head a {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--line-strong);
+  text-decoration: none;
+}
+.exec-pf-attn-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-pf-list {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-pf-ledger {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* correlation, with no data source */
+.exec-pf-corr {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.exec-pf-mx {
+  display: grid;
+  grid-template-columns: repeat(var(--exec-pf-mx-n, 5), minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px dashed var(--line-strong);
+}
+.exec-pf-mx-row {
+  display: contents;
+}
+.exec-pf-mx-h {
+  padding: var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+  background: var(--paper-raised);
+  overflow-wrap: anywhere;
+}
+.exec-pf-mx-cell {
+  min-height: 28px;
+  background: var(--paper-sunken);
+  background-image: repeating-linear-gradient(135deg, transparent 0 5px, var(--line) 5px 6px);
+}
+
+/* actions rail */
+.exec-pf-actions {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+.exec-pf-action {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--line);
+}
+.exec-pf-action-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+
+.exec-pf-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .exec-pf-grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 660px) {
+  .exec-pf-sortset {
+    display: inline-flex;
+  }
+  .exec-pf-main[data-docked="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exec-pf-input {
+    width: 100%;
+  }
+  .exec-pf-ccylist {
+    align-items: flex-end;
+  }
+  /* The mixed-book flag wraps inside the card instead of pushing the amount off its left edge. */
+  .exec-pf-panel .exec-cards .exec-cards-v {
+    min-width: 0;
+  }
+  .exec-pf-alloc {
+    align-items: flex-end;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .exec-pf-alloc .exec-flag {
+    max-width: 100%;
+    white-space: normal;
+    text-align: right;
+  }
+}
+
+/* Event ribbon notes under the equity panel: caption, honest absences and the table alternative. */
+.exec-pf-ribbon-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.exec-pf-ribbon-alt {
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-pf-ribbon-alt > summary {
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.exec-pf-ribbon-alt > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Capital statements: label left, value right, one row per statement. */
+.exec-pf-captable {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-pf-captable th {
+  padding: 6px 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-pf-captable td {
+  padding: 6px 0;
+  text-align: right;
+  border-bottom: 1px solid var(--line-soft);
+}

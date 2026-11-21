@@ -1,8 +1,16 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
+import { retainedReview } from "../execution/retained-read-profile";
+import { WorkspacesRepository } from "../repos/workspaces";
+import { OwnerAccessService } from "../auth/owner-access.service";
+import { commandCenterGovernanceActionableSql, commandCenterGovernanceGates } from "./governance-actionability";
+import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, type ReadScopePrincipal,
+  type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
+import { projectionRowVisible, redactProjectionFields } from "../execution-v2/read-projection";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DATA_POOL } from "../tokens";
 import {
   CommandCenterInputs,
   ExactSourceSlice,
@@ -78,7 +86,8 @@ interface ProjectionSnapshotRow {
 
 function reviewHref(gate: GovernanceTriageRow["gate"], id: string): string {
   if (gate === "R1") return `/governance/approvals/${id}/r1`;
-  if (gate === "R2" || gate === "LIVE_GATE") return `/governance/approvals/${id}/r2`;
+  if (gate === "R2") return `/governance/approvals/${id}/r2`;
+  if (gate === "LIVE_GATE") return `/governance/approvals/${id}/live`;
   return `/governance/exit-reviews/${id}`;
 }
 
@@ -105,30 +114,179 @@ function portalSourceStatus(asOf: Date | null, readAt: Date): SourceStatus {
 
 @Injectable()
 export class CommandCenterRepository {
+  // Pure timestamp parsing only. Keyed by the exact retained field object AND
+  // current string: mutable test/active projections cannot reuse stale facts.
+  // The read-time 24h predicate and per-request permissions are never cached.
+  private readonly journalStamps = new WeakMap<object, {
+    value: string | null; parsed: { iso: string; at: number } | null;
+  }>();
   constructor(
     @Inject(CONTROL_API_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Inject(EXECUTION_DATA_POOL) private readonly executionPool: Pool = pool,
+    @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly projections?: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(WorkspacesRepository) private readonly workspaces?: WorkspacesRepository,
+    @Optional() @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService = new OwnerAccessService(pool),
+    @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
   ) {}
 
-  async read(workspaceId: string, actor: PortalUser, readAt: Date): Promise<CommandCenterInputs> {
+  requiresTrustedPrincipal(): boolean { return this.scopes !== undefined; }
+
+  /** Composition never promotes a workspace-wide cache to V2 authority. */
+  async readAuthorized<T>(principal: ReadScopePrincipal, readAt: Date,
+    complete: (input: CommandCenterInputs, scoped: boolean) => T | Promise<T>): Promise<T> {
+    if (!this.scopes) return complete(await this.read(principal.workspaceId, principal.user, readAt), false);
+    const core: ReadScopePrincipal = { user: { ...principal.user }, session: { ...principal.session },
+      workspaceId: principal.workspaceId, viewerWorkspaceId: principal.workspaceId };
+    const coreMode = await this.scopes.coreSelectionMode(core);
+    const sourceWorkspace = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    const source: ReadScopePrincipal = { ...core, workspaceId: sourceWorkspace ?? "", viewerWorkspaceId: core.workspaceId };
+    const selectSource = async () => {
+      if (!sourceWorkspace) return "DENIED" as const;
+      try { return await this.scopes!.selectionMode(source); }
+      catch (error) {
+        // A current Core member may still read Core cards after retained
+        // source access is revoked. This is not a fallback to source bytes.
+        if (error instanceof ExecutionReadScopeError && error.code === "EXECUTION_READ_NOT_AVAILABLE") return "DENIED" as const;
+        throw error;
+      }
+    };
+    const sourceMode = await selectSource();
+    const fence = async () => {
+      if (await this.scopes!.coreSelectionMode(core) !== coreMode || await selectSource() !== sourceMode)
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    };
+    if (sourceMode !== "SCOPED_V2") {
+      const inputs = await this.read(core.workspaceId, core.user, readAt, {
+        omitProjection: sourceMode === "DENIED", omitCore: coreMode === "SCOPED_V2",
+      });
+      await fence();
+      const result = await complete(inputs, coreMode === "SCOPED_V2");
+      await fence();
+      return result;
+    }
+    // Scope datasets against source authority, never the caller's Core
+    // workspace. The response/Portal workflow identity remains Core-owned.
+    principal = source;
+    if (!this.projections) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const branches: Array<{ scope: AuthorizedExecutionReadScope; digest: string; epoch: string; catalogue: string | null }> = [];
+    const missing = new Map<string, string>();
+    for (const environment of ["paper", "sandbox", "live"] as const) {
+      const profileId = environment === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID :
+        environment === "sandbox" ? this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
+      if (!profileId) { missing.set(environment, "PROFILE_NOT_CONFIGURED"); continue; }
+      const metadata = await this.projections.snapshotMetadata(principal.workspaceId, environment, profileId);
+      try {
+        const scope = await this.scopes.authorize(principal, { environment, profileId }, { action: "alpha.read",
+          dataset: { dataset_id: "command-center:projection", source_revision: metadata?.payloadDigest ?? "NOT_RECORDED",
+            projection_generation: metadata?.projectionEpoch ?? "NOT_RECORDED", catalogue_revision: metadata?.sourceCatalogueSha256 ?? null, window: null } });
+        if (scope.mode !== "SCOPED_V2") throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        if (!metadata) { missing.set(environment, "PROFILE_NOT_RECORDED"); continue; }
+        branches.push({ scope, digest: metadata.payloadDigest, epoch: metadata.projectionEpoch, catalogue: metadata.sourceCatalogueSha256 });
+      } catch (error) {
+        if (!(error instanceof ExecutionReadScopeError) || error.status === 409) throw error;
+        missing.set(environment, error.code);
+      }
+    }
+    if (!branches.length) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    const read = async () => {
+      const rows: ProjectionSnapshotRow[] = [];
+      const fieldMissing = new Set<string>();
+      for (const branch of branches) {
+        const { scope } = branch;
+        const snapshot = await this.projections!.rawSnapshot(principal.workspaceId, scope.environment, scope.profileId);
+        if (!snapshot || snapshot.payloadDigest !== branch.digest || snapshot.projectionEpoch !== branch.epoch ||
+          snapshot.sourceCatalogueSha256 !== branch.catalogue || snapshot.document.workspace_id !== sourceWorkspace ||
+          snapshot.document.environment !== scope.environment || snapshot.document.profile_id !== scope.profileId)
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        const relation = snapshot.document.relations["manager.deployments:strategy_deployments"];
+        const allowed = ["deployment_id", "state"].every(field => scopeAllowsField(scope, field));
+        if (!allowed || relation?.availability !== "AVAILABLE") fieldMissing.add(scope.environment);
+        const items = allowed && relation?.availability === "AVAILABLE" ? relation.items
+          .filter(item => item.lineage.workspace_id === principal.workspaceId && item.lineage.profile_id === scope.profileId && projectionRowVisible(scope, item.fields))
+          .map(item => ({ fields: redactProjectionFields(scope, item.fields) })) : [];
+        rows.push({ environment: scope.environment, profile_id: scope.profileId, source_cursor: "",
+          source_as_of: null, received_at: readAt, last_successful_refresh_at: readAt, completeness: "PARTIAL",
+          projection_epoch: "", projection_sequence: "0",
+          payload: { relations: { "manager.deployments:strategy_deployments": { availability: "AVAILABLE", items } } } });
+      }
+      const fleet = this.projectionFleet({ rows, reason: fieldMissing.size === branches.length
+        ? "SCOPED_DEPLOYMENT_FIELDS_NOT_PUBLISHED" : null, ageMs: 0 }, readAt);
+      // Only the authorized deployment population contributes to totals. A
+      // missing profile/field is not an observed zero. Technical/reconciliation
+      // relations need their own purpose contract before aggregate disclosure.
+      for (const cell of fleet.items[0]?.cells ?? []) {
+        const environment = cell.code === "PAPER" ? "paper" : cell.code === "SANDBOX" ? "sandbox" : "live";
+        if (["BROKER_SYNC_ISSUES", "OPEN_FINDINGS"].includes(cell.code) || missing.has(environment) || fieldMissing.has(environment)) cell.value = null;
+      }
+      fleet.status = { ...fleet.status, reason: fleet.status.reason ?? "AUTHORIZED_DEPLOYMENT_SLICE_NOT_GLOBAL_TOTAL", as_of: null,
+        source_cursor: null, projection_epoch: null, projection_sequence: null, freshness_state: "UNKNOWN", age_seconds: null, lag_ms: null };
+      const unknown = "PORTAL_WORKFLOW_TARGET_LINEAGE_NOT_PUBLISHED";
+      const inputs: CommandCenterInputs = { workspaceId: core.workspaceId, actor: core.user, readAt, fleet,
+        triageSources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown),
+          unavailableSource("EXECUTION_INCIDENTS", "PORTAL", unknown), unavailableSource("EXECUTION_OPERATIONS", "PORTAL", unknown),
+          unavailableSource("EXECUTION_RECONCILIATION", "EXECUTION", "SCOPED_RECONCILIATION_FIELDS_NOT_PUBLISHED")],
+        todaySources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown),
+          unavailableSource("EXECUTION_JOURNAL", "EXECUTION", "SCOPED_COMMAND_JOURNAL_FIELDS_NOT_PUBLISHED")] };
+      await fence();
+      const result = await complete(inputs, true);
+      for (const branch of branches) {
+        const current = await this.projections!.snapshotMetadata(principal.workspaceId, branch.scope.environment, branch.scope.profileId);
+        if (!current || current.payloadDigest !== branch.digest || current.projectionEpoch !== branch.epoch ||
+          current.sourceCatalogueSha256 !== branch.catalogue) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      }
+      return result;
+    };
+    const fenced = (index: number): Promise<T> => index === branches.length ? read() :
+      this.scopes!.deliver(branches[index].scope, () => fenced(index + 1));
+    const result = await fenced(0);
+    await fence();
+    return result;
+  }
+
+  async read(workspaceId: string, actor: PortalUser, readAt: Date,
+    options: { omitProjection?: boolean; omitCore?: boolean } = {}): Promise<CommandCenterInputs> {
+    // Domain reads and Core authorization must not run while holding a Core
+    // transaction/connection. Twenty mounts can otherwise exhaust the pool
+    // waiting for their own nested canReadExecution query (and starve Research).
+    // The independent domain snapshot is deliberately not cross-DB atomic.
+    const retainedAccess = !options.omitProjection && (!retainedReview(this.config) || (!!this.workspaces &&
+      !!this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
+        await this.workspaces.canReadExecution(this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID,actor.userId)));
+    let projection: ProjectionState = retainedAccess ? await this.projectionState(this.executionPool, readAt)
+      : {rows:[],reason:"WORKSPACE_NOT_FOUND",ageMs:0};
+    if(retainedAccess && retainedReview(this.config) && !await this.workspaces!.canReadExecution(
+      this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!,actor.userId))
+      projection={rows:[],reason:"WORKSPACE_NOT_FOUND",ageMs:0};
+    if (options.omitCore) {
+      const unknown = "PORTAL_WORKFLOW_TARGET_LINEAGE_NOT_PUBLISHED";
+      return { workspaceId, actor, readAt, fleet: this.projectionFleet(projection, readAt),
+        triageSources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown),
+          unavailableSource("EXECUTION_INCIDENTS", "PORTAL", unknown), unavailableSource("EXECUTION_OPERATIONS", "PORTAL", unknown),
+          this.reconciliationTriage(projection, readAt)],
+        todaySources: [unavailableSource("PORTAL_GOVERNANCE", "PORTAL", unknown), this.journalToday(projection, readAt)] };
+    }
+    const gates = commandCenterGovernanceGates(actor, await this.ownerAccess.effectiveAccess(actor.userId), workspaceId);
+    const visibleGates = gates.readable;
     const client = await this.pool.connect();
+    let inputs: CommandCenterInputs;
     try {
       await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       await client.query("SET LOCAL statement_timeout = '1000ms'");
       await client.query("SET LOCAL idle_in_transaction_session_timeout = '2000ms'");
-      const governance = await this.governanceTriage(client, workspaceId, actor, readAt);
-      const today = await this.governanceToday(client, workspaceId, readAt);
+      const governance = await this.governanceTriage(client, workspaceId, actor, readAt, gates.actionable);
+      const today = await this.governanceToday(client, workspaceId, readAt,visibleGates);
       const incidents = await this.incidentTriage(client, workspaceId, readAt);
       const operations = await this.operationTriage(client, workspaceId, readAt);
       const verifiedOperations = await this.verifiedOperationsToday(client, workspaceId, readAt);
       // One projection read feeds fleet health, reconciliation triage and the
-      // journal window — the panels join what already exists, atomically.
-      const projection = await this.projectionState(client, readAt);
+      // journal window from one projection query; Core and domain are separate.
+      // Domain data has its own pool/snapshot; never pretend cross-DB atomicity.
       const fleet = this.projectionFleet(projection, readAt);
       const reconciliation = this.reconciliationTriage(projection, readAt);
       const journal = this.journalToday(projection, readAt);
       await client.query("COMMIT");
-      return {
+      inputs = {
         workspaceId,
         actor,
         readAt,
@@ -151,6 +309,13 @@ export class CommandCenterRepository {
     } finally {
       client.release();
     }
+    // Re-evaluate current delegated grants/owner anchor after all awaited reads.
+    // Release the Core connection first: authority evaluation uses its own pool
+    // and must not starve twenty concurrent mounts behind their held clients.
+    const current = commandCenterGovernanceGates(actor, await this.ownerAccess.effectiveAccess(actor.userId), workspaceId);
+    if (JSON.stringify(current) !== JSON.stringify(gates))
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return inputs;
   }
 
   private async incidentTriage(
@@ -274,10 +439,29 @@ export class CommandCenterRepository {
     };
   }
 
-  private async projectionState(client: PoolClient, readAt: Date): Promise<ProjectionState> {
+  private async projectionState(client: Pick<Pool, "query"> | PoolClient, readAt: Date): Promise<ProjectionState> {
     const projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     if (!projectionWorkspaceId || this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true") {
       return { rows: [], reason: "PHASE2_LOCAL_PROJECTION_DISABLED", ageMs: 0 };
+    }
+    if(retainedReview(this.config)&&this.projections){
+      // The repository already supplies source metadata and the scoped,
+      // single-flight retained document. Do not de-TOAST the same three raw
+      // snapshots again for every viewer before immediately replacing them.
+      const views=await Promise.all((["paper","sandbox","live"] as const).map(async environment=>{
+        const profile=environment==="paper"?this.config.EXECUTION_EDGE_PAPER_PROFILE_ID
+          :environment==="sandbox"?this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID:this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
+        if(!profile)return null;
+        const view=await this.projections!.snapshot(projectionWorkspaceId,environment,profile);
+        return view?{environment,profile_id:profile,source_cursor:view.sourceCursor,source_as_of:view.sourceAsOf,
+          received_at:view.receivedAt,last_successful_refresh_at:view.lastSuccessfulRefreshAt,
+          completeness:"PARTIAL" as const,projection_epoch:view.projectionEpoch,
+          projection_sequence:String(view.projectionSequence),payload:view.document}:null;
+      }));
+      const rows=views.filter((row):row is NonNullable<typeof row>=>row!==null);
+      const newest=latestDate(rows.map(row=>row.last_successful_refresh_at));
+      return {rows,reason:rows.length?null:"PHASE2_PROJECTION_NOT_READY",
+        ageMs:newest?Math.max(0,readAt.valueOf()-newest.valueOf()):Number.MAX_SAFE_INTEGER};
     }
     const result = await client.query<ProjectionSnapshotRow>(
       `SELECT environment, profile_id, source_cursor, source_as_of, received_at,
@@ -293,7 +477,7 @@ export class CommandCenterRepository {
     }
     const newestRefresh = latestDate(result.rows.map((row) => row.last_successful_refresh_at));
     const ageMs = newestRefresh ? Math.max(0, readAt.valueOf() - newestRefresh.valueOf()) : Number.MAX_SAFE_INTEGER;
-    if (ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (!retainedReview(this.config) && ageMs > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
       return { rows: result.rows, reason: "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED", ageMs };
     }
     return { rows: result.rows, reason: null, ageMs };
@@ -403,8 +587,12 @@ export class CommandCenterRepository {
     const stamp = (row: Record<string, unknown>) => {
       const value = typeof row.updated_at === "string" ? row.updated_at
         : typeof row.created_at === "string" ? row.created_at : null;
+      const cached = this.journalStamps.get(row);
+      if (cached && cached.value === value) return cached.parsed;
       const parsed = value ? Date.parse(value) : Number.NaN;
-      return Number.isNaN(parsed) ? null : { iso: new Date(parsed).toISOString(), at: parsed };
+      const result = Number.isNaN(parsed) ? null : { iso: new Date(parsed).toISOString(), at: parsed };
+      this.journalStamps.set(row, { value, parsed: result });
+      return result;
     };
     const windowed = projection.rows.flatMap((snapshot) =>
       projectionRows(snapshot, "manager.command-journal:command_journal").flatMap((row) => {
@@ -441,10 +629,12 @@ export class CommandCenterRepository {
     workspaceId: string,
     actor: PortalUser,
     readAt: Date,
+    actionableGates: string[],
   ): Promise<ExactSourceSlice<TriageCandidate>> {
     const result = await client.query<GovernanceTriageRow>(
       `WITH actionable AS (
-         SELECT request.*,
+         SELECT request.approval_id, request.gate, request.subject_label, request.target_label,
+                request.created_at, request.updated_at, request.sla_due_at,
                 CASE
                   WHEN request.sla_due_at <= $3 THEN 'OVERDUE'
                   WHEN request.sla_due_at <= $3 + interval '8 hours' THEN 'DUE_SOON'
@@ -455,28 +645,22 @@ export class CommandCenterRepository {
                   WHEN request.sla_due_at <= $3 + interval '8 hours' THEN 2
                   ELSE 3
                 END AS severity_rank
-           FROM governance_approval_requests request
-          WHERE request.workspace_id = $1
-            AND request.status = 'PENDING'
-            AND request.expires_at > $3
-            AND request.requester_user_id <> $2
-            AND request.artifact_creator_user_id <> $2
-            AND NOT ($2 = ANY(request.decision_actor_ids))
-            AND request.evidence_complete = true
-            AND request.blocker_count = 0
+           FROM governance_approval_decision_inbox request
+          WHERE ${commandCenterGovernanceActionableSql}
        )
        SELECT approval_id, gate, subject_label, target_label, created_at,
               updated_at, sla_due_at, sla_state, count(*) OVER() AS total_count
          FROM actionable
         ORDER BY severity_rank, sla_due_at, created_at, approval_id
         LIMIT 10`,
-      [workspaceId, actor.userId, readAt],
+      [workspaceId, actor.userId, readAt, actionableGates],
     );
     const total = result.rows[0] ? Number(result.rows[0].total_count) : await this.actionableCount(
       client,
       workspaceId,
       actor.userId,
       readAt,
+      actionableGates,
     );
     const asOf = result.rows.reduce<Date | null>(
       (latest, row) => latest === null || row.updated_at > latest ? row.updated_at : latest,
@@ -508,19 +692,13 @@ export class CommandCenterRepository {
     workspaceId: string,
     actorId: string,
     readAt: Date,
+    actionableGates: string[],
   ): Promise<number> {
     const result = await client.query<{ total_count: string }>(
       `SELECT count(*) AS total_count
-         FROM governance_approval_requests request
-        WHERE request.workspace_id = $1
-          AND request.status = 'PENDING'
-          AND request.expires_at > $3
-          AND request.requester_user_id <> $2
-          AND request.artifact_creator_user_id <> $2
-          AND NOT ($2 = ANY(request.decision_actor_ids))
-          AND request.evidence_complete = true
-          AND request.blocker_count = 0`,
-      [workspaceId, actorId, readAt],
+         FROM governance_approval_decision_inbox request
+        WHERE ${commandCenterGovernanceActionableSql}`,
+      [workspaceId, actorId, readAt, actionableGates],
     );
     return Number(result.rows[0]?.total_count ?? 0);
   }
@@ -529,6 +707,7 @@ export class CommandCenterRepository {
     client: PoolClient,
     workspaceId: string,
     readAt: Date,
+    visibleGates: string[],
   ): Promise<ExactSourceSlice<TodayCandidate>> {
     const result = await client.query<TodayRow>(
       `WITH upcoming AS (
@@ -538,12 +717,14 @@ export class CommandCenterRepository {
                 sla_due_at AS scheduled_at,
                 CASE
                   WHEN gate = 'R1' THEN concat('/governance/approvals/', approval_id, '/r1')
-                  WHEN gate IN ('R2', 'LIVE_GATE') THEN concat('/governance/approvals/', approval_id, '/r2')
+                  WHEN gate = 'R2' THEN concat('/governance/approvals/', approval_id, '/r2')
+                  WHEN gate = 'LIVE_GATE' THEN concat('/governance/approvals/', approval_id, '/live')
                   ELSE concat('/governance/exit-reviews/', approval_id)
                 END AS href,
                 updated_at
            FROM governance_approval_requests
           WHERE workspace_id = $1
+            AND gate=ANY($3::text[])
             AND status = 'PENDING'
             AND expires_at > $2
             AND sla_due_at <= $2 + interval '48 hours'
@@ -553,6 +734,7 @@ export class CommandCenterRepository {
                 '/governance/waivers', updated_at
            FROM governance_conditions_register
           WHERE workspace_id = $1
+            AND gate=ANY($3::text[])
             AND condition_state IN ('EXPIRING', 'LAPSED')
             AND due_at IS NOT NULL
             AND due_at BETWEEN $2 - interval '30 days' AND $2 + interval '48 hours'
@@ -561,7 +743,7 @@ export class CommandCenterRepository {
          FROM upcoming
         ORDER BY scheduled_at, kind, item_id
         LIMIT 12`,
-      [workspaceId, readAt],
+      [workspaceId, readAt,visibleGates],
     );
     const total = result.rows[0]
       ? Number(result.rows[0].total_count)
@@ -569,15 +751,17 @@ export class CommandCenterRepository {
         `SELECT (
            (SELECT count(*) FROM governance_approval_requests
              WHERE workspace_id = $1 AND status = 'PENDING'
+               AND gate=ANY($3::text[])
                AND expires_at > $2 AND sla_due_at <= $2 + interval '48 hours')
            +
            (SELECT count(*) FROM governance_conditions_register
              WHERE workspace_id = $1
+               AND gate=ANY($3::text[])
                AND condition_state IN ('EXPIRING', 'LAPSED')
                AND due_at IS NOT NULL
                AND due_at BETWEEN $2 - interval '30 days' AND $2 + interval '48 hours')
          ) AS total_count`,
-        [workspaceId, readAt],
+        [workspaceId, readAt,visibleGates],
       )).rows[0]?.total_count ?? 0);
     const asOf = result.rows.reduce<Date | null>(
       (latest, row) => latest === null || row.updated_at > latest ? row.updated_at : latest,

@@ -1,0 +1,200 @@
+/* Compare (UXM-07 S2). Layout and the candidate chips; the panels, banners and
+ * buttons come from portfolios.css and the charts from charts.css. Tokens and
+ * type roles only; no uppercase, no raw colour. */
+.exec-cmpr-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-cmpr-v2 > * {
+  min-width: 0;
+}
+.exec-cmpr-pick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-cmpr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 10px;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  /* A name is printed whole (never cut); a very long one wraps inside the chip instead of widening the page. */
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.exec-cmpr-chip small {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-cmpr-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-cmpr-chip[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-color: var(--exec-cmpr-c, var(--ink-soft));
+  box-shadow: inset 0 -2px 0 var(--exec-cmpr-c, var(--ink-soft));
+}
+.exec-cmpr-chip[disabled] {
+  color: var(--ink-faint);
+  background: var(--paper-sunken) repeating-linear-gradient(135deg, transparent 0 5px, var(--line) 5px 6px);
+  border-style: dashed;
+  cursor: not-allowed;
+}
+.exec-cmpr-chip[data-tone="series"] {
+  --exec-cmpr-c: var(--series);
+}
+.exec-cmpr-chip[data-tone="series-2"] {
+  --exec-cmpr-c: var(--series-2);
+}
+.exec-cmpr-chip[data-tone="series-3"] {
+  --exec-cmpr-c: var(--series-3);
+}
+.exec-cmpr-chip[data-tone="series-4"] {
+  --exec-cmpr-c: var(--series-4);
+}
+.exec-cmpr-sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--ink-faint);
+}
+.exec-cmpr-chip[data-tone="series"] .exec-cmpr-sw {
+  background: var(--series);
+  border-color: var(--series);
+}
+.exec-cmpr-chip[data-tone="series-2"] .exec-cmpr-sw {
+  background: var(--series-2);
+  border-color: var(--series-2);
+}
+.exec-cmpr-chip[data-tone="series-3"] .exec-cmpr-sw {
+  background: var(--series-3);
+  border-color: var(--series-3);
+}
+.exec-cmpr-chip[data-tone="series-4"] .exec-cmpr-sw {
+  background: var(--series-4);
+  border-color: var(--series-4);
+}
+.exec-cards-head .exec-cmpr-sw[data-tone="series"] {
+  background: var(--series);
+  border-color: var(--series);
+}
+.exec-cards-head .exec-cmpr-sw[data-tone="series-2"] {
+  background: var(--series-2);
+  border-color: var(--series-2);
+}
+.exec-cards-head .exec-cmpr-sw[data-tone="series-3"] {
+  background: var(--series-3);
+  border-color: var(--series-3);
+}
+.exec-cards-head .exec-cmpr-sw[data-tone="series-4"] {
+  background: var(--series-4);
+  border-color: var(--series-4);
+}
+.exec-cmpr-sw[data-glyph="circle"] {
+  border-radius: var(--radius-pill);
+}
+.exec-cmpr-sw[data-glyph="diamond"] {
+  transform: rotate(45deg);
+}
+.exec-cmpr-parts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+}
+.exec-cmpr-parts[hidden] {
+  display: none;
+}
+/* The one-line partition summary in the Series head; it opens the rule and the groups. A pick left out is counted here. */
+.exec-cmpr-sum {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  max-width: 100%;
+  margin-right: var(--space-3);
+  padding: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-cmpr-sum[data-excluded="true"] {
+  color: var(--ink);
+}
+.exec-cmpr-sum-more {
+  color: var(--accent);
+  text-decoration: underline;
+}
+/* The disclosure glyph follows aria-expanded; the empty alt text keeps it out of the accessible name ("... Partitions"). */
+.exec-cmpr-sum-more::after {
+  content: "\25B8";
+  content: "\25B8" / "";
+  margin-left: var(--space-1);
+  text-decoration: none;
+  display: inline-block;
+}
+.exec-cmpr-sum[aria-expanded="true"] .exec-cmpr-sum-more::after {
+  content: "\25BE";
+  content: "\25BE" / "";
+}
+.exec-cmpr-sum:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The best-in-row square (hi-fi: "Square marks the best in a row"): a filled square beside the figure, shape as well as colour. */
+.exec-cmpr-best {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: var(--space-2);
+  vertical-align: middle;
+  background: var(--ink);
+}
+
+/* Portfolios / Alphas: the subject tabs above the chooser. */
+.exec-cmpr-modes {
+  display: inline-flex;
+  align-self: flex-start;
+}
+
+/* WP-C: typed absences and partition words inside the metrics table follow the table text size (13px), like the figures beside them. */
+.exec-cmpr-v2 .exec-cards td[data-numeric="true"] .exec-pf-na,
+.exec-cmpr-v2 .exec-cards td[data-numeric="true"] .exec-mgr-na,
+.exec-cmpr-v2 .exec-cards td[data-numeric="true"] .exec-pf-unit {
+  font: var(--exec-font-meta);
+}
+.exec-cmpr-v2 .exec-cards td .exec-blk-why-btn {
+  font: inherit;
+}
+
+/* Alphas tab: one line per dataset row (an alpha version in one portfolio), figures right-aligned, never run together. */
+.exec-cmpr-lines {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+.exec-cmpr-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: var(--space-2);
+}

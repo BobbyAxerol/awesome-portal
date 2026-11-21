@@ -16,6 +16,7 @@ import {
 interface FinancialChartRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -77,7 +78,8 @@ export class ExecutionFinancialChartController {
     if (!query.success) throw new FinancialChartError("EDS07_CHART_QUERY_INVALID", 400);
     const workspaceId = await this.authorizeWorkspace(request, query.data.workspace_id);
     return this.charts.chart(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       {
         environment: query.data.environment,
         subject: { kind: query.data.subject_kind, id: query.data.subject_id },
@@ -96,7 +98,8 @@ export class ExecutionFinancialChartController {
     if (!query.success) throw new FinancialChartError("EDS07_DECISION_QUERY_INVALID", 400);
     const workspaceId = await this.authorizeWorkspace(request, query.data.workspace_id);
     return this.charts.decisionRecords(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       {
         environment: query.data.environment,
         subject: { kind: query.data.subject_kind, id: query.data.subject_id },
@@ -120,7 +123,7 @@ export class ExecutionFinancialChartController {
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new FinancialChartError("EDS07_PROJECTION_WORKSPACE_NOT_FOUND", 404);
     }
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new FinancialChartError("WORKSPACE_NOT_FOUND", 404);
     }
     return workspaceId;

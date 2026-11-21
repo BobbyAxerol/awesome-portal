@@ -1,0 +1,15 @@
+{
+  "schema_version": "research.rs03-changes.v1",
+  "phase": "RS-03",
+  "backend_surfaces": [
+    "fresh PostgreSQL authenticated six-operation current-source BFF acceptance test",
+    "bounded disposable Docker PostgreSQL acceptance command",
+    "RS-03 evidence, rollback, cleanup and Claude consumer handoff"
+  ],
+  "frontend_files_changed_by_backend": [],
+  "runtime_or_deployment_changed": false,
+  "feature_flag_changed": false,
+  "database_migration_added": false,
+  "historical_rows_mutated": false,
+  "protected_execution_or_trading_source_changed": false
+}

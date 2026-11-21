@@ -1,0 +1,74 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "base": "execution-manager-series.populated.synthetic.valid.json",
+  "note": "Each case mutates the base example. MD-5: canonical zero on emit, limited to the Manager series response; a stored publication (source) is not changed.",
+  "emit_rule": "A source point value that is zero with a minus sign is emitted with the same scale and no sign. Nothing else changes. Idempotent.",
+  "cases": [
+    {
+      "id": "MD-5/negative-zero-point",
+      "gap": "MD-5",
+      "rule": "a zero is never signed",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_DECIMAL_NEGATIVE_ZERO",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "points",
+            1,
+            "value"
+          ],
+          "value": "-0"
+        }
+      ]
+    },
+    {
+      "id": "MD-5/negative-zero-point-with-a-scale",
+      "gap": "MD-5",
+      "rule": "a zero is never signed",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_DECIMAL_NEGATIVE_ZERO",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "points",
+            1,
+            "value"
+          ],
+          "value": "-0.000"
+        }
+      ]
+    }
+  ],
+  "emit_examples": [
+    {
+      "source": "-0",
+      "emitted": "0"
+    },
+    {
+      "source": "-0.000",
+      "emitted": "0.000"
+    },
+    {
+      "source": "0",
+      "emitted": "0"
+    },
+    {
+      "source": "0.00",
+      "emitted": "0.00"
+    },
+    {
+      "source": "-0.5",
+      "emitted": "-0.5"
+    },
+    {
+      "source": "-100",
+      "emitted": "-100"
+    }
+  ]
+}

@@ -1,0 +1,1465 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-governance-portal-decisions.v1.schema.json",
+  "description": "Distinct Portal-only gate decision commands. No risk grant issuance, trading activation, broker or upstream side effects. LIVE_PARENT_NOT_PUBLISHED is not waived by owner role.",
+  "$defs": {
+    "R1DecisionPlanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "request_key",
+        "command_type",
+        "command_version",
+        "target",
+        "expected_approval_version",
+        "payload"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r1-decision-plan-request.v1"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "request_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+        },
+        "command_type": {
+          "const": "GOVERNANCE_R1_DECISION"
+        },
+        "command_version": {
+          "const": 1
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "approval_id"
+          ],
+          "properties": {
+            "approval_id": {
+              "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Identifier"
+            }
+          }
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "decision",
+            "reason",
+            "conditions",
+            "evidence_hashes"
+          ],
+          "properties": {
+            "decision": {
+              "enum": [
+                "APPROVE",
+                "APPROVE_WITH_CONDITION",
+                "DENY",
+                "REQUEST_CHANGES"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 2000
+            },
+            "conditions": {
+              "type": "array",
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/TypedCondition"
+              }
+            },
+            "evidence_hashes": {
+              "type": "array",
+              "maxItems": 128,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Hash"
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "enum": [
+                      "APPROVE_WITH_CONDITION",
+                      "REQUEST_CHANGES"
+                    ]
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "conditions": {
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "conditions": {
+                    "maxItems": 0,
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "R1DecisionPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "command_type",
+        "command_version",
+        "approval_id",
+        "expected_approval_version",
+        "payload_hash",
+        "evidence_set_hash",
+        "risk_tier",
+        "blockers",
+        "warnings",
+        "required_approvers",
+        "authority_requirements",
+        "fresh_auth_required",
+        "expires_at",
+        "apply_token",
+        "status",
+        "replayed"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r1-decision-plan.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "command_type": {
+          "const": "GOVERNANCE_R1_DECISION"
+        },
+        "command_version": {
+          "const": 1
+        },
+        "approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "evidence_set_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "risk_tier": {
+          "const": "R1"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "required_approvers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "count"
+            ],
+            "properties": {
+              "role": {
+                "const": "ADMIN"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              }
+            }
+          },
+          "description": "Legacy reviewer display/quorum summary, not an authorization rule. Use authority_requirements for exact capability/role and server per-verb eligibility; an ADMIN label does not grant access."
+        },
+        "authority_requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capability",
+            "role_constraint",
+            "workspace_membership_required",
+            "separation_of_duties_required"
+          ],
+          "properties": {
+            "capability": {
+              "const": "governance.r1.decide"
+            },
+            "role_constraint": {
+              "type": "null"
+            },
+            "workspace_membership_required": {
+              "const": true
+            },
+            "separation_of_duties_required": {
+              "const": true
+            }
+          }
+        },
+        "fresh_auth_required": {
+          "const": false
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "apply_token": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "PLANNED",
+            "APPLIED",
+            "EXPIRED"
+          ]
+        },
+        "replayed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "R1ApplyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "apply_token"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r1-decision-apply-request.v1"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "apply_token": {
+          "type": "string",
+          "pattern": "^gat1\\.[A-Za-z0-9_-]{1,32}\\.[A-Za-z0-9_-]{3,96}\\.[A-Za-z0-9_-]{43}$"
+        }
+      }
+    },
+    "R1ApplyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "receipt_id",
+        "status",
+        "replayed"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r1-decision-apply.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "receipt_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "const": "PENDING"
+        },
+        "replayed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "R1DecisionOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "approval_id",
+        "command_type",
+        "status",
+        "verification_result",
+        "blockers",
+        "warnings",
+        "expected_approval_version",
+        "evidence_set_hash",
+        "planned_at",
+        "expires_at",
+        "applied_at",
+        "receipt"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r1-decision-operation.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "command_type": {
+          "const": "GOVERNANCE_R1_DECISION"
+        },
+        "status": {
+          "enum": [
+            "SUCCEEDED",
+            "EXPIRED",
+            "PENDING"
+          ]
+        },
+        "verification_result": {
+          "enum": [
+            "SUCCEEDED",
+            "EXPIRED",
+            "PENDING"
+          ]
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidence_set_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "planned_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "applied_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receipt": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "R2DecisionPlanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "request_key",
+        "command_type",
+        "command_version",
+        "target",
+        "expected_approval_version",
+        "payload"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r2-decision-plan-request.v1"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "request_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+        },
+        "command_type": {
+          "const": "GOVERNANCE_R2_DECISION"
+        },
+        "command_version": {
+          "const": 1
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "approval_id"
+          ],
+          "properties": {
+            "approval_id": {
+              "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Identifier"
+            }
+          }
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "decision",
+            "reason",
+            "conditions",
+            "evidence_hashes"
+          ],
+          "properties": {
+            "decision": {
+              "enum": [
+                "APPROVE",
+                "APPROVE_WITH_CONDITION",
+                "DENY",
+                "REQUEST_CHANGES"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 2000
+            },
+            "conditions": {
+              "type": "array",
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/TypedCondition"
+              }
+            },
+            "evidence_hashes": {
+              "type": "array",
+              "maxItems": 128,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Hash"
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "enum": [
+                      "APPROVE_WITH_CONDITION",
+                      "REQUEST_CHANGES"
+                    ]
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "conditions": {
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "conditions": {
+                    "maxItems": 0,
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "R2DecisionPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "command_type",
+        "command_version",
+        "approval_id",
+        "expected_approval_version",
+        "payload_hash",
+        "evidence_set_hash",
+        "risk_tier",
+        "blockers",
+        "warnings",
+        "required_approvers",
+        "authority_requirements",
+        "fresh_auth_required",
+        "expires_at",
+        "apply_token",
+        "status",
+        "replayed",
+        "decision_authority",
+        "source_side_effect_requested"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r2-decision-plan.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "command_type": {
+          "const": "GOVERNANCE_R2_DECISION"
+        },
+        "command_version": {
+          "const": 1
+        },
+        "approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "evidence_set_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "risk_tier": {
+          "const": "R2"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "required_approvers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "count"
+            ],
+            "properties": {
+              "role": {
+                "const": "ADMIN"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              }
+            }
+          },
+          "description": "Legacy reviewer display/quorum summary, not an authorization rule. Use authority_requirements for exact capability/role and server per-verb eligibility; an ADMIN label does not grant access."
+        },
+        "authority_requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capability",
+            "role_constraint",
+            "workspace_membership_required",
+            "separation_of_duties_required"
+          ],
+          "properties": {
+            "capability": {
+              "const": "governance.r2.decide"
+            },
+            "role_constraint": {
+              "const": "ADMIN"
+            },
+            "workspace_membership_required": {
+              "const": true
+            },
+            "separation_of_duties_required": {
+              "const": true
+            }
+          }
+        },
+        "fresh_auth_required": {
+          "const": false
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "apply_token": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "PLANNED",
+            "APPLIED",
+            "EXPIRED"
+          ]
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "decision_authority": {
+          "const": "PORTAL_ONLY"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        }
+      }
+    },
+    "R2ApplyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "apply_token"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r2-decision-apply-request.v1"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "apply_token": {
+          "type": "string",
+          "pattern": "^gat1\\.[A-Za-z0-9_-]{1,32}\\.[A-Za-z0-9_-]{3,96}\\.[A-Za-z0-9_-]{43}$"
+        }
+      }
+    },
+    "R2ApplyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "receipt_id",
+        "status",
+        "replayed",
+        "decision_authority",
+        "source_side_effect_requested"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r2-decision-apply.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "receipt_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "const": "PENDING"
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "decision_authority": {
+          "const": "PORTAL_ONLY"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        }
+      }
+    },
+    "R2DecisionOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "approval_id",
+        "command_type",
+        "status",
+        "verification_result",
+        "blockers",
+        "warnings",
+        "expected_approval_version",
+        "evidence_set_hash",
+        "planned_at",
+        "expires_at",
+        "applied_at",
+        "receipt",
+        "decision_authority",
+        "source_side_effect_requested"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.r2-decision-operation.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "command_type": {
+          "const": "GOVERNANCE_R2_DECISION"
+        },
+        "status": {
+          "enum": [
+            "SUCCEEDED",
+            "EXPIRED",
+            "PENDING"
+          ]
+        },
+        "verification_result": {
+          "enum": [
+            "SUCCEEDED",
+            "EXPIRED",
+            "PENDING"
+          ]
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidence_set_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "planned_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "applied_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receipt": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decision_authority": {
+          "const": "PORTAL_ONLY"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        }
+      }
+    },
+    "LiveDecisionPlanRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "request_key",
+        "command_type",
+        "command_version",
+        "target",
+        "expected_approval_version",
+        "payload"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.live-decision-plan-request.v1"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "request_key": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+        },
+        "command_type": {
+          "const": "GOVERNANCE_LIVE_DECISION"
+        },
+        "command_version": {
+          "const": 1
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "approval_id"
+          ],
+          "properties": {
+            "approval_id": {
+              "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Identifier"
+            }
+          }
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "decision",
+            "reason",
+            "conditions",
+            "evidence_hashes"
+          ],
+          "properties": {
+            "decision": {
+              "enum": [
+                "APPROVE",
+                "APPROVE_WITH_CONDITION",
+                "DENY",
+                "REQUEST_CHANGES"
+              ]
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 2000
+            },
+            "conditions": {
+              "type": "array",
+              "maxItems": 16,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/TypedCondition"
+              }
+            },
+            "evidence_hashes": {
+              "type": "array",
+              "maxItems": 128,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "execution-governance-approval-workflow.v1.schema.json#/$defs/Hash"
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "decision": {
+                    "enum": [
+                      "APPROVE_WITH_CONDITION",
+                      "REQUEST_CHANGES"
+                    ]
+                  }
+                },
+                "required": [
+                  "decision"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "conditions": {
+                    "minItems": 1,
+                    "type": "array"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "conditions": {
+                    "maxItems": 0,
+                    "type": "array"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "LiveDecisionPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "command_type",
+        "command_version",
+        "approval_id",
+        "expected_approval_version",
+        "payload_hash",
+        "evidence_set_hash",
+        "risk_tier",
+        "blockers",
+        "warnings",
+        "required_approvers",
+        "authority_requirements",
+        "fresh_auth_required",
+        "expires_at",
+        "apply_token",
+        "status",
+        "replayed",
+        "decision_authority",
+        "source_side_effect_requested"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.live-decision-plan.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "command_type": {
+          "const": "GOVERNANCE_LIVE_DECISION"
+        },
+        "command_version": {
+          "const": 1
+        },
+        "approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "evidence_set_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "risk_tier": {
+          "const": "LIVE_GATE"
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "required_approvers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "role",
+              "count"
+            ],
+            "properties": {
+              "role": {
+                "const": "ADMIN"
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 8
+              }
+            }
+          },
+          "description": "Legacy reviewer display/quorum summary, not an authorization rule. Use authority_requirements for exact capability/role and server per-verb eligibility; an ADMIN label does not grant access."
+        },
+        "authority_requirements": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "capability",
+            "role_constraint",
+            "workspace_membership_required",
+            "separation_of_duties_required"
+          ],
+          "properties": {
+            "capability": {
+              "const": "governance.live.decide"
+            },
+            "role_constraint": {
+              "type": "null"
+            },
+            "workspace_membership_required": {
+              "const": true
+            },
+            "separation_of_duties_required": {
+              "const": true
+            }
+          }
+        },
+        "fresh_auth_required": {
+          "const": false
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "apply_token": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "enum": [
+            "PLANNED",
+            "APPLIED",
+            "EXPIRED"
+          ]
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "decision_authority": {
+          "const": "PORTAL_ONLY"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        }
+      }
+    },
+    "LiveApplyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "apply_token"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.live-decision-apply-request.v1"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "apply_token": {
+          "type": "string",
+          "pattern": "^gat1\\.[A-Za-z0-9_-]{1,32}\\.[A-Za-z0-9_-]{3,96}\\.[A-Za-z0-9_-]{43}$"
+        }
+      }
+    },
+    "LiveApplyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "receipt_id",
+        "status",
+        "replayed",
+        "decision_authority",
+        "source_side_effect_requested"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.live-decision-apply.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "receipt_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "status": {
+          "const": "PENDING"
+        },
+        "replayed": {
+          "type": "boolean"
+        },
+        "decision_authority": {
+          "const": "PORTAL_ONLY"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        }
+      }
+    },
+    "LiveDecisionOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "operation_id",
+        "approval_id",
+        "command_type",
+        "status",
+        "verification_result",
+        "blockers",
+        "warnings",
+        "expected_approval_version",
+        "evidence_set_hash",
+        "planned_at",
+        "expires_at",
+        "applied_at",
+        "receipt",
+        "decision_authority",
+        "source_side_effect_requested"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "governance.live-decision-operation.v1"
+        },
+        "operation_id": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 96
+        },
+        "approval_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+        },
+        "command_type": {
+          "const": "GOVERNANCE_LIVE_DECISION"
+        },
+        "status": {
+          "enum": [
+            "SUCCEEDED",
+            "EXPIRED",
+            "PENDING"
+          ]
+        },
+        "verification_result": {
+          "enum": [
+            "SUCCEEDED",
+            "EXPIRED",
+            "PENDING"
+          ]
+        },
+        "blockers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "expected_approval_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidence_set_hash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "planned_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "applied_at": {
+          "oneOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "receipt": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": true
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "decision_authority": {
+          "const": "PORTAL_ONLY"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -6,7 +6,7 @@
  * Lightweight Charts™) draws venue public klines with the trades on them
  * (OR-4 / OR-5). Every number printed is the server's string.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { MARKET_CANDLE_INTERVALS, type MarketCandleInterval, type MarketCandlesPayload } from "../api/marketCandles";
 import type { PanelStatus } from "../contracts";
@@ -14,6 +14,7 @@ import { ReplayCandleChart, type ReplayChartHandle } from "./ReplayCandleChart";
 import { buildLog, legLevels, legRole, money, ms, num, pairRoundTrips } from "./tradeReplayModel";
 import { EMPTY_GROUPS, type ReplayGroups } from "./tradeReplayGroups";
 import { soonReason } from "../soon";
+import { plainRow, plainTime } from "./tradeReplayWords";
 import type { LogRow, ReplayFill, ReplayOrder } from "./tradeReplayModel";
 
 export {
@@ -56,9 +57,20 @@ export interface TradeReplayEventsProps {
   subjectLabel?: string | null;
   /** order groups / packages / ledgers as the source publishes them (read ahead of publication) */
   groups?: ReplayGroups;
+  /**
+   * The V2 reading of the panel (hi-fi trade-replay): the trade log in plain
+   * words with the raw codes kept beside them, one column per fact, cards at or
+   * below 660px, and the provenance behind a disclosure. Off, the panel is the
+   * V1 panel unchanged.
+   */
+  plain?: boolean;
+  /** Drawn right under the chart (V2: the STAGE / DECISION / INCIDENT lanes of the same window). */
+  lanes?: ReactNode;
+  /** V2: the order id of a log row as a link to that order (the caller owns the router); absent keeps the plain id. */
+  orderLink?: (orderId: string) => ReactNode;
 }
 
-const HEIGHT = { compact: 420, tall: 620 } as const;
+const HEIGHT = { compact: 420, tall: 620, bare: 240 } as const;
 
 /** The scene object a log row stands for (the same ids the chart primitive uses). */
 export function sceneIdOfRow(row: LogRow, orders: readonly ReplayOrder[]): string | null {
@@ -112,7 +124,7 @@ export function sentence(text: string): string {
   return /[.!?]$/.test(text.trimEnd()) ? text.trimEnd() : `${text.trimEnd()}.`;
 }
 
-export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null }: TradeReplayEventsProps) {
+export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [], market = null, marketTransport = "loading", marketReason = null, interval = "1h", onIntervalChange, intervalNote = null, symbol: controlledSymbol, onSymbolChange, onRangeEdge, paging = null, focusId = null, page = null, subjectLabel = null, groups = EMPTY_GROUPS, source = null, plain = false, lanes = null, orderLink }: TradeReplayEventsProps) {
   const symbols = useMemo(() => Array.from(new Set([...fills.map((f) => f.symbol), ...orders.map((o) => o.symbol)].filter((s): s is string => !!s))).sort(), [fills, orders]);
   const [ownSymbol, setOwnSymbol] = useState<string | null>(null);
   const symbol = controlledSymbol !== undefined ? controlledSymbol : ownSymbol;
@@ -202,15 +214,37 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
     : marketTransport !== "ok" && marketTransport !== "loading" ? `venue klines ${marketTransport}${marketReason ? ` · ${marketReason}` : ""}`
     : marketTransport === "loading" && !market ? "venue klines loading" : null;
   const notice = bars.length > 0 ? null : `${klinesWord ?? "venue klines not requested"} · Trading System candles: ${soonReason(candles.reason) ?? "Soon · BR-EX-50"} — no candles: the time axis is indexed by the events themselves`;
-  const height = tall ? HEIGHT.tall : HEIGHT.compact;
+  // With no candles the chart has only the trades' own marks to hold: a short band, not 400px of empty plot (QA3 R2-20).
+  const height = tall ? HEIGHT.tall : bars.length === 0 ? HEIGHT.bare : HEIGHT.compact;
   const brackets = scopedFills.filter((f) => !trips.some((tr) => tr.exit.fillId === f.fillId)).length;
 
+  const provenance = (
+    <>
+          <span className="exec-rp-mute" data-source={source?.page ? "relations" : "n25"}>source: {source?.label ?? "retained projection page (N25)"}{source?.detail ? ` · ${source.detail}` : ""}</span>
+          <span className="exec-rp-mute" data-groups={groups.published.brackets ? "published" : "not-published"}>
+            groups: {groups.published.brackets ? `brackets published (${groups.brackets.length}) — boxes from the source's groups` : "order_brackets not published — boxes paired by time (DERIVED)"}
+            {" · "}{groups.published.conditional ? `OCO/OTO/OUO groups (${groups.conditional.length}) ⌐ brace` : "conditional_order_groups not published"}
+            {" · "}{groups.published.packages ? `atomic packages (${groups.packages.length}) ▒ band` : "arb_order_packages not published"}
+            {" · "}{groups.published.ledger ? `ledger (${groups.ledger.length}) ◆ on the time axis` : "capital ledger / settlements not published"}
+          </span>
+    </>
+  );
+  const footerNode = (
+    <footer className="exec-rp-foot">
+      source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
+      {market && market.state === "READY"
+        ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} ${market.source.kind === "data_layer" ? "data_layer" : "public"} klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? `${new Date(market.fetchedAtMs).toISOString().slice(11, 19)}Z` : "at a time not published"}, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
+        : `venue klines ${market ? market.state.toLowerCase() : marketTransport}${market?.reasonCode ? ` · ${market.reasonCode}` : marketReason ? ` · ${marketReason}` : ""}`}
+      {" "}· Trading System candles: {soonReason(candles.reason) ?? "Soon · BR-EX-50"} · as_of {asOf ?? "not stated"}
+      <span className="exec-rp-attrib"> · charting: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener">TradingView Lightweight Charts™</a> © TradingView, Inc.</span>
+    </footer>
+  );
   return (
     <>
       <section className="exec-rp-panel" aria-label="Trade replay">
         <header className="exec-rp-head">
-          <span className="exec-rp-title">Trade replay — trade logs on candles</span>
-          {accounts.length > 0 ? <span className="exec-rp-chip" title="Deployment account in scope">{accounts[0]}{accounts.length > 1 ? ` +${accounts.length - 1}` : ""}</span> : null}
+          {plain ? null : <span className="exec-rp-title">Trade replay — trade logs on candles</span>}
+          {accounts.length > 0 && !plain ? <span className="exec-rp-chip" title="Deployment account in scope">{accounts[0]}{accounts.length > 1 ? ` +${accounts.length - 1}` : ""}</span> : null}
           {symbols.length > 1 ? (
             <select className="exec-rp-chip" aria-label="Symbol" value={activeSymbol ?? ""} onChange={(e) => setSymbol(e.target.value)}>
               {symbols.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -237,7 +271,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             <button type="button" className="exec-rp-chip" disabled={bars.length === 0} title={bars.length === 0 ? "No candle window is available to fit." : undefined} onClick={() => chart.current?.fit()}>Fit</button>
             <button type="button" className="exec-rp-chip" onClick={() => { setTall(!tall); writeTall(!tall); }} aria-pressed={tall} aria-label={tall ? "Compact chart" : "Expand chart"}>{tall ? "Compact" : "Expand"}</button>
           </span>
-          <span className="exec-rp-win">{paging ? `loading ${paging === "left" ? "earlier" : "later"} candles · ` : ""}{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · {brackets} position box{brackets === 1 ? "" : "es"} · crosshair · drag · wheel zoom · drag the price axis · ← → step fills</span>
+          <span className="exec-rp-win">{paging ? `loading ${paging === "left" ? "earlier" : "later"} candles · ` : ""}{bars.length > 0 ? `${bars.length} bars · ${market?.interval ?? interval} · ` : ""}{scopedFills.length} fills · {legs.length} legs · {trips.length} round trips · {brackets} position box{brackets === 1 ? "" : "es"}{plain ? "" : " · crosshair · drag · wheel zoom · drag the price axis · ← → step fills"}</span>
         </header>
         <div className="exec-rp-canvas" style={{ height }} data-tall={tall}>
           <ReplayCandleChart
@@ -260,8 +294,11 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             onRangeEdge={onRangeEdge}
             focusId={focusTarget}
             groups={groups}
+            levelsInAutoscale={!plain}
+            hostRole={plain ? "group" : "img"}
           />
         </div>
+        {lanes}
         <div className="exec-rp-legend">
           <span><b data-side="long">▲</b> long entry · <b data-side="long">▽</b> long exit (hollow; label = realized_pnl)</span>
           <span><b data-side="short">▼</b> short entry · <b data-side="short">△</b> short exit</span>
@@ -269,28 +306,26 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           <span>─ ─ <span data-tone="good">TP</span> / <span data-tone="bad">SL</span> leg at trigger_price · ◇ triggered · ⊣ cancelled · ┈ resting limit level</span>
           <span data-tone="bad">× rejected ({rejects})</span>
           <span className="exec-rp-mute">╌ round trip · {bars.length > 0 ? "▮ venue candle up / down" : "no candles"} · hover a marker for its card · click ↔ log row · ← → step fills</span>
-          <span className="exec-rp-mute" data-source={source?.page ? "relations" : "n25"}>source: {source?.label ?? "retained projection page (N25)"}{source?.detail ? ` · ${source.detail}` : ""}</span>
-          <span className="exec-rp-mute" data-groups={groups.published.brackets ? "published" : "not-published"}>
-            groups: {groups.published.brackets ? `brackets published (${groups.brackets.length}) — boxes from the source's groups` : "order_brackets not published — boxes paired by time (DERIVED)"}
-            {" · "}{groups.published.conditional ? `OCO/OTO/OUO groups (${groups.conditional.length}) ⌐ brace` : "conditional_order_groups not published"}
-            {" · "}{groups.published.packages ? `atomic packages (${groups.packages.length}) ▒ band` : "arb_order_packages not published"}
-            {" · "}{groups.published.ledger ? `ledger (${groups.ledger.length}) ◆ on the time axis` : "capital ledger / settlements not published"}
-          </span>
+          {plain && bars.length > 0 ? <span className="exec-rp-mute">▲ / ▼ ┈ Off-scale levels are pinned to the edge with their value; the line position is not their price.</span> : null}
+          {plain ? null : provenance}
         </div>
-        <footer className="exec-rp-foot">
-          source: orders ⋈ fills (client_order_id) · legs = orders of type TAKE_PROFIT_* / STOP_* with trigger_price · marker time = fill trade_time (UTC) ·{" "}
-          {market && market.state === "READY"
-            ? `candles = ${market.source.venue ?? "venue"} ${market.source.market ?? ""} ${market.source.kind === "data_layer" ? "data_layer" : "public"} klines ${market.interval ?? interval}${market.source.instrument && market.source.instrument !== market.symbol ? ` (${market.source.instrument})` : ""} via Portal (${market.source.endpoint ?? "venue endpoint"}, fetched ${market.fetchedAtMs ? `${new Date(market.fetchedAtMs).toISOString().slice(11, 19)}Z` : "at a time not published"}, ${market.coverage.returnedCount ?? bars.length} bars${market.coverage.truncated ? ", truncated at the venue page limit" : ""}) — VENUE_PUBLIC_MARKET_DATA, not the Trading System kline shard`
-            : `venue klines ${market ? market.state.toLowerCase() : marketTransport}${market?.reasonCode ? ` · ${market.reasonCode}` : marketReason ? ` · ${marketReason}` : ""}`}
-          {" "}· Trading System candles: {soonReason(candles.reason) ?? "Soon · BR-EX-50"} · as_of {asOf ?? "not stated"}
-          <span className="exec-rp-attrib"> · charting: <a href="https://www.tradingview.com/" target="_blank" rel="noreferrer noopener">TradingView Lightweight Charts™</a> © TradingView, Inc.</span>
-        </footer>
+        {plain ? (
+          <details data-how="true">
+            <summary>How this is built</summary>
+            {provenance}
+            {footerNode}
+          </details>
+        ) : footerNode}
       </section>
       <section className="exec-rp-panel" aria-label="Trade log">
-        <header className="exec-rp-head"><span className="exec-rp-title">Trade log — events behind the markers</span><span className="exec-rp-spacer" /><span className="exec-rp-win" data-log-shown={Math.min(logShown, log.length)} data-log-total={log.length}>{log.length > logShown ? `${logShown} of ${log.length} events shown · newest first` : `${log.length} events`}{activeSymbol ? ` · ${activeSymbol}` : ""} · row ↔ marker share order_id / fill id</span></header>
+        <header className="exec-rp-head"><span className="exec-rp-title">Trade log — events behind the markers</span><span className="exec-rp-spacer" /><span className="exec-rp-win" data-log-shown={Math.min(logShown, log.length)} data-log-total={log.length}>{log.length > logShown ? `${logShown} of ${log.length} events shown · newest first` : `${log.length} events`}{activeSymbol ? ` · ${activeSymbol}` : ""}{plain ? "" : " · row ↔ marker share order_id / fill id"}</span></header>
         <div className="exec-scroll-x">
-          <table className="exec-rp-table">
+          <table className="exec-rp-table" data-plain={plain ? "true" : undefined}>
+            {plain ? (
+              <thead><tr><th>Time (UTC)</th><th>Event</th><th>Order</th><th>Leg</th><th>Type · Side</th><th data-numeric="true">Qty</th><th data-numeric="true">Price / Trigger</th><th data-numeric="true">Fee</th><th>Result</th></tr></thead>
+            ) : (
             <thead><tr><th>time (UTC)</th><th>event</th><th>order · leg</th><th>type · side</th><th data-numeric="true">qty</th><th data-numeric="true">price / trigger</th><th data-numeric="true">fee</th><th>note</th></tr></thead>
+            )}
             <tbody>
               {log.slice(0, logShown).map((r, index) => {
                 const sceneId = logScene[index];
@@ -306,6 +341,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
                   tabIndex={sceneId ? 0 : undefined}
                   onKeyDown={sceneId ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(sceneId, false); } } : undefined}
                 >
+                  {plain ? <PlainCells row={r} orderLink={orderLink} /> : (
+                  <>
                   <td className="exec-rp-dim">{r.time}</td>
                   <td><span className="exec-rp-ev" data-tone={r.eventTone}>{r.event}</span></td>
                   <td><span className="exec-rp-mute">{r.event === "FILL" ? "fill " : "ord "}</span><span className="exec-num">{r.ref}</span>{r.tail}</td>
@@ -314,6 +351,8 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
                   <td data-numeric="true">{r.price}</td>
                   <td data-numeric="true" className={r.fee ? undefined : "exec-rp-mute"}>{r.fee ?? "fee not published"}</td>
                   <td data-tone={r.noteTone ?? undefined}>{r.note}</td>
+                  </>
+                  )}
                 </tr>
                 );
               })}
@@ -327,6 +366,40 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
           </div>
         ) : null}
       </section>
+    </>
+  );
+}
+
+/** The nine cells of one log row in the V2 reading. The raw codes ride on `title` or in a muted chip; none is dropped. */
+function PlainCells({ row, orderLink }: { row: LogRow; orderLink?: (orderId: string) => ReactNode }) {
+  const p = plainRow(row);
+  const parent = row.event === "FILL" ? row.orderId : row.ref;
+  return (
+    <>
+      <td data-l="Time (UTC)" className="exec-rp-dim" title={new Date(row.t).toISOString()}>{plainTime(row.t)}</td>
+      <td data-l="Event"><span className="exec-rp-ev" data-tone={row.eventTone} title={p.eventCode}>{p.event}</span></td>
+      <td data-l="Order">
+        <span>
+          {orderLink ? <span className="exec-num" title={row.event === "FILL" ? `Fill ${row.ref}` : undefined}>{orderLink(parent)}</span> : <span className="exec-num" title={row.event === "FILL" ? `Fill ${row.ref}` : undefined}>{parent}</span>}
+          {row.event === "FILL" ? <small className="exec-rp-mute"> fill {row.ref}</small> : null}
+        </span>
+      </td>
+      <td data-l="Leg">{p.leg}</td>
+      <td data-l="Type · Side" title={row.typeCode ?? undefined}>
+        <span>
+          {p.type} · <span data-tone={row.side === "BUY" ? "good" : row.side === "SELL" ? "bad" : undefined}>{p.side ?? "Side not published"}</span>
+          {p.flags ? <small className="exec-rp-mute"> {p.flags}</small> : null}
+        </span>
+      </td>
+      <td data-l="Qty" data-numeric="true">{row.qty}</td>
+      <td data-l="Price / Trigger" data-numeric="true">{p.price}</td>
+      <td data-l="Fee" data-numeric="true" className={row.event === "FILL" && row.fee ? undefined : "exec-rp-mute"}>{p.fee}</td>
+      <td data-l="Result" data-tone={row.noteTone ?? undefined} title={[p.statusCode ? `Status ${p.statusCode}` : null, row.note].filter((x) => x).join(" · ") || undefined}>
+        <span>
+          {p.result}
+          {p.detail ? <small> {p.detail}</small> : null}
+        </span>
+      </td>
     </>
   );
 }

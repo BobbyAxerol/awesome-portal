@@ -4,6 +4,7 @@ import { PortalUser } from "../domain";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { CommandCenterRepository } from "./command-center.repository";
 import { composeCommandCenterSnapshot } from "./contracts";
+import { ExecutionReadScopeError, type ReadScopePrincipal } from "../execution-v2/read-scope";
 
 export class CommandCenterError extends Error {
   constructor(
@@ -22,7 +23,7 @@ export class CommandCenterService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
-  async snapshot(actor: PortalUser, workspaceId: string) {
+  async snapshot(actor: PortalUser, workspaceId: string, principal?: ReadScopePrincipal) {
     if (this.config.FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT !== "true") {
       throw new CommandCenterError(
         "COMMAND_CENTER_SNAPSHOT_DISABLED",
@@ -31,6 +32,20 @@ export class CommandCenterService {
       );
     }
     const readAt = new Date();
+    if (!principal && this.repository.requiresTrustedPrincipal?.())
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED", 403);
+    if (principal) {
+      if (principal.user.userId !== actor.userId || principal.workspaceId !== workspaceId)
+        throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED", 403);
+      return this.repository.readAuthorized(principal, readAt, (input, scoped) => {
+        const result = { ...composeCommandCenterSnapshot(input), ...(scoped ? {
+          read_scope: { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", totals_scope: "VISIBLE_DEPLOYMENTS_ONLY" },
+        } : {}) };
+        if (Buffer.byteLength(JSON.stringify(result)) > this.config.COMMAND_CENTER_MAX_RESPONSE_BYTES)
+          throw new CommandCenterError("COMMAND_CENTER_RESPONSE_BUDGET_EXCEEDED", "Command Center snapshot exceeded its response budget.", 503);
+        return result;
+      });
+    }
     let inputs;
     try {
       inputs = await this.repository.read(workspaceId, actor, readAt);

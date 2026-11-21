@@ -18,17 +18,29 @@ COPY features/roadmap-task-board/frontend features/roadmap-task-board/frontend
 # contracts workspace is a build input rather than a runtime dependency.
 COPY packages/contracts/generated packages/contracts/generated
 COPY packages/contracts/fixtures packages/contracts/fixtures
+# src/fixtureBff tests import the standalone fixture BFF sources; the frontend's tsc -b typechecks them, so the
+# sources must be in the build context. Build stage only: nothing from this directory reaches the served image.
+COPY apps/portal/registry/fixtures/registry.public.json apps/portal/registry/fixtures/links.public.json apps/portal/registry/fixtures/summary.healthy.json apps/portal/registry/fixtures/
+COPY apps/portal/fixture-bff apps/portal/fixture-bff
+# The frontend type-check reaches the fixture BFF (through src/fixtureBff tests), which imports these two outside modules.
+COPY packages/contracts/tooling/execution-manager-positive-series-fixtures.mjs packages/contracts/tooling/execution-manager-positive-series-fixtures.d.mts packages/contracts/tooling/
+COPY apps/control-api/src/domain.ts apps/control-api/src/domain.ts
+COPY apps/control-api/src/command-center/contracts.ts apps/control-api/src/command-center/visit-digest.ts apps/control-api/src/command-center/
 COPY apps/portal/frontend apps/portal/frontend
 ARG ROADMAP_TASK_BOARD_LOCAL_ONLY=false
 ARG ROADMAP_TASK_BOARD_PERSISTENCE=v1
 ARG ROADMAP_TASK_BOARD_API_BASE=/roadmap-task-board/api
 ARG EXECUTION_PREVIEW_ENABLED=false
+# UXM-07 / FE-040: comma list of Execution V2 screen keys (shell,fleet,cockpit,ops,...).
+# Empty (the default) keeps every screen on V1 and emits none of the V2 chunks.
+ARG EXECUTION_V2_SCREENS=
 # The embedded Planning views address the gateway prefix absolutely, because
 # they render under /planning/* rather than under /roadmap-task-board/.
 ENV VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=${ROADMAP_TASK_BOARD_LOCAL_ONLY} \
     VITE_ROADMAP_TASK_BOARD_PERSISTENCE=${ROADMAP_TASK_BOARD_PERSISTENCE} \
     VITE_ROADMAP_TASK_BOARD_API_BASE=${ROADMAP_TASK_BOARD_API_BASE} \
-    VITE_EXECUTION_PREVIEW_ENABLED=${EXECUTION_PREVIEW_ENABLED}
+    VITE_EXECUTION_PREVIEW_ENABLED=${EXECUTION_PREVIEW_ENABLED} \
+    VITE_EXECUTION_V2_SCREENS=${EXECUTION_V2_SCREENS}
 RUN cd apps/portal/frontend && npm run build
 
 FROM node:22-alpine AS roadmap-task-board-build

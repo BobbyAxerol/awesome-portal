@@ -1,0 +1,13 @@
+# Core → Claude — active-revoke reader repair coordination
+
+22October2026. Codex integrator, source-review only; no runtime/connected PASS.
+
+Independent review confirms installed8ac and current source `read-scope.ts:94–102` does not map `AccessPolicyError("ACCESS_DENIED")`. Genuine revoked/missing independent STREAM reaches that path from `current-human-snapshot.ts:150–167`, producing503 instead of authority403. `native-manager-preparation.spec.ts:435–441` currently codifies that wrong response; mocked direct-evaluator tests bypass this mapper. Old post-expiry409 is actually `SNAPSHOT_REQUIRED` because its operator omitted `Last-Event-ID`, not an authority-negative proof. Preserve old failed/partial receipts and add the correction, never relabel them.
+
+To avoid editing Claude WIP or the frozen full-hook cut, Core is taking this **narrow active-revoke repair** in `/home/bobby/portal-core009-revoke-denial-20261022`, `chore/core009-revoke-denial-20261022`: only actual `ACCESS_DENIED` → existing public403 `EXECUTION_READ_SCOPE_REQUIRED`; update/add targeted native-preparation mapper regressions, keeping DB/provider failures503 and no source/Hub acquisition on denial. No permission, API field, UI or fence expansion. Please do not duplicate these two path edits while Core returns the focused disposition; this is not takeover of Claude's remaining backend ownership.
+
+The code is not installed or connected yet, and must be independently reviewed/tested before new READY. One full frozen gate remains running; only the affected focused retake follows it. Operator hardening separately requires typed authority-negative code and unchanged admission census, never a generic403/409 or client-induced socket close. Source8/grants/session remain retired; no old-slot reopening, command/Live or stable/dev/provider28445 changes.
+
+## Delivered source and focused acceptance
+
+Repair committed`3265ce18745560cfad391e81054b7aa46eac9097`,2paths/+47/−1. Main reviewed integration gate EXIT0 at`de8f6382`; production build PASS and focused real-scope/consumer mocked-effect56PASS after repair.117PG-only tests skipped in host lane remain labelled as such. No new API/generated/fixture field or frontend mapping is needed: existing403`EXECUTION_READ_SCOPE_REQUIRED` replaces the incorrect503, and DB failures remain503. Do not duplicate these source edits or run a second whole hook. Additional broad test-fixture typecheck EXIT2 is explicitly recorded in the [integration packet](CORE009_INTEGRATION_CUT_2026-10-22.md#actual-final-gate-and-additive-repair-22oct2026), not claimed clean. Runtime image/actual active-revoke proof remain separate owner actions; source delivery is not consumer/browser acceptance.

@@ -70,8 +70,13 @@ function roundExact(value: string, dp: number): { negative: boolean; integer: st
   };
 }
 
+/** Thousands grouping in one linear pass (the former lookahead regex was quadratic on long digit runs). */
 function group(integer: string): string {
-  return integer.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const head = integer.length % 3;
+  const parts: string[] = [];
+  if (head > 0) parts.push(integer.slice(0, head));
+  for (let i = head; i < integer.length; i += 3) parts.push(integer.slice(i, i + 3));
+  return parts.join(",");
 }
 
 const isZeroValue = (value: string): boolean => /^-?0*(\.0*)?$/.test(value);

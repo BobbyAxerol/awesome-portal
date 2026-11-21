@@ -9,7 +9,7 @@
  * the registry. A registry failure is therefore a terminal bootstrap state
  * with its request id, not an empty sidebar.
  */
-import { useCallback, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { StateView } from "../components/ui";
@@ -19,11 +19,34 @@ import { breadcrumbsFor, type NavOptions } from "../portal/navigation";
 import { useSession } from "../auth/session";
 import { PortalPresentationProvider } from "./presentation";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
+import { opensV2CommandBar, V2_SHELL_ON } from "./commandRouting";
 import { PortalContext } from "./context";
 import { PortalRoutes } from "./PortalRoutes";
+import { NO_NAV_BADGES, NO_SELF_NAV, SELF_ENTRY_PATH, SelfWorkspaceContext, type NavBadges, type SelfNavShellView } from "./selfNavView";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { usePreferences } from "./preferences";
+import { installPrintLightTheme } from "./printTheme";
+import { useExecutionDocumentTitle } from "./executionTitle";
+
+// V2 command bar (concept C1). Lazy on the RAW env string, like the other V2 mounts, so a build
+// without the manifest emits no V2 chunk and never evaluates this module. Whether it is used on
+// a given route is `opensV2CommandBar` (shell flag + Execution route); otherwise V1's palette.
+const V2CommandBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/shell/ExecCommandBar").then((m) => ({ default: m.ExecCommandBar })))
+  : null;
+
+// Self-navigation (W3, FE-057/058): the controller that reads the actor's own navigation projection and tells the rail what it
+// lists. Same raw-env guard as above; it renders nothing, and with the shell flag off it is never mounted.
+const V2SelfNavigation = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/shell/SelfNavigation"))
+  : null;
+
+// Sidebar count badges (WP-D): Operations open exceptions and Approvals pending, from reads the screens also do. Same raw-env guard;
+// renders nothing, and with the shell flag off it is never mounted.
+const V2NavCounts = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/shell/navCounts"))
+  : null;
 
 export function PortalShell() {
   const location = useLocation();
@@ -35,11 +58,38 @@ export function PortalShell() {
 
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const openPalette = useCallback(() => setPaletteOpen(true), []);
+  const navToggleRef = useRef<HTMLButtonElement>(null);
+  /* D1: Esc closes the navigation drawer and hands focus back to its toggle. */
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMobileNavOpen(false);
+      navToggleRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mobileNavOpen]);
+  /* T-D1/T-D2: print is the light palette whatever the theme. */
+  useEffect(() => installPrintLightTheme(), []);
+  // UI review D10: the tab names the Execution screen from the first render (route metadata, no registry needed).
+  useExecutionDocumentTitle(location.pathname, location.search);
+  const [v2BarOpen, setV2BarOpen] = useState(false);
+  // One shortcut, one overlay: on an Execution route with the shell flag on, Cmd/Ctrl+K (and the
+  // topbar search button) open the V2 bar; everywhere else, and always with the flag off, the V1 palette.
+  const v2Route = V2CommandBar !== null && opensV2CommandBar(registry.data ?? null, location.pathname);
+  const openPalette = useCallback(() => (v2Route ? setV2BarOpen(true) : setPaletteOpen(true)), [v2Route]);
+  // Leaving the routes the V2 bar owns closes it, so it cannot reappear on the next Execution visit.
+  useEffect(() => {
+    if (!v2Route) setV2BarOpen(false);
+  }, [v2Route]);
   useCommandPaletteShortcut(openPalette);
 
   const environment = summary.data?.environment ?? null;
   const { access } = useSession();
+  // What the V2 self-navigation controller says the rail lists / why it is shut. Flag off nobody sets it: `NO_SELF_NAV`.
+  const [selfNav, setSelfNav] = useState<SelfNavShellView>(NO_SELF_NAV);
+  const [navBadges, setNavBadges] = useState<NavBadges>(NO_NAV_BADGES);
 
   /*
    * A4-4 · navigation is owner-aware, from the server's answer.
@@ -51,7 +101,22 @@ export function PortalShell() {
    * because the screen behind it would refuse anyway and an entry that always
    * refuses is worse than no entry.
    */
-  const capabilities = access.kind === "ready" ? access.access.capabilities : [];
+  const sessionCapabilities = access.kind === "ready" ? access.access.capabilities : [];
+  // The session's own read says the caller is the owner (never the role in the principal): the V2 rail lists Users and Admin Actions for them.
+  const ownerAccess = access?.kind === "ready" && access.access?.isOwner === true;
+  // Where the user chip leads: the member's own access, only where a page of it is on offer (an admin holds the Profile & Access
+  // capability; anyone else needs the live self-entry the navigation projection grants). Otherwise the chip is a statement.
+  const userAccessHref = selfNav.selfEntry
+    ? `${SELF_ENTRY_PATH}?workspace_id=${encodeURIComponent(selfNav.selfEntry.workspaceId)}`
+    : sessionCapabilities.includes("administration.profile_access.manage")
+      ? "/administration/profile-access"
+      : null;
+  // A live self-navigation projection can only ADD listing tokens to what the session holds (selfNavGate); nothing is removed,
+  // nothing is sent back. With no tokens (flag off, nothing read, expired, failed) this is the session list itself, as before.
+  const capabilities = useMemo(
+    () => (selfNav.tokens.size === 0 ? sessionCapabilities : [...new Set([...sessionCapabilities, ...selfNav.tokens])]),
+    [sessionCapabilities, selfNav.tokens],
+  );
   const navOptions = useMemo<NavOptions>(
     () => ({ environment, showCommissioned: preferences.showCommissioned, capabilities }),
     [environment, preferences.showCommissioned, capabilities],
@@ -94,11 +159,28 @@ export function PortalShell() {
           them together or not at all (EL-V2-01 §4.1). */}
       <PortalPresentationProvider registry={registry.data}>
       <div className="portal-shell" data-sidebar-collapsed={preferences.sidebarCollapsed}>
+        <a
+          className="portal-skip-link"
+          href="#portal-content"
+          onClick={(event) => {
+            // Move focus to the content region without touching the router's URL.
+            const target = document.getElementById("portal-content");
+            if (target) {
+              event.preventDefault();
+              target.focus();
+              target.scrollIntoView?.({ block: "start" });
+            }
+          }}
+        >
+          Skip to main content
+        </a>
         <TopBar
           breadcrumbs={breadcrumbs}
           environment={environment}
           onOpenPalette={openPalette}
+          v2={v2Route ? { userHref: userAccessHref } : undefined}
           onToggleMobileNav={() => setMobileNavOpen((open) => !open)}
+          navToggleRef={navToggleRef}
         />
 
         <div className="portal-body">
@@ -107,6 +189,10 @@ export function PortalShell() {
               registry={registry.data}
               options={navOptions}
               collapsed={preferences.sidebarCollapsed}
+              notice={selfNav.notice ?? undefined}
+              selfEntry={selfNav.selfEntry}
+              badges={navBadges}
+              ownerEntries={ownerAccess}
             />
           </div>
 
@@ -124,13 +210,19 @@ export function PortalShell() {
                   options={navOptions}
                   collapsed={false}
                   onNavigate={() => setMobileNavOpen(false)}
+                  notice={selfNav.notice ?? undefined}
+                  selfEntry={selfNav.selfEntry}
+                  badges={navBadges}
+                  ownerEntries={ownerAccess}
                 />
               </div>
             </div>
           ) : null}
 
-          <main className="portal-content" id="portal-content">
-            <PortalRoutes registry={registry.data} />
+          <main className="portal-content" id="portal-content" tabIndex={-1}>
+            <SelfWorkspaceContext.Provider value={selfNav.workspaceId}>
+              <PortalRoutes registry={registry.data} />
+            </SelfWorkspaceContext.Provider>
           </main>
         </div>
 
@@ -140,6 +232,26 @@ export function PortalShell() {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
         />
+        {V2SelfNavigation && V2_SHELL_ON ? (
+          <Suspense fallback={null}>
+            <V2SelfNavigation onView={setSelfNav} />
+          </Suspense>
+        ) : null}
+        {V2NavCounts && v2Route ? (
+          <Suspense fallback={null}>
+            <V2NavCounts registry={registry.data} options={navOptions} onView={setNavBadges} />
+          </Suspense>
+        ) : null}
+        {V2CommandBar && v2Route ? (
+          <Suspense fallback={null}>
+            <V2CommandBar
+              registry={registry.data}
+              options={navOptions}
+              open={v2BarOpen}
+              onClose={() => setV2BarOpen(false)}
+            />
+          </Suspense>
+        ) : null}
       </div>
       </PortalPresentationProvider>
     </PortalContext.Provider>

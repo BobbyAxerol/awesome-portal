@@ -1,0 +1,134 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M09 Operations — HIFI</title><link rel="stylesheet" href="hifi.css">
+<style>
+.g9{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:start}.g9 .drawer{width:auto}
+@media(max-width:1100px){.g9{grid-template-columns:1fr}}
+td,th{padding:6px 8px}td.w{white-space:normal}
+.tagu{white-space:nowrap}.tagu .dot{width:6px;height:6px;margin-right:6px;vertical-align:1px}
+.m{font-size:12px;line-height:16px;color:var(--ink-faint)}.faint{color:var(--ink-faint)}
+.sec{margin:16px 0 6px;font:500 11px/16px var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+.drawer table td{height:28px;padding:4px 0;white-space:normal}.drawer td.n{padding-right:0}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.dh b{font:600 15px/22px var(--font-sans)}
+.facts{display:grid;grid-template-columns:104px 1fr;gap:8px 8px;align-items:center}
+.facts>.tagu{justify-self:start}.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.bar2{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.tab{display:none}body[data-tab=cmd] .tab.cmd,body[data-tab=exc] .tab.exc,body[data-tab=aud] .tab.aud{display:block}
+[data-d]{display:none}body[data-sel=unk] [data-d=unk],body[data-sel=root] [data-d=root],body[data-sel=rec] [data-d=rec]{display:block}
+tbody tr[data-row]{cursor:pointer}body[data-sel=unk] tr[data-row=unk],body[data-sel=root] tr[data-row=root],body[data-sel=rec] tr[data-row=rec]{background:var(--accent-soft)}
+.btn.sm{padding:2px 8px;font-size:12px}
+</style></head>
+<body data-state="healthy" data-tab="cmd" data-sel="unk">
+<div class="strip"><span>Design preview · M09</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / <b>Operations</b></span></header>
+<nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a aria-current="page" href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+
+<div class="mast"><div><h1>Operations</h1><div class="sub" data-s="healthy sparse">Receipts · exceptions · audit</div><div class="sub" data-s="researcher">Your requests</div></div>
+ <div class="ctrls"><span class="seg" data-local="win"><button data-v="24" aria-pressed="true">24H</button><button data-v="7" aria-pressed="false">7D</button><button data-v="30" aria-pressed="false">30D</button></span><span class="chipx">UTC+7 · USDT · real-funded</span><span class="fresh" data-s="healthy researcher"><i class="dot"></i>Fresh · 8s</span><span class="fresh" data-s="sparse"><i class="dot warn"></i>Command status not qualified</span></div></div>
+
+<div class="banner" data-s="sparse">Command receipts are not available yet.</div>
+
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)" data-s="healthy">
+ <div class="kpi"><div class="l">UNKNOWN outcomes</div><div class="v neg">1</div><div class="n">Check the original request</div></div>
+ <div class="kpi"><div class="l">Pending receipts</div><div class="v">2</div><div class="n">Partial or pending drain</div></div>
+ <div class="kpi"><div class="l">Open exceptions</div><div class="v">3</div><div class="n">Need a person</div></div></div>
+<div class="kpis" style="grid-template-columns:repeat(3,1fr)" data-s="sparse">
+ <div class="kpi"><div class="l">UNKNOWN outcomes</div><div class="v na">Not available</div><div class="n">Command status not qualified</div></div>
+ <div class="kpi"><div class="l">Pending receipts</div><div class="v na">Not available</div><div class="n">Command status not qualified</div></div>
+ <div class="kpi"><div class="l">Open exceptions</div><div class="v">3</div><div class="n">Existing queue</div></div></div>
+
+<div class="panel" style="padding:8px 16px" data-s="healthy sparse"><details><summary>Source health <span class="faint" data-s="healthy">· 2 of 3 partial</span><span class="faint" data-s="sparse">· Not available</span></summary>
+ <div class="tw"><table><thead><tr><th>Profile</th><th>State</th><th>Freshness</th></tr></thead>
+ <tbody data-s="healthy"><tr><td>Paper · Binance USD-M</td><td><span class="tagu good"><i class="dot"></i>Complete</span></td><td class="mono">9 s ago</td></tr><tr><td>Sandbox · Binance USD-M</td><td><span class="tagu warn"><i class="dot warn"></i>Partial</span></td><td class="mono">14 m ago</td></tr><tr><td>Live · Binance USD-M</td><td><span class="tagu warn"><i class="dot warn"></i>Partial</span></td><td class="mono">14 m ago</td></tr></tbody>
+ <tbody data-s="sparse"><tr><td colspan="3"><span class="na">Not available</span> <span class="m">Command status not qualified</span></td></tr></tbody></table></div></details></div>
+
+<div>
+ <div class="tabs"><button aria-selected="true" data-t="cmd">Commands <span class="faint" data-s="healthy">128</span></button><button aria-selected="false" data-t="exc">Exceptions <span class="faint" data-s="healthy sparse">3</span></button><button aria-selected="false" data-t="aud">Audit</button></div>
+
+ <div class="tab cmd">
+  <div class="bar2"><span class="seg" data-local="lens"><button data-v="att" aria-pressed="true" data-s="healthy sparse">Needs attention</button><button data-v="mine" aria-pressed="false" data-s="healthy sparse">Mine</button><button data-v="mine" aria-pressed="true" data-s="researcher">Mine</button><button data-v="appr" aria-pressed="false" data-s="healthy sparse">Needs my approval <span class="tagu warn" data-s="healthy">1</span></button><button data-v="all" aria-pressed="false">All retained</button></span>
+   <span data-s="healthy researcher"><button class="btn">Operation ▾</button> <button class="btn">Intent ▾</button> <button class="btn">Receipt ▾</button> <button class="btn">Reconciliation ▾</button></span></div>
+
+  <div class="panel empty" data-s="sparse"><div style="text-align:center"><div style="font:600 15px/22px var(--font-sans)">Command receipts not available</div><div class="na">Command status source not qualified</div></div></div>
+
+  <div class="g9" data-s="healthy researcher">
+   <div class="panel" style="padding:0"><div class="tw"><table><thead><tr><th>Time</th><th>Target · operation</th><th>Intent</th><th>Receipt</th><th>Reconciliation</th><th>Next</th></tr></thead>
+   <tbody data-s="healthy">
+    <tr class="grp"><td colspan="6">Today · 17 Oct</td></tr>
+    <tr data-row="unk" onclick="sel('unk')"><td class="mono">14:12</td><td class="w"><b>Portfolio Canary</b><div class="m mono">ADJUST_TARGET_BUDGET</div></td><td><span class="tagu">Submitted</span></td><td><span class="tagu bad"><i class="dot bad"></i>UNKNOWN</span></td><td><span class="tagu warn"><i class="dot warn"></i>Reconciling</span></td><td><button class="btn sm">Check original request</button></td></tr>
+    <tr data-row="root" onclick="sel('root')"><td class="mono">14:02</td><td class="w"><b>Root fund</b><div class="m mono">SET_ROOT_LIMIT</div></td><td><span class="tagu">Submitted</span></td><td><span class="tagu good"><i class="dot"></i>Applied</span></td><td><span class="tagu good"><i class="dot"></i>Current</span></td><td class="m">Nothing to do</td></tr>
+    <tr data-row="appr" onclick="sel('unk')"><td class="mono">13:58</td><td class="w"><b>BTC-Trend v3</b><div class="m mono">ARCHIVE · requested by asmith</div></td><td><span class="tagu warn">Awaiting approval</span></td><td><span class="tagu">No receipt</span></td><td><span class="tagu">Not applicable</span></td><td><button class="btn sm">Review request</button></td></tr>
+    <tr data-row="rec" onclick="sel('rec')"><td class="mono">13:55</td><td class="w"><b>Portfolio Satellite</b><div class="m mono">RECALL_PARTIAL</div></td><td><span class="tagu">Submitted</span></td><td><span class="tagu warn"><i class="dot warn"></i>Partial</span></td><td><span class="tagu warn"><i class="dot warn"></i>Catching up</span></td><td class="m">Display updating</td></tr>
+    <tr><td class="mono">13:41</td><td class="w"><b>BTC-Momentum v2</b><div class="m mono">ARCHIVE</div></td><td><span class="tagu">Submitted</span></td><td><span class="tagu warn"><i class="dot warn"></i>Pending drain</span></td><td><span class="tagu good"><i class="dot"></i>Current</span></td><td><a href="#">Open obligations</a></td></tr>
+    <tr><td class="mono">13:20</td><td class="w"><b>Portfolio Core</b><div class="m mono">ADJUST_TARGET_BUDGET</div></td><td><span class="tagu">Submitted</span></td><td><span class="tagu bad"><i class="dot bad"></i>Rejected</span><div class="m">Version conflict</div></td><td><span class="tagu good"><i class="dot"></i>Current</span></td><td class="m">Review new preview</td></tr>
+    <tr><td class="mono">12:48</td><td class="w"><b>Portfolio Satellite</b><div class="m mono">RECALL_FULL</div></td><td><span class="tagu">Preview only</span></td><td><span class="tagu">No receipt</span></td><td><span class="tagu">Not applicable</span></td><td class="m">Nothing sent</td></tr>
+    <tr><td class="mono">12:10</td><td class="w"><b>Account Binance-02</b><div class="m mono">TOP_UP</div></td><td><span class="tagu">Submitted</span></td><td><span class="tagu good"><i class="dot"></i>Applied</span></td><td><span class="tagu warn"><i class="dot warn"></i>Catching up</span></td><td class="m">Display updating</td></tr>
+   </tbody>
+   <tbody data-s="researcher">
+    <tr class="grp"><td colspan="6">Today · 17 Oct</td></tr>
+    <tr class="sel"><td class="mono">11:30</td><td class="w"><b>BTC-Trend v3</b><div class="m mono">ARCHIVE</div></td><td><span class="tagu warn">Awaiting approval</span></td><td><span class="tagu">No receipt</span></td><td><span class="tagu">Not applicable</span></td><td><a href="#">Approval Inbox</a></td></tr>
+   </tbody></table></div>
+   <div class="m" style="padding:8px 12px" data-s="healthy">Showing 8 of 128 in the last 24H</div></div>
+
+   <aside class="drawer" data-s="healthy">
+    <div data-d="unk">
+     <div class="dh"><div><b>ADJUST_TARGET_BUDGET</b><div class="m">Portfolio Canary</div></div><span class="tagu bad"><i class="dot bad"></i>UNKNOWN</span></div>
+     <div class="banner" style="margin-top:12px">Outcome unknown. Check the original request.</div>
+     <div class="sec">Three facts</div>
+     <div class="facts"><span class="m">Intent</span><span>Submitted 14:12 <span class="m mono">idem_4b19…c2</span></span><span class="m">Receipt</span><span class="tagu bad"><i class="dot bad"></i>UNKNOWN</span><span class="m">Reconciliation</span><span class="tagu warn"><i class="dot warn"></i>Reconciling</span></div>
+     <div class="sec">Effect</div><table><tbody><tr><td>Target requested</td><td class="n">256,000 → 300,000</td></tr><tr><td>Applied</td><td class="n na">Not available</td></tr></tbody></table>
+     <div class="sec">References</div><table><tbody><tr><td>receipt_ref</td><td class="n na">Not available</td></tr><tr><td>source_event_ref</td><td class="n na">Not available</td></tr><tr><td>revision</td><td class="n">expected r18</td></tr></tbody></table>
+     <div class="acts"><button class="btn pri">Check original request</button><button class="btn" disabled>Send again</button></div><div class="m" style="margin-top:6px">Send again is blocked until the outcome is known.</div>
+     <div class="acts" style="margin-top:12px"><button class="btn">Acknowledge</button><button class="btn" disabled>Resolve</button></div>
+    </div>
+    <div data-d="root">
+     <div class="dh"><div><b>SET_ROOT_LIMIT</b><div class="m">Root fund</div></div><span class="tagu good"><i class="dot"></i>Applied</span></div>
+     <div class="sec">Three facts</div>
+     <div class="facts"><span class="m">Intent</span><span>Submitted 14:02 <span class="m mono">idem_91d0…7a</span></span><span class="m">Receipt</span><span class="tagu good"><i class="dot"></i>Applied 14:02</span><span class="m">Reconciliation</span><span class="tagu good"><i class="dot"></i>Current</span></div>
+     <div class="sec">Target-setting effect <span style="text-transform:none;letter-spacing:0">· USDT · real-funded</span></div><table><tbody><tr><td>Root limit</td><td class="n">1,100,000 → 1,200,000</td></tr><tr><td>Money moved</td><td class="n">None</td></tr><tr><td>Child budgets</td><td class="n">Unchanged</td></tr></tbody></table>
+     <div class="sec">References</div><table><tbody><tr><td>receipt_ref</td><td class="n">rcpt_7c20d1</td></tr><tr><td>source_event_ref</td><td class="n">evt_90a1f4</td></tr><tr><td>revision</td><td class="n">r18 → r19</td></tr></tbody></table>
+     <div class="acts"><button class="btn">Copy references</button></div>
+    </div>
+    <div data-d="rec">
+     <div class="dh"><div><b>RECALL_PARTIAL</b><div class="m">Portfolio Satellite</div></div><span class="tagu warn"><i class="dot warn"></i>Partial</span></div>
+     <div class="sec">Three facts</div>
+     <div class="facts"><span class="m">Intent</span><span>Submitted 13:55 <span class="m mono">idem_e2c8…5f</span></span><span class="m">Receipt</span><span class="tagu warn"><i class="dot warn"></i>Partial</span><span class="m">Reconciliation</span><span class="tagu warn"><i class="dot warn"></i>Catching up</span></div>
+     <div class="sec">Amounts <span style="text-transform:none;letter-spacing:0">· USDT · real-funded</span></div><table><tbody><tr><td><b>Requested</b></td><td class="n"><b>40,000.00</b></td></tr><tr><td>Applied</td><td class="n">25,000.00</td></tr><tr><td>Pending</td><td class="n">15,000.00</td></tr><tr><td>Cancelled</td><td class="n">0.00</td></tr><tr><td>Rejected</td><td class="n">0.00</td></tr></tbody></table>
+     <div class="sec">References</div><table><tbody><tr><td>receipt_ref</td><td class="n">rcpt_5e81b9</td></tr><tr><td>source_event_ref</td><td class="n">evt_6b02c7</td></tr><tr><td>revision</td><td class="n">r18 → r19</td></tr></tbody></table>
+     <div class="acts"><button class="btn">Acknowledge</button><button class="btn" disabled>Resolve</button></div>
+    </div>
+   </aside>
+
+   <aside class="drawer" data-s="researcher">
+    <div class="dh"><div><b>ARCHIVE</b><div class="m">BTC-Trend v3</div></div><span class="tagu warn">Awaiting approval</span></div>
+    <div class="sec">Three facts</div>
+    <div class="facts"><span class="m">Intent</span><span>Submitted 11:30</span><span class="m">Receipt</span><span class="tagu">No receipt</span><span class="m">Reconciliation</span><span class="tagu">Not applicable</span></div>
+    <div class="sec">References</div><table><tbody><tr><td>receipt_ref</td><td class="n na">Not available</td></tr><tr><td>source_event_ref</td><td class="n na">Not available</td></tr><tr><td>revision</td><td class="n">expected r12</td></tr></tbody></table>
+    <div class="m" style="margin-top:12px">Nothing is archived until a receipt says so.</div>
+   </aside>
+  </div>
+ </div>
+
+ <div class="tab exc"><div class="panel" style="padding:0"><div class="tw"><table><thead><tr><th>Since</th><th>Target</th><th>Exception</th><th>Source</th><th></th></tr></thead>
+  <tbody data-s="healthy sparse"><tr><td class="mono">14:05</td><td>Account Binance-02</td><td>Unreconciled valuation</td><td><span class="tagu warn"><i class="dot warn"></i>Stale 14m</span></td><td><button class="btn sm">Acknowledge</button> <button class="btn sm">Resolve</button></td></tr>
+  <tr><td class="mono">13:55</td><td>Portfolio Satellite</td><td>Recall not fully released</td><td><span class="tagu warn"><i class="dot warn"></i>Partial</span></td><td><button class="btn sm">Acknowledge</button> <button class="btn sm" disabled>Resolve</button></td></tr>
+  <tr><td class="mono">12:20</td><td>Deployment live-0192</td><td>Display behind a command</td><td><span class="tagu warn"><i class="dot warn"></i>Catching up</span></td><td><button class="btn sm">Acknowledge</button> <button class="btn sm" disabled>Resolve</button></td></tr></tbody>
+  <tbody data-s="researcher"><tr><td colspan="5"><span class="na">No open exceptions</span></td></tr></tbody></table></div></div></div>
+
+ <div class="tab aud"><div class="panel" style="padding:0"><div class="tw"><table><thead><tr><th>Time</th><th>Who</th><th>Action</th><th>Target</th><th>receipt_ref</th></tr></thead>
+  <tbody data-s="healthy"><tr><td class="mono">14:12</td><td>Stan</td><td>Submitted ADJUST_TARGET_BUDGET</td><td>Portfolio Canary</td><td class="na">Not available <span class="m">No receipt yet</span></td></tr>
+  <tr><td class="mono">14:02</td><td>Stan</td><td>Submitted SET_ROOT_LIMIT</td><td>Root fund</td><td class="mono">rcpt_7c20d1</td></tr>
+  <tr><td class="mono">13:55</td><td>Stan</td><td>Submitted RECALL_PARTIAL</td><td>Portfolio Satellite</td><td class="mono">rcpt_5e81b9</td></tr>
+  <tr><td class="mono">12:48</td><td>Stan</td><td>Opened preview of RECALL_FULL</td><td>Portfolio Satellite</td><td class="na">Not available <span class="m">Preview only</span></td></tr></tbody>
+  <tbody data-s="sparse"><tr><td colspan="5"><span class="na">Not available</span> <span class="m">Audit source not qualified</span></td></tr></tbody>
+  <tbody data-s="researcher"><tr><td class="mono">11:30</td><td>You</td><td>Submitted ARCHIVE</td><td>BTC-Trend v3</td><td class="na">Not available <span class="m">No receipt yet</span></td></tr></tbody></table></div></div></div>
+</div>
+
+<details><summary>About this page</summary><div class="m">Tracks receipts only; capital actions start elsewhere. Intent, receipt and reconciliation are separate facts. UNKNOWN means query the original request, never resend.</div></details>
+
+</div></main></div>
+<script src="hifi.js"></script>
+<script>
+function sel(v){document.body.setAttribute("data-sel",v)}
+document.querySelectorAll(".tabs button").forEach(function(b){b.addEventListener("click",function(){document.body.setAttribute("data-tab",b.getAttribute("data-t"));document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-selected",x===b?"true":"false")})})});
+</script></body></html>

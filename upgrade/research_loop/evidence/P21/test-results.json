@@ -1,0 +1,54 @@
+{
+  "schema_version": "research.p21-test-results.v1",
+  "phase": "P21",
+  "status": "BACKEND_AND_TYPED_CONTRACT_COMPLETE_FEATURE_DARK",
+  "scope": {
+    "runtime_activated": false,
+    "deployment_performed": false,
+    "p22_publication_or_approval": false,
+    "execution_or_quantbt_command": false
+  },
+  "checks": [
+    {
+      "name": "focused_control_api_units",
+      "command": "npm --prefix apps/control-api test -- research-release-candidate.service.spec.ts research-release-candidate.contract.spec.ts research-release-candidate.controller.spec.ts config.spec.ts",
+      "result": "PASS",
+      "tests": 30
+    },
+    {
+      "name": "disposable_postgresql_migration_and_immutability",
+      "command": "TEST_DATABASE_URL=<loopback-disposable-db> npm --prefix apps/control-api test -- research-release-candidate-migration.spec.ts",
+      "result": "PASS",
+      "tests": 1,
+      "safety": "Creates and drops only a random disposable test database; no runtime or production database was accessed."
+    },
+    {
+      "name": "control_api_build",
+      "command": "npm --prefix apps/control-api run build",
+      "result": "PASS"
+    },
+    {
+      "name": "generated_contract_snapshot_and_suite",
+      "command": "npm --prefix packages/contracts run generate && python3 packages/contracts/tooling/snapshot.py --check && npm --prefix packages/contracts test",
+      "result": "PASS",
+      "tests": 173
+    },
+    {
+      "name": "capability_inventory_ledger",
+      "command": "npm --prefix apps/portal/frontend test -- --run src/execution/r2Ledger.test.ts",
+      "result": "PASS",
+      "tests": 22,
+      "routes": 178
+    },
+    {
+      "name": "whitespace_integrity",
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "remaining_gates": [
+    "Claude Screen-11 product route and browser/HiFi receipt",
+    "controlled feature admission after independent review",
+    "P22 downstream publication and approval-mirror implementation"
+  ]
+}

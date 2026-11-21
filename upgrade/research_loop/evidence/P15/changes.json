@@ -1,0 +1,19 @@
+{
+  "schema_version": "research.phase-changes.v1",
+  "phase": "P15",
+  "areas": [
+    "feature-dark same-origin P15 Search controller/service and typed refusal boundary",
+    "immutable P10/P14 compatibility check for adapter and fixed parameter bundle digests",
+    "generated P15 OpenAPI declaration, generated type, byte verifier and contract snapshot",
+    "bounded fold/query, workspace membership, ETag and nested pending/legacy availability propagation",
+    "capability ownership ledger and focused unit/disposable PostgreSQL proof"
+  ],
+  "excluded": [
+    "generic optimizer/study/trial/evaluation/selection implementation",
+    "new PostgreSQL migration/table/source sidecar/cache/worker/Python change",
+    "frontend TSX/CSS/HiFi changes",
+    "runtime activation/deployment or Research execution",
+    "direct QuantBT/Trading System/source DB/Redis/broker/CLI/artifact/Parquet access",
+    "Execution Edge change or command/mutation surface"
+  ]
+}

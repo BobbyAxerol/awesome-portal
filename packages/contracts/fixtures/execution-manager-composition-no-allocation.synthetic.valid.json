@@ -1,0 +1,95 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.manager-score-revision.v1",
+    "target": {
+      "surface": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio"
+    },
+    "workspace_id": "TEST_ONLY:workspace",
+    "environment": "paper",
+    "revision_mode": "RESTATED_CURRENT_POLICY",
+    "purpose": "HISTORICAL_ANALYSIS_ONLY",
+    "operational_current": false,
+    "revision_ref": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+    "supersedes_revision_ref": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "supersedes_reason": "AUTHORIZED_PREDECESSOR",
+    "source": {
+      "authorized_source_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source_revision": "TEST_ONLY-source-r1",
+      "source_as_of_ms": 1000,
+      "recorded_through_ms": 1000,
+      "facts_through_ms": 1000
+    },
+    "knowledge_cutoff_ms": 3000,
+    "knowledge_cutoff_reason": null,
+    "computed_at_ms": 3100,
+    "computed_at_reason": null,
+    "eligibility": {
+      "policy_current": false,
+      "policy_state": "NOT_CURRENT",
+      "reason_code": "CURRENT_POLICY_NOT_CONFIRMED",
+      "economic_source": "RETAINED_EXACT_REVISION",
+      "usable_as_current_operational_score": false
+    },
+    "availability": "PARTIAL",
+    "reason_codes": [],
+    "score_details": [],
+    "composition": {
+      "availability": "PARTIAL",
+      "reason_codes": [
+        "NO_ALLOCATION"
+      ],
+      "binding": {
+        "subject_type": "portfolio",
+        "subject_id": "TEST_ONLY:portfolio",
+        "tuple_population_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "partition_digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+        "stage_filter": [
+          "PAPER"
+        ],
+        "window_start_ms": 0,
+        "window_end_ms": 1000,
+        "comparable_basis_id": "TEST_ONLY:basis",
+        "individual_evidence_binding_id": "TEST_ONLY:ledger"
+      },
+      "result": {
+        "value": null,
+        "status": "no_allocation",
+        "reason_codes": [
+          "NO_ALLOCATION"
+        ],
+        "band_code": null,
+        "weight_basis": "allocated_economic_capital",
+        "allocation_snapshot_id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "total_allocated_capital": "0",
+        "score_coverage_allocated": null,
+        "unscored_allocated_weight": null,
+        "provisional_allocated_weight": null,
+        "mature_allocated_weight": null,
+        "allocation_coverage_nav": null,
+        "scored_nav_weight": null,
+        "idle_cash_weight": null,
+        "nav_coverage_reason": "BASIS_MISMATCH",
+        "bounds": null,
+        "contributions": [],
+        "diagnostics": {
+          "allocation_hhi": null,
+          "score_contribution_hhi": null,
+          "score_dispersion": null,
+          "reason_codes": []
+        }
+      },
+      "allocation_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "allocation_effective_at_ms": 1000,
+      "original_publication_ref": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "computed_at_ms": 3100,
+      "calculation_revision": "TEST_ONLY:historical-composition",
+      "raw_dependencies": []
+    },
+    "regime": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "INDEPENDENT_REGIME_REVISION_NOT_SELECTED"
+    }
+  }
+}

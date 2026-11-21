@@ -1,0 +1,837 @@
+{
+  "_comment": "PROPOSED - values for UI development, not backend output. Base = the real GET /api/v1/research/datasets read on the Research preview (claude-preview, 2026-10-01); every field marked PROPOSED in DATA_DECLARATION_SPEC_2026-10-01.md section 3 is added by hand. The backend does not serve them yet.",
+  "schema_version": "research.dataset-catalog.v2",
+  "coverage_rule": "Coverage is the month partitions present in the approved reader's storage layout (hive-symbol-year-month-v1). It is not the exact first or last bar; preflight queries the bounded range and refuses what is absent.",
+  "datasets": [
+    {
+      "dataset_id": "crypto-binance-1m",
+      "venue": "BINANCE",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "UTC",
+      "calendar_policy": "CRYPTO_24_7",
+      "timeframes": [
+        {
+          "timeframe": "1min",
+          "resolution_seconds": 60,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "5min",
+          "resolution_seconds": 300,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "15min",
+          "resolution_seconds": 900,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "30min",
+          "resolution_seconds": 1800,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "1h",
+          "resolution_seconds": 3600,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "4h",
+          "resolution_seconds": 14400,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "1d",
+          "resolution_seconds": 86400,
+          "availability": "available",
+          "reason_code": null
+        }
+      ],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "items": [
+          {
+            "symbol": "BNBUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-02",
+              "last_month": "2026-10",
+              "months": 81,
+              "granularity": "MONTH_PARTITION"
+            },
+            "instrument": {
+              "display_name": "BNBUSDT Perpetual",
+              "contract_kind": "PERPETUAL",
+              "underlying": "BNBUSDT",
+              "base": "BNB",
+              "quote": "USDT",
+              "settle_currency": "USDT",
+              "tick_size": "0.010",
+              "lot_size": "0.01",
+              "contract_multiplier": "1",
+              "listing_utc_ms": 1581292800000,
+              "expiry_utc_ms": null,
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": 1790893800000
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "first_bar_utc_ms": 1581321600000,
+                "last_bar_utc_ms": 1790888400000,
+                "bar_count": 58197,
+                "expected_bar_count": 58214,
+                "missing_ratio": "0.000292",
+                "gap_count": 3,
+                "largest_gap_seconds": 21600,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "4h",
+                "first_bar_utc_ms": 1581321600000,
+                "last_bar_utc_ms": 1790884800000,
+                "bar_count": 14550,
+                "expected_bar_count": 14554,
+                "missing_ratio": "0.000275",
+                "gap_count": 3,
+                "largest_gap_seconds": 28800,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "1d",
+                "first_bar_utc_ms": 1581292800000,
+                "last_bar_utc_ms": 1790726400000,
+                "bar_count": 2424,
+                "expected_bar_count": 2425,
+                "missing_ratio": "0.000412",
+                "gap_count": 1,
+                "largest_gap_seconds": 86400,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              }
+            ],
+            "quality": {
+              "state": "PARTIAL",
+              "reason_code": "GAPS_PRESENT",
+              "gap_count": 3,
+              "missing_ratio": "0.000292",
+              "duplicate_bar_count": 0,
+              "as_of_utc_ms": 1790893800000,
+              "origin": "PORTAL_DERIVED"
+            }
+          },
+          {
+            "symbol": "BTCUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-01",
+              "last_month": "2026-10",
+              "months": 82,
+              "granularity": "MONTH_PARTITION"
+            },
+            "instrument": {
+              "display_name": "BTCUSDT Perpetual",
+              "contract_kind": "PERPETUAL",
+              "underlying": "BTCUSDT",
+              "base": "BTC",
+              "quote": "USDT",
+              "settle_currency": "USDT",
+              "tick_size": "0.10",
+              "lot_size": "0.001",
+              "contract_multiplier": "1",
+              "listing_utc_ms": 1567900800000,
+              "expiry_utc_ms": null,
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": 1790893800000
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "first_bar_utc_ms": 1577836800000,
+                "last_bar_utc_ms": 1790888400000,
+                "bar_count": 59182,
+                "expected_bar_count": 59182,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "4h",
+                "first_bar_utc_ms": 1577836800000,
+                "last_bar_utc_ms": 1790884800000,
+                "bar_count": 14796,
+                "expected_bar_count": 14796,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "1d",
+                "first_bar_utc_ms": 1577836800000,
+                "last_bar_utc_ms": 1790726400000,
+                "bar_count": 2465,
+                "expected_bar_count": 2465,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              }
+            ],
+            "quality": {
+              "state": "OK",
+              "reason_code": null,
+              "gap_count": 0,
+              "missing_ratio": "0.000000",
+              "duplicate_bar_count": 0,
+              "as_of_utc_ms": 1790893800000,
+              "origin": "PORTAL_DERIVED"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_210326",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2021-02",
+              "last_month": "2021-03",
+              "months": 2,
+              "granularity": "MONTH_PARTITION"
+            },
+            "instrument": {
+              "display_name": "BTCUSDT Mar 2021",
+              "contract_kind": "QUARTERLY",
+              "underlying": "BTCUSDT",
+              "base": "BTC",
+              "quote": "USDT",
+              "settle_currency": "USDT",
+              "tick_size": "0.10",
+              "lot_size": "0.001",
+              "contract_multiplier": "1",
+              "listing_utc_ms": 1608854400000,
+              "expiry_utc_ms": 1616745600000,
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": 1790893800000
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "first_bar_utc_ms": 1612137600000,
+                "last_bar_utc_ms": 1616742000000,
+                "bar_count": 1280,
+                "expected_bar_count": 1280,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "4h",
+                "first_bar_utc_ms": 1612137600000,
+                "last_bar_utc_ms": 1616731200000,
+                "bar_count": 320,
+                "expected_bar_count": 320,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "1d",
+                "first_bar_utc_ms": 1612137600000,
+                "last_bar_utc_ms": 1616630400000,
+                "bar_count": 53,
+                "expected_bar_count": 53,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              }
+            ],
+            "quality": {
+              "state": "OK",
+              "reason_code": null,
+              "gap_count": 0,
+              "missing_ratio": "0.000000",
+              "duplicate_bar_count": 0,
+              "as_of_utc_ms": 1790893800000,
+              "origin": "PORTAL_DERIVED"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_210625",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2021-03",
+              "last_month": "2021-06",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_210924",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2021-06",
+              "last_month": "2021-09",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_211231",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2021-09",
+              "last_month": "2021-12",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_220325",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2021-12",
+              "last_month": "2022-03",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_220624",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2022-03",
+              "last_month": "2022-06",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_220930",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2022-06",
+              "last_month": "2022-09",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_221230",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2022-09",
+              "last_month": "2022-12",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_230331",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2022-12",
+              "last_month": "2023-03",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_230630",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2023-03",
+              "last_month": "2023-06",
+              "months": 4,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_230929",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2023-06",
+              "last_month": "2023-11",
+              "months": 6,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_231229",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2023-08",
+              "last_month": "2024-01",
+              "months": 6,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_240329",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2023-09",
+              "last_month": "2024-03",
+              "months": 7,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_240628",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2023-12",
+              "last_month": "2024-07",
+              "months": 8,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_240927",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2024-03",
+              "last_month": "2024-09",
+              "months": 7,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_241227",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2024-06",
+              "last_month": "2024-12",
+              "months": 7,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_250328",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2024-09",
+              "last_month": "2025-03",
+              "months": 7,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_250627",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2024-12",
+              "last_month": "2025-06",
+              "months": 7,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_250926",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2025-03",
+              "last_month": "2025-09",
+              "months": 7,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_251226",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2025-06",
+              "last_month": "2026-01",
+              "months": 8,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_260327",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2025-09",
+              "last_month": "2026-04",
+              "months": 8,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_260626",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2025-12",
+              "last_month": "2026-06",
+              "months": 7,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_260925",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2026-03",
+              "last_month": "2026-09",
+              "months": 7,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "BTCUSDT_261225",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2026-06",
+              "last_month": "2026-10",
+              "months": 5,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "DOGEUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-07",
+              "last_month": "2026-10",
+              "months": 76,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "ETHUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-01",
+              "last_month": "2026-10",
+              "months": 82,
+              "granularity": "MONTH_PARTITION"
+            }
+          },
+          {
+            "symbol": "SOLUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-09",
+              "last_month": "2026-10",
+              "months": 74,
+              "granularity": "MONTH_PARTITION"
+            }
+          }
+        ],
+        "total": 29,
+        "truncated": false,
+        "next_cursor": null
+      },
+      "asset_class": "CRYPTO_DERIVATIVE",
+      "quote_currency": "USDT",
+      "session_calendar": "CRYPTO_24_7",
+      "catalog_revision": "catrev_8f2c1d04a9b7",
+      "as_of_utc_ms": 1790893800000
+    },
+    {
+      "dataset_id": "fx-oanda-1m",
+      "venue": "OANDA",
+      "availability": "unavailable",
+      "unavailable_reason": "This dataset is not mounted on the approved reader.",
+      "unavailable_reason_code": "DATASET_NOT_MOUNTED",
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "UTC",
+      "calendar_policy": "SOURCE_DECLARED",
+      "asset_class": "FX_SPOT",
+      "quote_currency": null,
+      "session_calendar": "FX_WEEK_5D",
+      "catalog_revision": "catrev_8f2c1d04a9b7",
+      "as_of_utc_ms": 1790893800000,
+      "timeframes": [
+        {
+          "timeframe": "1h",
+          "resolution_seconds": 3600,
+          "availability": "unavailable",
+          "reason_code": "DATASET_NOT_MOUNTED"
+        },
+        {
+          "timeframe": "1d",
+          "resolution_seconds": 86400,
+          "availability": "unavailable",
+          "reason_code": "DATASET_NOT_MOUNTED"
+        }
+      ],
+      "symbols": {
+        "state": "NOT_PUBLISHED",
+        "reason": "Symbols are published only for a mounted dataset.",
+        "total": null,
+        "truncated": false,
+        "next_cursor": null,
+        "items": []
+      }
+    },
+    {
+      "dataset_id": "crypto-bybit-1m",
+      "venue": "BYBIT",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "UTC",
+      "calendar_policy": "CRYPTO_24_7",
+      "asset_class": "CRYPTO_DERIVATIVE",
+      "quote_currency": "USDT",
+      "session_calendar": "CRYPTO_24_7",
+      "catalog_revision": "catrev_8f2c1d04a9b7",
+      "as_of_utc_ms": 1790893800000,
+      "timeframes": [
+        {
+          "timeframe": "1h",
+          "resolution_seconds": 3600,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "4h",
+          "resolution_seconds": 14400,
+          "availability": "unavailable",
+          "reason_code": "TIMEFRAME_NOT_BUILT"
+        },
+        {
+          "timeframe": "1d",
+          "resolution_seconds": 86400,
+          "availability": "available",
+          "reason_code": null
+        }
+      ],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "total": 3,
+        "truncated": false,
+        "next_cursor": null,
+        "items": [
+          {
+            "symbol": "BTCUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-03",
+              "last_month": "2026-10",
+              "months": 80,
+              "granularity": "MONTH_PARTITION"
+            },
+            "instrument": {
+              "display_name": "BTCUSDT Perpetual",
+              "contract_kind": "PERPETUAL",
+              "underlying": "BTCUSDT",
+              "base": "BTC",
+              "quote": "USDT",
+              "settle_currency": "USDT",
+              "tick_size": "0.10",
+              "lot_size": "0.001",
+              "contract_multiplier": "1",
+              "listing_utc_ms": 1583020800000,
+              "expiry_utc_ms": null,
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": 1790893800000
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "first_bar_utc_ms": 1583020800000,
+                "last_bar_utc_ms": 1790888400000,
+                "bar_count": 57742,
+                "expected_bar_count": 57742,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "1d",
+                "first_bar_utc_ms": 1583020800000,
+                "last_bar_utc_ms": 1790726400000,
+                "bar_count": 2405,
+                "expected_bar_count": 2405,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              }
+            ],
+            "quality": {
+              "state": "OK",
+              "reason_code": null,
+              "gap_count": 0,
+              "missing_ratio": "0.000000",
+              "duplicate_bar_count": 0,
+              "as_of_utc_ms": 1790893800000,
+              "origin": "PORTAL_DERIVED"
+            }
+          },
+          {
+            "symbol": "ETHUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-03",
+              "last_month": "2026-10",
+              "months": 80,
+              "granularity": "MONTH_PARTITION"
+            },
+            "instrument": {
+              "display_name": "ETHUSDT Perpetual",
+              "contract_kind": "PERPETUAL",
+              "underlying": "ETHUSDT",
+              "base": "ETH",
+              "quote": "USDT",
+              "settle_currency": "USDT",
+              "tick_size": "0.01",
+              "lot_size": "0.01",
+              "contract_multiplier": "1",
+              "listing_utc_ms": 1583020800000,
+              "expiry_utc_ms": null,
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": 1790893800000
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "first_bar_utc_ms": 1583020800000,
+                "last_bar_utc_ms": 1790888400000,
+                "bar_count": 57742,
+                "expected_bar_count": 57742,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "1d",
+                "first_bar_utc_ms": 1583020800000,
+                "last_bar_utc_ms": 1790726400000,
+                "bar_count": 2405,
+                "expected_bar_count": 2405,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              }
+            ],
+            "quality": {
+              "state": "OK",
+              "reason_code": null,
+              "gap_count": 0,
+              "missing_ratio": "0.000000",
+              "duplicate_bar_count": 0,
+              "as_of_utc_ms": 1790893800000,
+              "origin": "PORTAL_DERIVED"
+            }
+          },
+          {
+            "symbol": "SOLUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2021-10",
+              "last_month": "2026-10",
+              "months": 61,
+              "granularity": "MONTH_PARTITION"
+            },
+            "instrument": {
+              "display_name": "SOLUSDT Perpetual",
+              "contract_kind": "PERPETUAL",
+              "underlying": "SOLUSDT",
+              "base": "SOL",
+              "quote": "USDT",
+              "settle_currency": "USDT",
+              "tick_size": "0.001",
+              "lot_size": "0.1",
+              "contract_multiplier": "1",
+              "listing_utc_ms": 1633046400000,
+              "expiry_utc_ms": null,
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": 1790893800000
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "first_bar_utc_ms": 1633046400000,
+                "last_bar_utc_ms": 1790888400000,
+                "bar_count": 43846,
+                "expected_bar_count": 43846,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              },
+              {
+                "timeframe": "1d",
+                "first_bar_utc_ms": 1633046400000,
+                "last_bar_utc_ms": 1790726400000,
+                "bar_count": 1826,
+                "expected_bar_count": 1826,
+                "missing_ratio": "0.000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1790893800000
+              }
+            ],
+            "quality": {
+              "state": "OK",
+              "reason_code": null,
+              "gap_count": 0,
+              "missing_ratio": "0.000000",
+              "duplicate_bar_count": 0,
+              "as_of_utc_ms": 1790893800000,
+              "origin": "PORTAL_DERIVED"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

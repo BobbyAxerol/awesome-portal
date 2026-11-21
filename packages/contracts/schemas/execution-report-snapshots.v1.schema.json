@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-report-snapshots.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "record_authority",
+    "read_at_ms",
+    "subject"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.report-snapshots.v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "record_authority": {
+      "const": "PORTAL_PROJECTION"
+    },
+    "read_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "id"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "ALPHA",
+            "PORTFOLIO",
+            "ACCOUNT",
+            "DEPLOYMENT",
+            "OPERATION",
+            "INCIDENT",
+            "APPROVAL"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191,
+          "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+        }
+      }
+    },
+    "items": {
+      "anyOf": [
+        {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "report_id",
+              "content_hash",
+              "source_cut",
+              "created_at_ms",
+              "created_by"
+            ],
+            "properties": {
+              "report_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+              },
+              "content_hash": {
+                "type": "string",
+                "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+              },
+              "source_cut": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "as_of_ms",
+                  "revision"
+                ],
+                "properties": {
+                  "as_of_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "revision": {
+                    "type": "string",
+                    "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                  }
+                }
+              },
+              "created_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "created_by": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

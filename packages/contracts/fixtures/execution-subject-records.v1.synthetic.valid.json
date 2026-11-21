@@ -1,0 +1,327 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "producer_run": true,
+  "cases": [
+    {
+      "name": "orders_first_page_has_more",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v1",
+        "logical_operation_id": "executionAlphaOrdersV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "resource": {
+          "kind": "alpha",
+          "id": "alpha_btc_trend",
+          "resolution": "PUBLISHED_STRATEGY_ID"
+        },
+        "timeframe": {
+          "value": null,
+          "provenance": "UNAVAILABLE",
+          "source_field": null
+        },
+        "source_health": {
+          "availability": "AVAILABLE",
+          "freshness": "FRESH",
+          "completeness": "COMPLETE",
+          "as_of_ms": 1792238640000
+        },
+        "coverage": {
+          "retained_row_count": 2,
+          "oldest_observed_at_ms": 1792235040000,
+          "newest_observed_at_ms": 1792238640000,
+          "source_completeness": "COMPLETE",
+          "source_window": "CURRENT_SOURCE_CURSOR_TRAVERSAL"
+        },
+        "state": "AVAILABLE",
+        "page": {
+          "limit": 2,
+          "maximum_page_rows": 500,
+          "returned_count": 2,
+          "has_more": true,
+          "next_cursor": "kc1.query-k1.eyJib3VuZGFyeSI6WyJzaGEyNTY6YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsIjIwMjYtMTAtMTdUMTE6MDQ6MDAuMDAwWiIsIm9yZF8wMDIiXSwiZGlyZWN0aW9uIjoiYWZ0ZXIiLCJleHBpcmVzX2F0IjoxNzkyMjM5NTQxLCJpc3N1ZWRfYXQiOjE3OTIyMzg2NDEsImtleV9pZCI6InF1ZXJ5LWsxIiwicXVlcnlfZmluZ2VycHJpbnQiOiIySi0tbFZvcXZKS0tDUVVrd19GRTlJUlB3TGZpMHpGUi1XVzNoNmJJdFJrIiwicmVzb3VyY2VfaWQiOiJleGVjdXRpb24tc3ViamVjdC1yZWNvcmRzOnVzcl9hc21pdGg6bGl2ZTpMSVZFX0JJTkFOQ0VfVVNETTphbHBoYTphbHBoYV9idGNfdHJlbmQ6b3JkZXJzIiwidmVyc2lvbiI6MSwid29ya3NwYWNlX2lkIjoid29ya3NwYWNlX2V4ZWN1dGlvbl9tYW5hZ2VyIn0.KpjwhVGBH82CbNTwo3Ae9CfSSB5qHdN_N9fhtnYkt2U"
+        },
+        "records": [
+          {
+            "record_id": "ord_001",
+            "values": {
+              "order_id": "ord_001",
+              "client_order_id": "bt3-001",
+              "strategy_id": "alpha_btc_trend",
+              "account_id": "acct_binance_02",
+              "mode": "live",
+              "instrument_id": "BTCUSDT",
+              "side": "BUY",
+              "status": "FILLED",
+              "quantity": "0.40",
+              "price": "67200.50",
+              "submitted_at": "2026-10-17T11:04:00.000Z"
+            }
+          },
+          {
+            "record_id": "ord_002",
+            "values": {
+              "order_id": "ord_002",
+              "client_order_id": "bt3-002",
+              "strategy_id": "alpha_btc_trend",
+              "account_id": "acct_binance_02",
+              "mode": "live",
+              "instrument_id": "BTCUSDT",
+              "side": "BUY",
+              "status": "PARTIALLY_FILLED",
+              "quantity": "0.40",
+              "price": "67200.50",
+              "submitted_at": "2026-10-17T10:04:00.000Z"
+            }
+          }
+        ],
+        "projection": {
+          "epoch_id": "alpha-live",
+          "sequence": 7,
+          "source_as_of_ms": 1792238640000,
+          "received_at_ms": 1792238640500,
+          "last_successful_refresh_at_ms": 1792238640500
+        }
+      }
+    },
+    {
+      "name": "orders_last_page",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v1",
+        "logical_operation_id": "executionAlphaOrdersV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "resource": {
+          "kind": "alpha",
+          "id": "alpha_btc_trend",
+          "resolution": "PUBLISHED_STRATEGY_ID"
+        },
+        "timeframe": {
+          "value": null,
+          "provenance": "UNAVAILABLE",
+          "source_field": null
+        },
+        "source_health": {
+          "availability": "AVAILABLE",
+          "freshness": "FRESH",
+          "completeness": "COMPLETE",
+          "as_of_ms": 1792238640000
+        },
+        "coverage": {
+          "retained_row_count": 1,
+          "oldest_observed_at_ms": 1792238640000,
+          "newest_observed_at_ms": 1792238640000,
+          "source_completeness": "COMPLETE",
+          "source_window": "CURRENT_SOURCE_CURSOR_TRAVERSAL"
+        },
+        "state": "AVAILABLE",
+        "page": {
+          "limit": 200,
+          "maximum_page_rows": 500,
+          "returned_count": 1,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "records": [
+          {
+            "record_id": "ord_003",
+            "values": {
+              "order_id": "ord_003",
+              "client_order_id": "bt3-003",
+              "strategy_id": "alpha_btc_trend",
+              "account_id": "acct_binance_02",
+              "mode": "live",
+              "instrument_id": "BTCUSDT",
+              "side": "BUY",
+              "status": "CANCELED",
+              "quantity": "0.40",
+              "price": "67200.50",
+              "submitted_at": "2026-10-17T09:04:00.000Z"
+            }
+          }
+        ],
+        "projection": {
+          "epoch_id": "alpha-live",
+          "sequence": 7,
+          "source_as_of_ms": 1792238640000,
+          "received_at_ms": 1792238640500,
+          "last_successful_refresh_at_ms": 1792238640500
+        }
+      }
+    },
+    {
+      "name": "fills_one_page",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v1",
+        "logical_operation_id": "executionAlphaFillsV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "resource": {
+          "kind": "alpha",
+          "id": "alpha_btc_trend",
+          "resolution": "PUBLISHED_STRATEGY_ID"
+        },
+        "timeframe": {
+          "value": null,
+          "provenance": "UNAVAILABLE",
+          "source_field": null
+        },
+        "source_health": {
+          "availability": "AVAILABLE",
+          "freshness": "FRESH",
+          "completeness": "COMPLETE",
+          "as_of_ms": 1792238640000
+        },
+        "coverage": {
+          "retained_row_count": 1,
+          "oldest_observed_at_ms": 1792238640000,
+          "newest_observed_at_ms": 1792238640000,
+          "source_completeness": "COMPLETE",
+          "source_window": "CURRENT_SOURCE_CURSOR_TRAVERSAL"
+        },
+        "state": "AVAILABLE",
+        "page": {
+          "limit": 200,
+          "maximum_page_rows": 500,
+          "returned_count": 1,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "records": [
+          {
+            "record_id": "fill_001",
+            "values": {
+              "fill_id": "fill_001",
+              "client_order_id": "bt3-001",
+              "strategy_id": "alpha_btc_trend",
+              "account_id": "acct_binance_02",
+              "instrument_id": "BTCUSDT",
+              "side": "BUY",
+              "price": "67200.50",
+              "quantity": "0.40",
+              "commission": null,
+              "trade_time": "2026-10-17T11:04:00.000Z"
+            }
+          }
+        ],
+        "projection": {
+          "epoch_id": "alpha-live",
+          "sequence": 7,
+          "source_as_of_ms": 1792238640000,
+          "received_at_ms": 1792238640500,
+          "last_successful_refresh_at_ms": 1792238640500
+        }
+      }
+    },
+    {
+      "name": "authoritative_empty",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v1",
+        "logical_operation_id": "executionAlphaOrdersV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "resource": {
+          "kind": "alpha",
+          "id": "alpha_btc_trend",
+          "resolution": "PUBLISHED_STRATEGY_ID"
+        },
+        "timeframe": {
+          "value": null,
+          "provenance": "UNAVAILABLE",
+          "source_field": null
+        },
+        "source_health": {
+          "availability": "AVAILABLE",
+          "freshness": "FRESH",
+          "completeness": "COMPLETE",
+          "as_of_ms": 1792238640000
+        },
+        "coverage": {
+          "retained_row_count": 0,
+          "oldest_observed_at_ms": null,
+          "newest_observed_at_ms": null,
+          "source_completeness": "COMPLETE",
+          "source_window": "CURRENT_SOURCE_CURSOR_TRAVERSAL"
+        },
+        "state": "AUTHORITATIVE_EMPTY",
+        "page": {
+          "limit": 200,
+          "maximum_page_rows": 500,
+          "returned_count": 0,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "records": [],
+        "projection": {
+          "epoch_id": "alpha-live",
+          "sequence": 7,
+          "source_as_of_ms": 1792238640000,
+          "received_at_ms": 1792238640500,
+          "last_successful_refresh_at_ms": 1792238640500
+        }
+      }
+    },
+    {
+      "name": "relation_unavailable",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v1",
+        "logical_operation_id": "executionAlphaOrdersV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "resource": {
+          "kind": "alpha",
+          "id": "alpha_btc_trend",
+          "resolution": "PUBLISHED_STRATEGY_ID"
+        },
+        "timeframe": {
+          "value": null,
+          "provenance": "UNAVAILABLE",
+          "source_field": null
+        },
+        "source_health": {
+          "availability": "UNAVAILABLE",
+          "freshness": "FRESH",
+          "completeness": "COMPLETE",
+          "as_of_ms": 1792238640000
+        },
+        "coverage": {
+          "retained_row_count": 0,
+          "oldest_observed_at_ms": null,
+          "newest_observed_at_ms": null,
+          "source_completeness": "COMPLETE",
+          "source_window": "CURRENT_SOURCE_CURSOR_TRAVERSAL"
+        },
+        "state": "UNAVAILABLE",
+        "page": {
+          "limit": 200,
+          "maximum_page_rows": 500,
+          "returned_count": 0,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "records": [],
+        "projection": {
+          "epoch_id": "alpha-live",
+          "sequence": 7,
+          "source_as_of_ms": 1792238640000,
+          "received_at_ms": 1792238640500,
+          "last_successful_refresh_at_ms": 1792238640500
+        }
+      }
+    }
+  ]
+}

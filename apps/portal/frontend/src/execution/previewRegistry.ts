@@ -28,6 +28,8 @@ export const EXECUTION_PREVIEW_SCREEN_IDS = new Set([
   "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
   "EXECUTION_ALPHA_360_SCREEN",
   "EXECUTION_PORTFOLIO_360_SCREEN",
+  // Registry rev 9 (DEBT-UXM07-006): Compare's own route. PortalRoutes mounts it only while the `compare` flag is on.
+  "EXECUTION_COMPARE_SCREEN",
   "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
   "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
   "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN",
@@ -36,8 +38,14 @@ export const EXECUTION_PREVIEW_SCREEN_IDS = new Set([
   "EXECUTION_WAIVERS_REGISTER_SCREEN",
 ] as const);
 
-/** Revision 6 owns every reviewed route; retained as an empty compatibility export. */
+/**
+ * Revision 6 owns every reviewed route. The one extra path is an ALIAS (WP-C request, WP-D): Trade Replay is its own screen at
+ * `/deployments/alphas/:alphaId?tab=replay`; the clean path below lands there (the route table in `ExecutionPreviewRoute`
+ * redirects it and keeps the whole query). It claims no screen of its own, so the registry stays the one feature model.
+ */
+export const ALPHA_REPLAY_ALIAS_PATH = "/deployments/alphas/:alphaId/replay";
 export const EXECUTION_PREVIEW_EXTRA_ROUTES: readonly { path: string; screenId: string }[] = [
+  { path: ALPHA_REPLAY_ALIAS_PATH, screenId: "EXECUTION_ALPHA_360_SCREEN" },
 ];
 
 /**
@@ -53,6 +61,8 @@ export const EXECUTION_PREVIEW_FEATURE_DEFAULTS: Readonly<Record<string, string>
   EXECUTION_PORTFOLIOS: "EXECUTION_PORTFOLIO_360_SCREEN",
   EXECUTION_ALPHA_FLEET: "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
   EXECUTION_ACCOUNTS_BINDINGS: "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+  // The canonical route /deployments/blotter renders the Blotter even where no screen row of the registry matched it exactly (QA2 R4-01).
+  EXECUTION_BLOTTER: "EXECUTION_FULL_BLOTTER_SCREEN",
 };
 
 export function hasExecutionPreview(screenId: string): boolean {

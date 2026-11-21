@@ -1,0 +1,45 @@
+{
+  "schema_version": "research.local-candidate-evidence.v1",
+  "candidate_source_sha": "65bdc8e254c6393c8884de4433f64b61acbdde30",
+  "frontend_source_commit_preserved": "a599bd3f9ff5aa363717282b91c5d16c68883959",
+  "project": "portal-research-p23-ol12",
+  "base_url": "http://127.0.0.1:8096",
+  "candidate_snapshot_at_utc": "2026-10-02T07:17:21.703Z",
+  "recorded_at_utc": "2026-10-02T07:29:50.000Z",
+  "signed": false,
+  "production_authority": false,
+  "verdict": "NOT_READY_FOR_FULL_P24",
+  "images": {
+    "portal-web": "sha256:ddc34114368c9f949eea26113a791f3854724461c2dee95be513d71b06e8c7ce",
+    "control-api": "sha256:ee6d220ae36bda0b6d0bf7a8fdeabdcfc90201736eae23b75f90c3d96b89d6fd",
+    "portal-api": "sha256:1e454b125e80275c29adf03d57437ebcbfb968a30c13f7c2f9ee404aeb79eacd",
+    "quant-worker-py": "sha256:1e454b125e80275c29adf03d57437ebcbfb968a30c13f7c2f9ee404aeb79eacd",
+    "portal-postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "roadmap-task-board-api": "sha256:3f7acd1518a866eca9c2bba6da2c2b8ea67d457ff9adf274842f3f2b283ad095",
+    "portal-nats": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927"
+  },
+  "resource_limits_bytes": {
+    "portal-web": 100000000,
+    "control-api": 650000000,
+    "portal-api": 800000000,
+    "quant-worker-py": 1500000000,
+    "portal-postgres": 900000000,
+    "roadmap-task-board-api": 200000000,
+    "portal-nats": 150000000
+  },
+  "private_receipts": [
+    { "file": "temporal-65bd-farseek.json", "sha256": "4fab238950a5b4d65da41a1d95b5828e31639a6e34568a7c98d7dd897c4eb2c4", "scope": "warm-farseek", "verdict": "PASS" },
+    { "file": "temporal-65bd-isolation.json", "sha256": "c00ccd2b200d7267178007da50e88598c55aac94c5be706c533d7a30b0440733", "scope": "execution-isolation-only", "verdict": "PASS" },
+    { "file": "temporal-65bd-isolation-w06-workload.json", "sha256": "80ba3cea4a6fb068bf56ac4b04edd22a583d81d6bb93a73f9dee3366e7226c12", "scope": "mixed-load", "verdict": "FAIL_SLO" },
+    { "file": "temporal-65bd-utility.json", "sha256": "995c2431ea6a12d22f6096c403aa87b38b49252e604480196ef5ace1cdd17b70", "scope": "bounded-utility", "verdict": "PASS" },
+    { "file": "temporal-65bd-tenant.json", "sha256": "04f5075b4ce6cc765445f9a19e2b88792c3fb2686ffcb3687974eb0fe3ffb77a", "scope": "ten-named-get-cache-routes-not-full-T05", "verdict": "SCOPED_PASS" },
+    { "file": "fault-temporal-65bd-recovery.json", "sha256": "5d21c3a35aaab23ac0c308c2bbceb07542446ef2bcfce30908a3867d36155e5e", "scope": "db-nats-worker-outage", "verdict": "PASS" },
+    { "file": "restore-temporal-65bd-coherent.json", "sha256": "f527563ab45f5f847ac3e5bc7fbbe8a5ba21eb0bba3e05e4150375b4cf35008d", "scope": "strict-whole-store-restore", "verdict": "FAIL_MISSING_MANIFESTS" },
+    { "file": "restore-temporal-65bd-coherent-partial.json", "sha256": "a73395c4dd34e41241b26683f7ba4a17e2619e417d5a92f9ed00cc89c099b1a3", "scope": "coherent-copy-with-explicit-pre-existing-loss", "verdict": "COHERENT_COPY_PASS_FULL_INTEGRITY_FAIL" },
+    { "file": "temporal-65bd-missing-observations.json", "sha256": "8f1767a543cb70207944ea08c921496969f7e058cce8f0646d4b01680ad95e00", "scope": "three-actual-missing-byte-observations", "verdict": "SCOPED_PASS_NOT_RECOVERY" },
+    { "file": "temporal-65bd-cleanup.json", "sha256": "1768024dd5d5958faadd166e30123325962927c029de5e631d83100feacc8243", "scope": "22-owned-identities-only", "verdict": "PASS" }
+  ],
+  "coherent_restore": { "database_tables": 144, "part_records": 805, "files": 3132, "verified_sealed_artifacts": 70, "missing_sealed_manifests": 3, "all_sealed_artifacts_verified": false, "worker_off_reads": 5, "original_volumes_restored": true },
+  "cleanup": { "owned_active_jobs": 0, "owned_active_sessions": 0, "disabled_temporary_accounts": 21, "owner_anchor_retained": true, "cell_down": true, "volumes_backups_and_rollback_images_retained": true },
+  "open_gates": [ "MIXED_LIBRARY_PROGRESS_SLO", "OLD_DISPOSABLE_TEST_ARTIFACT_LOSS", "REAL_SECOND_ENGINE_T07_T13_P24_T05", "LINKED_NONREUSABLE_AUDIT_CHILD_CASE", "FULL_FRONTEND_BROWSER_VISUAL_PRINT_OWNER_ACCEPTANCE", "SIGNED_RELEASE_PROOF" ]
+}

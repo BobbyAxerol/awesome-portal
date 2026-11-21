@@ -20,17 +20,18 @@ import {
   type TypedCondition,
 } from "../components/conditions";
 import { ExecutionDecisionBar } from "../components/decisionBar";
+import { GateAbsences, GateDecisionActions, GateStepper, GateVerdict, type AbsenceItem } from "../components/gateFrame";
 import { EmptyRecordFrame } from "../components/EmptyRecordFrame";
 import { PanelState } from "../components/states";
 import { shortDigest } from "../components/workspace";
-import { REQUEST_CHANGES_DENIED_REASON, REQUEST_CHANGES_NOTE_REASON } from "./GateR1Review";
+import { REQUEST_CHANGES_DENIED_REASON, REQUEST_CHANGES_NOTE_REASON, REQUEST_CHANGES_NO_CONDITION_REASON } from "./GateR1Review";
 
 export type R1State = "APPROVED" | "APPROVED_WITH_CONDITION" | "EXPIRED" | "DENIED" | "PENDING" | "MISSING";
 
 function r1Block(state: R1State, id: string | null, expiredAt: string | null, lineagePublished = true): string | null {
   const ref = id ?? "the linked R1";
   if (!lineagePublished) {
-    return "This response does not carry the R1 lineage, so the authority this R2 rests on cannot be shown. Approve is disabled until the source publishes it (BR-EX-30).";
+    return "This response does not carry the R1 lineage, so the authority this R2 rests on cannot be shown. Approve is disabled until the source publishes it.";
   }
   switch (state) {
     case "APPROVED":
@@ -128,6 +129,7 @@ export function GateR2Review({
   onDeny,
   onRequestCondition,
   onRequestChanges,
+  children,
 }: {
   approvalId: ApprovalId;
   subject: string;
@@ -177,6 +179,8 @@ export function GateR2Review({
   onDeny?: () => void;
   onRequestCondition: () => void;
   onRequestChanges?: () => void;
+  /** Rendered above the decision dock: the next-step capture panel (R2 → Paper Exit review). */
+  children?: ReactNode;
   /** Kept for the container; the hi-fi page has no provenance drawer. */
   onCopyProvenance?: (full: string) => void;
 }) {
@@ -207,13 +211,14 @@ export function GateR2Review({
   const serverAllowsDeny = eligibility?.canDeny === true;
   const serverAllowsRequestChanges = eligibility?.canRequestChanges === true;
   const noteReady = (note ?? "").trim().length >= 8;
-  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges;
-  const locked = effectiveLocks.length > 0 || !serverAllowsApprove || Boolean(decisionsBlockedReason);
-  const conditionLocked = effectiveLocks.length > 0 || !serverAllowsCondition;
+  const closedByContext = Boolean(decisionsBlockedReason);
+  const requestChangesLocked = !serverAllowsRequestChanges || !noteReady || !onRequestChanges || (conditions?.length ?? 0) === 0 || closedByContext;
+  const locked = effectiveLocks.length > 0 || !serverAllowsApprove || closedByContext;
+  const conditionLocked = effectiveLocks.length > 0 || !serverAllowsCondition || closedByContext;
   const denyLocks = effectiveLocks.filter((lock): lock is "EXPIRED" | "NOT_ELIGIBLE" =>
     (DENY_BLOCKING_LOCKS as readonly string[]).includes(lock),
   );
-  const denyLocked = denyLocks.length > 0 || !serverAllowsDeny;
+  const denyLocked = denyLocks.length > 0 || !serverAllowsDeny || closedByContext;
   // The R1 sentence is printed once, in the banner; the bar points at it.
 
   /*
@@ -256,6 +261,12 @@ export function GateR2Review({
       ? Math.max(0, Math.round((sla.budgetMinutes - sla.ageMinutes) / 60))
       : null;
 
+  const absences: AbsenceItem[] = [
+    ...(fitPanel ? [] : [{ label: "portfolio fit", reason: "Portfolio fit is not published yet; nothing here estimates it." }]),
+    ...(criteriaPanel ? [] : [{ label: "gate criteria", reason: "Gate criteria are not published yet; the browser never re-derives a verdict." }]),
+    ...(stageChips ? [] : [{ label: "stage eligibility", reason: "Stage eligibility is not published yet." }]),
+  ];
+
   return (
     <section className="exec-gate exec-gov" aria-label={`Gate R2 review ${approvalId}`} data-hifi-exact="gate-r2-1b">
       <div className="exec-gov-head">
@@ -263,8 +274,8 @@ export function GateR2Review({
         <h1 className="exec-gov-h1">Operational Readiness <span className="exec-gov-dim">—</span> {subject}</h1>
         {status === "stale" ? <span className="exec-gov-chip" data-fill="bad">STALE</span> : null}
         {status === "partial" ? <span className="exec-gov-chip" data-fill="warn">PARTIAL</span> : null}
-        <span className="exec-gov-wf">WF 1b</span>
       </div>
+      <GateStepper current="r2" done={[...(releaseCandidate ? (["rc"] as const) : []), ...(r1State === "APPROVED" || r1State === "APPROVED_WITH_CONDITION" ? (["r1"] as const) : [])]} />
       <div className="exec-gov-metaline">
         <span className="exec-gov-chip" data-fill={r1State === "APPROVED" || r1State === "APPROVED_WITH_CONDITION" ? "good" : "bad"}>
           R1 {r1State}
@@ -287,7 +298,6 @@ export function GateR2Review({
           </span>
         ) : null}
         <span>policy {policyVersion}</span>
-        <span data-tone={selfApproval ? "bad" : "warn"}>{sodLine}</span>
         <span className="exec-gov-meta">
           R1 evidence {r1Digest ? shortDigest(r1Digest) : <span className="exec-gate-unverified">not published</span>}
         </span>
@@ -296,13 +306,25 @@ export function GateR2Review({
           {r1Expiry ?? <span className="exec-gate-unverified">not published</span>}
           {r1DecidedBy ? ` · decided by ${r1DecidedBy}${r1DecidedAt ? ` ${r1DecidedAt}` : ""}` : ""}
         </span>
-        <span className="exec-gov-spacer" />
-        <span className="exec-gov-meta">
-          PENDING {quorumMet}/{quorumRequired}
-          {slaRemaining !== null ? ` · SLA ${slaRemaining}h remaining` : ""}
-          {capitalEnvelope?.asOf ? ` · preview as_of ${utcStamp(capitalEnvelope.asOf)}` : ""}
-        </span>
       </div>
+      <GateVerdict
+        tone={locked && conditionLocked ? "bad" : "mute"}
+        headline={
+          blockedReason
+            ? `R1 approval is ${r1State.toLowerCase().replace(/_/g, " ")} — this gate is locked`
+            : locked && conditionLocked
+              ? "You cannot approve this now"
+              : "Nothing blocks your decision — review the readiness below"
+        }
+        detail={null}
+        facts={[
+          <span data-tone={selfApproval ? "bad" : "good"}>{sodLine}</span>,
+          `your decision is 1 of ${quorumRequired} required (${quorumMet} so far)`,
+          slaRemaining !== null ? `SLA ${slaRemaining}h remaining` : null,
+          capitalEnvelope?.asOf ? `capital preview as_of ${utcStamp(capitalEnvelope.asOf)}` : null,
+          breach ? <span data-tone="bad">capital limit breached</span> : null,
+        ].filter((fact) => fact !== null)}
+      />
       {blockedReason ? (
         <div className="exec-gate-banner exec-gate-blocking" role="status">
           <strong className="exec-gate-blocking-lead">Blocked — R1 approval {r1State.toLowerCase().replace(/_/g, " ")}</strong>{" "}
@@ -320,12 +342,7 @@ export function GateR2Review({
         </div>
       ) : null}
       <div className="exec-gov-grid2">
-        {fitPanel ?? (
-          <div className="exec-gov-panel">
-            <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">Portfolio fit</span></div>
-            <PanelState status="unavailable" reason="portfolio_fit is not published on governance.r2-review.v1 yet (BR-EX-67). Nothing here estimates it client-side." />
-          </div>
-        )}
+        {fitPanel ?? null}
         {readiness.map((group) => (
           <div className="exec-gov-panel" key={group.title}>
             <div className="exec-gov-panelhead"><span className="exec-gov-paneltitle">{group.title}</span></div>
@@ -344,18 +361,9 @@ export function GateR2Review({
         ))}
         {readiness.length === 0 ? <PanelState status="empty" reason="No readiness groups were published." /> : null}
       </div>
-      {criteriaPanel ?? (
-        <div className="exec-gov-panel">
-          <div className="exec-gov-panelhead">
-            <span className="exec-gov-paneltitle">Gate criteria — policy vs evidence</span>
-            <span className="exec-gate-policychip" title="The versioned gate policy ships with BR-EX-67.">gate policy not published · BR-EX-67</span>
-          </div>
-          <PanelState status="unavailable" reason="gate_criteria are POLICY DATA computed server-side and are not published yet (BR-EX-67). The browser never re-derives a verdict." />
-        </div>
-      )}
-      {stageChips ?? (
-        <p className="exec-role-meta">stage_eligibility is not published yet (BR-EX-67) — no chip is invented for it.</p>
-      )}
+      {criteriaPanel ?? null}
+      {stageChips ?? null}
+      <GateAbsences items={absences} />
       <div className="exec-gov-grid2" data-ratio="1.35">
         {capital.length > 0 ? (
           <div className="exec-preview-panel exec-gov-inverse">
@@ -454,6 +462,7 @@ export function GateR2Review({
           ) : null}
         </div>
       </div>
+      {children}
       <ExecutionDecisionBar
         label={`Gate R2 decision ${approvalId}`}
         verdict={verdict}
@@ -469,45 +478,28 @@ export function GateR2Review({
             ) : null}
             your decision counts as 1 of {quorumRequired} required approvers ·{" "}
             {artifactDigest ? <>evidence digest {shortDigest(artifactDigest)} · </> : null}
-            decision is recorded against policy {policyVersion} · conditions are typed objects with owner, deadline and expiry, never free text
+            decision is recorded against policy {policyVersion}
           </>
         }
         trail={trail}
         actions={
-          <>
-            <button
-              type="button"
-              className="exec-role-control exec-btn-ghost"
-              disabled={requestChangesLocked}
-              title={
-                !serverAllowsRequestChanges || !onRequestChanges
-                  ? REQUEST_CHANGES_DENIED_REASON
-                  : !noteReady
-                    ? REQUEST_CHANGES_NOTE_REASON
-                    : undefined
-              }
-              onClick={onRequestChanges}
-            >
-              Request changes
-            </button>
-            <button type="button" className="exec-role-control exec-btn-ghost" disabled={denyLocked}
-              title={denyLocked ? (denyReasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onDeny}>
-              Deny
-            </button>
-            <button
-              type="button"
-              className="exec-role-control exec-btn-ghost"
-              disabled={conditionLocked || (conditions?.length ?? 0) === 0}
-              title={(conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined}
-              onClick={onRequestCondition}
-            >
-              Approve with condition
-            </button>
-            <button type="button" className="exec-role-control exec-btn-apply" disabled={locked}
-              title={locked ? (approveReasons.join(" · ") || DECISION_CLOSED) : undefined} onClick={onApprove}>
-              Approve
-            </button>
-          </>
+          <GateDecisionActions
+            conditionCount={conditions?.length ?? 0}
+            approve={{ label: "Approve", locked, title: locked ? (approveReasons.join(" · ") || DECISION_CLOSED) : undefined, onClick: onApprove }}
+            condition={{
+              label: "Approve with condition",
+              locked: conditionLocked || (conditions?.length ?? 0) === 0,
+              title: (conditions?.length ?? 0) === 0 ? "Attach at least one condition first — this decision carries nothing without one" : undefined,
+              onClick: onRequestCondition,
+            }}
+            deny={{ label: "Deny", locked: denyLocked, title: denyLocked ? (denyReasons.join(" · ") || DECISION_CLOSED) : undefined, onClick: onDeny }}
+            requestChanges={{
+              label: "Request changes",
+              locked: requestChangesLocked,
+              title: closedByContext ? decisionsBlockedReason ?? undefined : !serverAllowsRequestChanges || !onRequestChanges ? REQUEST_CHANGES_DENIED_REASON : !noteReady ? REQUEST_CHANGES_NOTE_REASON : (conditions?.length ?? 0) === 0 ? REQUEST_CHANGES_NO_CONDITION_REASON : undefined,
+              onClick: onRequestChanges,
+            }}
+          />
         }
       />
     </section>

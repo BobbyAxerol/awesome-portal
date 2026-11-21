@@ -249,6 +249,10 @@ describe("derivation tiles", () => {
     expect(screen.getByText("sandbox …", { selector: ".exec-chip" })).toBeTruthy();
     expect(screen.getByText("live DENIED", { selector: ".exec-chip" })).toBeTruthy();
     expect(screen.getByRole("row", { name: /paper PAPER_BINANCE_USDM/ })).toBeTruthy();
+    const scrollRegion = screen.getByRole("region", { name: "Source health by profile table" });
+    expect(scrollRegion.getAttribute("tabindex")).toBe("0");
+    scrollRegion.focus();
+    expect(document.activeElement).toBe(scrollRegion);
     expect(screen.getByRole("note").textContent).toContain("live: denied · PERMISSION_DENIED");
     cleanup();
     const empty = readPortfolioCapital({ ...CAPITAL, environment: "live", data: { ...CAPITAL.data, allocation_by_currency: [], account_balance_by_currency: [], unpublished_inputs: [] } });

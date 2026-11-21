@@ -1,0 +1,39 @@
+{
+ "schema_version": "execution.operations-queue.v1",
+ "record_authority": "PORTAL",
+ "delivery_profile": "fixture",
+ "source_integration_state": "UNAVAILABLE",
+ "read_at": "2026-11-11T11:45:25.296Z",
+ "actor": {
+  "user_id": "usr_TEST_ONLY",
+  "username": "preview-user",
+  "roles": [
+   "ADMIN"
+  ]
+ },
+ "read_truth": {
+  "state": "EMPTY",
+  "reason_code": "NO_MATCHING_PORTAL_OPERATION_RECORDS",
+  "scope": "REQUEST"
+ },
+ "page": {
+  "rows": [],
+  "total_count": 0,
+  "filtered_count": 0,
+  "next_cursor": null,
+  "prev_cursor": null,
+  "has_more": false,
+  "has_previous": false,
+  "applied_filters": [],
+  "applied_sort": [
+   {
+    "field": "created_at",
+    "direction": "desc"
+   },
+   {
+    "field": "operation_id",
+    "direction": "desc"
+   }
+  ]
+ }
+}

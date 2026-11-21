@@ -1,0 +1,448 @@
+{
+  "schema_version": "research.enriched-analysis.v1",
+  "service": "enrich_analysis",
+  "basis": "ALL_TIME",
+  "lane": "FIXED",
+  "run_id": "rrun_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c",
+  "source_tables": [
+    {
+      "name": "P13_EQUITY_POINTS",
+      "row_count": 10,
+      "digest": "b9dc47830aea7b7eb2301454b44538a57b854a344f8cd4f6ecde4746b5ddd9a3"
+    }
+  ],
+  "scope": {
+    "window": "OOS",
+    "first_at_utc_ms": 1783641600000,
+    "last_at_utc_ms": 1785196800000,
+    "observation_count": 10,
+    "fold_count": 1,
+    "locator": "P13.retained_sampled_equity:OOS",
+    "benchmark_locator": "P13.retained_sampled_equity:benchmark_NOT_PUBLISHED",
+    "coverage": "SAMPLED_RETAINED_EQUITY",
+    "source_observation_count": 744
+  },
+  "windows": {
+    "oos": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "is": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "RETAINED_NO_IN_SAMPLE_ACCOUNT_PAYLOAD"
+    },
+    "holdout": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "RETAINED_NO_HOLDOUT_ACCOUNT_PAYLOAD"
+    }
+  },
+  "facts": {
+    "metrics": {
+      "sharpe": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "sortino": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "cagr_fraction": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "profit_factor": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "long_hit_rate_fraction": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:benchmark_NOT_PUBLISHED",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "short_hit_rate_fraction": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:benchmark_NOT_PUBLISHED",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "volatility_fraction": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "skew": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "excess_kurtosis": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "beta": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:benchmark_NOT_PUBLISHED",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "correlation": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:benchmark_NOT_PUBLISHED",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "benchmark_return_fraction": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "AN29_RETAINED_MARKET_CLOSE_NOT_PUBLISHED",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:benchmark_NOT_PUBLISHED",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "max_drawdown_duration_days": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "sharpe_decay": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      }
+    },
+    "behaviour": {
+      "exposure_long_fraction": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "exposure_short_fraction": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "exposure_flat_fraction": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "win_rate": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "payoff_ratio": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "average_hold_seconds": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "max_consecutive_losses": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      },
+      "turnover_notional": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+        "value": null,
+        "origin": "PORTAL_DERIVED",
+        "scope": "OOS",
+        "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+        "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+      }
+    }
+  },
+  "curves": {
+    "sampling": {
+      "source_observation_count": 10,
+      "emitted_point_count": 10,
+      "method": "EXTREMA_BUCKET_V1"
+    },
+    "strategy_rebased_100": [
+      {
+        "at_utc_ms": 1783641600000,
+        "value": "100"
+      },
+      {
+        "at_utc_ms": 1783814400000,
+        "value": "102.42424242424242"
+      },
+      {
+        "at_utc_ms": 1783987200000,
+        "value": "102.82828282828282"
+      },
+      {
+        "at_utc_ms": 1784160000000,
+        "value": "103.23232323232322"
+      },
+      {
+        "at_utc_ms": 1784332800000,
+        "value": "103.63636363636364"
+      },
+      {
+        "at_utc_ms": 1784505600000,
+        "value": "102.020202020202"
+      },
+      {
+        "at_utc_ms": 1784678400000,
+        "value": "104.44444444444446"
+      },
+      {
+        "at_utc_ms": 1784851200000,
+        "value": "104.84848484848486"
+      },
+      {
+        "at_utc_ms": 1785024000000,
+        "value": "105.25252525252525"
+      },
+      {
+        "at_utc_ms": 1785196800000,
+        "value": "105.65656565656565"
+      }
+    ],
+    "benchmark_rebased_100": [],
+    "drawdown_fraction": [
+      {
+        "at_utc_ms": 1783641600000,
+        "value": "0"
+      },
+      {
+        "at_utc_ms": 1783814400000,
+        "value": "0"
+      },
+      {
+        "at_utc_ms": 1783987200000,
+        "value": "0"
+      },
+      {
+        "at_utc_ms": 1784160000000,
+        "value": "0"
+      },
+      {
+        "at_utc_ms": 1784332800000,
+        "value": "0"
+      },
+      {
+        "at_utc_ms": 1784505600000,
+        "value": "-0.015594541910331383"
+      },
+      {
+        "at_utc_ms": 1784678400000,
+        "value": "0"
+      },
+      {
+        "at_utc_ms": 1784851200000,
+        "value": "0"
+      },
+      {
+        "at_utc_ms": 1785024000000,
+        "value": "0"
+      },
+      {
+        "at_utc_ms": 1785196800000,
+        "value": "0"
+      }
+    ]
+  },
+  "monthly_returns": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "origin": "PORTAL_DERIVED",
+    "includes_partial_months": true,
+    "values": [
+      {
+        "month_start_utc_ms": 1782864000000,
+        "return_fraction": "0.05656565656565656565656565656565656565656565657",
+        "partial": true,
+        "observation_count": 10,
+        "basis": "FIRST_OOS_CLOSE",
+        "base_at_utc_ms": 1783641600000,
+        "close_at_utc_ms": 1785196800000,
+        "expected_observation_count": 744
+      }
+    ],
+    "sampling": "FULL",
+    "total_period_count": 1,
+    "omitted_transport_period_count": 0,
+    "definition_id": "OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"
+  },
+  "return_distribution": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_DAILY_RETURN_LEDGER",
+    "origin": "PORTAL_DERIVED",
+    "sampling": "UTC_DAY",
+    "observation_count": 0,
+    "bucket_basis": "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1",
+    "buckets": []
+  },
+  "drawdown_episodes": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "origin": "PORTAL_DERIVED",
+    "total": 1,
+    "open_episode_present": false,
+    "longest_open": false,
+    "values": [
+      {
+        "start_utc_ms": 1784332800000,
+        "trough_utc_ms": 1784505600000,
+        "recovery_utc_ms": 1784678400000,
+        "depth_fraction": "-0.015594541910331383",
+        "duration_seconds": 345600
+      }
+    ]
+  },
+  "library_summary": {
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "label": "all time",
+    "basis": "ALL_TIME",
+    "sparkline": [
+      {
+        "at_utc_ms": 1783641600000,
+        "value": "990"
+      },
+      {
+        "at_utc_ms": 1783814400000,
+        "value": "1014"
+      },
+      {
+        "at_utc_ms": 1783987200000,
+        "value": "1018"
+      },
+      {
+        "at_utc_ms": 1784160000000,
+        "value": "1022"
+      },
+      {
+        "at_utc_ms": 1784332800000,
+        "value": "1026"
+      },
+      {
+        "at_utc_ms": 1784505600000,
+        "value": "1010"
+      },
+      {
+        "at_utc_ms": 1784678400000,
+        "value": "1034"
+      },
+      {
+        "at_utc_ms": 1784851200000,
+        "value": "1038"
+      },
+      {
+        "at_utc_ms": 1785024000000,
+        "value": "1042"
+      },
+      {
+        "at_utc_ms": 1785196800000,
+        "value": "1046"
+      }
+    ],
+    "sampling": "EXTREMA_BUCKET_V1",
+    "source_observation_count": 744,
+    "coverage": "SAMPLED_RETAINED_EQUITY",
+    "return_fraction": "0.056565656565656486",
+    "sharpe": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_RETAINED_SAMPLED_EQUITY_HAS_NO_COMPLETE_ANALYTICS_INPUT",
+      "value": null,
+      "origin": "PORTAL_DERIVED",
+      "scope": "OOS",
+      "source_locator": "P13.retained_sampled_equity:not_a_daily_or_position_ledger",
+      "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+    },
+    "max_drawdown_fraction": "-0.015594541910331383",
+    "input_digest": "d4e139c9b2bf26a795355fc049a5d58368edc369125b9ceaaa64034d89a01e4c"
+  },
+  "rolling": null
+}

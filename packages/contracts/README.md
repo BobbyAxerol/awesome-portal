@@ -1,10 +1,30 @@
 # Portal Contracts — canonical schema authority (U09 / BAR-06)
 
+ELP2-05 publication inventory: `npm run generate:execution-publication` pins the
+three committed Edge logical manifests in `fixtures/execution-publication-source/`
+and generates `execution-publication-catalogue.d.ts`. The existing authenticated
+`GET /api/v1/execution/manager/operations` now includes `publication_catalogue`.
+Its42 families and31 fields are **source contracts, not42 enabled exports**.
+Existing named current-page reads keep their own authority; no stable snapshot,
+event replay, certified return history, new grants or runtime activation follows
+from catalogue metadata. The dataset-publication synthetic fixture is TEST_ONLY;
+the qualified provider port is internal and remains unmounted/default-denied.
+
 `packages/contracts/` is the source-controlled canonical contract workspace:
 IDs, timestamps, decimals, RFC 7807 problem documents, command envelopes
 (idempotency + optimistic concurrency) and event envelopes (§6.7 of the v0.4
 guide). Schemas live in `schemas/`, canonical fixtures in `fixtures/`, and the
 committed TypeScript types generated from the Portal OpenAPI in `generated/`.
+
+ELP2-03 scoped access is published at `openapi/execution-access.openapi.json`
+and `generated/execution-access.d.ts`. Run `npm run generate:execution-access`
+for its eight named operations under `/api/admin/profile-access/v2`. Examples
+in `fixtures/execution-access.synthetic.valid.json` are explicitly TEST_ONLY,
+not owner approvals or TS producer receipts. Mounting the Portal controller
+does not qualify a policy/TS adapter: the default adapter remains unqualified,
+owner recovery disabled, and no migration seeds production rights. Preserve
+`APP_APPLIED` separately from `TS_PENDING/APPLIED/REJECTED/UNKNOWN`; a historical
+receipt is not current authority. Consumer assignment is still owner-gated.
 
 Execution analytics has its own narrow, source-backed screen contract at
 `openapi/execution-analytics.openapi.json`, generated as
@@ -165,6 +185,117 @@ strings, but deliberately make no lifecycle replay, global ordering,
 correction or retention claim. The checked-in intake starts fail-closed until
 a digest-pinned Trading System owner return is accepted; the browser never sees
 an Edge path, relation, cursor, mTLS input or delegated credential.
+
+P05 adds `research-artifact-manifest.v1.schema.json`, the immutable
+Research-only storage contract shared by the bounded Python writer, the Rust
+reader foundation and the Control API metadata authority.  It records opaque
+workspace/run/worker identities, lease epoch, exact input/build digests,
+bounded Parquet part statistics, nullable/unit-bearing column descriptors and
+small document checksums.  It is a sealed-byte manifest, not a browser route:
+only the Control API can publish its candidate as a sealed durable artifact
+after fence validation.
+The schema contains no filesystem absolute path, database locator, credential,
+market row or Execution/Trading System authority.
+
+P07 publishes the additive Research-owned Alpha Import contract at
+`openapi/research-alpha-import.openapi.json`, generated as
+`generated/research-alpha-import.d.ts`. It contains exactly five same-origin
+operations: registry list, parse, seven ordered gates, immutable DRAFT
+registration and ADMIN-only activation. `research.alpha-source.v1`,
+`research.alpha-import-gates.v1` and the server-to-private-parser
+`research.alpha-analysis.v1` are canonical component schemas. Browser
+responses never include source bytes, a filesystem path, a parser principal or
+a mutable parsed contract. This contract deliberately runs alongside the
+legacy QuantBT `/api/v1/alphas*` compatibility API; it does not replace or
+shadow it. Regenerate only with `npm run generate` (or the narrow
+`npm run generate:research-alpha-import`) and never hand-maintain the emitted
+TypeScript declarations.
+
+P08 publishes the additive Research Preflight contract at
+`openapi/research-preflight.openapi.json`, generated as
+`generated/research-preflight.d.ts`. It contains exactly two same-origin,
+actor/workspace-scoped operations: create an immutable effective-spec/data
+snapshot manifest and read its live opaque token. The request uses the frozen
+P02 `research.requested-spec.v1`; responses retain exact digests, UTC
+milliseconds, closed-bar policy, quality/topology/resource metadata and typed
+refusals. They never expose OHLCV points, a snapshot path, an internal HMAC
+principal, a private adapter URL, sealed-holdout values, a worker reservation
+or an execution command. P08 is `PREFLIGHT_ONLY`, not a run submission API.
+Regenerate only with `npm run generate` (or
+`npm run generate:research-preflight`) and never hand-maintain emitted types.
+The P02 frozen `research.requested-spec.v1` is packaged at
+`schemas/research-requested-spec.v1.schema.json`, so OpenAPI generation is
+self-contained in local, CI and release-image containers. The P08 contract
+test requires its parsed JSON to remain exactly equal to the immutable P02
+evidence copy; P02 remains the freeze authority.
+
+The S02 setup refinement publishes `openapi/research-run-setup.openapi.json`,
+generated as `generated/research-run-setup.d.ts`. Its two named operations are
+Alpha/version/workspace/dataset/symbol/timeframe-bound setup options and an
+explicit CSRF-protected window suggestion. They disclose the current Portal
+executor constraints, not the wider engine catalogue or a run authorization.
+Suggestions use source-pinned compressed bar metadata: shared Three Window
+A/B/C/D edges, or Advanced range/first-OOS/preferences. The existing declaration
+estimator publishes actual P08/engine fold geometry; neither operation invents
+an Advanced holdout, reads prices, runs an optimizer or creates a preflight.
+Regenerate with `npm run generate` or `npm run generate:research-run-setup`;
+fixtures are synthetic wire examples, not product/run receipts. Final P08/P10
+admission is always required.
+
+FULL-01 centralizes the six existing execution recipes in
+`apps/portal/registry/research-execution-recipes.v1.json` with its strict schema.
+Run `npm run generate:research-execution-recipes` here to regenerate the
+image-owned TS/Python views plus setup/preflight types. Verification checks
+the old descriptor digests and exact receipt hashes separately from the
+recipe-policy revision. Future qualified recipe changes need their own
+append-only migration; do not regenerate applied migration 095.
+`SetupOptions` optionally publishes declared budget/quota facts (256 profile
+rows, 1-MiB serialized cap). These are neither duration estimates nor grants.
+The preflight Problem can carry bounded `retry_after_seconds` for actor quota;
+old consumers remain compatible. No new recipe is opened by this generation.
+
+P13 publishes the additive Research Evidence Flow contract at
+`openapi/research-evidence.openapi.json`, generated as
+`generated/research-evidence.d.ts`. It contains exactly two same-origin
+read operations: an immutable compact Evidence Hub and one named, bounded lazy
+series. The source receipt is emitted only by the confined P04/P10 child at
+terminal completion, digest-bound to the P11 event, then projected in Portal
+storage. The browser never receives a worker attempt, lease, artifact path,
+raw OHLCV row, credential or a relation/revision input. Exact decimals and
+UTC milliseconds are retained; unavailable benchmark, funding, audited-fill
+and per-fold facts remain typed rather than being replaced with zero. Generate
+only with `npm run generate` (or `npm run generate:research-evidence`) and
+never hand-maintain emitted types.
+
+P14 publishes the additive Split / chronology contract at
+`openapi/research-split.openapi.json`, generated as
+`generated/research-split.d.ts`. It contains exactly one same-origin,
+workspace-scoped read operation for an immutable current-P04 three-window
+projection. The terminal P10/P11 receipt retains UTC half-open boundaries,
+measured child-tape consumption and exact digests. It explicitly retains the
+facts the current source does **not** publish: advanced fold plan, strict
+outer-OOS selection, purge/embargo, gap scan, source seal and holdout unlock.
+It never exposes a raw holdout value, snapshot/Parquet path, worker/lease,
+physical-I/O assertion, source relation or command. Regenerate only with
+`npm run generate` (or `npm run generate:research-split`) and never
+hand-maintain emitted types.
+
+RS-02 publishes `openapi/research-current-source.openapi.json`, generated as
+`generated/research-current-source.d.ts`. It is a parallel, versioned lane
+for explicitly sealed QuantBT 1.1.1 Advanced WFO artifacts, not a rewrite of
+P04/P13--P17 fixed-run contracts. It exposes six named same-origin reads for
+Evidence, bounded evidence series, Split, Search, Freeze and Replay. Full
+source rows are retained locally once in bounded P05-derived batches; callers
+cannot select a table/path/revision or make QuantBT compute on a GET. Original
+source IDs, UTC milliseconds and exact decimal strings are preserved. Model
+positions/returns are available where retained; route orders, audited fills,
+candles and any un-emitted methodology fact stay typed absences. Cursors are
+Portal-signed, workspace/run/revision/operation bound, and replay is
+`private, no-store`; a browser may use only a minted opaque playhead, never a
+raw source ordinal. Freeze verifies the immutable Portal-retained manifest,
+row counts and canonical local batch receipt; it never reopens private P05
+bytes during a GET. Regenerate from the OpenAPI only; do not hand-maintain the
+emitted declarations.
 
 Rules:
 

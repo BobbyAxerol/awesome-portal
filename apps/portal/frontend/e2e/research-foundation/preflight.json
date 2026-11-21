@@ -1,0 +1,254 @@
+{
+  "schema_version": "research.preflight.v1",
+  "preflight_token": "pf_01HZQ7PROBE",
+  "expires_at_utc_ms": 1767225600000,
+  "may_create_run": true,
+  "requested_spec_digest": "sha256:66e09b4410",
+  "effective_spec_digest": "sha256:3b81c7aa15",
+  "dataset_binding_digest": "sha256:9d44f2c880",
+  "manifest_digest": "sha256:11ab07dd3e",
+  "effective_spec": {
+    "schema_version": "research.effective-spec.v1",
+    "requested_spec_digest": "sha256:66e09b4410",
+    "engine": {
+      "engine_release_id": "er_quantbt_111",
+      "engine_catalog_digest": "sha256:c25a1d77b4",
+      "execution_route": "signal_notional",
+      "required_input_class": "single_symbol_ohlcv_plus_signal",
+      "route_axes": {
+        "engine": "ENGINE_SUPPORTED",
+        "integration": "ADAPTER_AVAILABLE",
+        "evidence": "EVIDENCE_MAPPED",
+        "admission": "P04_BASELINE_ONLY"
+      },
+      "preflight_admission": "PREFLIGHT_ONLY",
+      "optimization_mode": "per_fold_causal",
+      "optimization_schedule": "endpoint"
+    },
+    "data_binding": {
+      "snapshot_id": "snap_1",
+      "snapshot_content_hash": "sha256:aa91b3ce77",
+      "market_content_hash": "sha256:4f1c2b9ae0",
+      "source_manifest_digest": "sha256:07dd11ab3e",
+      "timezone": "UTC",
+      "calendar_policy": "24x7",
+      "closed_bar_policy": "CLOSED_BARS_ONLY",
+      "columns": [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume"
+      ],
+      "warmup_bars": 120,
+      "range_start_utc_ms": 1640995200000,
+      "range_end_exclusive_utc_ms": 1767225600000
+    },
+    "topology": {
+      "protocol": "three_window_decay",
+      "topology_digest": "sha256:4bc21f0a9e",
+      "folds": [
+        {
+          "fold_id": "fold_01",
+          "train": {
+            "start_utc": "2022-01-01T00:00:00.000Z",
+            "end_exclusive_utc": "2023-01-01T00:00:00.000Z",
+            "start_utc_ms": 1640995200000,
+            "end_exclusive_utc_ms": 1672531200000
+          },
+          "outer_oos": {
+            "start_utc": "2023-01-01T00:00:00.000Z",
+            "end_exclusive_utc": "2024-01-01T00:00:00.000Z",
+            "start_utc_ms": 1672531200000,
+            "end_exclusive_utc_ms": 1704067200000
+          },
+          "state": "BOUNDARY_FIXED_NOT_EVALUATED"
+        },
+        {
+          "fold_id": "fold_02",
+          "train": {
+            "start_utc": "2022-01-01T00:00:00.000Z",
+            "end_exclusive_utc": "2024-01-01T00:00:00.000Z",
+            "start_utc_ms": 1640995200000,
+            "end_exclusive_utc_ms": 1704067200000
+          },
+          "outer_oos": {
+            "start_utc": "2024-01-01T00:00:00.000Z",
+            "end_exclusive_utc": "2025-01-01T00:00:00.000Z",
+            "start_utc_ms": 1704067200000,
+            "end_exclusive_utc_ms": 1735689600000
+          },
+          "state": "BOUNDARY_FIXED_NOT_EVALUATED"
+        }
+      ],
+      "sealed_holdout": {
+        "start_utc": "2025-01-01T00:00:00.000Z",
+        "end_exclusive_utc": "2026-01-01T00:00:00.000Z",
+        "start_utc_ms": 1735689600000,
+        "end_exclusive_utc_ms": 1767225600000,
+        "snapshot_read_state": "OPAQUE_SNAPSHOT_ONLY",
+        "evaluation_state": "NOT_EVALUATED",
+        "disclosure": "The seal caps this run's certificate at B — unlock is a one-time audited read that creates a sibling attempt."
+      }
+    },
+    "optimization": {
+      "mode": "per_fold_causal",
+      "schedule": "endpoint",
+      "trial_count": 400,
+      "early_stopping": 200,
+      "random_seed": 42,
+      "scope": "per_study_per_fold_per_seed"
+    },
+    "intent": {
+      "kind": "NEW",
+      "reproduction_semantics": "reproduce the declared spec exactly",
+      "upgrade_semantics": "an upgraded release produces a new effective spec"
+    }
+  },
+  "dataset_binding": {
+    "schema_version": "research.dataset-binding.v1",
+    "snapshot_id": "snap_1",
+    "snapshot_content_hash": "sha256:aa91b3ce77",
+    "market_content_hash": "sha256:4f1c2b9ae0",
+    "source_manifest_digest": "sha256:07dd11ab3e",
+    "dataset_id": "ds_btcusdt_4h",
+    "symbol": "BTCUSDT",
+    "timeframe": "4h",
+    "range_start_utc_ms": 1640995200000,
+    "range_end_exclusive_utc_ms": 1767225600000,
+    "timezone": "UTC",
+    "calendar_policy": "24x7",
+    "closed_bar_policy": "CLOSED_BARS_ONLY"
+  },
+  "snapshot": {
+    "snapshot_id": "snap_1",
+    "snapshot_content_hash": "sha256:aa91b3ce77",
+    "market_content_hash": "sha256:4f1c2b9ae0",
+    "source_manifest_digest": "sha256:07dd11ab3e",
+    "row_count": 8766,
+    "byte_count": 1402560,
+    "query": {
+      "start_utc": "2021-12-12T00:00:00.000Z",
+      "end_exclusive_utc": "2026-01-01T00:00:00.000Z",
+      "start_utc_ms": 1639267200000,
+      "end_exclusive_utc_ms": 1767225600000
+    },
+    "logical_range": {
+      "start_utc": "2022-01-01T00:00:00.000Z",
+      "end_exclusive_utc": "2026-01-01T00:00:00.000Z",
+      "start_utc_ms": 1640995200000,
+      "end_exclusive_utc_ms": 1767225600000
+    },
+    "warmup": {
+      "start_utc": "2021-12-12T00:00:00.000Z",
+      "end_exclusive_utc": "2022-01-01T00:00:00.000Z",
+      "start_utc_ms": 1639267200000,
+      "end_exclusive_utc_ms": 1640995200000,
+      "requested_bars": 120,
+      "state": "BOUNDARY_ONLY_NOT_FIT"
+    },
+    "timezone": "UTC",
+    "calendar_policy": "24x7",
+    "closed_bar_policy": "CLOSED_BARS_ONLY",
+    "columns": [
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume"
+    ],
+    "quality": {
+      "rows": 8766,
+      "gaps": 2,
+      "duplicates": 0,
+      "gap_ratio": 0.00023,
+      "passed": true,
+      "reason_codes": [
+        "VENUE_MAINTENANCE"
+      ],
+      "missing_bar_count": 2,
+      "state": "SNAPSHOT_INTEGRITY_ONLY"
+    },
+    "provenance": {
+      "reader_class": "historical",
+      "sealed": true
+    }
+  },
+  "topology": {
+    "protocol": "three_window_decay",
+    "topology_digest": "sha256:4bc21f0a9e",
+    "folds": [
+      {
+        "fold_id": "fold_01",
+        "train": {
+          "start_utc": "2022-01-01T00:00:00.000Z",
+          "end_exclusive_utc": "2023-01-01T00:00:00.000Z",
+          "start_utc_ms": 1640995200000,
+          "end_exclusive_utc_ms": 1672531200000
+        },
+        "outer_oos": {
+          "start_utc": "2023-01-01T00:00:00.000Z",
+          "end_exclusive_utc": "2024-01-01T00:00:00.000Z",
+          "start_utc_ms": 1672531200000,
+          "end_exclusive_utc_ms": 1704067200000
+        },
+        "state": "BOUNDARY_FIXED_NOT_EVALUATED"
+      },
+      {
+        "fold_id": "fold_02",
+        "train": {
+          "start_utc": "2022-01-01T00:00:00.000Z",
+          "end_exclusive_utc": "2024-01-01T00:00:00.000Z",
+          "start_utc_ms": 1640995200000,
+          "end_exclusive_utc_ms": 1704067200000
+        },
+        "outer_oos": {
+          "start_utc": "2024-01-01T00:00:00.000Z",
+          "end_exclusive_utc": "2025-01-01T00:00:00.000Z",
+          "start_utc_ms": 1704067200000,
+          "end_exclusive_utc_ms": 1735689600000
+        },
+        "state": "BOUNDARY_FIXED_NOT_EVALUATED"
+      }
+    ],
+    "sealed_holdout": {
+      "start_utc": "2025-01-01T00:00:00.000Z",
+      "end_exclusive_utc": "2026-01-01T00:00:00.000Z",
+      "start_utc_ms": 1735689600000,
+      "end_exclusive_utc_ms": 1767225600000,
+      "snapshot_read_state": "OPAQUE_SNAPSHOT_ONLY",
+      "evaluation_state": "NOT_EVALUATED",
+      "disclosure": "The seal caps this run's certificate at B — unlock is a one-time audited read that creates a sibling attempt."
+    }
+  },
+  "resource_estimate": {
+    "schema_version": "research.resource-estimate.v1",
+    "scope": "per_study_per_fold_per_seed; no product-wide trial claim is implied",
+    "trial_count": 400,
+    "seed_count": 1,
+    "outer_fold_count": 2,
+    "evaluation_count": 800,
+    "raw_frame_bytes": 1402560,
+    "snapshot_bytes": 1402560,
+    "estimated_memory_bytes": 268435456,
+    "estimated_scratch_bytes": 134217728,
+    "estimated_cpu_seconds": 5400,
+    "admission_state": "PREFLIGHT_WITHIN_P10_DECLARATION_CEILING",
+    "disclosure": "This is a preflight estimate for the declared study scope. It is not a reservation and it does not queue engine time."
+  },
+  "capability": {
+    "engine_release_id": "er_quantbt_111",
+    "engine_catalog_digest": "sha256:c25a1d77b4",
+    "execution_route": "signal_notional",
+    "required_input_class": "single_symbol_ohlcv_plus_signal",
+    "route_axes": {
+      "engine": "ENGINE_SUPPORTED",
+      "integration": "ADAPTER_AVAILABLE",
+      "evidence": "EVIDENCE_MAPPED",
+      "admission": "P04_BASELINE_ONLY"
+    },
+    "preflight_admission": "PREFLIGHT_ONLY",
+    "optimization_mode": "per_fold_causal",
+    "optimization_schedule": "endpoint"
+  }
+}

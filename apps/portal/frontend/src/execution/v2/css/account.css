@@ -1,0 +1,594 @@
+/* Accounts and Account 360 (flag key `account`). Tokens and type roles only:
+ * no uppercase, no raw colour, no font-family or font-size. Every rule that
+ * sets both a text and a fill colour keeps the pair inside one rule so the
+ * contrast gate can read it; the pairs reuse ones fleet.css and blocks.css
+ * already proved. */
+.exec-acct-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-acct-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-acct-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-acct-subtitle {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-acct-back {
+  display: inline-block;
+  margin-bottom: var(--space-1);
+  font: var(--exec-font-meta);
+  color: var(--accent);
+}
+.exec-acct-controls,
+.exec-acct-fresh {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-acct-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-acct-banner[data-tone="attention"] {
+  border-color: var(--f-attention);
+}
+.exec-acct-banner[data-tone="stale"] {
+  border-color: var(--f-stale);
+}
+/* A shared binding is a warning, not a note (hi-fi .banner): warn fill and edge, same pair access.css proved. */
+.exec-acct-banner[data-tone="shared"] {
+  color: var(--ink);
+  background: var(--warn-bg);
+  border-color: var(--warn);
+}
+
+/* layout */
+.exec-acct-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.exec-acct-main[data-docked="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-acct-body,
+.exec-acct-panel,
+.exec-acct-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.exec-acct-stack {
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+.exec-acct-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.exec-acct-two > * {
+  min-width: 0;
+}
+
+/* tabs */
+.exec-acct-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-strong);
+}
+/* The environment tabs and the Issues toggle share one underline strip. */
+.exec-acct-tabrow {
+  display: flex;
+  align-items: flex-end;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-acct-tabrow .exec-acct-tabs {
+  overflow-x: visible;
+  border-bottom: 0;
+}
+.exec-acct-tabrow > .exec-acct-tab {
+  margin-left: var(--space-3);
+}
+.exec-acct-tab[aria-pressed="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+/* The currency that names one line of a mixed-currency Check cell: the flag's own label role, so the line reads as one size. */
+.exec-acct-ccy {
+  font: var(--exec-font-label);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+.exec-acct-url {
+  margin-left: auto;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-acct-url summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.exec-acct-url .exec-acct-mono {
+  overflow-wrap: anywhere;
+}
+.exec-acct-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.exec-acct-tab:hover {
+  color: var(--ink);
+}
+/* Underline tabs (hi-fi .tabs button): the selected tab is marked by the 2px accent line, not a fill. */
+.exec-acct-tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.exec-acct-tab:focus-visible,
+.exec-acct-segbtn:focus-visible,
+.exec-acct-btn:focus-visible,
+.exec-acct-input:focus-visible,
+.exec-acct-select:focus-visible,
+.exec-acct-chipx:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* .exec-acct-tabs scrolls (overflow-x), which also clips a 2px outline drawn outside the tab: draw it inside. */
+.exec-acct-tab:focus-visible {
+  outline-offset: -2px;
+}
+.exec-acct-tab-count {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+
+/* toolbar */
+.exec-acct-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-acct-field {
+  display: inline-flex;
+  min-width: 0;
+}
+.exec-acct-input,
+.exec-acct-select {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 5px 8px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-acct-input {
+  width: 240px;
+  max-width: 100%;
+}
+.exec-acct-input::placeholder {
+  color: var(--ink-faint);
+}
+.exec-acct-btn,
+.exec-acct-segbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-acct-btn:disabled,
+.exec-acct-segbtn:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-acct-seg {
+  display: inline-flex;
+}
+.exec-acct-segbtn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-acct-export {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.exec-acct-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exec-acct-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+.exec-acct-chipx {
+  padding: 0 4px;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+/* table cells */
+.exec-acct-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+}
+.exec-acct-name {
+  font: var(--exec-font-data);
+  font-weight: 600;
+  color: var(--ink);
+}
+.exec-acct-sub,
+.exec-acct-sub2,
+.exec-acct-why {
+  display: block;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  white-space: normal;
+}
+.exec-acct-link {
+  color: var(--accent);
+}
+/* A link inside a sentence is told apart by more than colour (WCAG 1.4.1, axe link-in-text-block). */
+.exec-acct-note .exec-acct-link {
+  text-decoration: underline;
+}
+/* Updated column: age against the read, with a filled square dot (hi-fi .dot); from 30 min a hollow warn diamond. */
+.exec-acct-ago {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+.exec-acct-dot {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  background: var(--good);
+}
+/* Stale is a different SHAPE, not only a different colour: a hollow diamond against the filled square. */
+.exec-acct-dot[data-stale="true"] {
+  box-sizing: border-box;
+  background: transparent;
+  border: 2px solid var(--warn);
+  transform: rotate(45deg);
+}
+a.exec-acct-open {
+  display: inline-block;
+  text-decoration: none;
+}
+.exec-acct-na,
+.exec-acct-np {
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-acct-mono {
+  margin: 0;
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-acct-withheld {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+
+/* footers, notes, empty states */
+.exec-acct-foot,
+.exec-acct-activity-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.exec-acct-count {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-acct-note,
+.exec-acct-cap {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-acct-cap {
+  padding: var(--space-2) var(--space-4);
+}
+.exec-acct-pad {
+  padding: var(--space-4);
+}
+.exec-acct-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  white-space: normal;
+}
+.exec-acct-empty p {
+  margin: 0;
+}
+
+/* facts and small tables */
+.exec-acct-facts,
+.exec-acct-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+.exec-acct-sidebar {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+}
+.exec-acct-fact {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 6px var(--space-3);
+  font: var(--exec-font-body);
+}
+.exec-acct-fact dt {
+  color: var(--ink-faint);
+}
+.exec-acct-fact dd {
+  margin: 0;
+  color: var(--ink);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.exec-acct-facts + .exec-acct-btn {
+  margin-top: var(--space-3);
+}
+.exec-acct-sidebar .exec-acct-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.exec-acct-sidebar .exec-acct-fact dd {
+  text-align: left;
+}
+.exec-acct-line {
+  margin: var(--space-2) 0 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-acct-k {
+  font: var(--exec-font-label);
+  color: var(--ink-faint);
+}
+.exec-acct-h {
+  margin: var(--space-3) 0 var(--space-2);
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-acct-minitable {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-acct-minitable th,
+.exec-acct-minitable td {
+  padding: 4px 4px 4px 0;
+  text-align: left;
+  border-top: 1px solid var(--line-soft);
+  /* A figure or a badge never breaks across lines (QA1 R4 I1). */
+  white-space: nowrap;
+}
+.exec-acct-minitable thead th {
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+  border-top: 0;
+}
+.exec-acct-prov {
+  margin-top: var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-acct-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+/* drawer body */
+.exec-acct-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.exec-acct-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The screen-reader-only text inside a table cell (the "(stale)" suffix) is absolutely positioned. Without a positioned
+ * ancestor inside the scroller its containing block is the page, so it escaped the table's own horizontal scroll and
+ * pushed the page sideways by the table's overhang between 661 and 1100 px (UXM-10 F-3). The wrap becomes its containing
+ * block, which clips it. Scoped to this screen: the shared cards table is used by other screens too. */
+.exec-acct-v2 .exec-cards-wrap {
+  position: relative;
+}
+.exec-acct-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  .exec-acct-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 660px) {
+  .exec-acct-main[data-docked="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exec-acct-input {
+    width: 100%;
+  }
+  .exec-acct-tool > .exec-acct-field:first-child {
+    flex: 1 1 100%;
+  }
+  .exec-acct-fact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}
+
+/* The capital invariant inside the narrow drawer: one block per currency, label left and figure right, so no figure or badge is
+ * squeezed to a few characters (QA1 R4 I1). The wide Physical binding view keeps the table. */
+.exec-acct-drawer .exec-acct-minitable,
+.exec-acct-drawer .exec-acct-minitable tbody,
+.exec-acct-drawer .exec-acct-minitable tr {
+  display: block;
+}
+.exec-acct-drawer .exec-acct-minitable thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.exec-acct-drawer .exec-acct-minitable tr {
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--line-soft);
+}
+.exec-acct-drawer .exec-acct-minitable tr > th,
+.exec-acct-drawer .exec-acct-minitable tr > td {
+  border-top: 0;
+}
+.exec-acct-drawer .exec-acct-minitable tbody th[scope="row"] {
+  display: block;
+  padding: 0 0 2px;
+  font: var(--exec-font-label);
+  color: var(--ink);
+}
+.exec-acct-drawer .exec-acct-minitable td {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 2px 0;
+  text-align: right;
+}
+.exec-acct-drawer .exec-acct-minitable td::before {
+  content: attr(data-l);
+  font: var(--exec-font-label);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+
+/* Accounts table: tighter cell padding so the eight columns fit the 1440 panel (QA1 R4 I2); the binding identity stays in view when
+ * the table scrolls at narrower widths (I5), and a sentence says so. */
+.exec-acct-v2 .exec-cards thead th,
+.exec-acct-v2 .exec-cards tbody td {
+  padding-left: var(--space-2);
+  padding-right: var(--space-2);
+}
+.exec-acct-v2 .exec-cards thead th:first-child,
+.exec-acct-v2 .exec-cards tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--paper-raised);
+  box-shadow: 1px 0 0 var(--line);
+}
+.exec-acct-v2 .exec-cards-wrap {
+  scrollbar-width: thin;
+  /* A control focused in a column that scrolled under the sticky binding column is brought out beside it, not left under it
+   * (WCAG 2.4.11): the padding is the sticky column's width (about 147px at 1024px) with some room. */
+  scroll-padding-left: 10rem;
+}
+.exec-acct-scrollhint {
+  display: none;
+}
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-acct-scrollhint {
+    display: inline;
+  }
+}
+
+/* A numeric column lines its figures, its absences and its sub-lines up on the right edge together (QA1 R4 I4). */
+.exec-acct-v2 .exec-cards td[data-numeric="true"] .exec-acct-cell {
+  align-items: flex-end;
+  text-align: right;
+}
+
+/* The sleeves table sits in a half-width panel: its column labels may take two lines so the figures keep their width. */
+.exec-acct-v2 table[aria-label="Sleeves on this binding"] thead th {
+  white-space: normal;
+}

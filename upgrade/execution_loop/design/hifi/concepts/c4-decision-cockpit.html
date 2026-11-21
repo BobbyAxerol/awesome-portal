@@ -1,0 +1,233 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C4 Decision cockpit — concept</title><link rel="stylesheet" href="../hifi.css">
+<style>
+/* Governance Light remap: page-local, hifi.css untouched */
+:root{color-scheme:light;--paper:#f7f6f1;--panel:#fff;--sunken:#e9edee;--cell:#efede5;--ink:#1b232b;--ink-soft:#404a54;--ink-faint:#68727c;--line:#d9d6ca;--line-soft:#e7e4da;--line-strong:#aeb3b3;
+--accent:#0e4a5a;--accent-strong:#0e4a5a;--accent-soft:#d9eaee;--accent-2:#b4531a;--good:#1c7b4a;--good-bg:#e2f1e8;--warn:#8a6100;--warn-bg:#fbf0cc;--bad:#b3261e;--bad-bg:#fbe3e0;
+--flag-pending:#9a6f00;--flag-recall:#b4531a;--flag-partial:#8a6b2c;--flag-unknown:#b8326a;--flag-applied:#0a7a77;--flag-rejected:#b3261e;--flag-reconcile:#1f6fb2;--flag-stale:#9a6f00;--flag-paused:#68727c;--flag-approval:#6b3fb0;--flag-incident:#b3261e;--flag-operation:#2f5fb8;
+--series:#3d7fdc;--series-2:#0a8a86;--series-dd:#c2570c;--series-sim:#7a4cc2;--chart-band:#b8892b}
+.serif{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;font-weight:500}
+h1.serif{font-size:26px;line-height:34px}
+.top{background:var(--paper);gap:16px}.top .sp{flex:1}
+.who{font:500 12px/16px var(--font-mono);color:var(--ink-soft);border:1px solid var(--line-strong);padding:3px 8px;background:var(--panel)}
+main{padding:16px 24px}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.seg button .ct{margin-left:6px;color:var(--ink-faint)}
+.ck{display:grid;grid-template-columns:320px minmax(0,1fr) 360px;gap:16px;align-items:start}
+.q{padding:0}.q .ph{margin:0}
+.qi{display:block;width:100%;text-align:left;background:var(--panel);border:0;border-bottom:1px solid var(--line);border-left:3px solid transparent;padding:10px 14px;cursor:pointer;font:inherit;color:inherit}
+.qi:hover{background:var(--cell)}.qi[aria-selected=true]{background:var(--accent-soft);border-left-color:var(--accent)}
+.qi:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.qt{display:flex;gap:8px;align-items:center}.qt b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kd{font:500 10.5px/16px var(--font-mono);letter-spacing:.08em;border:1px solid var(--ink-soft);padding:0 5px;color:var(--ink)}
+.qm{font:400 11px/16px var(--font-mono);color:var(--ink-faint);margin-top:2px}.qf{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px}
+.qi.done{opacity:.6}
+.keys{display:flex;gap:6px 12px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid var(--line-strong);background:var(--sunken);font:400 11px/16px var(--font-mono);color:var(--ink-soft)}
+kbd{font:500 11px/16px var(--font-mono);border:1px solid var(--line-strong);border-bottom-width:2px;background:var(--panel);padding:0 5px;color:var(--ink)}
+.gchip{font:500 11px/16px var(--font-mono);letter-spacing:.1em;border:1px solid var(--accent);color:var(--accent);padding:1px 8px;background:var(--panel)}
+.ladder{display:flex;flex-wrap:wrap;gap:2px 10px;font:400 12px/18px var(--font-mono);color:var(--ink-faint);margin:6px 0 4px}.ladder .on{color:var(--ink);border-bottom:2px solid var(--ink);font-weight:500}.ladder .ok{color:var(--good)}
+.meta{font:400 12px/16px var(--font-mono);color:var(--ink-soft);display:flex;gap:4px 18px;flex-wrap:wrap}
+.vd{--c:var(--good);border:1px solid var(--line-strong);border-left:4px solid var(--c);background:var(--panel);padding:12px 16px;margin:12px 0}
+.vd.warn{--c:var(--warn)}.vd.bad{--c:var(--bad)}.vd.mute{--c:var(--ink-faint)}
+.vd h2{margin:0 0 4px;font:500 18px/26px var(--font-sans)}
+.meter{display:flex;gap:3px;margin-top:8px;align-items:center}.meter i{height:8px;width:36px;background:var(--good)}.meter i.w{background:var(--warn)}.meter i.x{background:var(--bad)}.meter i.o{background:var(--line)}.meter span{font:500 12px/16px var(--font-mono);margin-right:6px}
+.ev,.evg{display:grid;gap:16px}
+.ev [data-ev]{display:none}body[data-k=r1] [data-ev~=r1],body[data-k=r2] [data-ev~=r2],body[data-k=exit] [data-ev~=exit],body[data-k=live] [data-ev~=live]{display:block}
+body[data-k=r1] table[data-ev~=r1],body[data-k=r2] table[data-ev~=r2],body[data-k=exit] table[data-ev~=exit],body[data-k=live] table[data-ev~=live]{display:table}
+.strip{--ink:#f4f4f4;--accent:#78a9ff;--line:#393939}
+.vt td,.vt th{padding:6px 12px}.vt td.n{white-space:nowrap}
+.vt td:last-child,.vt th:last-child{text-align:left}
+.cl{margin:0;padding:0;list-style:none}.cl li{padding:6px 0;border-bottom:1px solid var(--line-soft);display:flex;gap:10px}.cl b{font-family:var(--font-mono);width:14px;display:inline-block}.cl .ok b{color:var(--good)}.cl .w b{color:var(--warn)}
+details.d{border:1px solid var(--line-strong);background:var(--panel)}details.d>summary{padding:9px 16px;background:var(--sunken);font:500 11px/16px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft);cursor:pointer;list-style:none}
+details.d>summary::before{content:"▸ ";color:var(--ink-faint)}details.d[open]>summary::before{content:"▾ "}details.d>div{padding:8px 16px 12px}
+.dark{background:#17202a;color:#e8eef2;padding:0;border:1px solid #17202a}.dark .ph{margin:0;background:#0f161d;color:#aab6bf;border-color:#2b3743}
+.dark table td,.dark table th{border-color:#2b3743;background:transparent;color:#e8eef2}.dark th{color:#8fa0ab;background:#0f161d}
+.rail{position:sticky;top:44px;display:grid;gap:12px}
+.rail .panel{padding:0}.rail .ph{margin:0}.rail .bd{padding:12px 14px;display:grid;gap:10px}
+.sod{display:flex;gap:8px;align-items:flex-start;font-size:12px;line-height:18px}.sod b{font-family:var(--font-mono)}.sod.ok{color:var(--good)}.sod.no{color:var(--bad)}
+.quo{display:flex;align-items:center;gap:8px;font:400 12px/16px var(--font-mono);color:var(--ink-soft)}.quo i{width:18px;height:10px;border:1px solid var(--ink-soft);display:inline-block}.quo i.f{background:var(--ink-soft)}.quo i.p{background:repeating-linear-gradient(135deg,var(--ink-soft) 0 2px,transparent 2px 4px)}
+label.lb{font:500 11px/16px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+textarea{width:100%;font:400 13px/18px var(--font-sans);color:var(--ink);background:var(--panel);border:1px solid var(--line-strong);padding:8px 10px;resize:vertical;min-height:56px}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}.acts .pri{flex:1;min-width:140px;background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn{background:var(--panel);color:var(--ink);border:1px solid var(--line-strong)}
+.why{font:400 12px/16px var(--font-sans);color:var(--bad);min-height:16px}.why a{margin-left:6px}.why.ok{color:var(--good)}
+.rc{border:1px dashed var(--ink-soft);background:var(--panel)}.rc.rec{border:1px solid var(--flag-applied);border-left:4px solid var(--flag-applied)}
+.rc .rh{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);font:500 11px/16px var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+.rc.dim{opacity:.55}.rc table td{height:26px;padding:3px 12px;border-bottom:1px solid var(--line-soft);white-space:normal}.rc td:first-child{color:var(--ink-faint);font:400 11px/16px var(--font-mono);text-transform:uppercase;letter-spacing:.06em;width:34%}
+.help{position:fixed;inset:0;background:rgba(15,22,29,.45);display:none;place-items:center;z-index:30}.help.on{display:grid}.help .panel{width:360px;padding:0}
+.help td{height:30px}
+@media(max-width:1250px){.ck{grid-template-columns:300px minmax(0,1fr)}.rail{grid-column:1/3;position:static;grid-template-columns:1fr 1fr;align-items:start}}
+@media(max-width:860px){.crumb{display:none}.top{gap:8px}.ck{grid-template-columns:1fr}.rail{grid-column:1;grid-template-columns:1fr}main{padding:12px}}
+</style></head>
+<body data-state="healthy" data-k="r1">
+<div class="strip"><span>Concept · C4</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Reviewer</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Governance / <b>Decision cockpit</b></span><span class="sp"></span><span class="who" id="who">Lan · Ops Approver</span><button class="btn" id="helpBtn">? Keys</button></header>
+<main>
+<div class="head"><div><h1 class="serif">Decision cockpit</h1><div class="sub" data-s="healthy sparse">Sorted by SLA · one shell for every gate</div><div class="sub" data-s="researcher">Your requests · read only</div></div>
+ <span class="seg" id="kind"><button data-v="r1" aria-pressed="true">R1<span class="ct">1</span></button><button data-v="r2" aria-pressed="false">R2<span class="ct">1</span></button><button data-v="exit" aria-pressed="false">Exit<span class="ct">1</span></button><button data-v="live" aria-pressed="false">Live<span class="ct">1</span></button></span></div>
+
+<div class="ck">
+ <section class="panel q" aria-label="Decision queue"><h2 class="ph">Queue <span class="r">by SLA</span></h2><div id="queue"></div>
+  <details class="d" style="border:0;border-top:1px solid var(--line-strong)" data-s="healthy"><summary>Decided today · 2</summary><div><div class="qm">AP-188 · R1 · Approved 09:12 <span class="tagu" data-k="applied" data-g="✓">Recorded</span></div><div class="qm" style="margin-top:6px">EX-702 · Exit · Rejected 08:40 <span class="tagu" data-k="rejected" data-g="✕">Recorded</span></div></div></details>
+  <div class="keys"><span><kbd>J</kbd><kbd>K</kbd> move</span><span><kbd>A</kbd> approve</span><span><kbd>R</kbd> reject</span><span><kbd>N</kbd> note</span><span><kbd>?</kbd> help</span></div></section>
+
+ <section class="ev" aria-label="Evidence">
+  <div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="gchip" id="gate">GATE R1</span><h1 class="serif" id="title" style="font-size:22px;line-height:30px"></h1></div>
+   <div class="ladder" id="ladder"></div><div class="meta" id="meta"></div></div>
+
+  <div class="vd" id="vd"><h2 id="vt"></h2><div class="meta" id="vm"></div><div class="meter" id="meter"></div></div>
+
+  <div class="panel" data-s="sparse" style="padding:0"><h2 class="ph" style="margin:0">Evidence diff</h2><div style="padding:24px"><div class="na" style="font-size:15px">Not available</div><div class="na">Evidence source not published for this request</div></div></div>
+
+  <div data-s="healthy researcher" class="evg">
+   <!-- R1 -->
+   <div class="panel" data-ev="r1" style="padding:0"><h2 class="ph" style="margin:0">Evidence diff · observed vs approved <span class="r">OOS · 60 d</span></h2><div style="padding:12px 16px"><div class="chart" id="c-r1"></div><div class="cap"><span>Band = approved return range</span><span>Dashed = approved in-sample path</span></div></div></div>
+   <div class="panel" data-ev="exit" style="padding:0"><h2 class="ph" style="margin:0">Evidence diff · observed vs approved <span class="r">Paper · 30 d · restarts marked</span></h2><div style="padding:12px 16px"><div class="chart" id="c-exit"></div><div class="cap"><span>Band = approved return range</span><span>Dashed = approved backtest path</span><span>Squares = restart cycles</span></div></div></div>
+   <div class="panel" data-ev="live" style="padding:0"><h2 class="ph" style="margin:0">Evidence diff · canary vs paper twin <span class="r">30 d</span></h2><div style="padding:12px 16px"><div class="chart" id="c-live"></div><div class="cap"><span>Band = approved return range</span><span>Dashed = paper twin</span></div></div></div>
+   <div class="panel dark" data-ev="r2"><h2 class="ph">Capital change preview <span class="r" style="color:#8fa0ab">DERIVED · NOT APPLIED</span></h2><table><thead><tr><th>Item</th><th>Ccy</th><th class="n">Before</th><th class="n">After approval</th></tr></thead><tbody><tr><td>Allocated</td><td>USDT</td><td class="n">500.00</td><td class="n">550.00</td></tr><tr><td>Used</td><td>USDT</td><td class="n">100.00</td><td class="n">100.00</td></tr><tr><td>Reserved</td><td>USDT</td><td class="n">25.00</td><td class="n">25.00</td></tr></tbody></table></div>
+
+   <div class="panel" style="padding:0"><h2 class="ph" style="margin:0">Drift verdict <span class="r">metric · observed · limit</span></h2><div class="tw">
+    <table class="vt" data-ev="r1"><thead><tr><th>Metric</th><th class="n">Observed</th><th class="n">Limit</th><th>Verdict</th></tr></thead><tbody>
+     <tr><td>OOS Sharpe</td><td class="n">1.42</td><td class="n">≥ 1.00</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Max drawdown</td><td class="n">−6.1%</td><td class="n">≥ −8.0%</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Parameter stability</td><td class="n">0.86</td><td class="n">≥ 0.80</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Audit replay checksum</td><td class="n">match</td><td class="n">match</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Capacity coverage</td><td class="n">top-3 symbols</td><td class="n">all symbols</td><td><span class="tagu" data-k="partial" data-g="!">Warn</span></td></tr></tbody></table>
+    <table class="vt" data-ev="r2"><thead><tr><th>Metric</th><th class="n">Observed</th><th class="n">Limit</th><th>Verdict</th></tr></thead><tbody>
+     <tr><td>Allocation after</td><td class="n">550</td><td class="n">≤ 600</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Max order</td><td class="n">5,000</td><td class="n">≤ 10,000</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Daily loss cap</td><td class="n">3%</td><td class="n">≤ 5%</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Broker sync age</td><td class="n">14 m</td><td class="n">≤ 5 m</td><td><span class="tagu" data-k="rejected" data-g="✕">Blocker</span></td></tr>
+     <tr><td>Portfolio fit</td><td class="na n">Not available</td><td class="na n">Not available</td><td><span class="tagu">Not published</span></td></tr></tbody></table>
+    <table class="vt" data-ev="exit"><thead><tr><th>Metric</th><th class="n">Observed</th><th class="n">Limit</th><th>Verdict</th></tr></thead><tbody>
+     <tr><td>Hit rate vs run</td><td class="n">−1.1 pt</td><td class="n">± 3.0 pt</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Avg trade net</td><td class="n">−0.04 pt</td><td class="n">± 0.10 pt</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Fee drag</td><td class="n">+0.006 pt</td><td class="n">≤ +0.005 pt</td><td><span class="tagu" data-k="partial" data-g="!">Warn</span></td></tr>
+     <tr><td>Slippage</td><td class="n na">Not available</td><td class="n">≤ 0.02 pt</td><td><span class="tagu">No blotter data</span></td></tr>
+     <tr><td>Max drawdown</td><td class="n">−1.4%</td><td class="n">≥ −6.0%</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Reject rate</td><td class="n">0.2%</td><td class="n">≤ 0.5%</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr></tbody></table>
+    <table class="vt" data-ev="live"><thead><tr><th>Metric</th><th class="n">Observed</th><th class="n">Limit</th><th>Verdict</th></tr></thead><tbody>
+     <tr><td>PnL vs paper twin</td><td class="n">+0.4%</td><td class="n">± 1.0%</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Fill rate</td><td class="n">98.2%</td><td class="n">≥ 97.0%</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Slippage</td><td class="n">1.9 bp</td><td class="n">≤ 2.0 bp</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr>
+     <tr><td>Latency p95</td><td class="n">142 ms</td><td class="n">≤ 120 ms</td><td><span class="tagu" data-k="partial" data-g="!">Warn</span></td></tr>
+     <tr><td>Reconciliation breaks</td><td class="n">0</td><td class="n">0</td><td><span class="tagu" data-k="applied" data-g="✓">Within</span></td></tr></tbody></table>
+   </div></div>
+
+   <details class="d" data-ev="r1"><summary>Checklist · 4 of 5 · 1 warning</summary><div><ul class="cl"><li class="ok"><b>✓</b>Engine, data and version pinned by digest</li><li class="ok"><b>✓</b>Final audit replay reproducible</li><li class="ok"><b>✓</b>Outer OOS policy satisfied</li><li class="ok"><b>✓</b>Parameter stability across folds</li><li class="w"><b>!</b>Capacity evidence limited to top-3 symbols</li></ul></div></details>
+   <details class="d" data-ev="r2"><summary>Checklist · 3 of 4 · 1 blocker</summary><div><ul class="cl"><li class="ok"><b>✓</b>Account and risk plan pinned to policy rev 7</li><li class="ok"><b>✓</b>Separation of duty: plan author cannot sole-approve</li><li class="ok"><b>✓</b>Capital preview derived, not applied</li><li class="w"><b>!</b>Broker sync stale 14 m</li></ul></div></details>
+   <details class="d" data-ev="exit"><summary>Checklist · 6 of 7 · 1 warning</summary><div><ul class="cl"><li class="ok"><b>✓</b>30 / 30 days · 312 / 300 trades</li><li class="ok"><b>✓</b>2 / 2 restart cycles</li><li class="ok"><b>✓</b>Data freshness violations 0 · coverage 99.6%</li><li class="ok"><b>✓</b>Portfolio fit within band</li><li class="ok"><b>✓</b>Max drawdown within limit</li><li class="ok"><b>✓</b>Rejects and dead letters within limit</li><li class="w"><b>!</b>Fee drag above limit · carried to Sandbox</li></ul></div></details>
+   <details class="d" data-ev="live"><summary>Checklist · 4 of 5 · 1 warning</summary><div><ul class="cl"><li class="ok"><b>✓</b>Canary window complete</li><li class="ok"><b>✓</b>Paper twin comparison within band</li><li class="ok"><b>✓</b>No open incidents</li><li class="ok"><b>✓</b>Reconciliation clean</li><li class="w"><b>!</b>Latency p95 above limit</li></ul></div></details>
+  </div>
+ </section>
+
+ <aside class="rail" aria-label="Decision">
+  <div class="panel"><h2 class="ph">Decision <span class="r" id="polr">policy approval.v3</span></h2><div class="bd">
+   <div class="sod ok" id="sod"></div>
+   <div class="quo" id="quo"></div>
+   <div><label class="lb" for="note">Reviewer note</label><textarea id="note" placeholder="Reason recorded with the decision" rows="2"></textarea><div class="m faint" id="nhint" style="font-size:11px;color:var(--ink-faint)">Required to reject</div></div>
+   <div class="acts"><button class="btn pri" id="ap">Approve <kbd>A</kbd></button><button class="btn" id="rj">Reject <kbd>R</kbd></button><button class="btn" id="nt">Note <kbd>N</kbd></button></div>
+   <div class="why" id="why" role="status"></div>
+  </div></div>
+  <div class="rc" id="rc"><div class="rh"><span id="rtag">Preview · not recorded</span><span id="rid" class="mono"></span></div><table><tbody id="rrows"></tbody></table></div>
+ </aside>
+</div>
+</main>
+<div class="help" id="help" role="dialog" aria-label="Keyboard help"><div class="panel"><h2 class="ph" style="margin:0">Keys <span class="r">Esc closes</span></h2><table><tbody>
+ <tr><td><kbd>J</kbd> <kbd>K</kbd></td><td>Next · previous request</td></tr><tr><td><kbd>A</kbd></td><td>Approve, then <kbd>Ctrl</kbd>+<kbd>Enter</kbd> confirms</td></tr><tr><td><kbd>R</kbd></td><td>Reject, note required</td></tr><tr><td><kbd>N</kbd></td><td>Focus the note</td></tr><tr><td><kbd>Esc</kbd></td><td>Cancel the pending decision</td></tr></tbody></table></div></div>
+<script src="../hifi.js"></script>
+<script>
+var USER="Lan",STORE={};
+var R=[
+ {id:"AP-352",k:"r2",gate:"GATE R2",ladder:"R2",title:"Operational Readiness — Carry v3.2 → PF-MAIN",short:"Carry v3.2 → PF-MAIN",sub:"Sandbox · OKX TESTNET",slaMin:-120,sla:"overdue 2h",pct:100,need:2,have:0,creator:"Stan",blocker:"broker sync stale",vt:"Blocked — 1 blocker: broker sync stale",vk:"bad",meter:"ooox".split(""),score:"4/5",effect:"Grants paper_activation_authorization only",meta:["request AP-352","release RC-41","policy approval.v3"]},
+ {id:"AP-410",k:"live",gate:"GATE LIVE",ladder:"Live",title:"Live Promotion — Carry v3.2 → PF-MAIN",short:"Carry v3.2 → PF-MAIN",sub:"Canary → Live",slaMin:360,sla:"6h left",pct:60,need:2,have:1,creator:"Lan",vt:"Ready — you cannot decide your own request",vk:"mute",meter:"oooow".split(""),score:"4/5",effect:"Promotes to LIVE · step-up required",meta:["request AP-410","deployment dep_77","policy approval.v3"]},
+ {id:"AP-201",k:"r1",gate:"GATE R1",ladder:"R1",title:"Research Evidence Approval — RSI v1.7",short:"RSI v1.7 · RC-41",sub:"Research",slaMin:1320,sla:"22h left",pct:8,need:2,have:0,creator:"Minh",researcher:true,vt:"Can be approved — 1 warning suggests a condition",vk:"warn",meter:"ooooow".split(""),score:"5/6",effect:"Creates research_approval_id bound to RC-41",meta:["request AP-201","release candidate RC-41","policy approval.v3"]},
+ {id:"EX-771",k:"exit",gate:"PAPER EXIT",ladder:"Paper",title:"Grid v2.1 · dep_94 · DERIBIT",short:"Grid v2.1 · dep_94",sub:"Paper → Sandbox",slaMin:2640,sla:"44h left",pct:8,need:1,have:0,creator:"Minh",vt:"Gate met — ready to promote to SANDBOX_VALIDATION",vk:"",meter:"oooooow".split(""),score:"6/7",effect:"Promotes to SANDBOX_VALIDATION · no external effect",meta:["review EX-771","30 / 30 days · 312 trades","observation policy obs_29"]}
+];
+R.sort(function(a,b){return a.slaMin-b.slaMin});
+var S={sel:2,mode:null};
+function st(){return document.body.getAttribute("data-state")}
+function list(){return st()==="researcher"?R.filter(function(r){return r.researcher}):R}
+function cur(){var l=list();return l[Math.min(S.sel,l.length-1)]}
+function fl(k,g,t){return '<span class="tagu" data-k="'+k+'" data-g="'+g+'">'+t+'</span>'}
+function recOf(r){return st()==="healthy"?STORE[r.id]:null}
+function can(r){var s=st(),rec=recOf(r);
+ if(rec)return{ap:0,rj:0,why:"Decision recorded. It cannot be edited.",link:0};
+ if(s==="sparse")return{ap:0,rj:0,why:"Evidence not published.",link:0};
+ if(s==="researcher")return{ap:0,rj:0,why:"Reviewers decide this request.",link:1};
+ if(r.creator===USER)return{ap:0,rj:0,why:"You created this request.",link:1};
+ if(r.blocker)return{ap:0,rj:1,why:"Blocked: "+r.blocker+".",link:0};
+ return{ap:1,rj:1,why:"",link:0}}
+function renderQ(){var q=document.getElementById("queue"),l=list(),h="";
+ l.forEach(function(r,i){var c=can(r),rec=recOf(r),f="";
+  if(rec)f=fl(rec.dec==="approve"?"applied":"rejected",rec.dec==="approve"?"✓":"✕",rec.dec==="approve"?"Approved":"Rejected");
+  else{if(r.slaMin<0)f+=fl("rejected","!","Overdue");else f+=fl("pending","◔","Pending "+r.have+"/"+r.need);
+   if(st()==="healthy"){if(r.creator===USER)f+=fl("paused","⊘","Not yours");else if(r.blocker)f+=fl("incident","▲","Blocker");else f+=fl("approval","◈","Needs you")}}
+  h+='<button class="qi'+(rec?" done":"")+'" data-i="'+i+'" aria-selected="'+(i===S.sel)+'"><div class="qt"><span class="kd">'+r.ladder.toUpperCase()+'</span><b>'+r.short+'</b></div><div class="qm">'+r.id+" · "+r.sub+'</div><div class="qf">'+f+'</div><div class="sla'+(r.slaMin<0?" bad":"")+'"><i style="width:'+r.pct+'%"></i></div><div class="qm">'+r.sla+' · '+r.have+" of "+r.need+' approvers</div></button>'});
+ q.innerHTML=h;q.querySelectorAll(".qi").forEach(function(b){b.addEventListener("click",function(){pick(+b.getAttribute("data-i"))})})}
+function ladder(r){var seq=["Report","RC","R1","R2","Paper","Sandbox","Canary","Live"],ix=seq.indexOf(r.ladder),h="";seq.forEach(function(s,i){h+='<span class="'+(i<ix?"ok":i===ix?"on":"")+'">'+(i<ix?"✓ ":"")+s+"</span>"});return h}
+function renderHead(){var r=cur();document.body.setAttribute("data-k",r.k);document.getElementById("gate").textContent=r.gate;document.getElementById("title").textContent=r.title;
+ document.getElementById("ladder").innerHTML=ladder(r);document.getElementById("meta").innerHTML=r.meta.map(function(x){return"<span>"+x+"</span>"}).join("");
+ var vd=document.getElementById("vd"),s=st(),vt=r.vt,vk=r.vk;
+ if(s==="sparse"){vt="Evidence not available";vk="mute"}
+ vd.className="vd "+vk;document.getElementById("vt").textContent=vt;
+ var sod=st()==="researcher"?'<span class="no" style="color:var(--ink-soft)">Read only · reviewers decide your request</span>':r.creator===USER?'<span class="no">✕ Separation of duty: you created this request</span>':'<span>✓ Separation of duty OK · creator '+r.creator+" ≠ you ("+USER+")</span>";
+ document.getElementById("vm").innerHTML="<span>"+(s==="sparse"?"Not available":"checklist "+r.score)+"</span><span>quorum "+r.have+" of "+r.need+"</span><span>SLA "+r.sla+"</span>";
+ var m="";if(s!=="sparse"){m='<span>'+r.score+'</span>';r.meter.forEach(function(c){m+="<i class='"+(c==="o"?"":c==="w"?"w":"x")+"'></i>"})}document.getElementById("meter").innerHTML=m;
+ var so=document.getElementById("sod");so.className="sod "+(st()==="researcher"?"":r.creator===USER?"no":"ok");so.innerHTML=sod;
+ var qh="Quorum ";for(var i=0;i<r.need;i++)qh+='<i class="'+(i<r.have?"f":(i===r.have&&can(r).ap&&S.mode==="approve"?"p":""))+'"></i>';qh+=" "+r.have+" of "+r.need+" so far";document.getElementById("quo").innerHTML=qh;
+ var k=document.getElementById("kind");[].forEach.call(k.querySelectorAll("button"),function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===r.k?"true":"false");b.disabled=st()==="researcher"&&b.getAttribute("data-v")!==r.k;b.style.opacity=b.disabled?".45":""})}
+function renderRail(){var r=cur(),c=can(r),rec=recOf(r),ap=document.getElementById("ap"),rj=document.getElementById("rj"),w=document.getElementById("why"),note=document.getElementById("note");
+ var noteOk=note.value.trim().length>=12;
+ ap.disabled=!c.ap;rj.disabled=!c.rj;
+ if(S.mode==="approve"){ap.innerHTML='Confirm approve <kbd>Ctrl ↵</kbd>';ap.disabled=!c.ap}
+ else ap.innerHTML='Approve <kbd>A</kbd>';
+ if(S.mode==="reject"){rj.innerHTML='Confirm reject <kbd>Ctrl ↵</kbd>';rj.disabled=!(c.rj&&noteOk);rj.className="btn pri";ap.className="btn"}
+ else{rj.innerHTML='Reject <kbd>R</kbd>';rj.className="btn";ap.className="btn pri"}
+ document.getElementById("nhint").textContent=S.mode==="reject"&&!noteOk?"Required to reject · 12+ characters":"Required to reject";
+ w.className="why"+(rec?" ok":"");w.innerHTML=c.why?(c.why+(c.link?' <a href="../m10-profile-access.html">Why?</a>':"")):"";
+ note.disabled=!!rec;
+ var rc=document.getElementById("rc"),rows="",dec=S.mode||"approve";
+ rc.className="rc"+(rec?" rec":"")+((!c.ap&&!c.rj&&!rec)||(!S.mode&&!rec)?" dim":"");
+ var cnt=Math.min(r.need,r.have+1);
+ if(rec){document.getElementById("rtag").textContent="Recorded";document.getElementById("rid").textContent=rec.rcpt;
+  rows+="<tr><td>Decision</td><td>"+(rec.dec==="approve"?"Approved":"Rejected")+" · "+rec.t+"</td></tr>"}
+ else{document.getElementById("rtag").textContent="Preview · not recorded";document.getElementById("rid").textContent="";
+  rows+="<tr><td>Decision</td><td>"+(S.mode?(dec==="approve"?"Approve":"Reject"):"None chosen")+"</td></tr>"}
+ var eff=dec==="approve"?r.effect:"No change · returns to the author";
+ rows+="<tr><td>Request</td><td class='mono'>"+r.id+" · "+r.gate+"</td></tr><tr><td>You</td><td>"+(st()==="researcher"?"asmith · Researcher":USER+" · Ops Approver")+"</td></tr>";
+ if(!rec&&!c.ap&&!c.rj){rows=rows.replace("None chosen","Not available to you");document.getElementById("rrows").innerHTML=rows+"<tr><td>What changes</td><td>Nothing to record</td></tr>";return}
+ var cn=rec?(rec.dec==="approve"?Math.min(r.need,r.have+1):r.have):cnt;
+ rows+="<tr><td>Counts as</td><td class='mono'>"+(dec==="approve"||rec&&rec.dec==="approve"?cn+" of "+r.need+" approvers":"no approval")+"</td></tr><tr><td>What changes</td><td>"+(rec&&rec.dec==="reject"?"No change · returns to the author":eff)+"</td></tr>";
+ if(rec)rows+="<tr><td>Note</td><td>"+(rec.note?rec.note.replace(/</g,"&lt;"):"<span class='na'>None</span>")+"</td></tr>";
+ document.getElementById("rrows").innerHTML=rows}
+function drawCharts(){var gh=function(n,e){var a=[];for(var i=0;i<n;i++)a.push(e*i/(n-1)+Math.sin(i/4)*320);return a};
+ var h=document.getElementById("c-r1");if(h&&h.offsetParent)equityChart(h,{h:230,n:60,seed:21,drift:110,vol:1300,mode:"ret",base:100000,end:6400,drawdown:false,band:{lo:2,hi:10},ghost:gh(60,5600),ghostName:"Approved in-sample",seriesName:"Observed OOS return",label:"R1 evidence diff"});
+ h=document.getElementById("c-exit");if(h&&h.offsetParent)equityChart(h,{h:230,n:30,seed:33,drift:110,vol:1200,mode:"ret",base:100000,end:3100,drawdown:false,band:{lo:1,hi:5},ghost:gh(30,3300),ghostName:"Approved backtest",seriesName:"Observed paper return",events:[{ago:9},{ago:22}],label:"Exit evidence diff"});
+ h=document.getElementById("c-live");if(h&&h.offsetParent)equityChart(h,{h:230,n:30,seed:44,drift:80,vol:900,mode:"ret",base:100000,end:2100,drawdown:false,band:{lo:.5,hi:4},ghost:gh(30,1700),ghostName:"Paper twin",seriesName:"Canary return",label:"Live evidence diff"})}
+function renderAll(){renderHead();renderQ();renderRail();setTimeout(drawCharts,0)}
+function pick(i){S.sel=i;S.mode=null;document.getElementById("note").value="";renderAll();var b=document.querySelector('.qi[aria-selected="true"]');if(b)b.focus({preventScroll:true})}
+function arm(m){var r=cur(),c=can(r);var ok=m==="approve"?c.ap:c.rj;if(!ok){renderRail();var w=document.getElementById("why");w.style.fontWeight=600;setTimeout(function(){w.style.fontWeight=""},600);return}
+ S.mode=m;renderHead();renderRail();document.getElementById("note").focus()}
+function confirm(){var r=cur(),c=can(r);if(!S.mode)return;var note=document.getElementById("note").value.trim();
+ if(S.mode==="approve"&&!c.ap)return;if(S.mode==="reject"&&!(c.rj&&note.length>=12))return;
+ STORE[r.id]={dec:S.mode,note:note,rcpt:"rcpt_"+r.id.toLowerCase().replace("-","")+"_a1",t:"12:04Z"};S.mode=null;renderAll()}
+document.getElementById("ap").addEventListener("click",function(){S.mode==="approve"?confirm():arm("approve")});
+document.getElementById("rj").addEventListener("click",function(){S.mode==="reject"?confirm():arm("reject")});
+document.getElementById("nt").addEventListener("click",function(){document.getElementById("note").focus()});
+document.getElementById("note").addEventListener("input",renderRail);
+document.getElementById("kind").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;var l=list(),ix=l.findIndex(function(r){return r.k===b.getAttribute("data-v")});if(ix>=0)pick(ix)});
+var hp=document.getElementById("help");function help(on){hp.classList.toggle("on",on===undefined?!hp.classList.contains("on"):on)}
+document.getElementById("helpBtn").addEventListener("click",function(){help()});hp.addEventListener("click",function(e){if(e.target===hp)help(false)});
+document.addEventListener("keydown",function(e){var t=e.target,typing=t&&(t.tagName==="TEXTAREA"||t.tagName==="INPUT");
+ if(e.key==="Escape"){if(hp.classList.contains("on"))help(false);else{S.mode=null;renderHead();renderRail();if(typing)t.blur()}return}
+ if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){confirm();return}
+ if(typing||e.ctrlKey||e.metaKey||e.altKey)return;var k=e.key.toLowerCase(),l=list();
+ if(k==="j"||e.key==="ArrowDown"){e.preventDefault();pick(Math.min(l.length-1,S.sel+1))}
+ else if(k==="k"||e.key==="ArrowUp"){e.preventDefault();pick(Math.max(0,S.sel-1))}
+ else if(k==="a"){e.preventDefault();arm("approve")}else if(k==="r"){e.preventDefault();arm("reject")}
+ else if(k==="n"){e.preventDefault();document.getElementById("note").focus()}else if(e.key==="?"){help()}});
+window.onctl=function(){S.sel=Math.min(S.sel,list().length-1);S.mode=null;document.getElementById("who").textContent=st()==="researcher"?"asmith · Researcher":"Lan · Ops Approver";renderAll()};
+window.addEventListener("resize",function(){drawCharts()});
+renderAll();
+</script></body></html>

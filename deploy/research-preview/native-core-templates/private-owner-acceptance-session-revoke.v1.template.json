@@ -1,0 +1,18 @@
+{
+  "schema_version": "portal.private-owner-acceptance-session-revoke.v1",
+  "target": {
+    "database_name": "portal_control",
+    "database_system_identifier": "7688673963308855330",
+    "role_name": "portal",
+    "protected_owner_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+    "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+    "principal_workspace_pins": [
+      { "user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434", "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660" }
+    ]
+  },
+  "session_id": "<<FILL:str:SESSION_ID|the session_id printed by the issue receipt; only a Research acceptance session of the owner is accepted>>",
+  "user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+  "token_path": "<<FILL:path:SESSION_TOKEN_PATH|the SAME path as the issue artifact; wiped and removed after the revoke>>",
+  "approval_ref": "<<FILL:str:SESSION_REVOKE_APPROVAL_REF|reference to the approval; never invented>>",
+  "provenance_ref": "<<FILL:str:SESSION_REVOKE_PROVENANCE_REF|where the independent review of THIS file is recorded>>"
+}

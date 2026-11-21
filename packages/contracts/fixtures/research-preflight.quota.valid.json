@@ -1,0 +1,11 @@
+{
+  "error": {
+    "code": "RESEARCH_PREFLIGHT_UNAVAILABLE",
+    "message": "Research preflight is temporarily unavailable."
+  },
+  "request_id": "full01-quota-fixture",
+  "details": {
+    "gate": "preflight_manifest_quota",
+    "retry_after_seconds": 600
+  }
+}

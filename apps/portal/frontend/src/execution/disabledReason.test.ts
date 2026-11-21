@@ -96,11 +96,17 @@ const STRUCTURAL: Readonly<Record<string, string>> = {
   "execution/lab/adminCliDemo.tsx|disabled": "fixture lab, not a product route",
   "features/runs/CancelRunButton.tsx|disabled={cancel.pending}": "cancel is disabled only while its own request is in flight",
   "auth/LoginScreen.tsx|disabled={submitting}": "submit greyed while submitting; the label itself changes to 'Signing in…'",
-  "execution/screens/ApprovalInbox.tsx|disabled={status === \"loading\" || status === \"denied\" || status === \"unavailable\"}": "filter chip, not a mutation; inert only while the read is loading, denied or unavailable — the state panel beside it carries the reason",
+  "execution/screens/ApprovalInbox.tsx|disabled={filtersDisabled}": "filter chip, not a mutation; inert only while the read is loading, denied or unavailable — the state panel beside it carries the reason",
   "execution/screens/ApprovalInbox.tsx|disabled={!onLoadOlderDecided}": "pagination into decided history",
   "execution/screens/profileContainers.tsx|disabled={!prevCursor}": "pagination: no previous cursor",
   "execution/screens/profileContainers.tsx|disabled={!nextCursor}": "pagination: no next cursor",
+  "execution/v2/screens/fleet/FleetDatasetBoard.tsx|disabled={loadingMore}": "board lane Load more is greyed only while its own page is loading; the lane header says what is not loaded",
+  "execution/v2/screens/overview/Contributors.tsx|disabled={!pager.hasPrevious || pager.busy}": "group pagination: no previous cursor on the first page, or its own page is loading",
+  "execution/v2/screens/overview/Contributors.tsx|disabled={!pager.hasNext || pager.busy}": "group pagination: no next cursor on the last page, or its own page is loading",
   "features/command-center/CommandCenter.tsx|disabled={summary.isFetching}": "refresh greyed while its own fetch is in flight",
+  "research/NativeSearchPanel.tsx|disabled={loading}": "\"more\" is greyed only while its own page is loading; the label itself reads \"loading…\"",
+  "execution/components/choiceMenu.tsx|disabled={disabled}": "a menu or segment is inert only while its own list is loading, denied or unavailable — the state beside it says why",
+  "research/LinkedAuditConsumer.tsx|disabled={busy}": "linked-audit buttons are greyed only while their own read/create request is in flight",
 };
 
 describe("§3.5 — a disabled control states its reason", () => {

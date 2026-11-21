@@ -1,0 +1,86 @@
+# EXAMPLE ONLY. NOT MOUNTED, NOT INCLUDED, NOT APPLIED. Opt-in cutover of ONE real route at a time on the
+# isolated Research preview (port 8095), WITHOUT removing the fixture overlay.
+# Plan: upgrade/execution_loop/evidence/ELP2-10/CLAUDE_CONSUMER_CONNECTED_PLAN_2026-10-21.md, section 2.
+#
+# This file sits OUTSIDE the directory that portal-web mounts (nginx/fixture-bff/), so `include
+# /etc/nginx/fixture/*.conf` can never pick it up by accident. To use ONE block (an operator action, never
+# Claude's, and only after every precondition in the plan holds: Codex route acceptance, a finite window agreed
+# by Core/Edge/Claude, a genuine Core-issued session cookie, no cap increase):
+#
+#   1. copy exactly the block of the current step into an UNTRACKED file
+#      deploy/research-preview/nginx/fixture-bff/real-routes.conf   (never commit it)
+#   2. inside portal-web: `nginx -t` then `nginx -s reload`   (no compose up, no recreate, control-api untouched)
+#
+# Rollback: delete real-routes.conf, `nginx -t`, `nginx -s reload`. The path goes back to the fixture at once.
+#
+# Why exact (`=`) locations: an exact match beats the `^~ /api/v1/execution/` prefix that sends the whole family to
+# the fixture BFF, so only the named path changes and every other Execution path stays fixture.
+#
+# Why a variable upstream + resolver: nginx resolves a literal proxy_pass host at start-up and refuses to start when
+# it has no DNS entry; the fixture stack may run with control-api stopped. With a variable the name is resolved per
+# request, so the include can never stop portal-web from starting. 127.0.0.11 is Docker's embedded DNS.
+# BEFORE a reload, confirm `control-api` resolves to the approved Core container (ID / private IP 172.22.0.5 / image
+# 9cf5fffa, see CORE009_FIXTURE_ROUTE_DIAGNOSIS_2026-10-21.md). A mismatch means STOP.
+#
+# Cookie / Host: nginx forwards the Cookie header by default; Host is kept as the research Host so a host-only
+# cookie issued by Core still applies. No Authorization header is added. No cookie, token or CSRF value is logged
+# by anything here; the only marker added is X-Real-Route (and X-Fixture-Overlay is deliberately NOT added), so a
+# receipt can tell a real response from a fixture one.
+#
+# What this does NOT do: change the shell bootstrap (/api/auth/context stays the fixture "Fixture reviewer"), raise a
+# cap, add a port, touch control-api, or make any answer acceptance evidence by itself.
+
+# ── STEP A. barrier (READ positive control, and the cursor for STREAM) ──────────────────────────────────────────
+#
+# location = /api/v1/execution/manager/fleet/realtime-snapshot {
+#     proxy_read_timeout 15s;
+#     include /etc/nginx/fixture/real-proxy.inc;
+# }
+#
+# ── STEP B. SSE stream (only with a separately qualified STREAM grant and a finite window) ──────────────────────
+#
+# location = /api/v1/execution/manager/fleet/stream {
+#     gzip off;
+#     proxy_read_timeout 90s;          # finite on purpose; keep the case short, a retained heartbeat consumes an admission
+#     include /etc/nginx/fixture/real-proxy.inc;
+# }
+#
+# ── STEP C. the named fleet read, so lineage.revision can pair with the barrier ─────────────────────────────────
+#
+# location = /api/v1/execution/manager/fleet {
+#     proxy_read_timeout 15s;
+#     include /etc/nginx/fixture/real-proxy.inc;
+# }
+#
+# ── STEP D. identity: NOT ADDITIVE, so no block here ─────────────────────────────────────────────────────────────
+#
+# /api/auth/context, /api/admin/access/self and /api/admin/profile-access/v2/{self-context,effective} are already
+# EXACT locations in nginx/fixture-bff/fixture-bff.conf. A second `location =` for the same path makes `nginx -t`
+# fail (duplicate location), so an include cannot override them. Moving identity to the real Core means changing
+# that tracked file (or turning the fixture lane off for those paths): a separate decision, not part of this file.
+# Until then the shell keeps the synthetic "Fixture reviewer" and the Access screens stay fixture.
+#
+# ── STEP E. one screen read per step (Blotter, then Workbench) ──────────────────────────────────────────────────
+#
+# location = /api/v1/execution/screens/blotter                   { proxy_read_timeout 15s; include /etc/nginx/fixture/real-proxy.inc; }
+# location ^~ /api/v1/execution/deployments/                     { proxy_read_timeout 15s; include /etc/nginx/fixture/real-proxy.inc; }
+#
+# ── real-proxy.inc (copy next to real-routes.conf as an untracked real-proxy.inc; same directory, same mount) ───
+#
+# resolver 127.0.0.11 valid=5s ipv6=off;       # NOTE: `resolver` is not allowed in a plain include inside `location`;
+#                                              # put it once at the top of real-routes.conf (server context) instead.
+# set $real_core http://control-api:4000;
+# proxy_pass $real_core;                       # variable, no URI part: the original URI and query go through unchanged
+# proxy_http_version 1.1;
+# proxy_connect_timeout 3s;
+# proxy_set_header Host $host;
+# proxy_set_header X-Real-IP $remote_addr;
+# proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+# proxy_set_header X-Forwarded-Proto $scheme;
+# proxy_set_header X-Request-ID $request_id;
+# proxy_set_header Connection '';
+# proxy_buffering off;
+# proxy_cache off;
+# (no proxy_read_timeout here: a duplicate directive stops nginx. Every location block sets its own: 15s for a READ,
+#  90s for the stream.)
+# add_header X-Real-Route core always;         # proves "not the fixture"; no X-Fixture-Overlay on purpose

@@ -1,0 +1,31 @@
+{
+  "schema_version": "portal.private-owner-manager-revoke.v1",
+  "target": {
+    "database_name": "portal_control",
+    "database_system_identifier": "7688673963308855330",
+    "role_name": "portal",
+    "protected_owner_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+    "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+    "principal_workspace_pins": [
+      { "user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434", "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660" }
+    ]
+  },
+  "revocation_id": "<<FILL:str:REVOCATION_ID|idempotency identity of THIS decision; new for every distinct revoke, identical only for a replay of the same file>>",
+  "approval_ref": "<<FILL:str:REVOKE_APPROVAL_REF|reference to Bobby's written approval for this revoke; never invented>>",
+  "reason": "<<FILL:str:REVOKE_REASON|why, in one line; no secret>>",
+  "items": [
+    {
+      "mode": "REVOKE",
+      "grant_id": "<<FILL:str:READ_GRANT_ID|exact stored id of the business.read_all grant, from the install ACK or readback block C>>",
+      "action": "business.read_all",
+      "expected_grant_revision": "<<FILL:str:READ_GRANT_REVISION|the revision readback block C shows NOW>>"
+    },
+    {
+      "mode": "REVOKE",
+      "grant_id": "<<FILL:str:STREAM_GRANT_ID|exact stored id of the stream.subscribe grant>>",
+      "action": "stream.subscribe",
+      "expected_grant_revision": "<<FILL:str:STREAM_GRANT_REVISION|the revision readback block C shows NOW>>"
+    }
+  ],
+  "provenance_ref": "<<FILL:str:REVOKE_PROVENANCE_REF|where the independent review of THIS file is recorded>>"
+}

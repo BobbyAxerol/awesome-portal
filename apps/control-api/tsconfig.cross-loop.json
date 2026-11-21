@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "paths": {
+      "@portal/contracts-screen-data": ["../../packages/contracts/generated/execution-contract-authority.d.ts"],
+      "@portal/contracts-governance": ["../../packages/contracts/generated/execution-governance.d.ts"]
+    }
+  },
+  "include": [
+    "test/paper-history-depth.spec.ts",
+    "test/paper-history-http.spec.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

@@ -175,7 +175,7 @@ describe("what the reviewer is told afterwards", () => {
     fireEvent.change(screen.getByRole("textbox"), { target: { value: SUMMARY } });
     fireEvent.click(screen.getByRole("button", { name: /Record review/ }));
     await waitFor(() => expect(screen.getByText(/Workflow version 4/)).toBeTruthy());
-    expect(screen.getByRole("link", { name: /read the record/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /open the review/ })).toBeTruthy();
   });
 
   it("shows an explicit server refusal rather than swallowing it", async () => {

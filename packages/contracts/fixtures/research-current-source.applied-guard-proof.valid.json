@@ -1,0 +1,9 @@
+{
+  "verdict": "PASS",
+  "basis": "RETAINED_OBSERVATION_INDEX_AND_SOURCE_FOLD_GUARDS_V1",
+  "reason_code": null,
+  "folds": [
+    { "fold_id": "0", "verdict": "PASS", "reason_code": null, "configured_bars": 3, "observed_bars": 3, "clipping": "NONE" },
+    { "fold_id": "1", "verdict": "PASS", "reason_code": null, "configured_bars": 3, "observed_bars": 1, "clipping": "DATASET_TAIL" }
+  ]
+}

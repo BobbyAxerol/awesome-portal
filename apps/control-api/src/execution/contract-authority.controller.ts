@@ -36,7 +36,7 @@ export class ExecutionContractAuthorityController {
       throw new ExecutionContractAuthorityHttpError("EDS02_CONTRACT_AUTHORITY_QUERY_INVALID", "Invalid query.", 400);
     }
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new ExecutionContractAuthorityHttpError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
     return this.service.authority(request.portalUser, workspaceId);

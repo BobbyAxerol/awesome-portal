@@ -1,0 +1,116 @@
+# P14 frontend handoff — Screen 05 Split, chronology and holdout truth
+
+> **RS-01 amendment (2026-09-22):** invalid chronology and a P13/P14 transform
+> mismatch are now server refusals. Keep the S05 shell and render the typed
+> panel state; never calculate replacement ranges. No new client field/action
+> exists. See [RS-01 handoff](../RS-01/frontend-handoff-claude.md).
+
+**Astra review addendum — 2026-09-22: `AUDIT_REOPENED`.** Read the
+[P13–P17 audit/remediation guide](../../P13_P17_ASTRA_AUDIT_AND_REMEDIATION_PLAN.md)
+and Unified checkpoint before using this handoff. The v1 facts below describe
+a partial fixed-profile surface, not full screen/backend acceptance or proof
+that QuantBT lacks the omitted capabilities. Preserve your rich composition;
+consume new generated contracts per panel when published. No backend/runtime
+change is authorized by this audit note. Finish/preserve your P12 work.
+
+Backend and generated P14 contracts are ready, but **feature/runtime remains
+dark**. Work only in the Research Screen-05 composition, route, client and
+tests you own. Do not modify P14 Control API, OpenAPI, migration, PostgreSQL
+role grants, P10/P11 worker, QuantBT adapter, relay, deployment overlay or
+Execution code to make a panel render.
+
+## Mandatory reading chain — record `READ`, do not skip
+
+1. [`CLAUDE-FOR-thanhvuong.md` A13.1–A13.4](../../CLAUDE-FOR-thanhvuong.md),
+   especially full handoff-chain, ownership and browser-first HiFi rules.
+2. P08/P10/P11/P12/P13 packets and applicable addenda, particularly the P11
+   display-fact amendment and current P12 frontend work.
+3. This packet and [phase report](./phase-report.md).
+4. Screen-05 [spec](../../release-v1.1/docs/screens/05_s1_split.md) and
+   `QuantBT 05 S1 Split.dc.html` **opened in a browser**, not merely read as
+   text.
+5. Generated source only:
+   [`research-split.openapi.json`](../../../../packages/contracts/openapi/research-split.openapi.json)
+   and [`research-split.d.ts`](../../../../packages/contracts/generated/research-split.d.ts).
+
+## Use only this named operation
+
+Regenerate before writing the client:
+
+```bash
+npm --prefix packages/contracts run generate:research-split
+```
+
+| Generated operation | Product role |
+|---|---|
+| `researchSplitDetailGetV1` | one immutable Screen-05 snapshot; retain `revision`/ETag; preserve UTC milliseconds and source states/reason codes exactly |
+
+Never call `/internal/*`, legacy alpha/run routes, direct Portal/QuantBT DB,
+artifact/Parquet/file paths, a worker journal, source transport, fixture API
+or a generic relation endpoint from a product route. Do not decode a digest,
+calculate date boundaries, infer a fold, derive a selection/seal, or add a
+holdout action. A new fact/action needs one focused `CG-P14-*` request with a
+source locator and expected/actual shape—not a hand-written DTO or parser.
+
+### `CG-P14-01` resolved — UTC axis labels are presentation-only
+
+Read the binding [axis ruling](./axis-label-presentation-ruling.md). You may
+choose a bounded UTC tick density and format labels from the published
+`timeline` for the chart coordinate, including at 1280px and 660px. That does
+**not** create a semantic boundary: never round/snap/extend a window, use
+local time or `Date.now()`, serialize a tick into hash/request/export/cache, or
+label a tick as a fold/seal/holdout fact. Keep exact server endpoints and
+window ranges in accessible text. Test that a viewport-only tick change sends
+no new request and changes no semantic timestamp.
+
+## Required rich-but-truthful composition
+
+Keep Screen-05's complete HiFi shell in every state; replace only the content
+inside individual panels, never the entire route with a generic unavailable
+envelope.
+
+Audit A11 corrects a copied instruction: **Code Anatomy/import stages belong
+to S14, not this screen.** Follow S05's protocol, fold anatomy, inner folds,
+holdout and gap-scan layout. Do not invent a SEALED state from metadata-bound
+holdout, and do not add an import wizard or a new authority stage.
+
+| Generated fact | Required presentation rule |
+|---|---|
+| `timeline`, `windows.is`, `windows.outer_oos` | show server UTC-ms boundaries/counts exactly; chart labels may follow the explicit UTC presentation ruling, but must not calculate alternate boundaries or resize time intervals |
+| `windows.warmup` | when `AVAILABLE`, label non-scored copied input; when `NOT_APPLICABLE`, preserve panel layout with its exact reason |
+| `windows.holdout` | show metadata-bound, not exposed/not evaluated/not exposed; no result, preview, click-through, raw request or unlock affordance |
+| `windows.holdout.physical_io` / holdout source absence | say only `NOT_ATTESTED`; semantic tape exclusion is not a physical Parquet row-group proof |
+| `selection.strict_outer_oos.state=NOT_ASSERTED` | preserve the distinction from a failed/passed strict selector; no pass badge or source-grade claim |
+| fold/purge/embargo/inner/theta/gap/seal/unlock `NOT_PUBLISHED` | retain local card/drawer with typed reason. Do not render a faux timeline, zero/empty quality result, policy gate or disabled-but-posting button |
+| `PENDING_SOURCE_CALLBACK`, legacy, `400/401/403/404/503` | keep breadcrumb/timeline shell and use the existing typed error grammar; do not expose raw server text/relation/worker detail |
+
+## Browser/HiFi receipt is mandatory
+
+Before claiming P14 FE completion, compare the open HiFi HTML directly with a
+production-like implementation at **1280px and 660px**. Record:
+
+`HiFi element / interaction / copy → component or panel → generated field or
+operation → typed state → browser assertion`.
+
+Exercise loading, available current source, no warmup, pending, legacy,
+typed absence/refusal, ETag refresh, hard-refresh/deep-link, all relevant
+drawers, keyboard/focus and overflow. Verify navigation never sends a raw
+holdout/evaluation/unlock request. Distinguish
+`COMPONENT_FIXTURE_BROWSER_RECEIPT`, `PRODUCT_ROUTE_BROWSER_RECEIPT` and
+`REAL_API_E2E_RECEIPT`; do not re-record broad visual baselines to hide drift.
+
+## Return packet
+
+Send Codex one Markdown receipt with files/line count, generated contract
+revision, reading chain, mapping matrix, browser command/build SHA/routes/
+viewports, console/network result, test counts, source gaps and no-debt
+conclusion. Do not stage/reset/reformat the currently owned P12 files while
+starting Screen 05. If blocked, send exactly one minimal `CG-P14-*` request.
+
+## RS-02 consumer amendment — 2026-09-22
+
+For an admitted Advanced-WFO run, use the generated current-source `split`
+operation rather than the older generic receipt for actual fold windows. Do
+not change the rich S05 anatomy: unavailable warmup/purge/embargo/strict-OOS/
+physical-I/O facts stay in their existing panel as exact typed gaps. Details:
+[RS-02 handoff](../RS-02/frontend-handoff-claude.md).

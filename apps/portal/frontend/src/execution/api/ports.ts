@@ -21,6 +21,7 @@ import type { StageDrift } from "../hifiInsight";
 import type { CompositionName, OperationalComposition } from "../operationalComposition";
 import type { ApprovalRow, DecidedRow } from "../screens/ApprovalInbox";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "./rows";
+import type { DecisionGate } from "./governanceContext";
 import type {
   AnalyticsEnvelope,
   BindingExposure,
@@ -38,6 +39,33 @@ import type { ScreenContract } from "../screenContracts";
 import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
 import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operations";
+import type {
+  AlphaResourceVersionRead,
+  CanaryVersionRead,
+  GovernanceParentKind,
+  GovernanceParentRead,
+  LiveFullVersionedOptions,
+  LiveFullVersionRead,
+  SandboxVersionRead,
+  StageVersionedOptions,
+  SubjectRecordsVersionRead,
+} from "../v2/readers/dispatch";
+import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV2 } from "../v2/readers/operationalQueue";
+import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "../v2/readers/pendingRecallDiscovery";
+import type { PendingControlPreviewRead } from "../v2/readers/pendingControlPreview";
+import type { PendingControlIntentWire } from "../v2/screens/operations/pendingControlIntent";
+import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligibility";
+import type { PaperExitParentQuery, PaperExitParentRead } from "../v2/readers/paperExitParent";
+import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
+import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";
+import type { VisitDigestMarkResult, VisitDigestRead, VisitDigestSeenBody } from "../v2/readers/visitDigest";
+import type { AlphaLifecycle } from "../v2/readers/alphaLifecycle";
+import type { EntityKind, EntitySearch } from "../v2/readers/entitySearch";
+import type { Out } from "../v2/readers/strictRead";
+import type { SIBLINGS, SiblingId } from "../v2/readers/siblings.generated";
+import type { IncidentChildren, OperationsAuditPage } from "../v2/readers/incidentChildren";
+import type { ApprovalEvidence } from "../v2/readers/approvalEvidence";
+import type { AccessSelfContextRead } from "../v2/readers/accessSelfContext";import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
@@ -46,6 +74,9 @@ import type { AlphaActivity, DeploymentQuality, PortfolioCapital, SourceHealth }
 import type { MarketCandlesPayload, MarketCandlesQuery } from "./marketCandles";
 import type { MarketContextCandles, MarketContextQuery } from "./marketContext";
 import type { RelationPage, RelationPageQuery } from "./managerRelations";
+import type { ManagerDataset } from "../v2/readers/managerDataset";
+import type { ManagerSeries, ManagerSeriesQuery } from "../v2/readers/managerSeries";
+import type { ManagerDatasetQuery } from "./managerDatasetQuery";
 import type { ObservedTimeline, ObservedTimelineQuery } from "./observedTimeline";
 import type { SubjectActivityPage, SubjectActivityQuery } from "./subjectActivity";
 
@@ -95,6 +126,8 @@ export interface InboxQuery {
 }
 
 export interface InboxResult {
+  /** The instant the Portal says it read the queue (the envelope's `read_at`), epoch ms; absent when it publishes none. */
+  readAt?: number | null;
   page: KeysetPage<ApprovalRow>;
   counts: { pending: number; overdue: number | null; dueSoon: number | null; mine?: number | null } | null;
   /** Server-counted over the whole filter. See `ApprovalInbox.inertCount`. */
@@ -107,6 +140,12 @@ export interface InboxResult {
   /** The workflow contract's actor object (hi-fi header: "you are Lan · roles"). */
   actor?: { username: string; roles: readonly string[] } | null;
   policyVersion?: string | null;
+  /**
+   * The page rows as the server sent them. `readApprovalRow` drops creator,
+   * requester and status; the V2 cockpit reads them from here and never
+   * invents them when this is absent.
+   */
+  rawRows?: readonly unknown[];
 }
 
 /** What apply returned. A 202 and nothing more (master plan §7.3). */
@@ -136,7 +175,22 @@ export function isPaperExitDecision(decision: string): decision is PaperExitDeci
 /** The schema pins the extension to one term; it is not a free number. */
 export const PAPER_EXIT_EXTENSION_DAYS = 14;
 
+/** Which Portal-local decision a plan/apply belongs to. Each has its own command, request schema and apply schema; none borrows another's. */
+export type DecisionKind = DecisionGate | "PAPER_EXIT";
+
+/** `authority_requirements` of a plan, exactly as served. The legacy `required_approvers` is a display/quorum summary and is not carried here as authorization. */
+export interface PlanAuthority {
+  capability: string;
+  /** `null` = no role constraint; an ADMIN label alone never grants access. */
+  roleConstraint: string | null;
+  workspaceMembershipRequired: boolean;
+  separationOfDutiesRequired: boolean;
+}
+
 export interface DecisionPlan {
+  /** The decision kind this plan was made for; the apply must name the same one. */
+  kind: DecisionKind;
+  authority: PlanAuthority | null;
   operationId: string;
   applyToken: string | null;
   blockers: readonly { code: string }[];
@@ -185,7 +239,7 @@ export interface ApprovalCreateInput {
  * The four states the entry screen binds (N29 §4). `duplicate` carries the
  * existing approval so the UI can link it instead of apologizing; `failed`
  * carries the typed problem. A thrown fetch becomes `failed` with
- * `offline: true` — the request key survives for a retry of the SAME payload.
+ * `offline: true` — the outcome is unknown (network drop, 408, 5xx, or a 2xx whose body could not be read): the request key survives for a retry of the SAME payload.
  */
 export type ApprovalCreateOutcome =
   | {
@@ -197,9 +251,24 @@ export type ApprovalCreateOutcome =
       policyVersion: string | null;
       quorumRequired: number | null;
       requester: string | null;
+      /**
+       * Where the 2xx body breaks `governance.approval-create.v1` (`v2/readers/approvalCreate.ts`); set by the HTTP port, absent when nobody
+       * checked or the body keeps the schema. V1 ignores it; the V2 screen reads a marked answer as "answered, not readable".
+       */
+      schemaViolations?: readonly string[];
     }
-  | { kind: "duplicate"; existingApprovalId: string | null; reason: string }
-  | { kind: "failed"; status: PanelStatus; reason: string; offline?: boolean };
+  | { kind: "duplicate"; existingApprovalId: string | null; reason: string; untyped?: { status: number } }
+  | {
+      kind: "failed";
+      status: PanelStatus;
+      reason: string;
+      offline?: boolean;
+      /**
+       * Set by the HTTP port when the problem body is not the published `Problem` (its `error.code` is then not a typed code): the HTTP
+       * status it answered with. V1 ignores it; the V2 screen drops the code and keeps the status (`HTTP_<status>`).
+       */
+      untyped?: { status: number };
+    };
 
 export type WaiverStateCode = "OPEN" | "WAIVED" | "EXPIRING" | "LAPSED";
 
@@ -244,6 +313,8 @@ export interface WaiverQuery {
 }
 
 export interface ManagerListQuery {
+  /** `workspace_id`: the workspace the list is read in. Absent means the caller's HOME workspace (the server's fallback). */
+  workspace_id?: string;
   environment?: "all" | "paper" | "sandbox" | "live";
   after?: string;
   before?: string;
@@ -275,6 +346,15 @@ export interface BlotterQuery {
   symbol?: string;
   side?: "BUY" | "SELL";
   sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
+  /**
+   * The server-side scope (`executionFullBlotterV1`): applied BEFORE paging, so the totals, aggregates and
+   * pages are those of the scope's own population. Any stage other than PAPER is refused by the server
+   * with `N22_BLOTTER_STAGE_NOT_AVAILABLE`.
+   */
+  stage?: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
+  deployment_id?: string;
+  account_id?: string;
+  alpha_id?: string;
 }
 
 export interface ExecutionApi {
@@ -319,10 +399,25 @@ export interface ExecutionApi {
   runOperatorTask(taskId: string, params: Readonly<Record<string, string | number | boolean | null>>): Promise<Result<OperatorTaskRunResult>>;
   /** `GET /governance/approvals/{id}/live` — `governance.live-review.v1`. */
   getLiveReview(approvalId: string, workspaceId?: string): Promise<Result<LiveReviewPayload>>;
+  /**
+   * The R2, Paper Exit or Live review on its V1 route, read by the body's
+   * `schema_version` (v2/readers/dispatch.ts). In a SCOPED_V2 workspace the
+   * same route answers a V2 parent body, which the V1 readers refuse; this
+   * method answers whichever the server sent, tagged, so a caller never reads
+   * a V2 body as V1. A body neither reader accepts is an `unsupported` answer
+   * inside an `ok` result, not a transport failure.
+   */
+  getGovernanceParent(kind: GovernanceParentKind, id: string, workspaceId?: string): Promise<Result<GovernanceParentRead>>;
   /** `GET /screens/accounts/{id}` — N28 typed unavailable until published. */
   getAccountBroker360(accountId: string): Promise<Result<ProfileEnvelope>>;
   /** EDS-04 exact resource BFFs. Each resolves the resource server-side first. */
   getAlpha360Resource(alphaId: string): Promise<Result<ProfileEnvelope>>;
+  /**
+   * UXM-07 R-3 (additive): the same route read by `schema_version`. The legacy `execution.alpha-resource.v1` envelope answers
+   * `v1` (the V1 screens keep calling `getAlpha360Resource`); the SCOPED_V2 `execution.alpha-resource.v2` raw-facts body answers
+   * `v2`; anything else answers `unsupported` (an `ok` answer, named by `unsupportedText`). `workspaceId` is `?workspace_id=`.
+   */
+  getAlpha360ResourceVersioned(alphaId: string, options?: StageVersionedOptions): Promise<Result<AlphaResourceVersionRead>>;
   getPortfolio360Resource(portfolioId: string): Promise<Result<ProfileEnvelope>>;
   getAccount360Resource(accountId: string): Promise<Result<ProfileEnvelope>>;
   getBindingResource(bindingId: string): Promise<Result<ProfileEnvelope>>;
@@ -352,15 +447,35 @@ export interface ExecutionApi {
   /** EDS-11R1 named relation BFF (G9): one bounded page of a screen-bound Manager relation; the Portal continuation goes back unchanged. */
   getManagerRelationPage(query: RelationPageQuery): Promise<Result<RelationPage>>;
   /**
+   * BE-P4 / FE-013 + FE-033 `GET /manager/series`: the NAV, Net PnL or Return series of 1 to 4 subjects over one exact window.
+   * `subjects`, `window` and `economic_partition` travel as JSON-encoded query values, as the OpenAPI says. Any non-2xx, any
+   * network failure and any body the reader refuses is a typed `unavailable` (never an empty series, never a zero line); a
+   * request the server would refuse (no subject, five subjects, a duplicate) is refused here without a fetch.
+   */
+  getManagerSeries(query: ManagerSeriesQuery): Promise<Result<ManagerSeries>>;
+  /**
+   * BE-P1 / BE-P4 / FE-012 / FE-027 / FE-033 `GET /manager/{fund-overview|fleet|portfolios/:id/overview|alphas/:id/overview|
+   * accounts/:id/overview|deployments/:id/overview}`: the Manager DATASET of one surface in one environment (rows, groups, page,
+   * capital statements). The query is encoded exactly as the OpenAPI says (JSON for `window`, `filters`, `sort`,
+   * `economic_partition`; comma lists for `stage_filter`, `group_by`). Any non-2xx, any network failure, a body of another
+   * schema, a body the reader refuses and a well-formed body that ANSWERS ANOTHER QUESTION (another surface, environment, scope,
+   * window, page size, grouping, filter or stage) is a typed `unavailable` with its code: never an empty table, never partial
+   * rows. A request the server would refuse (unknown field or operator, a doubled operand, an `IN` over 32 values, a backwards
+   * window, `after` with `before`) is refused here without a fetch.
+   */
+  getManagerDataset(query: ManagerDatasetQuery): Promise<Result<ManagerDataset>>;
+  /**
    * BR-EX-81 exact subject history through the Portal durable retained-current
    * mirror.  This is deliberately separate from the generic relation page:
    * callers cannot choose a Manager relation, source cursor or source host.
    */
   getSubjectActivity(query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>>;
+  /** UXM-07 R-3 (additive): `getSubjectActivity` read by `schema_version` (`subject-records.v1` or `.v2`); same query, same opaque cursor. */
+  getSubjectActivityVersioned(query: SubjectActivityQuery): Promise<Result<SubjectRecordsVersionRead>>;
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */
-  listPortfolios(): Promise<Result<PortfolioListEnvelope>>;
+  listPortfolios(query?: { workspaceId?: string }): Promise<Result<PortfolioListEnvelope>>;
   /** `GET /broker-bindings` — BR-EX-72 bounded binding projection. */
   getBindings(query?: BindingListQuery): Promise<Result<ManagerListEnvelope<BindingItem>>>;
   /** `GET /broker-bindings/{id}` — narrow, non-secret binding detail. */
@@ -392,6 +507,29 @@ export interface ExecutionApi {
   getCanaryControlRoom(deploymentId: string): Promise<Result<CanaryControlRoom>>;
   /** `GET /api/v1/execution/deployments/{id}/live` */
   getLiveFullOperations(deploymentId: string): Promise<Result<LiveFullOperations>>;
+  /**
+   * The three stage routes above, read by the body's `schema_version`
+   * (v2/readers/dispatch.ts). In a SCOPED_V2 workspace the SAME route answers
+   * `portal.execution.following-parent.v2` (certification, canary) or
+   * `portal.execution.live-source-operations.v2` (live), which the V1 methods
+   * above refuse. These answer whichever the server sent, tagged: `v1` (the
+   * existing V1 value), `v2` (the strict V2 value) or `unsupported` (a later or
+   * foreign version, a malformed body, an unreadable response: named by
+   * `unsupportedText`, never a partial V1-shaped object and never the body).
+   * `unsupported` is an `ok` answer, not a failure: a refusal (403/404/409/503),
+   * a network failure and an aborted read are `ok: false` with the typed status.
+   * The V1 methods are unchanged and V1 screens keep calling them.
+   * `workspaceId` is `?workspace_id=`; omitted means the caller's own.
+   */
+  getSandboxCertificationVersioned(deploymentId: string, options?: StageVersionedOptions): Promise<Result<SandboxVersionRead>>;
+  getCanaryVersioned(deploymentId: string, options?: StageVersionedOptions): Promise<Result<CanaryVersionRead>>;
+  /**
+   * `panel` (one of the ten pageable Live panels) advances that panel and every
+   * other panel answers its first page; `cursor` is the opaque continuation the
+   * server issued for that panel and requires `panel`. A panel outside the
+   * published enum, or a cursor without a panel, is `unavailable` with no request.
+   */
+  getLiveFullVersioned(deploymentId: string, options?: LiveFullVersionedOptions): Promise<Result<LiveFullVersionRead>>;
   /**
    * `GET /api/v1/execution/operations` — the triage queue.
    *
@@ -436,6 +574,135 @@ export interface ExecutionApi {
   }): Promise<Result<WorkflowResult>>;
   /** `GET /api/v1/execution/operations/incidents/{id}` */
   getIncident(incidentId: string, workspaceId?: string): Promise<Result<IncidentDetail>>;
+  /**
+   * `GET /api/v1/execution/operations`, read as the V2 current operational
+   * queue (`portal.execution.operational-queue.v2`).
+   *
+   * The path answers either the legacy queue or V2; this method discriminates
+   * on `schema_version` and answers `unsupported_shape` for anything else
+   * rather than mis-reading it. `assigned_to` is deliberately not a parameter:
+   * the server answers 400 for it.
+   */
+  listOperationalQueueV2(query: OperationalQueueQueryV2): Promise<Result<OperationalQueueReadV2>>;
+  /**
+   * `GET /api/v1/execution/operations/incidents/{id}`, read as the V2 current
+   * root (`portal.execution.incident-current-root.v2`). Same discrimination
+   * as `listOperationalQueueV2`.
+   */
+  getIncidentRootV2(incidentId: string, workspaceId?: string): Promise<Result<IncidentRootReadV2>>;
+  /**
+   * `GET /api/v1/execution/pending-recalls` (FE-062): the still-open recalls THIS PORTAL controlled on one exact resource,
+   * read as `portal.execution.pending-recall-discovery.v1`. Additive and read-only. A recall the Portal never controlled is not
+   * discoverable (the body says so as `untracked_recalls`), so an empty list is never "no open recall exists". A body that does not
+   * answer the resource asked, or does not read, is a typed `unavailable`, never an empty list.
+   */
+  getPendingRecallDiscovery(query: PendingRecallDiscoveryQuery): Promise<Result<PendingRecallDiscoveryRead>>;
+  /**
+   * `POST /api/v1/execution/pending-recalls/preview` (RV-10): a ROLLBACK preview of one named continuation of a recall the Portal
+   * controlled (`portal.execution.pending-recall-preview.v1`). The five `expected_versions` in the intent are the served counters of
+   * that recall, built by `buildPendingControlIntent`; a screen never types them. The idempotency key travels as the
+   * `x-portal-idempotency-key` header and equals the intent's. A submit is a different route and is not in this port. A refusal is
+   * a typed `{ ok: false }` whose reason starts with the closed code; a body that does not read, or answers another operation or
+   * recall, is `unavailable`, never an allowed preview.
+   */
+  previewPendingControl(intent: PendingControlIntentWire): Promise<Result<PendingControlPreviewRead>>;
+  /**
+   * `GET /api/v1/execution/governance/stage-action-eligibility` (FE-068): the caller's own ADVISORY answer for the ten stage
+   * actions (`portal.stage-action-eligibility.v1`). It only explains a control that is off; it never enables one. A missing or
+   * failed read keeps the generic reason the control already had.
+   */
+  getStageActionEligibility(workspaceId?: string): Promise<Result<StageActionEligibilityRead>>;
+  /**
+   * `GET /api/v1/execution/governance/paper-exit/parent` (RV-10): the R2 parent of one deployment as the `PAPER_EXIT_CREATE`
+   * capture context the Paper exit request is bound to (`governance.paper-exit-parent.v1`). `NONE` is a published answer (the
+   * deployment has no R2). A body for another deployment or workspace than the one asked is `unavailable`, never a context. The
+   * context only binds the request; the write route rechecks every pin.
+   */
+  getPaperExitParent(query: PaperExitParentQuery): Promise<Result<PaperExitParentRead>>;
+  /**
+   * `GET /api/admin/profile-access/v2/eligibility/batch` (FE-068): 1 to 8 resources x the same 1 to 16 actions, with a typed
+   * step-up state (`portal.self-eligibility-batch.v1`). Advisory; the single-resource `portal.self-eligibility.v1` is unchanged.
+   */
+  getSelfEligibilityBatch(request: EligibilityBatchRequest): Promise<Result<AccessEligibilityBatchRead>>;
+  /**
+   * `GET /api/v1/execution/visit-digest?workspace_id=` (Codex package 3, `portal.execution.visit-digest.v1`): the Portal's own
+   * last-seen OBSERVATION baseline of this user in this workspace compared with the current authorized command-center slice.
+   * A GET never writes. `NO_BASELINE` is a first visit; `coverage` is bounded observations, never an event history. A body for another
+   * workspace than the one asked is `unavailable`. Not polled: it is read on open and on an explicit Refresh.
+   */
+  getVisitDigest(workspaceId?: string): Promise<Result<VisitDigestRead>>;
+  /**
+   * `POST /api/v1/execution/visit-digest/seen?workspace_id=` with `x-portal-csrf`: acknowledges the digest the user is looking at, with
+   * the `mark_seen` body of that GET (snapshot revision and expected baseline version). Only an explicit user action calls it, and only when
+   * `may_mark_seen`. A 409 (another tab acknowledged, or the source moved) is `conflict`: read again and let the user act again. A 503 or a
+   * failure to read the answer is `unavailable` and changes nothing the screen already shows.
+   */
+  markVisitDigestSeen(workspaceId: string | undefined, body: VisitDigestSeenBody): Promise<VisitDigestMarkResult>;
+  /**
+   * `POST /api/admin/profile-access/v2/step-up` (FE-015/060, BE-P7): the caller re-enters their OWN password to open THIS session's
+   * step-up for one proof family (`portal.access-step-up.v1`). The body always names the family. CSRF and a fresh idempotency key
+   * travel as headers; the browser adds `Origin`. The password is an argument of this call only: the adapter puts it in the JSON
+   * body and keeps it nowhere else. A 200 is not an `ACTIVE` row and not a grant: re-read the eligibility batch.
+   */
+  postSessionStepUp(input: AccessStepUpInput): Promise<SessionStepUpOutcome>;
+  /**
+   * `GET /api/admin/profile-access/v2/self-context` (FE-057/058/038, BE-P7): the member's own default workspace (or a typed absence),
+   * the self-only entry route and the typed no-operation branch for account management (`portal.self-context.v1`). Takes no query.
+   * Advisory and current-only: never a permit. An unreadable body or another schema is a typed `unavailable`, never a guessed workspace.
+   */
+  getSelfContext(): Promise<Result<AccessSelfContextRead>>;
+  /**
+   * `GET /api/v1/execution/governance/approvals/request-lookup` (FE-069): what replaying a `request_key` would do, for the caller's
+   * own requests (`governance.approval-request-lookup.v1`). A read: it writes nothing and creates nothing.
+   */
+  lookupApprovalRequest(query: ApprovalRequestLookupQuery): Promise<Result<ApprovalRequestLookupRead>>;
+  /**
+   * `GET /api/v1/quantbt/runs/alpha-catalogue` (FE-069, `researchRunLibraryAlphaCatalogueV1`): ONE page of the workspace's run-derived alpha
+   * facet (not the Alpha Registry, not a create grant). Optional: a port that does not offer it leaves the picker on the run list's own
+   * catalogue. Never throws; a failure is a typed word, never server prose. Traversal and its fences live in `traverseAlphaCatalogue`.
+   */
+  getRunLibraryAlphaCataloguePage?(query: import("../v2/readers/runLibraryAlphaCatalogue").AlphaCatalogueQuery): Promise<import("../v2/readers/runLibraryAlphaCatalogue").AlphaCataloguePageAnswer>;
+  /**
+   * `GET /api/v1/execution/deployments/{deploymentId}/equity-projection` (R-C, `executionEquityProjection`): the deployment's equity, drawdown
+   * and an approved-band projection. The real route is source-dark and unmounted (`runtime_active` is the constant false), so real screens keep
+   * their typed absence; only the fixture lane serves it. Optional; never throws; a failure is a typed word, never server prose.
+   */
+  getEquityProjection?(query: import("../v2/readers/equityProjection").EquityProjectionQuery): Promise<import("../v2/readers/equityProjection").EquityProjectionAnswer>;
+  /**
+   * `GET /api/v1/execution/governance/approvals/{approval_id}/evidence` (WP-K, `portal.execution.approval-evidence.v1`): the evidence beside one
+   * request (prior economic history, evidence diff, obligations still open, receipt preview, the Portal's evaluation time). Optional: a port
+   * that does not offer it, or a route nothing serves yet, leaves the cockpit panels on their typed absence.
+   */
+  getApprovalEvidence?(approvalId: string, workspaceId?: string): Promise<Result<ApprovalEvidence>>;
+  /**
+   * `GET /api/v1/execution/alphas/{alpha_id}/lifecycle` (WP-K, `portal.execution.alpha-lifecycle.v1`): stage transitions with criteria, decider, actor
+   * and receipt; the unified event feed; the regime fit apart from the score; Net PnL per venue. Optional, like the approval evidence: a port or a
+   * route that does not offer it leaves Alpha 360 on what it read before.
+   */
+  getAlphaLifecycle?(alphaId: string, environment?: "paper" | "sandbox" | "live", workspaceId?: string): Promise<Result<AlphaLifecycle>>;
+  /**
+   * `GET /api/v1/execution/operations/incidents/{incident_id}/children` (WP-K, `portal.execution.incident-children.v1`): the evidence, assignee, resolution gate,
+   * timeline and original targets of a scoped incident, which the V2 root does not carry. Optional: absent leaves the incident page on its typed absences.
+   */
+  getIncidentChildren?(incidentId: string, workspaceId?: string): Promise<Result<IncidentChildren>>;
+  /**
+   * `GET /api/v1/execution/operations/audit` (WP-K, `portal.execution.operations-audit.v1`): actor, action, subject, time and receipt of the operations
+   * workflow, newest first, keyset paged. Optional: absent leaves the Audit tab on the workflow record of the loaded rows.
+   */
+  getOperationsAudit?(query?: { workspaceId?: string; limit?: number; after?: string; incidentId?: string }): Promise<Result<OperationsAuditPage>>;
+  /**
+   * `GET /api/v1/execution/search` (WP-K, `portal.execution.entity-search.v1`): the command bar's cross-entity search, per kind at most `limit` rows already
+   * scoped to the caller (an unauthorized entity is absent). Optional: absent leaves the bar fanning out to the list reads.
+   */
+  searchEntities?(query: { q: string; kinds?: readonly EntityKind[]; limit?: number; workspaceId?: string }): Promise<Result<EntitySearch>>;
+  /**
+   * WP-K second pass: one of the small sibling reads (visit digest, controls, obligations, portfolio members, account profile, readiness, reconciliation,
+   * limits, cost events, report snapshots, recovery events, grants), strictly read by the reader GENERATED from the same definition as its schema
+   * (`siblings.generated.ts`). Optional: a port or a route that does not offer it leaves the screen on its typed absence. `params` are the path and
+   * query values the definition names (`portfolio_id`, `workspace_id`, `subject_type`, ...).
+   */
+  getSibling?<K extends SiblingId>(id: K, params?: Readonly<Record<string, string>>): Promise<Result<SiblingBody<K>>>;
+  /** `POST /api/v1/execution/digest/baseline` (WP-K, GAP-7): move this user's digest baseline for the workspace to the named cut (mark seen). Fixture-served only today. */
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *
@@ -544,7 +811,7 @@ export interface ExecutionApi {
     request: CapitalPreviewInput,
   ): Promise<Result<{ preview: CapitalPreview; envelope: AnalyticsEnvelope }>>;
   /** `GET /api/v1/execution/governance/exit-reviews/{id}` */
-  getPaperExit(reviewId: string): Promise<Result<PaperExitDetail>>;
+  getPaperExit(reviewId: string, workspaceId?: string): Promise<Result<PaperExitDetail>>;
   /** `POST /api/v1/execution/governance/approvals/{id}/decision-plans` */
   /**
    * Plan a governance decision.
@@ -558,7 +825,9 @@ export interface ExecutionApi {
    * other decision.
    */
   planDecision(input: {
-    /** Approval or exit-review identifier. One command type, two subjects. */
+    /** Which decision this is. Defaults to R1 for a verb that is not a Paper Exit outcome; Paper Exit outcomes are always Paper Exit. */
+    gate?: DecisionGate;
+    /** Approval or exit-review identifier. One command type per gate. */
     approvalId: string;
     workspaceId: string;
     decision:
@@ -573,7 +842,7 @@ export interface ExecutionApi {
     /** The schema floor is eight characters; a one-word reason is refused. */
     reason: string;
     /**
-     * Required for `APPROVE_WITH_CONDITION`, refused for anything else.
+     * Required for `APPROVE_WITH_CONDITION` and `REQUEST_CHANGES` (the remediation asked for), refused for anything else.
      *
      * Typed objects, not a flattened string (BR-EX-29). The server checks each
      * one for an owner, compares its expiry against its deadline and rejects
@@ -606,6 +875,8 @@ export interface ExecutionApi {
     operationId: string,
     applyToken: string,
     workspaceId: string,
+    /** The kind the plan was made for (`DecisionPlan.kind`): it picks the apply schema. */
+    kind?: DecisionKind,
   ): Promise<Result<ApplyReceipt>>;
   /** `GET /api/v1/execution/operations/{id}` */
   pollOperation(operationId: string): Promise<Result<OperationSnapshot>>;
@@ -619,3 +890,6 @@ export function unavailable(reason: string): Result<never> {
 export function denied(reason: string): Result<never> {
   return { ok: false, status: "denied", reason };
 }
+
+/** The typed body of one sibling read (the wire names, snake_case; a section is NO_SOURCE / NOT_READ / PUBLISHED). */
+export type SiblingBody<K extends SiblingId> = Out<(typeof SIBLINGS)[K]["read"]>;

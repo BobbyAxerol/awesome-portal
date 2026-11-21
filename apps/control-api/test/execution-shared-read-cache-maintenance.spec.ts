@@ -149,6 +149,58 @@ describe("BE-R2-1 bounded shared-read cache lifecycle", () => {
     expect(bounded.deletedRows).toBeGreaterThanOrEqual(0);
   });
 
+  it("keeps the stored body when a refresh carries the same bytes, and replaces it when they differ", async () => {
+    const repository = new ExecutionSharedReadRepository(pool, config());
+    const body = (note: string) => ({
+      authority: "EXECUTION_CELL", freshness: "FRESH", completeness: "COMPLETE", as_of: "2026-09-11T00:00:00.000Z",
+      // incompressible enough to be stored out of line (TOAST) so the chunk id is observable
+      rows: Array.from({ length: 4000 }, (_, i) => `${note}-${(i * 2654435761 % 4294967296).toString(36)}`),
+    });
+    const chunkId = async () => {
+      const toast = (await pool.query<{ name: string }>(
+        "SELECT reltoastrelid::regclass::text AS name FROM pg_class WHERE oid = 'execution_shared_read_cache'::regclass")).rows[0]!.name;
+      return (await pool.query<{ id: string }>(`SELECT min(chunk_id)::text AS id FROM ${toast}`)).rows[0]!.id;
+    };
+    const refresh = async (note: string) => {
+      await pool.query("UPDATE execution_shared_read_cache SET stored_at = clock_timestamp() - interval '3 seconds', expires_at = clock_timestamp() - interval '1 second'");
+      const admission = await repository.begin(scope);
+      expect(admission.kind).toBe("LEADER");
+      if (admission.kind !== "LEADER") throw new Error("expected leader");
+      return repository.complete(scope, admission, body(note));
+    };
+
+    await refresh("a");
+    const first = await chunkId();
+    const same = await refresh("a");
+    expect(await chunkId()).toBe(first);
+    expect(same.body).toEqual(body("a"));
+    const changed = await refresh("b");
+    expect(await chunkId()).not.toBe(first);
+    expect(changed.body).toEqual(body("b"));
+  });
+
+  it("gives the file back only when it has outgrown the limit and nothing in it is live", async () => {
+    const repository = new ExecutionSharedReadRepository(pool, config());
+    await insertCache(pool, 900, "PAPER_BINANCE_USDM", -4_000);
+
+    await expect(repository.reclaimPhysicalSpace(64 * 1024 * 1024)).resolves.toMatchObject({ reclaimed: false, reason: "WITHIN_LIMIT" });
+    await expect(rowCount(pool, "true")).resolves.toBe(1);
+
+    await insertCache(pool, 901, "PAPER_BINANCE_USDM", 30_000);
+    await expect(repository.reclaimPhysicalSpace(1)).resolves.toMatchObject({ reclaimed: false, reason: "LIVE_ENTRIES" });
+    await expect(rowCount(pool, "true")).resolves.toBe(2);
+
+    await pool.query("DELETE FROM execution_shared_read_cache WHERE expires_at > clock_timestamp()");
+    await expect(repository.reclaimPhysicalSpace(1)).resolves.toMatchObject({ reclaimed: true, reason: "RECLAIMED" });
+    await expect(rowCount(pool, "true")).resolves.toBe(0);
+
+    await insertCache(pool, 902, "PAPER_BINANCE_USDM", -1_000);
+    const report = await runSharedReadCacheSweep(repository, config({ EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES: "0" }), { workerId: "guard-off", dryRun: false });
+    expect(report.physicalReclaim.reason).toBe("DISABLED");
+    const guarded = await runSharedReadCacheSweep(repository, config({ EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES: "1" }), { workerId: "guard-on", dryRun: false });
+    expect(guarded.physicalReclaim.reason).toBe("RECLAIMED");
+  });
+
   it("reserves capacity before admitting a leader, so a fresh leader always has cache space", async () => {
     const capacityConfig = config({
       EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS: "128",
@@ -164,6 +216,38 @@ describe("BE-R2-1 bounded shared-read cache lifecycle", () => {
       reasonCode: "N21_SHARED_CACHE_CAPACITY_EXHAUSTED",
     });
     await expect(rowCount(pool, "true", "execution_shared_read_flights")).resolves.toBe(0);
+  });
+
+  it("backpressures new leaders under physical pressure without evicting live hits", async () => {
+    const freshScope = { ...scope, requestPath: `${scope.requestPath}&physical=live` };
+    await insertScopeCache(pool, freshScope, 950, 30_000);
+    const guarded = new ExecutionSharedReadRepository(pool, config({
+      EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES: "1048576",
+    }));
+    await expect(guarded.begin(freshScope)).resolves.toMatchObject({ kind: "CACHE_HIT" });
+    const miss = { ...scope, requestPath: `${scope.requestPath}&physical=miss` };
+    const denied = await guarded.begin(miss);
+    expect(denied).toMatchObject({ kind: "DENIED", reasonCode: "N21_SHARED_CACHE_CAPACITY_EXHAUSTED" });
+    await expect(rowCount(pool, "expires_at > clock_timestamp()")).resolves.toBe(1);
+    expect((await pool.query("SELECT count(*)::integer AS count FROM execution_shared_read_flights")).rows[0].count).toBe(0);
+    const unguarded = new ExecutionSharedReadRepository(pool, config({
+      EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES: "0",
+    }));
+    const accepted = await unguarded.begin(miss);
+    expect(accepted.kind).toBe("LEADER");
+    if (accepted.kind === "LEADER") await unguarded.fail(accepted);
+  });
+
+  it("defers physical reclaim at a short lock timeout and leaves cache rows intact", async () => {
+    await insertCache(pool, 951, "PAPER_BINANCE_USDM", -4_000);
+    const blocker = await pool.connect();
+    try {
+      await blocker.query("BEGIN");
+      await blocker.query("LOCK TABLE execution_shared_read_cache IN ACCESS SHARE MODE");
+      const repository = new ExecutionSharedReadRepository(pool, config());
+      await expect(repository.reclaimPhysicalSpace(1)).resolves.toMatchObject({ reclaimed: false, reason: "LOCKED" });
+      await expect(rowCount(pool, "true")).resolves.toBe(1);
+    } finally { await blocker.query("ROLLBACK"); blocker.release(); }
   });
 
   it("keeps the operational lifecycle disabled by default and honorably stops on shutdown", async () => {

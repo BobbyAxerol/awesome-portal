@@ -2,6 +2,25 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { CONTROL_API_POOL } from "../tokens";
 import { TypedCondition } from "../operations/contracts";
+import type { PortalUser } from "../domain";
+import { assertDecisionAuthority } from "./decision-authority";
+import { computeEvidenceManifestHash } from "./evidence-manifest";
+import type { ApprovalGate, ApprovalInboxItem } from "./contracts";
+
+export type GovernanceDecisionCommand = "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION" | "GOVERNANCE_LIVE_DECISION";
+
+function commandGate(command: GovernanceDecisionCommand): "R1" | "R2" | "LIVE_GATE" {
+  return command === "GOVERNANCE_R1_DECISION" ? "R1" : command === "GOVERNANCE_R2_DECISION" ? "R2" : "LIVE_GATE";
+}
+
+function decisionProblem(code: string, status = 409): Error & { governanceCode: string; status: number } {
+  return Object.assign(new Error(code), { governanceCode: code, status });
+}
+
+function commandEvent(command: GovernanceDecisionCommand, suffix: "planned" | "applied"): string {
+  const gate = command === "GOVERNANCE_R1_DECISION" ? "r1" : command === "GOVERNANCE_R2_DECISION" ? "r2" : "live";
+  return `governance.${gate}_decision.${suffix}`;
+}
 
 export interface ApprovalRecord {
   approvalId: string;
@@ -51,9 +70,10 @@ interface CapitalPreviewApprovalScopeRow {
 
 export interface R2ApprovalDetailRecord {
   approval: ApprovalRecord;
-  scope: CapitalPreviewApprovalScope;
+  scope: CapitalPreviewApprovalScope | null;
   lineage: R2LineageRecord | null;
   evidence: EvidenceRecord[];
+  parentEvidence: EvidenceRecord[];
 }
 
 interface ApprovalRow {
@@ -89,8 +109,8 @@ interface ApprovalRow {
 }
 
 interface R2ApprovalDetailRow extends ApprovalRow {
-  portfolio_id: string;
-  currency: string;
+  portfolio_id: string | null;
+  currency: string | null;
   r1_approval_id: string | null;
   grant_id: string | null;
   grant_name: string | null;
@@ -278,6 +298,11 @@ export interface DecisionPlanRecord {
   actorUserId: string;
   requestKey: string;
   payloadHash: string;
+  commandType: GovernanceDecisionCommand;
+  policyVersion: string | null;
+  parentApprovalId: string | null;
+  parentApprovalVersion: number | null;
+  parentEvidenceSetHash: string | null;
   decision: string;
   reason: string;
   condition: string | null;
@@ -304,6 +329,11 @@ interface PlanRow {
   actor_user_id: string;
   request_key: string;
   payload_hash: string;
+  command_type: GovernanceDecisionCommand;
+  policy_version: string | null;
+  parent_approval_id: string | null;
+  parent_approval_version: number | null;
+  parent_evidence_set_hash: string | null;
   decision: string;
   reason: string;
   condition: string | null;
@@ -420,6 +450,11 @@ function plan(row: PlanRow): DecisionPlanRecord {
     actorUserId: row.actor_user_id,
     requestKey: row.request_key,
     payloadHash: row.payload_hash,
+    commandType: row.command_type,
+    policyVersion: row.policy_version,
+    parentApprovalId: row.parent_approval_id,
+    parentApprovalVersion: row.parent_approval_version,
+    parentEvidenceSetHash: row.parent_evidence_set_hash,
     decision: row.decision,
     reason: row.reason,
     condition: row.condition,
@@ -479,6 +514,14 @@ export class GovernanceRepository {
       : null;
   }
 
+  async isWorkspaceMember(workspaceId: string, userId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      "SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2",
+      [workspaceId, userId],
+    );
+    return result.rowCount === 1;
+  }
+
   async findCreatedApproval(
     workspaceId: string,
     requesterUserId: string,
@@ -534,6 +577,18 @@ export class GovernanceRepository {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+      // P22 calls this repository through the existing service rather than
+      // through GovernanceController.workspace(). Hold the membership row
+      // through commit so revocation cannot race a downstream R1 write.
+      const member = await client.query(
+        `SELECT 1 FROM workspace_members WHERE workspace_id = $1 AND user_id = $2 FOR SHARE`,
+        [input.workspaceId, input.requesterUserId],
+      );
+      if (member.rowCount !== 1) {
+        throw Object.assign(new Error("workspace access denied"), {
+          governanceCode: "WORKSPACE_ACCESS_DENIED", status: 403,
+        });
+      }
       const runResult = await client.query<ApprovalEvidenceRunRow>(
         `SELECT run.run_id, run.workspace_id, run.owner_user_id,
                 owner.username AS owner_username, run.status, run.strategy_id,
@@ -654,6 +709,61 @@ export class GovernanceRepository {
     return { pending: Number(row.pending), overdue: Number(row.overdue), dueSoon: Number(row.due_soon) };
   }
 
+  /** Navigation metadata for an already-authorized page, not a new scope
+   * resolver. R2 owns its immutable analytics scope; Paper Exit owns its
+   * immutable captured review. R1 records no portfolio and MUST NOT acquire
+   * one by walking forward to an R2, deployment or a current projection.
+   * Unsupported/missing/ambiguous lineage remains null. */
+  async inboxPortfolioIds(
+    workspaceId: string,
+    page: readonly Pick<ApprovalInboxItem, "id" | "gate">[],
+    visibleGates: readonly ApprovalGate[],
+  ): Promise<ReadonlyMap<string, string | null>> {
+    // Match the existing public page bound; never truncate an oversized page.
+    if (page.length > 250) throw new RangeError("Approval inbox page exceeds its bound.");
+    const links = new Map<string, string | null>(page.map(item => [item.id, null]));
+    const candidates = page.filter(item => visibleGates.includes(item.gate)
+      && (item.gate === "R2" || item.gate === "PAPER_EXIT"));
+    if (candidates.length === 0) return links;
+    const expected = new Map(candidates.map(item => [item.id, item.gate]));
+    const result = await this.pool.query<{
+      approval_id: string; workspace_id: string; gate: ApprovalGate; portfolio_id: unknown;
+    }>(
+      `WITH visible_requests AS (
+         SELECT request.approval_id, request.workspace_id, request.gate
+           FROM governance_approval_requests request
+           JOIN unnest($2::text[], $3::text[]) requested(approval_id, gate)
+             ON requested.approval_id = request.approval_id AND requested.gate = request.gate
+          WHERE request.workspace_id = $1 AND request.gate = ANY($4::text[])
+       )
+       SELECT request.approval_id, request.workspace_id, request.gate, scope.portfolio_id
+         FROM visible_requests request
+         JOIN governance_approval_analytics_scopes scope
+           ON scope.approval_id = request.approval_id AND scope.workspace_id = request.workspace_id
+          AND scope.gate = request.gate
+        WHERE request.gate = 'R2'
+       UNION ALL
+       SELECT request.approval_id, request.workspace_id, request.gate, review.portfolio_id
+         FROM visible_requests request
+         JOIN governance_paper_exit_reviews review
+           ON review.review_id = request.approval_id AND review.workspace_id = request.workspace_id
+          AND review.gate = request.gate
+        WHERE request.gate = 'PAPER_EXIT'`,
+      [workspaceId, candidates.map(item => item.id), candidates.map(item => item.gate), visibleGates],
+    );
+    const seen = new Set<string>();
+    for (const row of result.rows) {
+      if (row.workspace_id !== workspaceId || expected.get(row.approval_id) !== row.gate) continue;
+      // The current tables are unique by approval. Fail closed rather than
+      // choosing a first/last portfolio if a future source produces ambiguity.
+      const duplicate = seen.has(row.approval_id);
+      seen.add(row.approval_id);
+      links.set(row.approval_id, !duplicate && typeof row.portfolio_id === "string"
+        && /^[A-Za-z0-9._:-]{1,191}$/.test(row.portfolio_id) ? row.portfolio_id : null);
+    }
+    return links;
+  }
+
   /**
    * Resolves the immutable R2 analytics scope without leaking approvals from
    * another workspace or exposing previews for closed/expired reviews.
@@ -688,13 +798,13 @@ export class GovernanceRepository {
   }
 
   /**
-   * Reads the active R2 review and its immutable capital-preview binding in one
-   * workspace-bound, repeatable-read snapshot. Closed or expired reviews do
-   * not disclose a scope that cannot be used for a preview.
+   * An authorized historical review remains readable after its local decision.
+   * capitalPreviewScope separately restricts active analytics eligibility.
    */
   async r2Detail(
     workspaceId: string,
     approvalId: string,
+    gate: "R2" | "LIVE_GATE" = "R2",
   ): Promise<R2ApprovalDetailRecord | null> {
     const client = await this.pool.connect();
     try {
@@ -710,7 +820,7 @@ export class GovernanceRepository {
                 r1.evidence_complete AS r1_evidence_complete,
                 r1_decider.username AS r1_decided_by_username
            FROM governance_approval_requests request
-           JOIN governance_approval_analytics_scopes scope
+           LEFT JOIN governance_approval_analytics_scopes scope
              ON scope.approval_id = request.approval_id
             AND scope.workspace_id = request.workspace_id
             AND scope.gate = request.gate
@@ -723,29 +833,30 @@ export class GovernanceRepository {
            LEFT JOIN portal_users r1_decider ON r1_decider.user_id = r1.decided_by_user_id
           WHERE request.workspace_id = $1
             AND request.approval_id = $2
-            AND request.gate = 'R2'
-            AND request.status = 'PENDING'
-            AND request.expires_at > now()`,
-        [workspaceId, approvalId],
+            AND request.gate = $3`,
+        [workspaceId, approvalId, gate],
       );
       const row = result.rows[0];
-      const evidenceRows = row?.r1_approval_id
+      const parentEvidenceRows = row?.r1_approval_id
         ? await client.query<EvidenceRow>(
             `SELECT * FROM governance_approval_evidence
              WHERE approval_id = $1 ORDER BY ordinal`,
             [row.r1_approval_id],
           )
         : { rows: [] as EvidenceRow[] };
+      const childEvidenceRows = row
+        ? await client.query<EvidenceRow>(`SELECT * FROM governance_approval_evidence WHERE approval_id = $1 ORDER BY ordinal`, [approvalId])
+        : { rows: [] as EvidenceRow[] };
       await client.query("COMMIT");
       return row
         ? {
             approval: approval(row),
-            scope: {
+            scope: row.portfolio_id !== null && row.currency !== null ? {
               approvalId: row.approval_id,
               workspaceId: row.workspace_id,
               portfolioId: row.portfolio_id,
               currency: row.currency,
-            },
+            } : null,
             lineage: row.r1_approval_id && row.grant_id && row.grant_name &&
               row.approver_role && row.plan_author_user_id && row.plan_author_username &&
               row.r1_status && row.r1_expires_at && row.r1_evidence_set_hash &&
@@ -765,7 +876,8 @@ export class GovernanceRepository {
                   planAuthorUsername: row.plan_author_username,
                 }
               : null,
-            evidence: evidenceRows.rows.map(evidence),
+            evidence: childEvidenceRows.rows.map(evidence),
+            parentEvidence: parentEvidenceRows.rows.map(evidence),
           }
         : null;
     } catch (error) {
@@ -774,6 +886,23 @@ export class GovernanceRepository {
     } finally {
       client.release();
     }
+  }
+
+  /**
+   * The R2 approval whose subject is this deployment (R2 captures are filed under the deployment id), for the Paper exit parent
+   * read: the newest approved and unexpired one, else the newest of any status so the capture context can say why it is shut.
+   * Read-only; the caller reads the approval itself with `r2Detail`.
+   */
+  async r2ParentOfDeployment(workspaceId: string, deploymentId: string): Promise<string | null> {
+    const result = await this.pool.query<{ approval_id: string }>(
+      `SELECT approval_id FROM governance_approval_requests
+        WHERE workspace_id = $1 AND gate = 'R2' AND subject_id = $2
+        ORDER BY (status IN ('APPROVED', 'APPROVED_WITH_CONDITION') AND expires_at > now()) DESC,
+                 created_at DESC, approval_id DESC
+        LIMIT 1`,
+      [workspaceId, deploymentId],
+    );
+    return result.rows[0]?.approval_id ?? null;
   }
 
   async detail(workspaceId: string, approvalId: string): Promise<{
@@ -835,6 +964,20 @@ export class GovernanceRepository {
     }
   }
 
+  async assertActorAuthority(actor: PortalUser, workspaceId: string, commandType: GovernanceDecisionCommand): Promise<void> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await assertDecisionAuthority(client, { actor, workspaceId, gate: commandGate(commandType) });
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async findPlanByKey(workspaceId: string, actorUserId: string, requestKey: string): Promise<DecisionPlanRecord | null> {
     const result = await this.pool.query<PlanRow>(
       `SELECT * FROM governance_decision_plans
@@ -853,11 +996,55 @@ export class GovernanceRepository {
     return result.rows[0] ? plan(result.rows[0]) : null;
   }
 
+  private async validatedManifest(client: PoolClient, approvalId: string, expectedHash: string, parent = false) {
+    const rows = await client.query<EvidenceRow>(
+      `SELECT * FROM governance_approval_evidence WHERE approval_id = $1 ORDER BY ordinal`, [approvalId],
+    );
+    const entries = rows.rows.map(evidence);
+    if (computeEvidenceManifestHash(entries) !== expectedHash) {
+      throw decisionProblem(parent ? "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED" : "EVIDENCE_MANIFEST_INTEGRITY_FAILED");
+    }
+    return entries;
+  }
+
+  private async r2DecisionParent(
+    client: PoolClient, workspaceId: string, approvalId: string, actorUserId: string,
+    currentRole: string, decision: string,
+  ): Promise<{ id: string; version: number; hash: string }> {
+    const result = await client.query<ApprovalRow & { approver_role: string; plan_author_user_id: string }>(
+      `SELECT parent.*, lineage.approver_role, lineage.plan_author_user_id
+         FROM governance_r2_lineage lineage
+         JOIN governance_approval_requests parent
+           ON parent.approval_id = lineage.r1_approval_id
+          AND parent.workspace_id = lineage.workspace_id AND parent.gate = 'R1'
+        WHERE lineage.r2_approval_id = $1 AND lineage.workspace_id = $2
+        FOR SHARE OF parent, lineage`, [approvalId, workspaceId],
+    );
+    const parent = result.rows[0];
+    if (!parent) throw decisionProblem("R1_LINEAGE_UNPUBLISHED");
+    if (["APPROVE", "APPROVE_WITH_CONDITION"].includes(decision)) {
+      if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(parent.status)) throw decisionProblem("R1_NOT_APPROVED");
+      if (parent.expires_at <= new Date()) throw decisionProblem("R1_EXPIRED");
+      if (!parent.evidence_complete) throw decisionProblem("R1_EVIDENCE_INCOMPLETE");
+    }
+    if (parent.approver_role !== "ADMIN" || currentRole !== parent.approver_role) {
+      throw decisionProblem("APPROVER_ROLE_REQUIRED", 403);
+    }
+    if (decision !== "DENY" && parent.plan_author_user_id === actorUserId) {
+      throw decisionProblem("SELF_APPROVAL_PROHIBITED");
+    }
+    await this.validatedManifest(client, parent.approval_id, parent.evidence_set_hash, true);
+    return { id: parent.approval_id, version: parent.approval_version, hash: parent.evidence_set_hash };
+  }
+
   async createPlan(input: {
     operationId: string;
     workspaceId: string;
     approvalId: string;
     actorUserId: string;
+    actor: PortalUser;
+    commandType?: GovernanceDecisionCommand;
+    policyVersion?: string;
     requestKey: string;
     payloadHash: string;
     decision: string;
@@ -879,15 +1066,44 @@ export class GovernanceRepository {
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
+      const commandType = input.commandType ?? "GOVERNANCE_R1_DECISION";
+      const gate = commandGate(commandType);
+      if (input.actor.userId !== input.actorUserId) throw decisionProblem("ACTOR_IDENTITY_MISMATCH", 403);
+      const authority = await assertDecisionAuthority(client, { actor: input.actor, workspaceId: input.workspaceId, gate });
+      const request = await client.query<ApprovalRow>(
+        `SELECT * FROM governance_approval_requests WHERE approval_id = $1 AND workspace_id = $2 FOR SHARE`,
+        [input.approvalId, input.workspaceId],
+      );
+      const approval = request.rows[0];
+      if (!approval) throw decisionProblem("APPROVAL_NOT_FOUND", 404);
+      if (approval.gate !== gate) throw decisionProblem("GOVERNANCE_DECISION_GATE_MISMATCH");
+      let parent: { id: string; version: number; hash: string } | null = null;
+      if (input.blockerCodes.length === 0) {
+        if (approval.status !== "PENDING") throw decisionProblem("APPROVAL_CLOSED");
+        if (approval.expires_at <= new Date()) throw decisionProblem("APPROVAL_EXPIRED");
+        if (approval.approval_version !== input.expectedApprovalVersion) throw decisionProblem("APPROVAL_VERSION_CONFLICT");
+        if (approval.quorum_required !== input.quorumRequired ||
+          (input.policyVersion !== undefined && approval.policy_version !== input.policyVersion)) {
+          throw decisionProblem("APPROVAL_POLICY_CHANGED");
+        }
+        const entries = await this.validatedManifest(client, approval.approval_id, approval.evidence_set_hash);
+        if (approval.evidence_set_hash !== input.evidenceSetHash ||
+          JSON.stringify([...new Set(entries.map(entry => entry.sha256))].sort()) !==
+            JSON.stringify([...input.evidenceHashes].sort())) throw decisionProblem("EVIDENCE_SET_CHANGED");
+        if (gate === "LIVE_GATE") throw decisionProblem("LIVE_PARENT_NOT_PUBLISHED");
+        if (gate === "R2") parent = await this.r2DecisionParent(
+          client, input.workspaceId, input.approvalId, input.actorUserId, authority.role, input.decision,
+        );
+      }
       const inserted = await client.query<PlanRow>(
         `INSERT INTO governance_decision_plans
            (operation_id, workspace_id, approval_id, actor_user_id, request_key,
             command_type, command_version, payload_hash, decision, reason, condition, conditions,
             expected_approval_version, quorum_required, evidence_set_hash, evidence_hashes,
             blocker_codes, warning_codes, apply_key_id, apply_token_hash,
-            status, expires_at)
-         VALUES ($1, $2, $3, $4, $5, 'GOVERNANCE_R1_DECISION', 1, $6, $7,
-                 $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'PLANNED', $19)
+            status, expires_at, policy_version, parent_approval_id, parent_approval_version, parent_evidence_set_hash)
+         VALUES ($1, $2, $3, $4, $5, $20, 1, $6, $7,
+                 $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, 'PLANNED', $19, $21, $22, $23, $24)
          RETURNING *`,
         [
           input.operationId, input.workspaceId, input.approvalId, input.actorUserId,
@@ -895,7 +1111,8 @@ export class GovernanceRepository {
           input.conditions[0]?.text ?? null, JSON.stringify(input.conditions),
           input.expectedApprovalVersion, input.quorumRequired, input.evidenceSetHash,
           input.evidenceHashes, input.blockerCodes, input.warningCodes,
-          input.applyKeyId, input.applyTokenHash, input.expiresAt,
+          input.applyKeyId, input.applyTokenHash, input.expiresAt, commandType,
+          input.policyVersion ?? approval.policy_version, parent?.id ?? null, parent?.version ?? null, parent?.hash ?? null,
         ],
       );
       await client.query(
@@ -903,7 +1120,7 @@ export class GovernanceRepository {
            (event_id, event_type, actor_user_id, workspace_id, request_id,
             idempotency_key, aggregate_type, aggregate_id, aggregate_version,
             result, reason_code, metadata_json)
-         VALUES ($1, 'governance.r1_decision.planned', $2, $3, $4, $5,
+         VALUES ($1, $9, $2, $3, $4, $5,
                  'governance_approval', $6, $7, 'SUCCESS', NULL, $8)`,
         [
           input.auditEventId, input.actorUserId, input.workspaceId, input.requestId,
@@ -914,14 +1131,14 @@ export class GovernanceRepository {
             evidence_set_hash: input.evidenceSetHash,
             blocker_codes: input.blockerCodes,
             warning_codes: input.warningCodes,
-          }),
+          }), commandEvent(commandType, "planned"),
         ],
       );
       await client.query(
         `INSERT INTO outbox_messages
            (message_id, idempotency_key, aggregate_type, aggregate_id, event_type,
             actor_user_id, workspace_id, request_id, payload_json, state)
-         VALUES ($1, $2, 'governance_approval', $3, 'governance.r1_decision.planned',
+         VALUES ($1, $2, 'governance_approval', $3, $8,
                  $4, $5, $6, $7, 'PENDING')`,
         [
           input.outboxMessageId,
@@ -936,7 +1153,7 @@ export class GovernanceRepository {
             expected_approval_version: input.expectedApprovalVersion,
             payload_hash: input.payloadHash,
             blocker_codes: input.blockerCodes,
-          }),
+          }), commandEvent(commandType, "planned"),
         ],
       );
       await client.query("COMMIT");
@@ -953,6 +1170,8 @@ export class GovernanceRepository {
     workspaceId: string;
     actorUserId: string;
     actorUsername: string;
+    actor: PortalUser;
+    commandType?: GovernanceDecisionCommand;
     operationId: string;
     requestId: string;
     decisionId: string;
@@ -966,6 +1185,10 @@ export class GovernanceRepository {
     try {
       await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
       transactionOpen = true;
+      const commandType = input.commandType ?? "GOVERNANCE_R1_DECISION";
+      const gate = commandGate(commandType);
+      if (input.actor.userId !== input.actorUserId) throw decisionProblem("ACTOR_IDENTITY_MISMATCH", 403);
+      const authority = await assertDecisionAuthority(client, { actor: input.actor, workspaceId: input.workspaceId, gate });
       const planResult = await client.query<PlanRow>(
         `SELECT * FROM governance_decision_plans
          WHERE workspace_id = $1 AND actor_user_id = $2 AND operation_id = $3
@@ -974,14 +1197,19 @@ export class GovernanceRepository {
       );
       const planRow = planResult.rows[0];
       if (!planRow) throw Object.assign(new Error("operation not found"), { governanceCode: "OPERATION_NOT_FOUND", status: 404 });
+      if (planRow.command_type !== commandType) throw decisionProblem("GOVERNANCE_DECISION_GATE_MISMATCH");
+      const requestResult = await client.query<ApprovalRow>(
+        `SELECT * FROM governance_approval_requests
+         WHERE workspace_id = $1 AND approval_id = $2 FOR UPDATE`,
+        [input.workspaceId, planRow.approval_id],
+      );
+      const request = requestResult.rows[0];
+      if (!request) throw decisionProblem("APPROVAL_NOT_FOUND", 404);
+      if (request.gate !== gate) throw decisionProblem("GOVERNANCE_DECISION_GATE_MISMATCH");
       if (planRow.status === "APPLIED") {
-        const request = await client.query<ApprovalRow>(
-          `SELECT * FROM governance_approval_requests WHERE approval_id = $1`,
-          [planRow.approval_id],
-        );
         await client.query("COMMIT");
         transactionOpen = false;
-        return { plan: plan(planRow), approval: approval(request.rows[0]), replayed: true };
+        return { plan: plan(planRow), approval: approval(request), replayed: true };
       }
       if (planRow.status === "EXPIRED" || planRow.expires_at <= new Date()) {
         await client.query(
@@ -999,15 +1227,13 @@ export class GovernanceRepository {
           details: { blocker_codes: planRow.blocker_codes },
         });
       }
-      const requestResult = await client.query<ApprovalRow>(
-        `SELECT * FROM governance_approval_requests
-         WHERE workspace_id = $1 AND approval_id = $2 FOR UPDATE`,
-        [input.workspaceId, planRow.approval_id],
-      );
-      const request = requestResult.rows[0];
-      if (!request) throw Object.assign(new Error("approval not found"), { governanceCode: "APPROVAL_NOT_FOUND", status: 404 });
       if (request.status !== "PENDING") {
         throw Object.assign(new Error("approval is closed"), { governanceCode: "APPROVAL_CLOSED", status: 409 });
+      }
+      if (request.expires_at <= new Date()) throw decisionProblem("APPROVAL_EXPIRED");
+      if (planRow.policy_version === null) throw decisionProblem("APPROVAL_POLICY_PIN_NOT_RECORDED");
+      if (request.policy_version !== planRow.policy_version || request.quorum_required !== planRow.quorum_required) {
+        throw decisionProblem("APPROVAL_POLICY_CHANGED");
       }
       if (request.approval_version !== planRow.expected_approval_version) {
         throw Object.assign(new Error("approval version changed"), {
@@ -1018,6 +1244,31 @@ export class GovernanceRepository {
       }
       if (request.evidence_set_hash !== planRow.evidence_set_hash) {
         throw Object.assign(new Error("evidence changed"), { governanceCode: "EVIDENCE_SET_CHANGED", status: 409 });
+      }
+      const currentEvidence = await this.validatedManifest(client, request.approval_id, request.evidence_set_hash);
+      const currentHashes = [...new Set(currentEvidence.map((entry) => entry.sha256))].sort();
+      if (JSON.stringify(currentHashes) !== JSON.stringify([...planRow.evidence_hashes].sort())) {
+        throw decisionProblem("EVIDENCE_SET_CHANGED");
+      }
+      if (request.decision_actor_ids.includes(input.actorUserId)) throw decisionProblem("ACTOR_ALREADY_DECIDED");
+      if (planRow.decision !== "DENY" &&
+        [request.requester_user_id, request.artifact_creator_user_id].includes(input.actorUserId)) {
+        throw decisionProblem("SELF_APPROVAL_PROHIBITED");
+      }
+      if (["APPROVE", "APPROVE_WITH_CONDITION"].includes(planRow.decision)) {
+        if (!request.evidence_complete || currentEvidence.length === 0) throw decisionProblem("EVIDENCE_INCOMPLETE");
+        const blocking = await client.query(
+          `SELECT 1 FROM governance_approval_findings
+           WHERE approval_id = $1 AND (blocking OR outcome = 'FAIL') LIMIT 1`, [request.approval_id],
+        );
+        if (request.blocker_count > 0 || blocking.rowCount !== 0) throw decisionProblem("BLOCKING_FINDINGS");
+      }
+      if (gate === "LIVE_GATE") throw decisionProblem("LIVE_PARENT_NOT_PUBLISHED");
+      if (gate === "R2") {
+        const parent = await this.r2DecisionParent(client, input.workspaceId, request.approval_id,
+          input.actorUserId, authority.role, planRow.decision);
+        if (parent.id !== planRow.parent_approval_id || parent.version !== planRow.parent_approval_version ||
+          parent.hash !== planRow.parent_evidence_set_hash) throw decisionProblem("R1_PARENT_CHANGED");
       }
       const versionAfter = request.approval_version + 1;
       const nonQuorumDecision = planRow.decision === "DENY" || planRow.decision === "REQUEST_CHANGES";
@@ -1056,7 +1307,15 @@ export class GovernanceRepository {
           versionAfter, decidedAt,
         ],
       );
-      for (const [ordinal, condition] of planRow.conditions.entries()) {
+      // The locked approval row serializes all decisions for this aggregate.
+      // Conditions from later quorum reviewers append to, never overwrite or
+      // reuse, the immutable limitation ordinals of an earlier reviewer.
+      const limitationStart = planRow.conditions.length === 0 ? 0 : (await client.query<{ next_ordinal: number }>(
+        `SELECT COALESCE(MAX(ordinal) + 1, 0)::integer AS next_ordinal
+           FROM governance_approval_known_limitations WHERE approval_id = $1`,
+        [request.approval_id],
+      )).rows[0].next_ordinal;
+      for (const [conditionIndex, condition] of planRow.conditions.entries()) {
         const expiresOn = condition.expires_at ?? condition.deadline;
         const expiresAt = expiresOn ? new Date(`${expiresOn}T23:59:59.999Z`) : null;
         const kind = planRow.decision === "APPROVE_WITH_CONDITION" ? "WAIVER" : "RESTRICTION";
@@ -1066,7 +1325,7 @@ export class GovernanceRepository {
              (limitation_id, approval_id, ordinal, kind, label, statement, expires_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [
-            input.limitationIds[ordinal], request.approval_id, ordinal, kind,
+            input.limitationIds[conditionIndex], request.approval_id, limitationStart + conditionIndex, kind,
             `${labelPrefix} · ${condition.owner}`, condition.text, expiresAt,
           ],
         );
@@ -1117,7 +1376,7 @@ export class GovernanceRepository {
            (event_id, event_type, actor_user_id, workspace_id, request_id,
             idempotency_key, aggregate_type, aggregate_id, aggregate_version,
             result, reason_code, metadata_json)
-         VALUES ($1, 'governance.r1_decision.applied', $2, $3, $4, $5,
+         VALUES ($1, $9, $2, $3, $4, $5,
                  'governance_approval', $6, $7, 'SUCCESS', NULL, $8)`,
         [
           input.auditEventId, input.actorUserId, input.workspaceId, input.requestId,
@@ -1130,7 +1389,7 @@ export class GovernanceRepository {
             approval_status: nextStatus,
             quorum_met: nextQuorum,
             quorum_required: request.quorum_required,
-          }),
+          }), commandEvent(commandType, "applied"),
         ],
       );
       await client.query(
@@ -1138,7 +1397,7 @@ export class GovernanceRepository {
            (message_id, idempotency_key, aggregate_type, aggregate_id, event_type,
             actor_user_id, workspace_id, request_id, payload_json, response_json,
             response_status, state)
-         VALUES ($1, $2, 'governance_approval', $3, 'governance.r1_decision.applied',
+         VALUES ($1, $2, 'governance_approval', $3, $9,
                  $4, $5, $6, $7, $8, 202, 'PENDING')`,
         [
           input.outboxMessageId,
@@ -1154,7 +1413,7 @@ export class GovernanceRepository {
             evidence_set_hash: request.evidence_set_hash,
             approval_version: versionAfter,
           }),
-          JSON.stringify(response),
+          JSON.stringify(response), commandEvent(commandType, "applied"),
         ],
       );
       await client.query("COMMIT");

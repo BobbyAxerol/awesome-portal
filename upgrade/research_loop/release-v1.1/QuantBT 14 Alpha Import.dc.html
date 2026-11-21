@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT — Alpha Import</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; transition: border-color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, a:focus-visible { outline:none; box-shadow:0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+</style>
+</helmet>
+
+<div data-screen-label="Alpha Import" style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px">
+  <div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5">
+    <span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span>
+    <span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span>
+    <span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap">
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span>
+      <span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Alpha Intake</span><span style="color:#939db0">/</span>
+      <span style="color:#1c2532; flex:none">Import (U14)</span>
+    </span>
+    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span>
+    <span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span>
+  </div>
+  <div style="display:flex; flex:1; min-height:0">
+    <div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px"><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">command</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Command Center</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Portal Map</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">research</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><a href="QuantBT 01 Run Library.dc.html" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; background:#e2edf0; color:#1c2532; font-weight:500; text-decoration:none"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">QuantBT Backtest</span></a><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Pool</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Mining</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Strategy Composer</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">backtests</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Approvals</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">deployments</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Paper Trading</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sandbox</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Live Operations</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">data & operations</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Data Catalog</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">planning</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Roadmap & Task Board</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">administration</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Profile & Access</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div></div>
+    <div style="flex:1; min-width:0">
+      <div style="width:100%; max-width:1240px; margin:0 auto; padding:16px 24px 56px; display:flex; flex-direction:column; gap:12px">
+
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px 16px; border-bottom:1px solid #e3e0d7; padding-bottom:10px">
+          <div style="display:flex; flex-direction:column; gap:3px">
+            <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4e5a6e">
+              <a href="QuantBT 00 Journey Map.dc.html">Journey</a><span style="color:#939db0">/</span><span style="color:#1c2532">Alpha Import</span>
+              <span style="color:#939db0">·</span><a href="QuantBT 02 New Run Preflight.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px">next: New Run →</a>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px"><span style="font-family:Newsreader,Georgia,serif; font-size:22px; font-weight:300; letter-spacing:-.01em">Alpha Import — standardize the code artifact</span><span style="{{ stateChip.style }}">{{ stateChip.label }}</span></div>
+            <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0">One contract, mirrored from the built-in delta-rsi-polynomial-alpha. Quarantine is fail-closed: nothing runs until every check passes and the artifact is signed into the registry as an immutable av_.</div>
+          </div>
+          <span style="flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">POST /api/v1/alphas/import · owner-only · browser never executes code</span>
+        </div>
+
+        <div style="display:flex; gap:4px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:5px; overflow-x:auto">
+          <sc-for list="{{ steps }}" as="st" hint-placeholder-count="4">
+            <button onClick="{{ st.onPick }}" style="{{ st.style }}">
+              <span style="{{ st.numStyle }}">{{ st.num }}</span>
+              <span style="display:flex; flex-direction:column; align-items:flex-start"><span style="font-size:11.5px; font-weight:500">{{ st.label }}</span><span style="{{ st.subStyle }}">{{ st.sub }}</span></span>
+            </button>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ isManifest }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start">
+            <div style="flex:1.4; min-width:460px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); overflow-x:auto">
+              <div style="display:flex; justify-content:space-between; padding:8px 14px; border-bottom:1px solid #efede4">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">1 · StrategySpecification — declared inside the .py, field by field</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">single file · mirror of DELTA_RSI_SPECIFICATION</span>
+              </div>
+              <div style="display:flex; min-width:640px; font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; color:#939db0; border-bottom:1px solid #efede4; padding:5px 14px">
+                <span style="width:180px; flex:none">field</span><span style="flex:1">declared value</span><span style="width:90px; flex:none; text-align:right">check</span>
+              </div>
+              <sc-for list="{{ manifest }}" as="mf" hint-placeholder-count="13">
+                <div title="{{ mf.note }}" style="display:flex; align-items:baseline; min-width:640px; padding:5px 14px; border-bottom:1px solid #f4f2ec">
+                  <span style="width:180px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#4e5a6e">{{ mf.k }}</span>
+                  <span style="flex:1; min-width:0; font-family:'JetBrains Mono',monospace; font-size:10.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ mf.v }}</span>
+                  <span style="{{ mf.checkStyle }}">{{ mf.check }}</span>
+                </div>
+              </sc-for>
+              <div style="padding:7px 14px; font-size:10px; color:#939db0; line-height:1.5">Structure rules live in the next step (Code anatomy).  Field rules are validation, not suggestion: <span style="font-family:'JetBrains Mono',monospace">strategy_id ^[a-z][a-z0-9-]{2,63}$</span> · version SemVer immutable · parameter_space always (low, high, step) or categorical · endpoints declared, capability-gated — never inferred.</div>
+            </div>
+            <div style="flex:1; min-width:320px; display:flex; flex-direction:column; gap:12px">
+              <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:12px 14px; display:flex; flex-direction:column; gap:5px">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">drop one .py file</span>
+                <div style="border:1.5px dashed #c9c5ba; border-radius:6px; background:#faf9f5; padding:16px 14px; display:flex; flex-direction:column; gap:3px; align-items:center">
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:11px">alpha_meanrev_eth.py</span>
+                  <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">sha256:88c1f2… · 18 KB · ONE .py — spec + params + code, nothing else</span>
+                  <span style="font-size:10px; color:#9a6a1f">held in quarantine — no code executed at upload</span>
+                </div>
+                <span style="font-size:10px; color:#4e5a6e; line-height:1.5">One file is the whole artifact: the spec dataclass, the maximal parameter surface, and the code live inside it. Data input, engine config, fees, windows — ALL declared at New Run, never in the file. Digest computed server-side; mismatch ⇒ QUARANTINED_DIGEST_MISMATCH.</span>
+              </div>
+              <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:12px 14px; display:flex; flex-direction:column; gap:4px">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">entrypoint shape (mirrors the built-in)</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.7; color:#4e5a6e">class Alpha:<br>&nbsp;&nbsp;generate_signals(df, params) → pd.Series<br>&nbsp;&nbsp;build_walkforward_signal(df, params) → pd.Series</span>
+                <span style="font-size:10px; color:#939db0; line-height:1.5">Same adapter interface as <span style="font-family:'JetBrains Mono',monospace">strategy.delta_rsi:DeltaRsiStrategyAdapter</span> — imported alphas go through the SAME StrategyRegistry gate; no private call path exists.</span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAnatomy }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start">
+            <div style="flex:1.5; min-width:460px; display:flex; flex-direction:column; gap:10px">
+              <sc-for list="{{ anatomy }}" as="an" hint-placeholder-count="6">
+                <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); overflow:hidden">
+                  <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:7px 12px; border-bottom:1px solid #efede4">
+                    <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">{{ an.sec }}</span>
+                    <span style="margin-left:auto; display:flex; gap:4px; flex-wrap:wrap">
+                      <sc-for list="{{ an.chips }}" as="ch" hint-placeholder-count="2"><span style="{{ ch.style }}">{{ ch.label }}</span></sc-for>
+                    </span>
+                  </div>
+                  <pre style="margin:0; padding:9px 12px; background:#fdfdfa; font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.65; color:#1c2532; overflow-x:auto; white-space:pre">{{ an.code }}</pre>
+                  <div style="padding:6px 12px; border-top:1px solid #f4f2ec; font-size:10.5px; color:#4e5a6e; line-height:1.5">{{ an.note }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="flex:1; min-width:320px; position:sticky; top:70px; display:flex; flex-direction:column; gap:12px">
+              <div style="border:1px solid #0f4c5c; border-radius:8px; background:#e2edf0; padding:11px 14px; display:flex; flex-direction:column; gap:5px">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:700; color:#0f4c5c">declare more → unlock more routes</span>
+                <sc-for list="{{ unlockMap }}" as="um" hint-placeholder-count="6">
+                  <span style="display:flex; flex-direction:column; gap:1px; border-bottom:1px solid rgba(15,76,92,.15); padding:3px 0">
+                    <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600">{{ um.out }}</span>
+                    <span style="font-size:10px; color:#4e5a6e">{{ um.routes }}</span>
+                  </span>
+                </sc-for>
+                <span style="font-size:9.5px; color:#4e5a6e; line-height:1.5">Routes are capability-gated per release — declare an output the code does not produce and the smoke gate fails, not the run.</span>
+              </div>
+              <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:11px 14px; display:flex; flex-direction:column; gap:4px">
+                <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">what the pipeline asserts on this code</span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:10px; line-height:1.8; color:#4e5a6e">✓ required_columns ⊆ frame · index UTC monotonic unique<br>✓ missing params raise with names<br>✓ causal cutoff: shifted-input probe, signals immobile<br>✓ two seeded runs byte-identical (warm_up first)<br>✓ no print · globals · abs paths · external IO<br>✓ output contract per declared endpoint (folds + trace / signal col)</span>
+                <span style="font-size:9.5px; color:#939db0">Mirror of the built-in delta-rsi contract — same adapter, same gates, no private path.</span>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isPipeline }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:12px 14px; display:flex; flex-direction:column; gap:8px">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:8px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">3 · quarantine pipeline — fail-closed, every gate named</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">source→release discipline · v0.5 §7</span>
+            </div>
+            <sc-for list="{{ pipeline }}" as="pl" hint-placeholder-count="6">
+              <div style="display:flex; align-items:baseline; gap:10px; padding:5px 0; border-bottom:1px solid #f4f2ec; flex-wrap:wrap">
+                <span style="{{ pl.dotStyle }}"></span>
+                <span style="width:210px; flex:none; font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600">{{ pl.name }}</span>
+                <span style="{{ pl.stateStyle }}">{{ pl.state }}</span>
+                <span style="flex:1; min-width:240px; font-size:10.5px; color:#4e5a6e; line-height:1.5">{{ pl.detail }}</span>
+              </div>
+            </sc-for>
+            <span style="font-size:10px; color:#9a6a1f; line-height:1.5">A red gate stops the pipeline where it stands — the artifact stays QUARANTINED with the gate's exact reason (e.g. QUARANTINED_DIGEST_MISMATCH, QUARANTINED_LOOKAHEAD, QUARANTINED_PERF_FLOOR). No manual override; fix the .py and re-import — new digest ⇒ new attempt.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isRegister }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:stretch">
+            <div style="flex:1.2; min-width:400px; border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:12px 14px; display:flex; flex-direction:column; gap:5px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">4 · registration — what the registry writes</span>
+              <sc-for list="{{ regRows }}" as="rr" hint-placeholder-count="7">
+                <span style="display:flex; gap:12px; font-size:11px; border-bottom:1px solid #f4f2ec; padding:3px 0">
+                  <span style="width:190px; flex:none; font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">{{ rr.k }}</span>
+                  <span style="flex:1; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:{{ rr.color }}">{{ rr.v }}</span>
+                </span>
+              </sc-for>
+              <span style="font-size:10px; color:#4e5a6e; line-height:1.5">Import states: DRAFT → ACTIVE → SUPERSEDED. Only ACTIVE composes a release candidate; New Run warns on DRAFT. Activation is a registry action, not a code change.</span>
+            </div>
+            <div style="flex:1; min-width:320px; border:1px solid #9a6a1f; border-radius:8px; background:#fdfbf5; padding:12px 14px; display:flex; flex-direction:column; gap:8px">
+              <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:700; color:#9a6a1f">where it goes next</span>
+              <span style="font-size:11px; color:#4e5a6e; line-height:1.6">The signed artifact is now <span style="font-family:'JetBrains Mono',monospace">av_0_3_0</span> of <span style="font-family:'JetBrains Mono',monospace">alpha_meanrev_eth</span>. Every run that binds it inherits the digest; every rc_ composed from those runs pins it.</span>
+              <span style="display:flex; gap:8px; flex-wrap:wrap">
+                <a href="QuantBT 02 New Run Preflight.dc.html" style="border:1px solid #9a6a1f; border-radius:6px; background:#9a6a1f; color:#ffffff; padding:6px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; text-decoration:none">new run with this av_ →</a>
+                <a href="QuantBT 10 Attempt Lineage.dc.html" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; color:#4e5a6e; padding:6px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; text-decoration:none">lineage</a>
+                <a href="QuantBT 01 Run Library.dc.html" style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; color:#4e5a6e; padding:6px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; text-decoration:none">run library</a>
+              </span>
+            </div>
+          </div>
+        </sc-if>
+
+        <div style="display:flex; flex-direction:column; gap:3px; border-top:1px solid #e3e0d7; padding-top:8px">
+          <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0">rules of this screen</span>
+          <span style="font-size:11px; color:#4e5a6e; line-height:1.6">No browser upload executes code. Digest verify before anything else. Declared endpoints are capability-gated per engine release — an alpha may honestly support only walk_forward, like the built-in. A new import is always a new immutable av_; nothing is ever patched in place.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1400, &quot;height&quot;: 1050}, &quot;step&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;manifest&quot;, &quot;pipeline&quot;, &quot;register&quot;], &quot;default&quot;: &quot;manifest&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: props.step ?? "manifest" };
+  }
+  renderVals() {
+    const s = this.state;
+    const STEPS = [
+      { id: "manifest", label: "Manifest & package", sub: "one .py — spec + params + code" },
+      { id: "anatomy", label: "Code anatomy", sub: "standard classes · route unlocks" },
+      { id: "pipeline", label: "Quarantine pipeline", sub: "7 gates · fail-closed" },
+      { id: "register", label: "Register av_", sub: "DRAFT → ACTIVE" }
+    ];
+    const steps = STEPS.map((st, i) => ({
+      num: String(i + 1), label: st.label, sub: st.sub,
+      onPick: () => this.setState({ step: st.id }),
+      style: "display:flex; align-items:center; gap:8px; border:0; border-radius:5px; padding:5px 12px; background:" + (s.step === st.id ? "#e2edf0" : "transparent") + "; color:#1c2532; flex:none;",
+      numStyle: "width:20px; height:20px; flex:none; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; border:1.5px solid " + (s.step === st.id ? "#0f4c5c" : "#1e7b4f") + "; color:" + (s.step === st.id ? "#0f4c5c" : "#1e7b4f") + ";",
+      subStyle: "font-size:9px; color:#939db0;"
+    }));
+    const ok = "width:90px; flex:none; text-align:right; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#1e7b4f;";
+    const warn = "width:90px; flex:none; text-align:right; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:#9a6a1f;";
+    const manifest = [
+      { k: "strategy_id", v: "alpha-meanrev-eth", check: "PASS", s: ok, note: "^[a-z][a-z0-9-]{2,63}$ — a changed id is a new alpha, not a version" },
+      { k: "display_name", v: "MeanRev ETH Polynomial", check: "PASS", s: ok, note: "UI copy" },
+      { k: "version", v: "0.3.0", check: "PASS", s: ok, note: "SemVer, immutable per import" },
+      { k: "default_timeframe", v: "1h", check: "PASS", s: ok, note: "overridable per valid request" },
+      { k: "required_columns", v: "open, high, low, close, volume", check: "PASS", s: ok, note: "must be a subset of standard OHLCV" },
+      { k: "structural_contract", v: "polynomial_degree, long_entry, short_entry…", check: "PASS", s: ok, note: "immutable per version — audit surface" },
+      { k: "parameter_space", v: "window (20,60,2) · rsi_l (12,30,1) · entry_z (0.6,2.6,0.1) · use_trail [true,false] — MAXIMAL surface, 8 params", check: "PASS", s: ok, note: "the alpha declares EVERYTHING it can accept; New Run pins or sweeps any subset — but a run must bind every required param" },
+      { k: "entrypoint", v: "alphas.meanrev_eth:Alpha", check: "PASS", s: ok, note: "pkg.module:Class — same adapter gate as the built-in" },
+      { k: "artifact.digest", v: "sha256:88c1f2…", check: "VERIFY", s: warn, note: "server recomputes at ingest; mismatch quarantines" },
+      { k: "data_requirements", v: "crypto · OHLCV · [1h, 4h] · warmup 300 · point_in_time", check: "PASS", s: ok, note: "from alpha.yaml §9.3" },
+      { k: "determinism", v: "seed_required: true · external_io: false", check: "SMOKE", s: warn, note: "lookahead + no-io smoke run in the pipeline, not here" },
+      { k: "supported_endpoint_ids", v: "[walk_forward, signal_notional]", check: "GATED", s: warn, note: "capability-gated per engine release — declared, never inferred" },
+      { k: "execution_contracts", v: "[close_target_v2]", check: "PASS", s: ok, note: "v0.6 execution contract" },
+      { k: "output_contract", v: "DatetimeIndex UTC asc unique · signal cols per input_kind", check: "PASS", s: ok, note: "folds + SelectionTrace for WFO · signal col for signal_notional" }
+    ].map(m => ({ k: m.k, v: m.v, check: m.check, checkStyle: m.s, note: m.note }));
+    const pipeline = [
+      { name: "quarantine ingest", state: "PASS", tone: "#1e7b4f", detail: "alpha_meanrev_eth.py accepted · digest recomputed = sha256:88c1f2 (matches declaration)" },
+      { name: "hermetic build", state: "PASS", tone: "#1e7b4f", detail: "lockfile resolved offline · SBOM emitted · no network at build" },
+      { name: "scan: secret · license", state: "PASS", tone: "#1e7b4f", detail: "0 secrets · MIT-compatible deps only" },
+      { name: "contract: determinism", state: "PASS", tone: "#1e7b4f", detail: "two seeded runs byte-identical · seed_required honored" },
+      { name: "contract: no-lookahead", state: "PASS", tone: "#1e7b4f", detail: "shifted-input probe — signals do not move · point_in_time holds" },
+      { name: "contract: QuantBT smoke", state: "PASS", tone: "#1e7b4f", detail: "fixture market through walk_forward — output contract (folds + SelectionTraceV1) holds" },
+      { name: "perf: numba / DSA floor", state: "RUNNING", tone: "#9a6a1f", detail: "AST scan: every numpy-vectorizable loop must be @njit or vectorized — python-loop indicators FAIL as QUARANTINED_PERF_FLOOR · throughput probe ≥ 1.0M bars/s (release floor; core kernels run 2.9M)" }
+    ].map(p => ({
+      name: p.name, state: p.state, detail: p.detail,
+      dotStyle: "width:9px; height:9px; border-radius:50%; flex:none; background:" + (p.state === "PASS" ? p.tone : "#faf9f5") + "; border:2px solid " + p.tone + ";",
+      stateStyle: "width:76px; flex:none; font-family:'JetBrains Mono',monospace; font-size:9px; font-weight:700; color:" + p.tone + ";"
+    }));
+    const regRows = [
+      { k: "alpha_id", v: "alpha_9c1 · alpha_meanrev_eth", color: "#1c2532" },
+      { k: "alpha_version_id", v: "av_0_3_0 (immutable)", color: "#1e7b4f" },
+      { k: "artifact digest", v: "sha256:88c1f2…", color: "#1c2532" },
+      { k: "entrypoint", v: "alphas.meanrev_eth:Alpha", color: "#1c2532" },
+      { k: "import state", v: "DRAFT — activate to make it runnable for publish", color: "#9a6a1f" },
+      { k: "supersedes", v: "av_0_2_1 (DRAFT — replaced before activation, stays readable)", color: "#4e5a6e" },
+      { k: "capability registration", v: "walk_forward STABLE · signal_notional STABLE (per er_quantbt_1_1_1)", color: "#1c2532" },
+      { k: "signed publication", v: "registry signature + SBOM attached", color: "#1c2532" }
+    ];
+    const anatomy = [
+      { sec: "specification.py — the immutable thesis", unlocks: ["all routes"],
+        code: "@dataclass(frozen=True, slots=True)\nclass StrategySpecification:\n    strategy_id · display_name · version\n    default_timeframe · required_columns\n    structural_contract: dict          # thesis flags: entries, exits,\n                                       # atr_filter, hard_stop_loss…\n    parameter_space: {name: (low, high, step)}",
+        note: "Provenance for UI and audit — it never re-implements logic. Immutable per version; changing it is a new av_. parameter_space tuples are what New Run's sweep/pin table renders." },
+      { sec: "errors + validators — fail with names, not booleans", unlocks: ["quarantine gates"],
+        code: "class StrategyParameterError(ValueError)\nclass StrategyDataError(ValueError)\n\n_validate_input(frame):\n    required_columns ⊆ frame.columns\n    DatetimeIndex · UTC · monotonic · unique · float64\n_validate_params(params):\n    raise with the sorted MISSING KEYS listed",
+        note: "The pipeline's smoke gate asserts these raise correctly — an import whose validator swallows errors fails the gate. Portal preflight reuses the same messages verbatim." },
+      { sec: "compute block — pure indicator functions", unlocks: ["numba speed"],
+        code: "def _rsi(close, length): …     # pure, vectorized\ndef _atr(high, low, close, n): …\ndef _rvol(volume, n): …        # no state, no IO",
+        note: "One job each, and NOT optional style: any loop that numpy can vectorize must be vectorized or @njit — the perf gate AST-scans for python-loop indicators and fails the import (QUARANTINED_PERF_FLOOR). The engine core is rust/numba-fast; a slow alpha is a UX regression the pipeline refuses." },
+      { sec: "strategy + risk block — entries, exits, intents", unlocks: ["intrabar_bracket", "dca_ladder"],
+        code: "def _entries(ind, p): …   # long: signal_line_crossing\ndef _exits(ind, p): …     # short/exit: direction_change\ndef _risk(frame, p):      # OPTIONAL intent columns\n    stop_value / take_profit_value / trailing_value\n    ladder_level              # 0 flat · 1 base · 2+ safety",
+        note: "Declare only what the thesis has (structural_contract says hard_stop_loss: true, trailing: false — the code must match). Emitting intent columns unlocks intrabar_bracket_v1; ladder levels unlock dca_ladder. No intents ⇒ close_target_v2 only, honestly." },
+      { sec: "public surface — the ONLY two functions the adapter calls", unlocks: ["walk_forward", "signal_notional"],
+        code: "def generate_signals(data, params) -> DataFrame:\n    _validate_input(data); _validate_params(params)\n    return data.copy() + [pos_weight, exit_type, exit_price]\n    # input NEVER mutated\n\ndef build_walkforward_signal(data, params,\n        train_index, test_index, fold) -> Series:\n    frame = data.loc[: test_index[-1]]   # CAUSAL CUTOFF\n    return sig.reindex(test_index).fillna(0.0)",
+        note: "Output index is exactly test_index; no bar after test_index[-1] is ever read — the no-lookahead gate shifts inputs and asserts signals do not move. pos_weight is -1/0/1 (use_pyramiding=false) or fractional scale." },
+      { sec: "warm_up + hygiene — what is forbidden", unlocks: ["determinism gate"],
+        code: "def warm_up(params=None): …\n    # compile Numba ONCE on a synthetic frame\n    # deterministic · side-effect free · idempotent\n\n# forbidden anywhere in the package:\n# print/display/plot · mutable module globals\n# absolute paths · external IO · unseeded RNG",
+        note: "warm_up runs before timing so compile cost never pollutes a benchmark. The determinism gate runs the package twice seeded and requires byte-identical output." }
+    ].map(a => ({ sec: a.sec, code: a.code, note: a.note,
+      chips: a.unlocks.map(u => ({ label: u, style: "font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; border:1px solid " + (u.indexOf("gate") >= 0 || u === "numba speed" ? "#9a6a1f; color:#9a6a1f" : "#1e7b4f; color:#1e7b4f") + "; border-radius:999px; padding:0 6px; background:#ffffff;" })) }));
+    const unlockMap = [
+      { out: "pos_weight (-1/0/1 or fractional)", routes: "signal_notional · pct_equity · walk_forward · train_test_split" },
+      { out: "+ stop_value · take_profit_value · trailing_value", routes: "intrabar_bracket_v1 (SL/TP inside the bar, ambiguity flagged)" },
+      { out: "+ ladder_level (0 · 1 · 2+)", routes: "dca_ladder (base + safety orders at grid touches)" },
+      { out: "position matrix (per-symbol weights)", routes: "portfolio — 6 modes × 8 sizing rules" },
+      { out: "OrderIntent / OrderCommand tape", routes: "orders · native_event_lifecycle (OCO, cancel/replace)" },
+      { out: "reactive on_bar kernel", routes: "native_event_strategy R0–R3B (wake-driven)" }
+    ];
+    return {
+      steps, anatomy, unlockMap,
+      isAnatomy: s.step === "anatomy",
+      isManifest: s.step === "manifest", isPipeline: s.step === "pipeline", isRegister: s.step === "register",
+      stateChip: s.step === "register"
+        ? { label: "DRAFT · av_0_3_0", style: "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; border:1px solid #9a6a1f; color:#9a6a1f; background:#fdfbf5; border-radius:999px; padding:2px 10px;" }
+        : { label: "QUARANTINE", style: "font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; border:1px dashed #9a6a1f; color:#9a6a1f; background:#fdfbf5; border-radius:999px; padding:2px 10px;" },
+      manifest, pipeline, regRows
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -15,7 +15,7 @@ const alpha = (alphaId: string, deployments: AlphaFleetItem["deployments"], alph
 const envelope = (rows: AlphaFleetItem[], filteredCount = rows.length): ManagerListEnvelope<AlphaFleetItem> => ({
   environment: "all", freshness: "FRESH", completeness: "COMPLETE", sourceAsOf: null, projectionRefreshedAt: null, freshnessBudgetMs: null, readAt: "2026-09-05T00:00:00Z",
   recordAuthority: "PORTAL_PROJECTION", sourceAuthority: "TRADING_SYSTEM",
-  page: { rows, totalCount: filteredCount, filteredCount, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false },
+  page: { rows, totalCount: filteredCount, filteredCount, nextCursor: null, prevCursor: null, hasMore: false, hasPrevious: false, repeatedRowCount: 0 },
 });
 
 describe("fleetPipeline — the register's current deployments, never a promotion history", () => {

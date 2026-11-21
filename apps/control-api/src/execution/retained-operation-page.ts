@@ -1,0 +1,498 @@
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { ControlApiConfig, querySigningKeys } from "../config";
+import { ExecutionProfileProjectionRepository, ProjectionScalar, ProfileProjectionSnapshot } from "./profile-projection.repository";
+import { ManagerRelationOperation, ManagerRelationScalarKind, managerRelationProfileBinding, managerRelationOperationByRelation } from "./eds11r-manager-relation.registry";
+import type { MaximumDataOperationPrincipal, MaximumDataRelationQuery } from "./maximum-data-operation.service";
+import { LocalRealtimeError } from "./profile-realtime.service";
+import { AuthorizedExecutionReadScope, ExecutionReadScopes, ExecutionReadScopeError,
+  scopeAllowsField, scopeAllowsDetailField, scopeReadPopulation, ReadScopePrincipal, ReadScopeRequirement } from "../execution-v2/read-scope";
+import { projectionRowVisible } from "../execution-v2/read-projection";
+import { managerTimestamp } from "./manager-timestamp";
+import { joinRetainedBracketLegRows, joinRetainedConditionalLegLinks, joinRetainedFindingSessionRows, namedRetainedFindingNeedsSession, namedRetainedBusinessAnchored, namedRetainedBusinessFields, namedRetainedBusinessResourceId, namedRetainedBusinessSourceAllowed } from "./retained-business-aliases";
+
+/** Internal adapters share one publication identity. This is never accepted
+ * from a browser, and the source revision is not returned as a scoped digest. */
+export async function authorizeRetainedRelation(scopes: ExecutionReadScopes | undefined,
+  principal: ReadScopePrincipal, environment: "paper" | "sandbox" | "live", profileId: string,
+  sourceId: string, relation: string, snapshot?: Pick<ProfileProjectionSnapshot, "payloadDigest" | "projectionEpoch" | "sourceCatalogueSha256">,
+  resource?: ReadScopeRequirement["resource"], action: ReadScopeRequirement["action"] = "alpha.read"): Promise<AuthorizedExecutionReadScope | undefined> {
+  if (!scopes) return undefined; // Only old manual constructors; production injects the service.
+  // An OWN_ALPHA grant is expressed on the Alpha, not by enumerating every
+  // deployment. Authorize its qualified tuple collection, then require the
+  // exact deployment before exposing existence; callers still narrow rows to it.
+  const tupleDeployment = resource?.kind === "DEPLOYMENT" && action === "alpha.read";
+  const result = await scopes.authorize(principal, { environment, profileId }, { action, ...(resource && !tupleDeployment ? { resource } : {}),
+    ...(snapshot ? { dataset: { dataset_id: `relation:${sourceId}:${relation}`, source_revision: snapshot.payloadDigest,
+      projection_generation: snapshot.projectionEpoch, catalogue_revision: snapshot.sourceCatalogueSha256,
+      window: null } } : {}) });
+  if (tupleDeployment && result.mode === "SCOPED_V2" &&
+      !scopeReadPopulation(result).allowedTuples.some(tuple => tuple.deployment_id === resource.id))
+    throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+  return result;
+}
+
+export function retainedRelationAction(relation: string): ReadScopeRequirement["action"] {
+  if (["accounts", "account_balances", "account_policies", "margin_balances", "account_equity_snapshots", "account_sync_effective", "venue_accounts", "reconciliation_findings"].includes(relation)) return "account.read";
+  if (["portfolios", "portfolio_equity_snapshots", "portfolio_allocations"].includes(relation)) return "portfolio.read";
+  return "alpha.read";
+}
+
+/** Every browser-selectable Manager alias needs an explicit purpose. A business
+ * ALL population is not custody, audit, technical or parent-child authority.
+ * Null entries remain useful in explicit legacy mode; V2 publication must first
+ * supply the missing purpose/lineage/finite field contract. No wildcard default. */
+export const NAMED_RETAINED_PURPOSES = Object.freeze({
+  account_balances: "account.read", account_policies: "account.read", account_reservations: "account.read",
+  account_sync_current_state: "account.read", account_sync_effective: "account.read", account_sync_snapshots: "account.read",
+  accounts: "account.read", alpha_risk_config: null, alphas: "alpha.read",
+  broker_account_sync_current_state: null, broker_account_sync_effective: null, broker_account_sync_snapshots: null,
+  broker_sync_state_history: null, broker_sync_valuation_current_state: null, broker_sync_valuation_history: null,
+  command_ack_evidence: null, command_journal: null, conditional_order_group_legs: "account.read",
+  conditional_order_groups: "alpha.read", dead_letters: null, execution_replay_jobs: null,
+  execution_sessions: "alpha.read", fills: "alpha.read", instrument_aliases: null,
+  instrument_metadata_history: null, instruments: null, margin_balances: "account.read",
+  operator_operations: null, order_bracket_legs: "account.read", order_brackets: "alpha.read", orders: "alpha.read",
+  paper_account_seed: "account.read", paper_matcher_config: null, paper_open_orders: "alpha.read",
+  performance_projection_current_state: null, portfolio_allocations: "portfolio.read",
+  portfolio_audit_current_state: null, portfolio_capital_ledger: "portfolio.read",
+  portfolio_equity_snapshots: "portfolio.read", portfolios: "portfolio.read", positions_v2: "alpha.read",
+  reconciliation_findings: "account.read", reconciliation_observation_buckets: null, redis_transport_epochs: null,
+  risk_grants: "alpha.read", risk_profiles: null, service_heartbeats: null, settlement_calendars: null,
+  sizing_decisions: "alpha.read", strategies: "alpha.read", strategy_deployments: "alpha.read",
+  traders: null, venue_accounts: null, venues: null,
+} satisfies Record<string, ReadScopeRequirement["action"] | null>);
+
+export function namedRetainedRelationAction(relation: string): ReadScopeRequirement["action"] {
+  const action = Object.hasOwn(NAMED_RETAINED_PURPOSES, relation)
+    ? NAMED_RETAINED_PURPOSES[relation as keyof typeof NAMED_RETAINED_PURPOSES] : null;
+  if (!action) throw new RetainedOperationError("EXECUTION_NAMED_PURPOSE_NOT_COMMISSIONED", 503);
+  return action;
+}
+
+// A collection read is not an exact deployment resolver. These aliases need
+// BOTH independently published tuple populations, not an Account-only swap:
+// an Account can belong to more than one Alpha. This is limited to the four
+// named execution datasets whose authority and source aliases were reviewed.
+const namedExecutionAccountSources: Readonly<Record<string, readonly string[]>> = Object.freeze({
+  orders: ["manager.orders", "manager.current.orders"],
+  positions_v2: ["manager.positions", "manager.current.positions-v2"],
+  execution_sessions: ["manager.sessions", "manager.current.execution-sessions"],
+  fills: ["manager.fills", "manager.current.fills"],
+});
+export function namedExecutionNeedsAccount(relation: string): boolean {
+  return Object.hasOwn(namedExecutionAccountSources, relation);
+}
+
+// Only known local public refusals may survive the shared terminal fence.
+// The held error is recovered by object identity after authority succeeds.
+const namedExecutionSafeRefusals: Readonly<Record<string, number>> = Object.freeze({
+  UDB_RETAINED_PROFILE_NOT_CAPTURED: 503,
+  EXECUTION_READ_PUBLICATION_NOT_QUALIFIED: 503,
+  UDB_RETAINED_VIEW_ROW_BOUND: 503,
+  EXECUTION_READ_FIELD_POLICY_PENDING: 503,
+  UDB_RETAINED_CURSOR_INVALID_OR_STALE: 400,
+  UDB_RETAINED_SCALAR_CONTRACT_REJECTED: 503,
+  EDS11R_RESPONSE_TOO_LARGE: 502,
+});
+
+function namedExecutionAnchored(row: Record<string, ProjectionScalar>, environment: string,
+  alphaScope: AuthorizedExecutionReadScope): boolean {
+  const properties = Object.getOwnPropertyDescriptors(row);
+  const valid = (name: string) => {
+    const property = properties[name];
+    return Boolean(property && "value" in property && typeof property.value === "string" && property.value.length > 0 &&
+      !/[\u0000-\u001f\u007f]/u.test(property.value));
+  };
+  const mode = properties.mode;
+  if (!valid("account_id") || !(valid("strategy_id") || valid("deployment_id") || valid("alpha_id")) ||
+    mode && (!("value" in mode) || mode.value !== null && mode.value !== undefined &&
+      (typeof mode.value !== "string" || mode.value.toLowerCase() !== environment))) return false;
+  // A partial row is safe only when qualified lineage resolves one exact
+  // source tuple. Merely having rights to two plausible deployments is not
+  // proof that either was the actual origin of this order/fill/session.
+  const population = scopeReadPopulation(alphaScope);
+  const strategy = properties.strategy_id?.value;
+  const strategyAlpha = typeof strategy === "string"
+    ? population.strategyPairs.find(pair => pair.strategy_id === strategy)?.alpha_id : undefined;
+  if (strategy !== null && strategy !== undefined && !strategyAlpha) return false;
+  const keys = ["alpha_id", "alpha_version_id", "portfolio_id", "deployment_id", "account_id"] as const;
+  return population.populationTuples.filter(tuple => keys.every(key => {
+    const value = properties[key]?.value;
+    return value === null || value === undefined || value === tuple[key];
+  }) && (!strategyAlpha || tuple.alpha_id === strategyAlpha)).length === 1;
+}
+
+export async function authorizeNamedRetainedRelation(scopes: ExecutionReadScopes | undefined,
+  principal: ReadScopePrincipal, environment: "paper" | "sandbox" | "live", profileId: string,
+  operation: ManagerRelationOperation, snapshot?: Pick<ProfileProjectionSnapshot, "payloadDigest" | "projectionEpoch" | "sourceCatalogueSha256">) {
+  if (!scopes) return undefined;
+  const mode = await scopes.selectionMode(principal);
+  const action = mode === "SCOPED_V2" ? namedRetainedRelationAction(operation.relation) : retainedRelationAction(operation.relation);
+  const scope = await authorizeRetainedRelation(scopes, principal, environment, profileId,
+    operation.sourceId, operation.relation, snapshot, undefined, action);
+  // Activation between routing and authorization cannot use a legacy purpose.
+  if (scope?.mode === "SCOPED_V2" && namedRetainedRelationAction(operation.relation) !== action)
+    throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+  return scope;
+}
+
+/** Raw Manager names mapped onto the reviewed public field vocabulary. Never
+ * infer identity from display labels or expose custody/technical credentials. */
+const RAW_PUBLIC_FIELD: Readonly<Record<string, string>> = Object.freeze({
+  total: "balance_total", free: "balance_free", locked: "balance_locked", allocated_capital: "allocation",
+  signed_qty: "quantity", position_qty: "quantity", avg_px_open: "price", avg_px_close: "price",
+  mark_price: "price", symbol: "instrument_id", mode: "environment", submitted_at: "created_at",
+  trade_time: "occurred_at_ms", ts: "timestamp_ms",
+});
+export function retainedFieldAllowed(scope: AuthorizedExecutionReadScope, name: string): boolean {
+  return scope.mode === "LEGACY_COMPATIBILITY" || scopeAllowsField(scope, RAW_PUBLIC_FIELD[name] ?? name);
+}
+/** Raw source column -> record-detail policy name (BE-P15). Everything else in the detail vocabulary is spelled the same. */
+const RAW_DETAIL_FIELD: Readonly<Record<string, string>> = Object.freeze({ submitted_at: "submitted_at_ms", resolved_at: "resolved_at_ms" });
+/** Record-detail admission (client order id, order type, fee, liquidity, finding identity). Never consulted by the
+ * money-field guards: those keep using `retainedFieldAllowed`, which does not know these names. */
+export function retainedDetailFieldAllowed(scope: AuthorizedExecutionReadScope, name: string): boolean {
+  return scope.mode === "LEGACY_COMPATIBILITY" || scopeAllowsDetailField(scope, RAW_DETAIL_FIELD[name] ?? name);
+}
+export function scopedRetainedRows<T extends { fields: Record<string, ProjectionScalar> }>(
+  scope: AuthorizedExecutionReadScope | undefined, rows: readonly T[], options?: { readonly detail?: boolean }): T[] {
+  if (!scope || scope.mode === "LEGACY_COMPATIBILITY") return [...rows];
+  return rows.filter(row => projectionRowVisible(scope, row.fields)).map(row => ({ ...row,
+    fields: Object.fromEntries(Object.entries(row.fields).filter(([key, value]) =>
+      (retainedFieldAllowed(scope, key) || options?.detail === true && retainedDetailFieldAllowed(scope, key)) &&
+      (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)))) }));
+}
+export async function fenceRetainedSnapshot(repository: ExecutionProfileProjectionRepository,
+  workspaceId: string, environment: "paper" | "sandbox" | "live", profileId: string, snapshot: ProfileProjectionSnapshot) {
+  if (snapshot.document.workspace_id !== workspaceId || snapshot.document.environment !== environment || snapshot.document.profile_id !== profileId)
+    throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+  const current = await repository.snapshotMetadata(workspaceId, environment, profileId);
+  if (!current || current.payloadDigest !== snapshot.payloadDigest || current.projectionEpoch !== snapshot.projectionEpoch ||
+      current.sourceCatalogueSha256 !== snapshot.sourceCatalogueSha256)
+    throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+}
+export function retainedConfiguredProfile(config: ControlApiConfig, environment: "paper" | "sandbox" | "live") {
+  const value = environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID :
+    environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
+  if (!value) throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+  return value;
+}
+
+export class RetainedOperationError extends LocalRealtimeError {}
+
+/** Named local observation page. Never resolves an Edge cursor or writes a
+ * continuation/cache/job. The signature binds actor, operation, profile,
+ * workspace, page size and immutable view revision; expiry/key rotation apply. */
+export async function retainedOperationPage(config: ControlApiConfig,
+  repository: ExecutionProfileProjectionRepository, principal: MaximumDataOperationPrincipal,
+  operation: ManagerRelationOperation, query: MaximumDataRelationQuery, scopes?: ExecutionReadScopes,
+  routeScope?: AuthorizedExecutionReadScope) {
+  if (principal.workspaceId !== config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
+    throw new RetainedOperationError("WORKSPACE_NOT_FOUND", 404);
+  }
+  const profile = scopes ? retainedConfiguredProfile(config, query.environment) : managerRelationProfileBinding(query.environment).profileId;
+  const metadata = scopes ? await repository.snapshotMetadata(principal.workspaceId, query.environment, profile) : null;
+  const scope = await authorizeNamedRetainedRelation(scopes, principal, query.environment, profile, operation, metadata ?? undefined);
+  if (routeScope?.mode === "SCOPED_V2" && scope?.mode !== "SCOPED_V2")
+    throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+  // Explicit account purposes of the two finite leg adapters, distinct
+  // from their legacy Alpha readers. A child publication/opaque FK is not
+  // authority over the independently accepted exact parent dataset.
+  const parentRelation = operation.relation === "conditional_order_group_legs" ? "conditional_order_groups"
+    : operation.relation === "order_bracket_legs" ? "order_brackets" : null;
+  let parentScope: AuthorizedExecutionReadScope | undefined;
+  if (scope?.mode === "SCOPED_V2" && parentRelation) {
+    const parent = managerRelationOperationByRelation(parentRelation);
+    if (!parent) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    parentScope = await authorizeRetainedRelation(scopes, principal, query.environment, profile,
+      parent.sourceId, parent.relation, metadata ?? undefined, undefined, "account.read");
+    if (parentScope?.mode !== "SCOPED_V2") throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+  }
+  let namedRefusal: { original: RetainedOperationError; marker: ExecutionReadScopeError } | undefined;
+  let terminalNamedCheck: (() => void) | undefined;
+  const read = async (executionAccountScope?: AuthorizedExecutionReadScope) => {
+  const snapshot = scope?.mode === "SCOPED_V2" ? await repository.rawSnapshot(principal.workspaceId, query.environment, profile)
+    : await repository.snapshot(principal.workspaceId, query.environment, profile);
+  if (scope?.mode === "SCOPED_V2" && snapshot && (snapshot.payloadDigest !== metadata?.payloadDigest ||
+      snapshot.projectionEpoch !== metadata?.projectionEpoch || snapshot.sourceCatalogueSha256 !== metadata?.sourceCatalogueSha256))
+    throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+  if (!snapshot) throw new RetainedOperationError("UDB_RETAINED_PROFILE_NOT_CAPTURED", 503);
+  try {
+  const scoped = scope?.mode === "SCOPED_V2";
+  // Named catalogue aliases (`manager.current.*`) and the legacy ingestion
+  // keys (`manager.*`) name the same registered relation. Resolve only a unique
+  // retained relation; a duplicate is not authority to choose the first one.
+  const matchingRelations = Object.values(snapshot.document.relations).filter(r => r.relation === operation.relation);
+  if (scoped && matchingRelations.length > 1) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+  const relation = matchingRelations[0];
+  if (executionAccountScope && relation && !namedExecutionAccountSources[operation.relation].includes(relation.source_id))
+    throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+  const rawItems = relation?.availability === "AVAILABLE" ? relation.items : [];
+  if (rawItems.length > 10000) throw new RetainedOperationError("UDB_RETAINED_VIEW_ROW_BOUND", 503);
+  const finiteFields = scoped ? namedRetainedBusinessFields(operation.relation) : null;
+  const accountPolicyMetadata = operation.relation === "account_policies";
+  // Newly captured metadata stays finite in BOTH retained compatibility modes.
+  // This does not change the separate legacy current-source translator or the
+  // accepted bytes/disclosure of unrelated retained aliases.
+  const publicFields = finiteFields ?? (accountPolicyMetadata || operation.relation === "account_sync_current_state" ||
+    operation.relation === "account_sync_snapshots" ? namedRetainedBusinessFields(operation.relation) : null);
+  if ((finiteFields || accountPolicyMetadata) && relation && !namedRetainedBusinessSourceAllowed(operation.relation, relation.source_id))
+    throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+  let sourceRows = rawItems;
+  // Optional per-record dependency, unlike the conditional child dataset.
+  // Never mint a parent scope just because a hidden row has a session key.
+  let findingSessionScope: AuthorizedExecutionReadScope | undefined;
+  let findingSessionUsed = false;
+  const joinedFindingRows = new Set<(typeof rawItems)[number]>();
+  const bracketInheritedFields = new Map<(typeof rawItems)[number], readonly string[]>();
+  if (scope?.mode === "SCOPED_V2" && operation.relation === "reconciliation_findings") {
+    const candidates = rawItems.filter(row => projectionRowVisible(scope, row.fields) &&
+      namedRetainedFindingNeedsSession(row.fields));
+    if (candidates.length) {
+      const parentOperation = managerRelationOperationByRelation("execution_sessions");
+      if (!parentOperation) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+      findingSessionScope = await authorizeRetainedRelation(scopes, principal, query.environment, profile,
+        parentOperation.sourceId, parentOperation.relation, metadata ?? undefined, undefined, "alpha.read");
+      if (findingSessionScope?.mode !== "SCOPED_V2")
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      const parents = Object.values(snapshot.document.relations).filter(r => r.relation === "execution_sessions");
+      const parent = parents[0];
+      if (parents.length !== 1 || !parent ||
+        !namedRetainedBusinessSourceAllowed("execution_sessions", parent.source_id) ||
+        !relation || relation.availability !== "AVAILABLE" || parent.availability !== "AVAILABLE" ||
+        parent.completeness !== "COMPLETE" || !["FRESH", "STALE"].includes(parent.freshness) ||
+        parent.freshness !== relation.freshness || !parent.as_of || !relation.as_of ||
+        !managerTimestamp(parent.as_of) || !managerTimestamp(relation.as_of))
+        throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+      const parentReadScope = findingSessionScope;
+      const joined = joinRetainedFindingSessionRows(candidates, parent.items).filter(link =>
+        projectionRowVisible(parentReadScope, link.parent.fields) &&
+        projectionRowVisible(scope, link.row.fields) &&
+        projectionRowVisible(parentReadScope, link.row.fields));
+      const dependent = new Set(candidates);
+      sourceRows = rawItems.filter(row => !dependent.has(row)).concat(joined.map(link => link.row));
+      for (const link of joined) joinedFindingRows.add(link.row);
+      findingSessionUsed = joined.length > 0;
+    }
+  }
+  if (parentScope) {
+    const parents = Object.values(snapshot.document.relations).filter(r => r.relation === parentRelation);
+    if (parents.length > 1) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    if (parents[0] && !namedRetainedBusinessSourceAllowed(parentRelation!, parents[0].source_id))
+      throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    // Absence/partial lineage is not an authorized empty child dataset. A
+    // retained STALE pair may still describe retained observations, but no
+    // missing/unknown/mixed-quality parent becomes a current structural fact.
+    const parent = parents[0];
+    if (!relation || relation.availability !== "AVAILABLE" || !parent || parent.availability !== "AVAILABLE" ||
+      parent.completeness !== "COMPLETE" || !["FRESH", "STALE"].includes(parent.freshness) ||
+      parent.freshness !== relation.freshness || !parent.as_of || !relation.as_of ||
+      !managerTimestamp(parent.as_of) || !managerTimestamp(relation.as_of))
+      throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    if (operation.relation === "order_bracket_legs") {
+      const currentParentScope = parentScope;
+      const joined = joinRetainedBracketLegRows(rawItems, parent.items, query.environment).filter(link =>
+        // Original parent first: a child cannot narrow a shared account into
+        // a visible Alpha and thereby mint parent authority.
+        projectionRowVisible(currentParentScope, link.parent.fields) &&
+        projectionRowVisible(scope!, link.row.fields) &&
+        projectionRowVisible(currentParentScope, link.row.fields));
+      sourceRows = joined.map(link => link.row);
+      for (const link of joined) bracketInheritedFields.set(link.row, link.inherited_fields);
+    } else {
+      const currentParentScope = parentScope;
+      sourceRows = joinRetainedConditionalLegLinks(rawItems, parent.items, query.environment).filter(link =>
+        projectionRowVisible(currentParentScope, link.parent.fields) &&
+        projectionRowVisible(scope!, link.row.fields) &&
+        projectionRowVisible(currentParentScope, link.row.fields)).map(link => link.row);
+    }
+  }
+  // Keep private identity until AFTER row authorization, not after redaction.
+  // It supplies only an opaque record ID. Its existence is not a field grant.
+  const items = (finiteFields || executionAccountScope) && scope ? sourceRows.filter(row => {
+    // Establish current visibility first: an unknown/hidden row's shape must
+    // not create an error or reveal the existence of another population.
+    if (!projectionRowVisible(scope, row.fields) || parentScope && !projectionRowVisible(parentScope, row.fields) ||
+      executionAccountScope && !projectionRowVisible(executionAccountScope, row.fields)) return false;
+    if (executionAccountScope) {
+      if (!namedExecutionAnchored(row.fields, query.environment, scope))
+        throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+      return true;
+    }
+    if (!namedRetainedBusinessAnchored(operation.relation, row.fields))
+      throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    return true;
+  }) : scopedRetainedRows(scope, sourceRows);
+  // Resolve the existing key ring once, before computing opaque row IDs.
+  // Unrelated legacy IDs retain their original unkeyed bytes. The newly finite
+  // account-policy alias keeps its private PK keyed in BOTH retained modes.
+  const keys = querySigningKeys(config);
+  const activeKeyId = config.QUERY_CURSOR_ACTIVE_KEY_ID;
+  const keyedIdentity = Boolean(finiteFields) || accountPolicyMetadata || Boolean(executionAccountScope);
+  const identities = new Set<string>();
+  const records = items.map(item => {
+    if (accountPolicyMetadata) {
+      // Worker ingress already checks profile/mode. Validate visible imported
+      // or corrupt snapshots too, AFTER row visibility, without an existence
+      // oracle for a hidden malformed policy. Missing/null mode stays absence;
+      // it is never replaced by the request environment.
+      const mode = Object.getOwnPropertyDescriptor(item.fields, "mode");
+      if (!namedRetainedBusinessAnchored(operation.relation, item.fields) ||
+        mode && (!("value" in mode) || mode.value !== null && mode.value !== undefined &&
+          (typeof mode.value !== "string" || mode.value.toLowerCase() !== query.environment)))
+        throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    }
+    const values: Record<string, string | number | boolean | null> = {};
+    for (const field of operation.fields) {
+      if (publicFields && !publicFields.includes(field.name)) continue;
+      if ((finiteFields || executionAccountScope) && !retainedFieldAllowed(scope!, field.name)) continue;
+      if (executionAccountScope && !retainedFieldAllowed(executionAccountScope, field.name)) continue;
+      // The parent supplies only strategy; its row authority is not a public
+      // field grant. Preserve direct rows and child-owned fields unchanged.
+      if (field.name === "strategy_id" && joinedFindingRows.has(item) &&
+        (!findingSessionScope || !retainedFieldAllowed(findingSessionScope, field.name))) continue;
+      // Inherited fields remain private unless BOTH dataset scopes grant the
+      // same finite public field. Current bracket-leg catalogue exposes none
+      // of its parent's economic/session anchors; this is not a new grant.
+      if (bracketInheritedFields.get(item)?.includes(field.name) &&
+        (!parentScope || !retainedFieldAllowed(parentScope, field.name))) continue;
+      if (field.name in item.fields) values[field.name] = scalar(field.kind, item.fields[field.name]);
+    }
+    const identity = operation.identityFields.map(name => {
+      const value = publicFields || executionAccountScope ? item.fields[name] : values[name];
+      if (value === null || value === undefined) throw new RetainedOperationError(scoped ? "EXECUTION_READ_FIELD_POLICY_PENDING" : "UDB_RETAINED_ROW_IDENTITY_NOT_CAPTURED", 503);
+      if ((publicFields || executionAccountScope) && typeof value === "string" && (!value || /[\u0000-\u001f\u007f]/u.test(value)))
+        throw new RetainedOperationError("UDB_RETAINED_SCALAR_CONTRACT_REJECTED", 503);
+      const kind = operation.fields.find(f => f.name === name)?.kind;
+      const key = kind === "TIMESTAMP" ? managerTimestamp(item.fields[name])?.identity :
+        (publicFields || executionAccountScope) && kind ? String(scalar(kind, value)) : String(value);
+      if (key === undefined) throw new RetainedOperationError("UDB_RETAINED_SCALAR_CONTRACT_REJECTED", 503);
+      return `${name}\u0000${key}`;
+    });
+    // Effective sync IDs are source-observed, not a declared PK. Even a
+    // declared source PK cannot silently collapse duplicate retained rows.
+    const identityKey = identity.join("\u0001");
+    if (keyedIdentity && identities.has(identityKey)) throw new RetainedOperationError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    identities.add(identityKey);
+    const resourceId = keyedIdentity
+      ? namedRetainedBusinessResourceId(keys[activeKeyId], principal.workspaceId,
+        query.environment, profile, operation.operationId, identity)
+      : `por1_${createHash("sha256").update(`${operation.operationId}\u0000${identity.join("\u0001")}`).digest("hex")}`;
+    return { resource_id: resourceId, values };
+  }).sort((a, b) => a.resource_id.localeCompare(b.resource_id));
+  const binding = JSON.stringify([principal.workspaceId, principal.user.userId, principal.user.role,
+    principal.session.sessionId, principal.session.sessionVersion, query.environment, profile, operation.operationId,
+    query.limit, snapshot.payloadDigest, snapshot.projectionEpoch, snapshot.sourceCatalogueSha256, scope?.fingerprint ?? null,
+    ...(executionAccountScope ? [executionAccountScope.fingerprint] : []),
+    ...(parentScope ? [parentScope.fingerprint] : []),
+    ...(findingSessionUsed ? [findingSessionScope!.fingerprint] : []),
+    // Rotation changes keyed record ordering; an old-key cursor must not
+    // silently seek within a new-key ordering, even while its key is retained.
+    ...(keyedIdentity ? ["named-row-key", activeKeyId] : [])]);
+  const mac = (prefix: string, key: string) => createHmac("sha256", key).update(binding).update("\u0000" + prefix).digest("base64url");
+  let offset = 0;
+  if (query.cursor) {
+    const match = /^ur1\.([A-Za-z0-9_-]{1,32})\.(\d{1,5})\.(\d{10})\.([A-Za-z0-9_-]{43})$(?![\s\S])/.exec(query.cursor);
+    if (!match || !keys[match[1]] || Number(match[3]) <= Math.floor(Date.now() / 1000)) throw invalidCursor();
+    const expected = Buffer.from(mac(query.cursor.slice(0, query.cursor.lastIndexOf(".")), keys[match[1]]));
+    const received = Buffer.from(match[4]);
+    if (expected.length !== received.length || !timingSafeEqual(expected, received)) throw invalidCursor();
+    offset = Number(match[2]);
+    if (offset < 1 || offset >= records.length) throw invalidCursor();
+  }
+  const page = records.slice(offset, offset + query.limit);
+  const hasMore = offset + page.length < records.length;
+  const prefix = `ur1.${config.QUERY_CURSOR_ACTIVE_KEY_ID}.${offset + page.length}.${Math.floor(Date.now() / 1000) + config.QUERY_CURSOR_TTL_SECONDS}`;
+  const next = hasMore ? `${prefix}.${mac(prefix, keys[config.QUERY_CURSOR_ACTIVE_KEY_ID])}` : null;
+  if (executionAccountScope) {
+    const inputExpiry = query.cursor ? Number(query.cursor.split(".")[3]) : null;
+    const nextExpiry = next ? Number(next.split(".")[3]) : null;
+    terminalNamedCheck = () => {
+      // A held typed refusal is already non-disclosing. Do not replace its
+      // marker while the composition is deciding which refusal to release.
+      if (namedRefusal) return;
+      const currentKeys = querySigningKeys(config);
+      if (config.QUERY_CURSOR_ACTIVE_KEY_ID !== activeKeyId || currentKeys[activeKeyId] !== keys[activeKeyId])
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      const now = Math.floor(Date.now() / 1000);
+      if (inputExpiry !== null && inputExpiry <= now) {
+        const marker = new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
+        namedRefusal = { original: invalidCursor(), marker };
+        throw marker;
+      }
+      if (nextExpiry !== null && nextExpiry <= now)
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    };
+  }
+  const captured = records.length > 0;
+  const result = {
+    schema_version: "portal.execution.eds11r.manager-relation-page.v1",
+    publication_revision: "portal.execution.eds11r.named-operation-manifest.v1",
+    logical_operation_id: operation.operationId, field_id: operation.fieldId,
+    record_authority: "PORTAL_CONTROL_API", read_profile: "retained_review_v1",
+    record_basis: "PORTAL_RETAINED_OBSERVATION", environment: query.environment, profile_id: profile,
+    source_contract_revision: snapshot.document.source_contract_revision,
+    source_catalogue_sha256: snapshot.sourceCatalogueSha256,
+    source_history_semantics: "BOUNDED_RETAINED_OBSERVATIONS_NOT_AUTHORITATIVE_REPLAY",
+    source_retention_semantics: "LOCAL_CAPTURE_ONLY_NO_TOTAL_HISTORY_CLAIM",
+    reason_code: scoped ? "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" : captured ? "UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE" : "UDB_RETAINED_PANEL_NOT_CAPTURED",
+    source_health: { availability: scoped ? captured ? "AVAILABLE" : "UNAVAILABLE"
+      : relation?.reason_code === "UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE" ? "UNAVAILABLE" : relation?.availability ?? "UNAVAILABLE", freshness: "STALE", completeness: "PARTIAL",
+      as_of_ms: scoped ? null : relation?.as_of ? Date.parse(relation.as_of) : null, global_sequence: null, retention_floor_ms: null,
+      retention_floor_status: "UNDECLARED_BY_MANAGER_ENVELOPE", correction_observability: "NOT_OBSERVABLE_FROM_MANAGER_PAGE", replay_eligible: false },
+    page: { next_cursor: next, has_more: hasMore, total_unknown: true, maximum_page_rows: 200,
+      maximum_response_bytes: 1048576, truncated: false },
+    state: captured || scoped ? "PARTIAL" : "UNAVAILABLE", records: page,
+    ...(scoped ? { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", read_scope: {
+      visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policy_revision: scope.policyRevision } } : {}),
+  };
+  if (Buffer.byteLength(JSON.stringify(result)) > 1048576) throw new RetainedOperationError("EDS11R_RESPONSE_TOO_LARGE", 502);
+  if (scoped && !executionAccountScope) await fenceRetainedSnapshot(repository, principal.workspaceId, query.environment, profile, snapshot);
+  // Sequential current delivery only, NOT a held compound-source transaction.
+  // Unused/missing links cannot impose a new dependency on direct records.
+  if (findingSessionUsed && findingSessionScope && scopes) await scopes.revalidate(findingSessionScope);
+  return result;
+  } finally {
+    // A failed parse/cursor/source read also observed this protected snapshot.
+    if (executionAccountScope) await fenceRetainedSnapshot(repository, principal.workspaceId, query.environment, profile, snapshot);
+  }
+  };
+  if (scope?.mode === "SCOPED_V2" && scopes && namedExecutionNeedsAccount(operation.relation)) {
+    try {
+      return await scopes.deliverScopedTogether(routeScope ? [routeScope, scope] : [scope], async retain => {
+        const accountScope = await authorizeRetainedRelation(scopes, principal, query.environment, profile,
+          operation.sourceId, operation.relation, metadata ?? undefined, undefined, "account.read");
+        if (!accountScope || accountScope.mode !== "SCOPED_V2")
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+        retain(accountScope);
+        try { return await read(accountScope); } catch (error) {
+          if (error instanceof RetainedOperationError && namedExecutionSafeRefusals[error.code] === error.status) {
+            const marker = new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", error.status);
+            namedRefusal = { original: error, marker };
+            throw marker;
+          }
+          throw error;
+        }
+      }, () => terminalNamedCheck?.());
+    } catch (error) {
+      if (namedRefusal && error === namedRefusal.marker) throw namedRefusal.original;
+      throw error;
+    }
+  }
+  return scope && scopes ? scopes.deliver(scope, () =>
+    parentScope ? scopes.deliver(parentScope, read) : read()) : read();
+}
+function invalidCursor() { return new RetainedOperationError("UDB_RETAINED_CURSOR_INVALID_OR_STALE", 400); }
+function scalar(kind: ManagerRelationScalarKind, value: ProjectionScalar): string | number | boolean | null {
+  if (value === null) return null;
+  if (kind === "TIMESTAMP" && typeof value === "string") {
+    const clock = managerTimestamp(value); if (clock) return clock.milliseconds;
+  }
+  if (kind === "TEXT" && typeof value === "string" && Buffer.byteLength(value) <= 4096) return value;
+  if (kind === "BOOLEAN" && typeof value === "boolean") return value;
+  if ((kind === "DECIMAL" || kind === "INTEGER") && typeof value === "string" && value.length <= 96 &&
+    (kind === "DECIMAL" ? /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/ : /^-?(?:0|[1-9]\d*)$/).test(value)) return value;
+  if (kind === "INTEGER" && typeof value === "number" && Number.isSafeInteger(value)) return String(value);
+  // Never downcast a decimal, infer a timestamp or return arbitrary JSON.
+  throw new RetainedOperationError("UDB_RETAINED_SCALAR_CONTRACT_REJECTED", 503);
+}

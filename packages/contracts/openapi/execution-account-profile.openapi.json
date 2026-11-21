@@ -1,0 +1,447 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "account-profile",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/accounts/{account_id}/profile": {
+      "get": {
+        "operationId": "executionAccountProfileGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "description": "The physical profile of an account/binding as the venue states it: product, network and when the network was proven, margin mode and ratio (a percent decimal text), wallet balance and native equity (each ONE currency). When the separately qualified Paper Manager CURRENT and native HTTP custody are installed, the route can return account identity alone. Fields without source authority are omitted. Otherwise it refuses; no source is enabled by this contract.",
+        "parameters": [
+          {
+            "name": "account_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized current answer; absence stays typed",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfile"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Read refused",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authority or source changed before dispatch",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Source unavailable",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountProfileProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "AccountProfile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "record_authority",
+          "read_at_ms",
+          "account_id"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.account-profile.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "record_authority": {
+            "const": "PORTAL_PROJECTION"
+          },
+          "read_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "account_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+          },
+          "product": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "network": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "proof_at_ms"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "proof_at_ms": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "margin_mode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "CROSS",
+                  "ISOLATED",
+                  "PORTFOLIO",
+                  "NONE"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "margin_ratio": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "percent",
+                  "as_of_ms"
+                ],
+                "properties": {
+                  "percent": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  "as_of_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "wallet_balance": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "currency",
+                  "value",
+                  "as_of_ms"
+                ],
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "value": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  "as_of_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "native_equity": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "currency",
+                  "value",
+                  "as_of_ms"
+                ],
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "value": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  "as_of_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "AccountProfileProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EXECUTION_READ_NOT_AVAILABLE",
+                  "EXECUTION_READ_QUERY_INVALID",
+                  "SESSION_REQUIRED",
+                  "REQUEST_REJECTED",
+                  "PORTAL_AUTHORITY_UNAVAILABLE",
+                  "PORTAL_READ_STORE_UNAVAILABLE",
+                  "EXECUTION_LOCAL_READ_BUSY",
+                  "EXECUTION_READ_SCOPE_REQUIRED",
+                  "EXECUTION_READ_ACCESS_CHANGED",
+                  "EXECUTION_READ_CURRENT_ONLY",
+                  "EXECUTION_READ_POLICY_PENDING",
+                  "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",
+                  "EXECUTION_READ_FIELD_POLICY_PENDING",
+                  "EXECUTION_READ_SCOPE_LIMIT",
+                  "EXECUTION_READ_AUTHORITY_UNAVAILABLE",
+                  "EXECUTION_READ_CURSOR_INVALID"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

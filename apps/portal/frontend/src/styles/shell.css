@@ -33,6 +33,19 @@
   flex-wrap: wrap;
 }
 
+/* UXM-10 F-11: the top bar is sticky, so a focus scroll (or an in-page anchor) that lands a control at the top edge of the viewport
+ * put it under the bar. Scroll alignment keeps the bar's own height clear. Paints nothing and moves nothing at rest: it only
+ * changes where the browser stops when it scrolls something into view. The variable is the bar's own `min-height`, so the two
+ * cannot drift; the small-screen bar is a fixed 56px (see the max-width: 720px block), so that is its padding there. */
+html {
+  scroll-padding-top: var(--topbar-h);
+}
+@media (max-width: 720px) {
+  html {
+    scroll-padding-top: 56px;
+  }
+}
+
 .portal-brand {
   font-family: var(--font-display);
   font-size: 16px;
@@ -64,6 +77,27 @@
   gap: var(--space-1);
   white-space: nowrap;
 }
+/* G14 (Bobby, option A, 2026-09-30): a run-scoped crumb reads
+   `Research / QuantBT Backtest / R-WFO-017 / Stage 1 · Split` (hi-fi) only
+   where it fits on one row. Short of room it drops, in order, the feature
+   segment and then the screen name (the page's own heading names it), and
+   keeps `Research / <run>`. Pages that are not run pages are untouched, and
+   narrow widths keep the shell's existing wrap. */
+@media (max-width: 1439px) {
+  .portal-crumb--run-context { display: none; }
+}
+@media (max-width: 1365px) {
+  .portal-crumb--run-screen { display: none; }
+}
+/* A long screen name ("Release Candidate & Publish") must not push the bar to
+   a second row either: on a run page the trail takes only the room left and the
+   screen name gives way first, with its full words in `title`. */
+@media (min-width: 1024px) {
+  .portal-breadcrumbs--run { flex: 1 1 0; }
+  .portal-crumb--run-screen { min-width: 0; }
+  .portal-crumb-tail { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
 .portal-crumb-sep {
   color: var(--ink-faint);
 }
@@ -215,6 +249,15 @@
   background: var(--accent-soft);
   color: var(--ink);
   font-weight: 500;
+}
+/* axe color-contrast: Sidebar.tsx fades SOON / BLOCKED / LEGACY rows with an inline
+   `opacity` (0.58 / 0.38 / 0.55) on the whole row, text included (2.5:1 measured).
+   Recede through ink instead: full opacity, `--ink-faint` (AA on both themes). */
+.portal-navitem[data-maturity="COMMISSIONED"]:not(.portal-navitem-active),
+.portal-navitem[data-maturity="BLOCKED"]:not(.portal-navitem-active),
+.portal-navitem[data-maturity="DEPRECATED"]:not(.portal-navitem-active) {
+  opacity: 1 !important;
+  color: var(--ink-faint);
 }
 .portal-navitem-label {
   flex: 1;
@@ -2714,6 +2757,47 @@
 :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn,
 :root[data-theme="execution-carbon"] .portal-topbar .portal-pref-check { display: none; }
 :root[data-theme="execution-carbon"] .portal-breadcrumbs { flex: 1; }
+/* WP-D: the V2 count badges stay on the type scale (10px is its floor); the V1 badge keeps its own 9px. */
+:root[data-theme="execution-carbon"] .portal-navbadge[data-v2-count] { font: 600 10px/14px var(--font-mono); }
+/* WP-D (audit 2026-10-23, shell): on a route the V2 command bar owns the search is a visible field ("Search or jump to", Cmd K) and
+   the signed-in user is named. Both carry a data attribute that only that route's TopBar sets, so the flag-off carbon topbar keeps
+   hiding the plain button exactly as before. */
+:root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] { display: inline-flex; margin-left: auto; }
+@media (min-width: 721px) {
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] { width: clamp(176px, 16vw, 240px); justify-content: flex-start; }
+  /* The field and the user chip take room from the trail, so on a V2 bar the trail wraps inside the bar (two 16px lines fit in 56px)
+     at every width, as it already does between 721px and 1279px, instead of cutting mid-word. */
+  :root[data-theme="execution-carbon"] .portal-topbar:has([data-v2-search]) .portal-breadcrumbs { flex-wrap: wrap; row-gap: 0; max-height: 32px; min-width: 0; }
+  :root[data-theme="execution-carbon"] .portal-topbar:has([data-v2-search]) .portal-breadcrumbs .portal-crumb { white-space: normal; min-width: 0; overflow-wrap: anywhere; }
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] kbd { margin-left: auto; }
+}
+:root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] .portal-search-label { color: var(--ink-faint); }
+:root[data-theme="execution-carbon"] .portal-topbar .portal-user-chip { display: inline-block; font: 500 10px/14px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); background: var(--surface-2); border: 1px solid var(--line); border-radius: 0; padding: 3px 8px; white-space: nowrap; flex: 0 1 auto; min-width: 0; max-width: 260px; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+:root[data-theme="execution-carbon"] .portal-topbar a.portal-user-chip:hover { color: var(--ink); border-color: var(--accent); }
+/* WP-D (QA1 SH-01, R2-25): on a V2 bar the chrome text sits on the 11px floor, the field's label never wraps, and the Portal environment badge is
+   labelled as the Portal's. */
+:root[data-theme="execution-carbon"] .portal-topbar:has([data-v2-search]) :is(.portal-workspace, .portal-pref select, .portal-search-btn, .portal-user-chip, .portal-env-prefix, .badge-env) { font-size: 11px; line-height: 16px; }
+:root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] .portal-search-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+:root[data-theme="execution-carbon"] .portal-topbar .portal-env-wrap { display: inline-flex; align-items: center; gap: 4px; }
+:root[data-theme="execution-carbon"] .portal-topbar .portal-env-prefix { font: 400 11px/16px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+:root[data-theme="execution-carbon"] .portal-topbar:has([data-v2-search]) .portal-search-btn kbd { font-size: 11px; line-height: 16px; }
+/* Between the phone bar and 1100px the field is the icon alone: no label is cut mid-word (QA2 R3-24, R4-20). The name stays for assistive tech. */
+@media (min-width: 721px) and (max-width: 1099px) {
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] { width: 36px; height: 32px; justify-content: center; padding: 0; margin-left: auto; }
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] kbd { display: none; }
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] .portal-search-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+@media (max-width: 1279px) {
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-user-chip { display: none; }
+}
+/* UXM-07 audit B #24: between the phone bar and the wide bar the trail used to clip mid-word ("dep_canary_01 · c").
+   The workspace chip (one workspace, it names nothing) gives its room to the trail, and the trail wraps to a second
+   line inside the same 56px bar (two 16px lines fit) instead of cutting. The words stay in the DOM for assistive tech. */
+@media (min-width: 721px) and (max-width: 1279px) {
+  :root[data-theme="execution-carbon"] .portal-topbar > .portal-workspace { display: none; }
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs { flex-wrap: wrap; row-gap: 0; max-height: 32px; }
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs .portal-crumb { white-space: normal; min-width: 0; overflow-wrap: anywhere; }
+}
 @media (min-width: 1024px) { :root[data-theme="execution-carbon"] .portal-topbar .portal-icon-btn { display: none; } }
 :root[data-theme="execution-carbon"] .portal-topbar .badge-env { display: inline-block; font: 700 10px/14px var(--font-mono); letter-spacing: 0.08em; border-width: 2px; border-style: solid; border-radius: 0; padding: 1px 7px; }
 /* Hi-fi 4e chrome: the alerts chip and the sidebar count badge (carbon only). */
@@ -2730,3 +2814,163 @@
 :root[data-theme="execution-carbon"] .portal-price-chip [data-tone="bad"] { color: var(--bad); }
 .portal-price-chip { display: none; }
 :root[data-theme="execution-carbon"] .portal-price-chip { display: inline-flex; }
+
+/* Skip link: first focusable element of the shell, visible only on focus. */
+.portal-skip-link { position: absolute; left: var(--space-3); top: var(--space-2); z-index: 1000; padding: var(--space-2) var(--space-3); background: var(--paper-raised); color: var(--ink); border: 2px solid var(--accent); border-radius: 4px; transform: translateY(-200%); }
+.portal-skip-link:focus { transform: none; }
+.portal-content:focus { outline: none; }
+/* D11: one rail toggle per width. The tailwind `lg:hidden` / `hidden` utilities lose to
+   `.portal-icon-btn { display: inline-flex }`, so both toggles showed at >=1024px. */
+@media (min-width: 1024px) { .portal-topbar > .portal-icon-btn.lg\:hidden { display: none; } }
+@media (max-width: 1023px) { .portal-topbar > .portal-icon-btn.hidden { display: none; } }
+
+/* --- Mobile shell (W3A, <=720px) ----------------------------------------
+ * One 56px row: menu button, one crumb (ellipsised), environment badge,
+ * search icon, Display menu. Theme, Density, Planned modules, the workspace
+ * chip and Users & Access live in the Display menu. Everything here is
+ * inside the media query, so >=721px renders as before. */
+.portal-display { display: none; }
+
+@media (max-width: 720px) {
+  .portal-topbar,
+  :root[data-theme="execution-carbon"] .portal-topbar {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+    height: 56px;
+    min-height: 56px;
+    padding: 0 var(--space-3);
+  }
+  .portal-topbar > .portal-brand,
+  .portal-topbar > .portal-wide-only,
+  .portal-topbar > .portal-pref,
+  .portal-topbar > .portal-pref-check,
+  .portal-topbar > .portal-admin-link,
+  .portal-topbar > .portal-price-chip,
+  /* The rail-collapse toggle is a laptop control (tailwind `hidden lg:inline-flex`
+     loses to `.portal-icon-btn { display: inline-flex }` below 1024px). */
+  .portal-topbar > .portal-icon-btn.hidden { display: none; }
+
+  .portal-topbar > .portal-icon-btn,
+  .portal-search-btn,
+  .portal-display-btn {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+  .portal-search-btn { margin-left: 0; }
+  .portal-search-btn kbd { display: none; }
+  .portal-search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .portal-topbar .badge-env { flex: 0 0 auto; }
+  /* UI review D10: the word "Portal" before the environment badge gives its room to the page name, which was left ~50px and broke
+     mid-word ("Approval/s"). The badge keeps its own label, and its title still says it is the Portal's environment. */
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-env-prefix { display: none; }
+
+  /* Only the current crumb stays; it takes the free room and ellipsises. */
+  .portal-breadcrumbs,
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-right: auto;
+  }
+  .portal-breadcrumbs .portal-crumb { display: none; }
+  .portal-breadcrumbs .portal-crumb--current {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .portal-breadcrumbs .portal-crumb--current .portal-crumb-sep { display: none; }
+  .portal-breadcrumbs .portal-crumb--current > a,
+  .portal-breadcrumbs .portal-crumb--current > span:not(.portal-crumb-sep) {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 14px;
+    color: var(--ink);
+    padding: 12px 0;
+  }
+  /* UXM-07 audit A #10, B #24: on an Execution route the one crumb wraps to two lines (a deployment id plus its stage is
+     longer than the room) and only then ellipsises; the 56px bar holds two 18px lines. Research keeps its single line. */
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs .portal-crumb--current > a,
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs .portal-crumb--current > span:not(.portal-crumb-sep) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    /* UI review D10: a word is never cut in the middle ("Approval/s"). It wraps between words; a single token longer than the line
+       (an id) breaks only then, and the clamp ends the second line with an ellipsis. */
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: none;
+    padding: 0;
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .portal-alerts-chip { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+  .portal-display { display: block; position: relative; flex: 0 0 auto; }
+  .portal-display-btn {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    color: var(--ink-soft);
+    background: var(--paper-raised);
+  }
+  .portal-display-btn:hover,
+  .portal-display-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--accent); }
+  .portal-display-panel {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    z-index: 50;
+    width: min(280px, calc(100vw - 2 * var(--space-3)));
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-e3);
+  }
+  .portal-display-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    min-height: 32px;
+  }
+  .portal-display-key { font-size: 11px; color: var(--ink-faint); }
+  .portal-display-panel .portal-pref { display: block; }
+  .portal-display-panel .portal-pref select {
+    width: 100%;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .portal-display-panel .portal-pref-check {
+    display: flex;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .portal-display-panel .portal-pref-check input { width: 18px; height: 18px; }
+  .portal-display-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+  .portal-display-link:hover { color: var(--ink); text-decoration: underline; }
+}

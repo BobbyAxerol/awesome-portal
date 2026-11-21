@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { z } from "zod";
 import { AUTH_MODES } from "./domain";
+import {executionRecipes} from "./research/execution-recipes";
 
 const ServiceOriginSchema = z
   .string()
@@ -27,7 +28,20 @@ const EnvSchema = z.object({
   PORTAL_ENV: z.enum(["local", "research", "paper", "sandbox", "live"]).default("research"),
   AUTH_MODE: z.enum(AUTH_MODES).default("cloudflare_access_local_password"),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  EXECUTION_DATABASE_URL: z.preprocess(v => v === "" ? undefined : v,
+    z.string().url().refine(v => ["postgres:", "postgresql:"].includes(new URL(v).protocol)).optional()),
+  EXECUTION_DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(10).default(6),
+  EXECUTION_DATABASE_POOL_QUEUE_MAX: z.coerce.number().int().min(0).max(32).default(12),
   PORTAL_PUBLIC_ORIGIN: z.string().min(1).default("http://localhost:8080"),
+  /**
+   * Research preview only (research-portal): the user a browser without a
+   * session is signed in as, so a quick-look build has no login screen.
+   * Refused at startup unless PORTAL_ENV=local and AUTH_MODE=dev.
+   */
+  PREVIEW_AUTO_LOGIN_USERNAME: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^[a-z][a-z0-9._-]{1,63}$/).optional(),
+  ),
   CLOUDFLARE_TEAM_DOMAIN: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).optional(),
@@ -49,6 +63,147 @@ const EnvSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.string().min(16).optional(),
   ),
+  // P07 source custody remains in Control API PostgreSQL; the Python service
+  // is a short-lived private AST analyser only.  These limits bound that
+  // adapter path without adding a worker, runtime container or browser-held
+  // source credential.
+  RESEARCH_ALPHA_IMPORT_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(10 * 60),
+  RESEARCH_ALPHA_IMPORT_ANALYSIS_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
+  RESEARCH_ALPHA_IMPORT_MAXIMUM_ACTIVE_SOURCES_PER_ACTOR: z.coerce.number().int().min(1).max(32).default(8),
+  // P08 writes only immutable preflight-manifest metadata to PostgreSQL. The
+  // source snapshot stays private to the Portal API content-addressed store;
+  // these settings bound the short private adapter call and actor-local token
+  // lease without starting a worker or changing any execution profile.
+  RESEARCH_PREFLIGHT_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(10 * 60),
+  RESEARCH_PREFLIGHT_TIMEOUT_MS: z.coerce.number().int().min(250).max(15_000).default(5_000),
+  RESEARCH_PREFLIGHT_MAXIMUM_ACTIVE_MANIFESTS_PER_ACTOR: z.coerce.number().int().min(1).max(16).default(8),
+  // P09 has one bounded, read-only private Atlas request. It neither imports
+  // an engine per browser view nor starts a worker/runner.
+  RESEARCH_FOUNDATION_ATLAS_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
+  // P10 is dark by default. A release can expose all preceding Research reads
+  // without accepting a browser-originated run until the bounded producer,
+  // Portal private route and durable worker are deployed as one approved unit.
+  FEATURE_RESEARCH_RUN_PRODUCER: z.enum(["true", "false"]).default("false"),
+  // P23 only: exact old-wheel compatibility binding, never a current default.
+  RESEARCH_ENGINE_QUALIFICATION_VERSION: z.preprocess(value => value === "" ? undefined : value,
+    z.literal("1.1.0").optional()),
+  RESEARCH_RUN_PRODUCER_LEASE_SECONDS: z.coerce.number().int().min(15).max(300).default(90),
+  // P11 is an explicitly deployed, additive callback/read plane.  It stays
+  // dark until the Python worker journal, shared durable volume and Control
+  // API migration are deployed as one compatibility unit.  The short timeout
+  // bounds the private cancellation marker hop; worker journal persistence
+  // remains the source recovery authority if that hop is unavailable.
+  FEATURE_RESEARCH_PROGRESS: z.enum(["true", "false"]).default("false"),
+  // P05 writer registration is separate from P11 progress.  A release must
+  // deploy the worker's P05 store and private reserve/seal callback together.
+  FEATURE_RESEARCH_RETAINED_ARTIFACTS: z.enum(["true", "false"]).default("false"),
+
+  RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS: z.coerce.number().int().min(250).max(5_000).default(1_500),
+  // P12 is a persisted, same-origin history reader. It is deliberately
+  // independent of the P10 producer/P11 callback flags: old and completed
+  // Research rows remain safely browsable after workers are stopped, while a
+  // release can still keep this new BFF route dark until its migration and
+  // generated contract are deployed together.
+  FEATURE_RESEARCH_RUN_LIBRARY: z.enum(["true", "false"]).default("false"),
+  // P13 reader activation is independent from source materialisation. A
+  // deployed worker can durably relay a bounded terminal evidence receipt
+  // while the browser Hub remains dark until the same release's migration and
+  // generated contract have been reviewed.
+  FEATURE_RESEARCH_EVIDENCE: z.enum(["true", "false"]).default("false"),
+  // P14 is a separately gated read-only chronology surface. Source terminal
+  // receipts may be persisted for recovery while browser Split reads remain
+  // dark; this flag never enables a producer, worker, holdout value or
+  // holdout-unlock mutation.
+  FEATURE_RESEARCH_SPLIT: z.enum(["true", "false"]).default("false"),
+  // P15 reads only the immutable P14/P10 current-P04 receipt and its pinned
+  // static declaration. It starts no search, does not scan artifacts/Parquet
+  // and cannot turn the fixed qualification into an optimizer. Keep it dark
+  // until its generated contract and Screen-06 consumer are accepted.
+  FEATURE_RESEARCH_SEARCH: z.enum(["true", "false"]).default("false"),
+  // P16 is a feature-dark, retained-fact verifier. It only compares the
+  // immutable P04/P10/P14 digest bindings already held by Portal; it never
+  // opens an artifact, starts a worker or diagnostic job, reads a source data
+  // store, or changes frozen parameters.
+  FEATURE_RESEARCH_FREEZE: z.enum(["true", "false"]).default("false"),
+  // P17 is a feature-dark, read-only replay view over P13's bounded sealed
+  // equity samples. It neither replays QuantBT nor derives orders/fills from
+  // equity; its signed cursors remain Portal-local and evidence-bound.
+  FEATURE_RESEARCH_REPLAY: z.enum(["true", "false"]).default("false"),
+  // RS-02 is a separate current-engine lane. It can read only an already
+  // sealed local artifact/revision, never starts QuantBT, calls an artifact
+  // path, or changes P04/P13--P17 fixed-run routing. Keep it dark until the
+  // bounded importer, generated client and Screen 04--08 acceptance land as
+  // one reviewed dev slice.
+  FEATURE_RESEARCH_CURRENT_SOURCE: z.enum(["true", "false"]).default("false"),
+  // W1 admits the one locked Delta signal-notional walk-forward execution
+  // profile (P10) and its private RS-02 ingest. It only widens P10 admission
+  // to that exact profile; the P04 fixed qualification wire is unchanged.
+  // Requires the producer, progress, retained-artifact and current-source
+  // lanes, because a WFO run is complete only once its artifact is sealed.
+  FEATURE_RESEARCH_WFO_PROFILE: z.enum(["true", "false"]).default("false"),
+  FEATURE_RESEARCH_FULL02_PROFILE: z.enum(["true", "false"]).default("false"),
+  FEATURE_RESEARCH_FULL03_PROFILE: z.enum(["true", "false"]).default("false"),
+  FEATURE_RESEARCH_FULL04_PROFILE: z.enum(["true", "false"]).default("false"),
+  FEATURE_RESEARCH_FULL05_PROFILE: z.enum(["true", "false"]).default("false"),
+  FEATURE_RESEARCH_FULL06_PROFILE: z.enum(["true", "false"]).default("false"),
+  // One exact owner qualification recipe; never valid outside the isolated local cell.
+  RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID: z.preprocess(v => v === "" ? undefined : v,
+    z.string().max(191).refine(v=>executionRecipes.some(row=>row.profile_id===v &&
+      (row.feature_flags as readonly string[]).some(flag=>flag==="FEATURE_RESEARCH_FULL02_PROFILE"||flag==="FEATURE_RESEARCH_FULL03_PROFILE"||flag==="FEATURE_RESEARCH_FULL04_PROFILE"||flag==="FEATURE_RESEARCH_FULL05_PROFILE"||flag==="FEATURE_RESEARCH_FULL06_PROFILE")),
+      "One exact installed qualification recipe is required").optional()),
+  // Source-qualified FPT observed daily research only; not a generic VN venue.
+  FEATURE_RESEARCH_VN_OBSERVED_PROFILE: z.enum(["true", "false"]).default("false"),
+  // E17: execute only a digest-bound DRAFT/ACTIVE P07 AlphaVersion through
+  // the installed restricted signal-notional adapter. Publication still
+  // requires ACTIVE; execution needs the producer/progress/evidence foundation
+  // plus an internal principal for exact-digest source custody.
+  FEATURE_RESEARCH_IMPORTED_EXECUTION: z.enum(["true", "false"]).default("false"),
+  // W5a · A10a: an explicit P16 verify re-reads the sealed P05 artifact's
+  // bytes through the private Portal observer and appends one immutable,
+  // bounded receipt. It never rewrites an expected digest, never repairs a
+  // file and never runs on a GET. Needs Freeze, retained artifacts and the
+  // private principal.
+  FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY: z.enum(["true", "false"]).default("false"),
+  // W5a · A10c: the Screen-07 what-if grid for a sealed Delta WFO run. The
+  // read serves exact existing evaluations only; the one explicit "evaluate
+  // grid" action admits one bounded diagnostic Research job through P10/P06.
+  // Nothing is evaluated on a GET, on mount or on a slider move.
+  FEATURE_RESEARCH_WHATIF: z.enum(["true", "false"]).default("false"),
+  // Research preview only (Bobby 2026-09-30): the Delta WFO profile admits
+  // 2..400 Optuna trials (seed 42, everything else locked) with preview child
+  // limits of 1800 CPU-s / 3600 wall-s. The profile identity and digest do
+  // not change; the run's requested spec records its real trial count.
+  // Refused at startup unless AUTH_MODE=dev and PORTAL_ENV=local.
+  FEATURE_RESEARCH_PREVIEW_LONG_WFO: z.enum(["true", "false"]).default("false"),
+  // P18 is a persisted Report/Export projection.  It is independently dark
+  // until the source readers, the additive migration and the generated
+  // consumer contract are accepted together.  Enabling it never starts
+  // QuantBT, a renderer daemon, a source adapter or an export worker: the
+  // one-shot bounded worker is invoked explicitly by deployment automation.
+  FEATURE_RESEARCH_REPORTS: z.enum(["true", "false"]).default("false"),
+  RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(512 * 1024),
+  RESEARCH_REPORT_EXPORT_LEASE_SECONDS: z.coerce.number().int().min(15).max(300).default(90),
+  // P19 is a separately admitted, persisted-only Screen-10 reader.  It is
+  // intentionally independent from active workers and can render historical
+  // evidence after a worker stop, but requires the retained P12 Library lane
+  // so the two screens keep one truthful definition of a logical run/retry.
+  FEATURE_RESEARCH_LINEAGE: z.enum(["true", "false"]).default("false"),
+  // P20 is an independently dark, persisted-only Compare reader. It can
+  // calculate one bounded exact-timestamp correlation only from already
+  // sealed local observations; it never triggers QuantBT, source I/O,
+  // selection, approval, publication or an Execution command.
+  FEATURE_RESEARCH_COMPARE: z.enum(["true", "false"]).default("false"),
+  // P21 composes a Portal-local immutable Release Candidate evidence pack
+  // from already retained facts. It has no publish, approval, Execution,
+  // worker, artifact-byte, or source-data transport authority. P22 alone
+  // may later deliver an already sealed pack to Governance.
+  FEATURE_RESEARCH_RELEASE_CANDIDATES: z.enum(["true", "false"]).default("false"),
+  // P22 publication intake: a NEW publish intent (the first POST for a sealed
+  // candidate) goes to the existing R1 create service only when this is true.
+  // Compose, local seal, the publication read/mirror and the replay of an
+  // intent already recorded (PENDING/UNKNOWN reconciliation) keep running
+  // with it off, so intake can be stopped without stranding an outcome.
+  FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: z.enum(["true", "false"]).default("false"),
   QUERY_CURSOR_ACTIVE_KEY_ID: z.string().regex(/^[A-Za-z0-9_-]{1,32}$/).default("query-k1"),
   QUERY_CURSOR_KEYS_JSON: z.preprocess(
     (value) => (value === "" ? undefined : value),
@@ -112,6 +267,17 @@ const EnvSchema = z.object({
   // P4-D taxonomy (Bobby approved 2026-09-03): the DNSE/VN paper family gets
   // its own profile home. Off until the Edge publishes the N13B origin.
   FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: z.enum(["true", "false"]).default("false"),
+  // OKX Paper profile (owner decision 2026-11-18, staged): PAPER_OKX_SWAP is a
+  // third Paper family beside BINANCE and DNSE. Off until the Edge instance,
+  // Manager and catalogue for it exist; Core wiring is groundwork only.
+  FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: z.enum(["true", "false"]).default("false"),
+  // Which Paper profile the product READ side serves. Unset = PAPER_OKX_SWAP when
+  // the OKX profile is enabled and wired, otherwise the BINANCE Paper profile
+  // (owner, 2026-11-18). Write-side paths are never moved by this setting.
+  EXECUTION_PAPER_READ_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.enum(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"]).optional(),
+  ),
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
   // EDS-11R4 remains separately dark even when a current-source profile is
@@ -119,6 +285,7 @@ const EnvSchema = z.object({
   // is the second, deployment-review gate after that intake is accepted.
   FEATURE_EXECUTION_MARKET_CONTEXT: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_LOCAL_PROJECTION: z.enum(["true", "false"]).default("false"),
+  EXECUTION_READ_PROFILE: z.enum(["source_current_v1", "retained_review_v1", "native_manager_review_v1"]).default("source_current_v1"),
   // EDS-06 stays storage/change-window gated even when the source projection
   // itself is active. Browser reads are a later, per-screen cutover.
   FEATURE_EXECUTION_DURABLE_MIRROR: z.enum(["true", "false"]).default("false"),
@@ -173,6 +340,15 @@ const EnvSchema = z.object({
     z.string().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
   ),
   EXECUTION_EDGE_PAPER_DNSE_AUDIENCE: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().min(1).max(160).optional(),
+  ),
+  EXECUTION_EDGE_PAPER_OKX_ORIGIN: OptionalServiceOriginSchema,
+  EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: z.preprocess(
+    (value) => (value === "" ? undefined : value),
+    z.string().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
+  ),
+  EXECUTION_EDGE_PAPER_OKX_AUDIENCE: z.preprocess(
     (value) => (value === "" ? undefined : value),
     z.string().min(1).max(160).optional(),
   ),
@@ -248,10 +424,39 @@ const EnvSchema = z.object({
   // uncacheable flight.  Expired rows are handled only by the worker below.
   EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS: z.coerce.number().int().min(128).max(500_000).default(20_000),
   EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES: z.coerce.number().int().min(8 * 1024 * 1024).max(1024 * 1024 * 1024).default(256 * 1024 * 1024),
+  // Physical-size guard: ordinary VACUUM never returns file space, so a burst once left this recomputable cache at 92 GB.
+  // When the table's on-disk size exceeds this and holds no live entry, the sweeper reclaims it (TRUNCATE). 0 disables.
+  EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES: z.coerce.number().int().min(0).max(1024 * 1024 * 1024 * 1024).default(1024 * 1024 * 1024),
   OUTBOX_MAX_RESPONSE_BYTES: z.coerce.number().int().positive().default(64 * 1024),
 });
 
 export type ControlApiConfig = z.infer<typeof EnvSchema>;
+
+export const PAPER_OKX_PROFILE_ID = "PAPER_OKX_SWAP";
+
+type PaperReadProfileConfig = Partial<Pick<ControlApiConfig,
+  | "EXECUTION_EDGE_PAPER_PROFILE_ID"
+  | "EXECUTION_PAPER_READ_PROFILE_ID"
+  | "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX"
+  | "EXECUTION_EDGE_PAPER_OKX_PROFILE_ID">>;
+
+/** True when the OKX Paper profile is enabled and its profile id is wired. */
+export function paperOkxReady(config: PaperReadProfileConfig): boolean {
+  return config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX === "true" &&
+    config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID === PAPER_OKX_PROFILE_ID;
+}
+
+/**
+ * The Paper profile every product READ resolves to. One function so a screen
+ * and its sources can never disagree about which Paper profile they describe.
+ */
+export function paperReadProfileId(config: PaperReadProfileConfig): string | undefined {
+  const choice = config.EXECUTION_PAPER_READ_PROFILE_ID
+    ?? (paperOkxReady(config) ? PAPER_OKX_PROFILE_ID : undefined);
+  return choice === PAPER_OKX_PROFILE_ID && paperOkxReady(config)
+    ? PAPER_OKX_PROFILE_ID
+    : config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+}
 
 function signingKeysFromFile(
   env: NodeJS.ProcessEnv,
@@ -310,7 +515,30 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     "GOVERNANCE_APPLY_KEYS_JSON",
     "GOVERNANCE_APPLY_KEYS_FILE",
   );
+  if (env.EXECUTION_DATABASE_URL_FILE) {
+    if (env.EXECUTION_DATABASE_URL || !/^\/run\/secrets\/[A-Za-z0-9_./-]+$/.test(env.EXECUTION_DATABASE_URL_FILE)
+        || env.EXECUTION_DATABASE_URL_FILE.includes("..")) throw new Error("EXECUTION_DATABASE_FILE_INVALID");
+    resolved.EXECUTION_DATABASE_URL = readFileSync(env.EXECUTION_DATABASE_URL_FILE, "utf8").trim();
+  }
   const config = EnvSchema.parse(resolved);
+  if (config.EXECUTION_PAPER_READ_PROFILE_ID === PAPER_OKX_PROFILE_ID && !paperOkxReady(config)) {
+    throw new Error(
+      "EXECUTION_PAPER_READ_PROFILE_ID=PAPER_OKX_SWAP requires FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX=true " +
+      "and EXECUTION_EDGE_PAPER_OKX_PROFILE_ID=PAPER_OKX_SWAP",
+    );
+  }
+  if (config.EXECUTION_DATABASE_URL) {
+    const core = new URL(config.DATABASE_URL), domain = new URL(config.EXECUTION_DATABASE_URL);
+    // Changing a role, URL spelling or omitted default port is not isolation.
+    if (core.hostname === domain.hostname && (core.port || "5432") === (domain.port || "5432") &&
+        decodeURIComponent(core.pathname) === decodeURIComponent(domain.pathname)) {
+      throw new Error("EXECUTION_DATABASE_MUST_BE_ISOLATED");
+    }
+  }
+  if (config.RESEARCH_ENGINE_QUALIFICATION_VERSION !== undefined
+      && (config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev")) {
+    throw new Error("RESEARCH_ENGINE_QUALIFICATION_VERSION is isolated-only (PORTAL_ENV=local and AUTH_MODE=dev)");
+  }
   if (config.PORTAL_ENV !== "local") {
     const missingSigningKeys = ["QUERY_CURSOR_KEYS_JSON", "GOVERNANCE_APPLY_KEYS_JSON"]
       .filter((name) => !resolved[name]);
@@ -351,6 +579,139 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   if (config.AUTH_MODE === "dev" && !["local"].includes(config.PORTAL_ENV)) {
     throw new Error("AUTH_MODE=dev is only allowed with PORTAL_ENV=local");
   }
+  if (config.PREVIEW_AUTO_LOGIN_USERNAME && (config.AUTH_MODE !== "dev" || config.PORTAL_ENV !== "local")) {
+    throw new Error("PREVIEW_AUTO_LOGIN_USERNAME is only allowed with AUTH_MODE=dev and PORTAL_ENV=local");
+  }
+  if (config.FEATURE_RESEARCH_PROGRESS === "true") {
+    if (config.FEATURE_RESEARCH_RUN_PRODUCER !== "true") {
+      throw new Error("FEATURE_RESEARCH_PROGRESS=true requires FEATURE_RESEARCH_RUN_PRODUCER=true");
+    }
+    if (!config.INTERNAL_PRINCIPAL_SECRET) {
+      throw new Error("FEATURE_RESEARCH_PROGRESS=true requires INTERNAL_PRINCIPAL_SECRET");
+    }
+  }
+  if (config.FEATURE_RESEARCH_RETAINED_ARTIFACTS === "true" && config.FEATURE_RESEARCH_PROGRESS !== "true") {
+    throw new Error("FEATURE_RESEARCH_RETAINED_ARTIFACTS=true requires FEATURE_RESEARCH_PROGRESS=true");
+  }
+  if (config.FEATURE_RESEARCH_WFO_PROFILE === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_RUN_PRODUCER", config.FEATURE_RESEARCH_RUN_PRODUCER],
+      ["FEATURE_RESEARCH_PROGRESS", config.FEATURE_RESEARCH_PROGRESS],
+      ["FEATURE_RESEARCH_RETAINED_ARTIFACTS", config.FEATURE_RESEARCH_RETAINED_ARTIFACTS],
+      ["FEATURE_RESEARCH_CURRENT_SOURCE", config.FEATURE_RESEARCH_CURRENT_SOURCE],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_WFO_PROFILE=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_FULL02_PROFILE === "true" && config.FEATURE_RESEARCH_WFO_PROFILE !== "true") {
+    throw new Error("FEATURE_RESEARCH_FULL02_PROFILE requires the complete WFO retention/read foundation");
+  }
+  if (config.FEATURE_RESEARCH_FULL03_PROFILE === "true" && config.FEATURE_RESEARCH_WFO_PROFILE !== "true") {
+    throw new Error("FEATURE_RESEARCH_FULL03_PROFILE requires the complete WFO retention/read foundation");
+  }
+  if (config.FEATURE_RESEARCH_FULL04_PROFILE === "true" && config.FEATURE_RESEARCH_FULL03_PROFILE !== "true") {
+    throw new Error("FEATURE_RESEARCH_FULL04_PROFILE requires the indexed source/retention foundation");
+  }
+  if(config.FEATURE_RESEARCH_FULL05_PROFILE==="true"&&(config.FEATURE_RESEARCH_WFO_PROFILE!=="true"||config.FEATURE_RESEARCH_IMPORTED_EXECUTION!=="true")){
+    throw new Error("FEATURE_RESEARCH_FULL05_PROFILE requires confined imported execution and the complete WFO foundation");
+  }
+  if(config.FEATURE_RESEARCH_FULL06_PROFILE==="true"&&config.FEATURE_RESEARCH_WFO_PROFILE!=="true"){
+    throw new Error("FEATURE_RESEARCH_FULL06_PROFILE requires the complete WFO retention/read foundation");
+  }
+  if (config.RESEARCH_RECIPE_QUALIFICATION_PROFILE_ID !== undefined && (
+      config.FEATURE_RESEARCH_FULL02_PROFILE !== "true" && config.FEATURE_RESEARCH_FULL03_PROFILE !== "true" && config.FEATURE_RESEARCH_FULL05_PROFILE !== "true" && config.FEATURE_RESEARCH_FULL06_PROFILE !== "true"
+      || config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev")) {
+    throw new Error("Recipe qualification requires one exact local/dev owner cell");
+  }
+  if (config.FEATURE_RESEARCH_VN_OBSERVED_PROFILE === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_RUN_PRODUCER", config.FEATURE_RESEARCH_RUN_PRODUCER],
+      ["FEATURE_RESEARCH_PROGRESS", config.FEATURE_RESEARCH_PROGRESS],
+      ["FEATURE_RESEARCH_RETAINED_ARTIFACTS", config.FEATURE_RESEARCH_RETAINED_ARTIFACTS],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) throw new Error(`FEATURE_RESEARCH_VN_OBSERVED_PROFILE=true requires: ${missing.join(", ")}`);
+  }
+  if (config.FEATURE_RESEARCH_IMPORTED_EXECUTION === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_RUN_PRODUCER", config.FEATURE_RESEARCH_RUN_PRODUCER],
+      ["FEATURE_RESEARCH_PROGRESS", config.FEATURE_RESEARCH_PROGRESS],
+      ["FEATURE_RESEARCH_RETAINED_ARTIFACTS", config.FEATURE_RESEARCH_RETAINED_ARTIFACTS],
+      ["FEATURE_RESEARCH_EVIDENCE", config.FEATURE_RESEARCH_EVIDENCE],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (!config.INTERNAL_PRINCIPAL_SECRET) missing.push("INTERNAL_PRINCIPAL_SECRET");
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_IMPORTED_EXECUTION=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_FREEZE", config.FEATURE_RESEARCH_FREEZE],
+      ["FEATURE_RESEARCH_RETAINED_ARTIFACTS", config.FEATURE_RESEARCH_RETAINED_ARTIFACTS],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (!config.INTERNAL_PRINCIPAL_SECRET) missing.push("INTERNAL_PRINCIPAL_SECRET");
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_WHATIF === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_WFO_PROFILE", config.FEATURE_RESEARCH_WFO_PROFILE],
+      ["FEATURE_RESEARCH_FREEZE", config.FEATURE_RESEARCH_FREEZE],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_WHATIF=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_PREVIEW_LONG_WFO === "true") {
+    if (config.AUTH_MODE !== "dev" || config.PORTAL_ENV !== "local") {
+      throw new Error("FEATURE_RESEARCH_PREVIEW_LONG_WFO is only allowed with AUTH_MODE=dev and PORTAL_ENV=local");
+    }
+    if (config.FEATURE_RESEARCH_WFO_PROFILE !== "true") {
+      throw new Error("FEATURE_RESEARCH_PREVIEW_LONG_WFO=true requires FEATURE_RESEARCH_WFO_PROFILE=true");
+    }
+  }
+  if (config.FEATURE_RESEARCH_REPLAY === "true" && config.FEATURE_RESEARCH_EVIDENCE !== "true") {
+    throw new Error("FEATURE_RESEARCH_REPLAY=true requires FEATURE_RESEARCH_EVIDENCE=true");
+  }
+  if (config.FEATURE_RESEARCH_REPORTS === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_EVIDENCE", config.FEATURE_RESEARCH_EVIDENCE],
+      ["FEATURE_RESEARCH_SPLIT", config.FEATURE_RESEARCH_SPLIT],
+      ["FEATURE_RESEARCH_SEARCH", config.FEATURE_RESEARCH_SEARCH],
+      ["FEATURE_RESEARCH_FREEZE", config.FEATURE_RESEARCH_FREEZE],
+      ["FEATURE_RESEARCH_REPLAY", config.FEATURE_RESEARCH_REPLAY],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_REPORTS=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_LINEAGE === "true" && config.FEATURE_RESEARCH_RUN_LIBRARY !== "true") {
+    throw new Error("FEATURE_RESEARCH_LINEAGE=true requires FEATURE_RESEARCH_RUN_LIBRARY=true");
+  }
+  if (config.FEATURE_RESEARCH_COMPARE === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_RUN_LIBRARY", config.FEATURE_RESEARCH_RUN_LIBRARY],
+      ["FEATURE_RESEARCH_EVIDENCE", config.FEATURE_RESEARCH_EVIDENCE],
+      ["FEATURE_RESEARCH_SPLIT", config.FEATURE_RESEARCH_SPLIT],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_COMPARE=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_RELEASE_CANDIDATES === "true") {
+    const missing = [
+      ["FEATURE_RESEARCH_REPORTS", config.FEATURE_RESEARCH_REPORTS],
+      ["FEATURE_RESEARCH_LINEAGE", config.FEATURE_RESEARCH_LINEAGE],
+    ].filter(([, value]) => value !== "true").map(([name]) => name);
+    if (missing.length > 0) {
+      throw new Error(`FEATURE_RESEARCH_RELEASE_CANDIDATES=true requires: ${missing.join(", ")}`);
+    }
+  }
+  if (config.FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION === "true"
+    && config.FEATURE_RESEARCH_RELEASE_CANDIDATES !== "true") {
+    throw new Error("FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION=true requires FEATURE_RESEARCH_RELEASE_CANDIDATES=true");
+  }
   if (config.FEATURE_EXECUTION_EDGE === "true" && !config.EXECUTION_EDGE_PRIVATE_KEY_FILE) {
     throw new Error(
       "FEATURE_EXECUTION_EDGE=true requires EXECUTION_EDGE_PRIVATE_KEY_FILE",
@@ -363,6 +724,38 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
   }
   if (config.FEATURE_EXECUTION_COMMAND_RELAY === "true") {
     throw new Error("FEATURE_EXECUTION_COMMAND_RELAY is not commissioned in EX-BE-05b/F0");
+  }
+  if (config.EXECUTION_READ_PROFILE === "native_manager_review_v1") {
+    if (config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev" || !config.EXECUTION_DATABASE_URL ||
+      config.EXECUTION_DATABASE_URL === config.DATABASE_URL || !config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
+      config.FEATURE_EXECUTION_EDGE !== "true" || config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER !== "true" ||
+      config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || config.EXECUTION_EDGE_PAPER_PROFILE_ID !== "PAPER_BINANCE_USDM")
+      throw new Error("NATIVE_RESEARCH_REVIEW_REQUIRES_ISOLATED_PAPER_PROFILE");
+    const forbidden = ["FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE", "FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX",
+      "FEATURE_EXECUTION_CURRENT_SOURCE_LIVE", "FEATURE_EXECUTION_DURABLE_MIRROR", "FEATURE_EXECUTION_DURABLE_MIRROR_READS",
+      "FEATURE_EXECUTION_REALTIME_SSE", "FEATURE_EXECUTION_ANALYTICS_QUERY", "FEATURE_EXECUTION_SHADOW_QUERY",
+      "FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW", "FEATURE_EXECUTION_MARKET_CONTEXT", "FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES",
+      "FEATURE_EXECUTION_COMMAND_RELAY", "FEATURE_EXECUTION_LOCAL_R0_TASKS"] as const;
+    if (forbidden.some(key => config[key] === "true") || config.EXECUTION_EDGE_SANDBOX_PROFILE_ID || config.EXECUTION_EDGE_LIVE_PROFILE_ID)
+      throw new Error("NATIVE_RESEARCH_REVIEW_FORBIDS_OTHER_PROFILES_AND_LEGACY_WORKERS");
+  }
+  if (config.EXECUTION_READ_PROFILE === "retained_review_v1") {
+    if (config.PORTAL_ENV !== "local" || config.AUTH_MODE !== "dev" || !config.EXECUTION_DATABASE_URL ||
+      config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || !config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
+      !config.EXECUTION_EDGE_PAPER_PROFILE_ID || !config.EXECUTION_EDGE_SANDBOX_PROFILE_ID || !config.EXECUTION_EDGE_LIVE_PROFILE_ID) {
+      throw new Error("UDB_RETAINED_REVIEW_REQUIRES_ISOLATED_LOCAL_PROFILE");
+    }
+    const forbidden = ["FEATURE_EXECUTION_EDGE", "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER",
+      "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE", "FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX",
+      "FEATURE_EXECUTION_CURRENT_SOURCE_LIVE", "FEATURE_EXECUTION_DURABLE_MIRROR",
+      "FEATURE_EXECUTION_DURABLE_MIRROR_READS", "FEATURE_EXECUTION_REALTIME_SSE",
+      "FEATURE_EXECUTION_ANALYTICS_QUERY", "FEATURE_EXECUTION_SHADOW_QUERY",
+      "FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW", "FEATURE_EXECUTION_MARKET_CONTEXT",
+      "FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES", "FEATURE_EXECUTION_COMMAND_RELAY", "FEATURE_EXECUTION_LOCAL_R0_TASKS"] as const;
+    if (forbidden.some(key => config[key] === "true")) throw new Error("UDB_RETAINED_REVIEW_FORBIDS_SOURCE_STREAM_AND_MUTATION");
+    if (config.EXECUTION_EDGE_PAPER_PROFILE_ID !== "PAPER_BINANCE_USDM" ||
+      config.EXECUTION_EDGE_SANDBOX_PROFILE_ID !== "SANDBOX_BINANCE_USDM" ||
+      config.EXECUTION_EDGE_LIVE_PROFILE_ID !== "LIVE_BINANCE_USDM") throw new Error("UDB_RETAINED_REVIEW_PROFILE_MISMATCH");
   }
   if (config.FEATURE_EXECUTION_LOCAL_R0_TASKS === "true") {
     const missing = [
@@ -395,6 +788,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       audience: config.EXECUTION_EDGE_PAPER_DNSE_AUDIENCE,
       expectedProfileId: "PAPER_DNSE_VNM",
       expectedAudience: "portal-execution-edge-paper-dnse",
+    },
+    {
+      environment: "paper",
+      keyPrefix: "PAPER_OKX",
+      feature: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX,
+      origin: config.EXECUTION_EDGE_PAPER_OKX_ORIGIN,
+      profileId: config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID,
+      audience: config.EXECUTION_EDGE_PAPER_OKX_AUDIENCE,
+      expectedProfileId: "PAPER_OKX_SWAP",
+      expectedAudience: "portal-execution-edge-paper-okx",
     },
     {
       environment: "sandbox",
@@ -463,7 +866,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
         "FEATURE_EXECUTION_LOCAL_PROJECTION=true requires EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID",
       );
     }
-    if (!currentSourceProfiles.some((profile) => profile.feature === "true")) {
+    if (config.EXECUTION_READ_PROFILE !== "retained_review_v1" && !currentSourceProfiles.some((profile) => profile.feature === "true")) {
       throw new Error("local execution projection requires at least one current-source profile");
     }
     if (

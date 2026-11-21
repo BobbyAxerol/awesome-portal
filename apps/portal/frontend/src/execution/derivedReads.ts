@@ -145,7 +145,8 @@ export function readConditionalGroup(raw: unknown): ConditionalGroupRead | null 
   const legs = Array.isArray(data.legs) ? data.legs : [];
   return {
     groupId,
-    contingency: group ? str(group.contingency) : str(data.contingency),
+    // The server field is `contingency_type` (CONDITIONAL_GROUP_FIELDS); `contingency` is the older hand-built spelling.
+    contingency: group ? (str(group.contingency_type) ?? str(group.contingency)) : (str(data.contingency_type) ?? str(data.contingency)),
     state: group ? str(group.state) : str(data.state),
     envelopeState: str(body.state),
     reasonCode: str(body.reason_code),

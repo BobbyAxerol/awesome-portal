@@ -127,7 +127,7 @@ describe("EDS-00 runtime manifest intake", () => {
     }));
     const controller = new ExecutionRuntimeManifestController(
       service,
-      { isMember: async (workspaceId: string, userId: string) => workspaceId === "ws_primary" && userId === "usr_bobby" } as never,
+      { canReadExecution: async (workspaceId: string, userId: string) => workspaceId === "ws_primary" && userId === "usr_bobby" } as never,
     );
     const request = { portalWorkspaceId: "ws_primary", portalUser: { userId: "usr_bobby" } } as never;
     await expect(controller.manifest(request, {})).resolves.toMatchObject({ workspace_id: "ws_primary" });

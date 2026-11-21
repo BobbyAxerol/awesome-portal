@@ -17,19 +17,20 @@
       "get": {
         "operationId": "executionPaperWorkbenchV1",
         "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
-        "responses": { "200": { "description": "Current deployment-scoped Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+        "responses": { "200": { "description": "Current deployment-scoped Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "413": { "description": "N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } }
       }
     },
     "/api/v1/execution/screens/paper/{deployment_id}/vn-market": {
       "get": {
         "operationId": "executionPaperWorkbenchVnmV1",
         "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
-        "responses": { "200": { "description": "Current deployment-scoped VNM Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
+        "responses": { "200": { "description": "Current deployment-scoped VNM Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "413": { "description": "N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } }
       }
     },
     "/api/v1/execution/screens/blotter": {
       "get": {
         "operationId": "executionFullBlotterV1",
+        "description": "Paper-only read. Scope filters run over authorized retained tuples before pagination/counts; alpha-to-strategy mapping requires qualified lineage. Missing attribution is typed PARTIAL, not exact empty. Other stages are refused, not silently routed. Scoped views omit legacy global mirror proof/totals and retain SOURCE_PARTIAL; per-order fills/costs are not synthesized from a bounded fill page.",
         "parameters": [
           { "$ref": "#/components/parameters/WorkspaceId" },
           { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 } },
@@ -37,6 +38,10 @@
           { "name": "before", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
           { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED"] } },
           { "name": "status_bucket", "in": "query", "required": false, "schema": { "type": "string", "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN"] } },
+          { "name": "stage", "in": "query", "required": false, "description": "Only PAPER is served by this route; other stages return N22_BLOTTER_STAGE_NOT_AVAILABLE.", "schema": { "type": "string", "enum": ["PAPER", "SANDBOX", "CANARY", "LIVE"] } },
+          { "name": "deployment_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+          { "name": "account_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+          { "name": "alpha_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
           { "name": "venue", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 64 } },
           { "name": "symbol", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 128 } },
           { "name": "side", "in": "query", "required": false, "schema": { "type": "string", "enum": ["BUY", "SELL"] } },
@@ -55,6 +60,1203 @@
       "Problem": { "description": "Safe Portal problem", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
     },
     "schemas": {
+      "Scalar": {
+        "oneOf": [
+          {
+            "type": "string",
+            "maxLength": 8192
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "PaperHistoryRecords": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/NarrowRecord"
+        },
+        "description": "Retained account-equity history, not a bounded snapshot page. The existing producer returns exact sparse rows or per-series bucket extrema (target2000 is not a hard output ceiling). Inspect history_windows for coverage/downsampling; do not assert a fabricated row ceiling or truncate history to the snapshot page size. This DTO does not qualify projection cardinality/response-byte budgets."
+      },
+      "PaperHistoryWindows": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "account_equity": {
+            "$ref": "#/components/schemas/PaperHistoryWindow"
+          }
+        }
+      },
+      "PaperHistoryWindow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "days",
+          "basis",
+          "returned_rows",
+          "source_rows",
+          "truncated"
+        ],
+        "properties": {
+          "days": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "basis": {
+            "const": "PORTAL_SGP_HISTORY_MIRROR"
+          },
+          "returned_rows": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_rows": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "truncated": {
+            "const": false
+          },
+          "downsample": {
+            "$ref": "#/components/schemas/PaperHistoryDownsample"
+          }
+        }
+      },
+      "PaperHistoryDownsample": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "method",
+          "bucket_seconds",
+          "series_count",
+          "input_rows",
+          "output_rows"
+        ],
+        "properties": {
+          "method": {
+            "const": "PER_SERIES_BUCKET_EXTREMA"
+          },
+          "bucket_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "series_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "input_rows": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "output_rows": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "Digest": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "PanelIdentifier": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 191
+      },
+      "PanelCoverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from_ms",
+          "to_ms",
+          "source_total",
+          "filtered_total",
+          "returned_count",
+          "truncated",
+          "downsampled",
+          "has_more",
+          "next_cursor",
+          "gaps"
+        ],
+        "properties": {
+          "from_ms": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UtcEpochMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "to_ms": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UtcEpochMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          },
+          "filtered_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          },
+          "returned_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "downsampled": {
+            "type": "boolean"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4096
+          },
+          "gaps": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from_ms",
+                "to_ms",
+                "reason_code"
+              ],
+              "properties": {
+                "from_ms": {
+                  "$ref": "#/components/schemas/UtcEpochMs"
+                },
+                "to_ms": {
+                  "$ref": "#/components/schemas/UtcEpochMs"
+                },
+                "reason_code": {
+                  "$ref": "#/components/schemas/PanelIdentifier"
+                }
+              }
+            }
+          }
+        }
+      },
+      "UtcEpochMs": {
+        "type": "integer",
+        "minimum": -8640000000000000,
+        "maximum": 8640000000000000
+      },
+      "PanelEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "data",
+          "clocks",
+          "coverage",
+          "source_history_semantics",
+          "formula",
+          "reason_code",
+          "retryable"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "READY",
+              "EMPTY",
+              "PARTIAL",
+              "STALE",
+              "UNAVAILABLE",
+              "DENIED",
+              "ERROR"
+            ]
+          },
+          "data": {},
+          "clocks": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "event_time_ms",
+              "source_published_at_ms",
+              "received_at_ms",
+              "ingested_at_ms",
+              "processed_at_ms",
+              "as_of_ms",
+              "read_at_ms"
+            ],
+            "properties": {
+              "event_time_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source_published_at_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "received_at_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ingested_at_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "processed_at_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "as_of_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "read_at_ms": {
+                "$ref": "#/components/schemas/UtcEpochMs"
+              }
+            }
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/PanelCoverage"
+          },
+          "source_history_semantics": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "formula": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "formula_id",
+                  "formula_version",
+                  "input_revision",
+                  "input_digest",
+                  "composite_read_revision"
+                ],
+                "properties": {
+                  "formula_id": {
+                    "$ref": "#/components/schemas/PanelIdentifier"
+                  },
+                  "formula_version": {
+                    "$ref": "#/components/schemas/PanelIdentifier"
+                  },
+                  "input_revision": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 256
+                  },
+                  "input_digest": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/Digest"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "composite_read_revision": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 256
+                  }
+                }
+              }
+            ]
+          },
+          "reason_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "READY",
+                    "PARTIAL",
+                    "STALE"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "data": {
+                  "not": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "EMPTY",
+                    "UNAVAILABLE",
+                    "DENIED",
+                    "ERROR"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "data": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "VenueCalendar": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "market",
+          "basis",
+          "timezone",
+          "windows",
+          "breaks",
+          "holidays",
+          "is_open",
+          "as_of"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "execution.venue-calendar.v1"
+          },
+          "market": {
+            "const": "VN_EQUITY"
+          },
+          "basis": {
+            "const": "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE"
+          },
+          "timezone": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "AVAILABLE"
+                  },
+                  "value": {
+                    "$ref": "#/components/schemas/VenueTimezone"
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "reason_code": {
+                    "$ref": "#/components/schemas/StageReasonCode"
+                  }
+                }
+              }
+            ]
+          },
+          "windows": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "AVAILABLE"
+                  },
+                  "value": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 12,
+                    "items": {
+                      "$ref": "#/components/schemas/VenueWindow"
+                    }
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "reason_code": {
+                    "$ref": "#/components/schemas/StageReasonCode"
+                  }
+                }
+              }
+            ]
+          },
+          "breaks": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "AVAILABLE"
+                  },
+                  "value": {
+                    "type": "array",
+                    "maxItems": 12,
+                    "items": {
+                      "$ref": "#/components/schemas/VenueBreak"
+                    }
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "reason_code": {
+                    "$ref": "#/components/schemas/StageReasonCode"
+                  }
+                }
+              }
+            ]
+          },
+          "holidays": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "AVAILABLE"
+                  },
+                  "value": {
+                    "type": "array",
+                    "maxItems": 400,
+                    "items": {
+                      "$ref": "#/components/schemas/VenueHoliday"
+                    }
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "reason_code": {
+                    "$ref": "#/components/schemas/StageReasonCode"
+                  }
+                }
+              }
+            ]
+          },
+          "is_open": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "AVAILABLE"
+                  },
+                  "value": {
+                    "type": "boolean"
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "availability",
+                  "value",
+                  "reason_code"
+                ],
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "value": {
+                    "type": "null"
+                  },
+                  "reason_code": {
+                    "$ref": "#/components/schemas/StageReasonCode"
+                  }
+                }
+              }
+            ]
+          },
+          "as_of": {
+            "$ref": "#/components/schemas/StageFactTimestamp"
+          }
+        },
+        "description": "FE-070. Present only on the VN market workbench variant. Every member is a Fact: the Portal holds no trading-calendar source of truth, so each is NOT_PUBLISHED (N28_VENUE_CALENDAR_NOT_ACTIVE) until the market-data-layer session calendar is wired. is_open is the SOURCE's own statement at as_of; a client never infers PAUSED or AGING from window arithmetic."
+      },
+      "VenueHoliday": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "date",
+          "name"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"
+          },
+          "name": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "VenueBreak": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "from",
+          "to",
+          "basis"
+        ],
+        "properties": {
+          "name": {
+            "const": "BREAK"
+          },
+          "from": {
+            "$ref": "#/components/schemas/VenueClock"
+          },
+          "to": {
+            "$ref": "#/components/schemas/VenueClock"
+          },
+          "basis": {
+            "const": "GAP_BETWEEN_PUBLISHED_WINDOWS"
+          }
+        },
+        "description": "The interval between two consecutive published windows (the lunch break). Arithmetic on published windows only."
+      },
+      "VenueWindow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "kind",
+          "open",
+          "close"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "kind": {
+            "enum": [
+              "TRADING_SESSION",
+              "OPENING_AUCTION",
+              "CLOSING_AUCTION"
+            ]
+          },
+          "open": {
+            "$ref": "#/components/schemas/VenueClock"
+          },
+          "close": {
+            "$ref": "#/components/schemas/VenueClock"
+          }
+        },
+        "description": "A named window in the venue's local time. OPENING_AUCTION / CLOSING_AUCTION (ATO / ATC) only when the source names them; a generic session is TRADING_SESSION. Window kinds describe the market calendar, not which order types the Portal can route."
+      },
+      "VenueClock": {
+        "type": "string",
+        "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+      },
+      "VenueTimezone": {
+        "type": "string",
+        "pattern": "^[A-Za-z_]+(?:/[A-Za-z0-9_+-]+){1,2}$",
+        "description": "IANA time-zone name, e.g. Asia/Ho_Chi_Minh."
+      },
+      "StageFacts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "runtime",
+          "reconciliation",
+          "sessions"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "execution.stage-facts.v1"
+          },
+          "runtime": {
+            "$ref": "#/components/schemas/StageRuntimeFacts"
+          },
+          "reconciliation": {
+            "$ref": "#/components/schemas/StageReconciliationFacts"
+          },
+          "sessions": {
+            "$ref": "#/components/schemas/StageSessionsFact"
+          }
+        },
+        "description": "FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged."
+      },
+      "StageSessionsFact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "availability",
+          "reason_code",
+          "basis",
+          "rows",
+          "returned_count",
+          "omitted_count",
+          "source_complete"
+        ],
+        "properties": {
+          "availability": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "reason_code": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StageReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "basis": {
+            "const": "EXECUTION_SESSIONS_BOUNDED_WINDOW"
+          },
+          "rows": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/StageSessionRow"
+            }
+          },
+          "returned_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 50
+          },
+          "omitted_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_complete": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "description": "Newest first. `ended` null while the session has no completion time. A row the reader cannot type is counted in omitted_count, never listed. `state` is the source's own word or null.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                }
+              },
+              "required": [
+                "availability"
+              ]
+            },
+            "then": {
+              "properties": {
+                "reason_code": {
+                  "$ref": "#/components/schemas/StageReasonCode"
+                },
+                "rows": {
+                  "type": "array",
+                  "maxItems": 0
+                },
+                "returned_count": {
+                  "const": 0
+                },
+                "omitted_count": {
+                  "const": 0
+                },
+                "source_complete": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "reason_code": {
+                  "type": "null"
+                },
+                "source_complete": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "StageSessionRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "started",
+          "ended",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$"
+          },
+          "started": {
+            "$ref": "#/components/schemas/StageTimestamp"
+          },
+          "ended": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StageTimestamp"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "StageReconciliationFacts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "basis",
+          "verdict",
+          "open_finding_count",
+          "unknown_order_count",
+          "as_of"
+        ],
+        "properties": {
+          "basis": {
+            "const": "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN"
+          },
+          "verdict": {
+            "$ref": "#/components/schemas/StageFactVerdict"
+          },
+          "open_finding_count": {
+            "$ref": "#/components/schemas/StageFactInteger"
+          },
+          "unknown_order_count": {
+            "$ref": "#/components/schemas/StageFactInteger",
+            "description": "Open findings the reviewed finding-type table classes as UNKNOWN_ORDER. Exact 0 only when no finding is open; NOT_PUBLISHED (FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED) while any open finding is unclassified."
+          },
+          "as_of": {
+            "$ref": "#/components/schemas/StageFactTimestamp"
+          }
+        }
+      },
+      "StageFactInteger": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ],
+            "properties": {
+              "availability": {
+                "const": "AVAILABLE"
+              },
+              "value": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reason_code": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ],
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "type": "null"
+              },
+              "reason_code": {
+                "$ref": "#/components/schemas/StageReasonCode"
+              }
+            }
+          }
+        ]
+      },
+      "StageFactVerdict": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ],
+            "properties": {
+              "availability": {
+                "const": "AVAILABLE"
+              },
+              "value": {
+                "enum": [
+                  "NO_OPEN_FINDINGS",
+                  "OPEN_FINDINGS"
+                ]
+              },
+              "reason_code": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ],
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "type": "null"
+              },
+              "reason_code": {
+                "$ref": "#/components/schemas/StageReasonCode"
+              }
+            }
+          }
+        ],
+        "description": "NO_OPEN_FINDINGS is a statement about the findings relation, not a reconciliation run: it is never published from a partial window or when any finding status is unreadable."
+      },
+      "StageRuntimeFacts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "runtime_state",
+          "since"
+        ],
+        "properties": {
+          "runtime_state": {
+            "$ref": "#/components/schemas/StageFactRuntimeState"
+          },
+          "since": {
+            "$ref": "#/components/schemas/StageFactTimestamp"
+          }
+        }
+      },
+      "StageFactTimestamp": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ],
+            "properties": {
+              "availability": {
+                "const": "AVAILABLE"
+              },
+              "value": {
+                "$ref": "#/components/schemas/StageTimestamp"
+              },
+              "reason_code": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ],
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "type": "null"
+              },
+              "reason_code": {
+                "$ref": "#/components/schemas/StageReasonCode"
+              }
+            }
+          }
+        ]
+      },
+      "StageTimestamp": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "StageFactRuntimeState": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ],
+            "properties": {
+              "availability": {
+                "const": "AVAILABLE"
+              },
+              "value": {
+                "enum": [
+                  "RUNNING",
+                  "PAUSED",
+                  "HALTED",
+                  "STOPPED"
+                ]
+              },
+              "reason_code": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "availability",
+              "value",
+              "reason_code"
+            ],
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              },
+              "value": {
+                "type": "null"
+              },
+              "reason_code": {
+                "$ref": "#/components/schemas/StageReasonCode"
+              }
+            }
+          }
+        ],
+        "description": "Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed."
+      },
+      "StageReasonCode": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{2,127}$",
+        "description": "Reviewed machine code saying why a fact is not published. Never free text, never a source message."
+      },
       "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$" },
       "Actor": { "type": "object", "additionalProperties": false, "required": ["user_id", "username", "roles"], "properties": { "user_id": { "$ref": "#/components/schemas/Identifier" }, "username": { "type": "string" }, "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "string", "enum": ["ADMIN", "USER"] } } } },
       "Capability": {
@@ -70,19 +1272,75 @@
           "status_map_version": { "type": "string" },
           "authority": { "type": ["string", "null"], "enum": ["DERIVED", "TRADING_SYSTEM", null] },
           "formula_version": { "type": ["string", "null"], "pattern": "^[a-z0-9.-]{3,96}$" },
-          "lineage_rejects": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } }
+          "lineage_rejects": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+          "lineage_scoped_out": { "type": "object", "minProperties": 1, "maxProperties": 7, "propertyNames": { "enum": ["account", "external_account", "deployment", "strategy", "portfolio", "session", "group"] }, "additionalProperties": { "type": "integer", "minimum": 1 } }
         }
       },
-      "NarrowRecord": { "type": "object", "maxProperties": 40, "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }, { "type": "array", "items": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } }] } },
+      "DeploymentDisplayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 256, "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])", "description": "FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace." },
+      "AlphaIdentityReason": { "enum": ["ALPHA_MEMBERSHIP_NOT_QUALIFIED", "ALPHA_MEMBERSHIP_NOT_PUBLISHED", "ALPHA_MEMBERSHIP_AMBIGUOUS", "ALPHA_IDENTITY_NOT_AUTHORIZED", "ALPHA_NAME_NOT_PUBLISHED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id." },
+      "PortfolioNameReason": { "enum": ["PORTFOLIO_NOT_ASSIGNED", "PORTFOLIO_NAME_NOT_PUBLISHED", "PORTFOLIO_NAME_AMBIGUOUS", "PORTFOLIO_NAME_NOT_AUTHORIZED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why portfolio_name is null." },
+      "DeploymentIdentityRules": {
+        "type": "object", "description": "FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id.",
+        "dependentRequired": { "alpha_id": ["alpha_name", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_name": ["alpha_id", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "portfolio_name": ["alpha_id", "alpha_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "portfolio_name_reason_code"], "portfolio_name_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "alpha_reason_code"] },
+        "allOf": [
+          { "if": { "required": ["alpha_name"], "properties": { "alpha_name": { "type": "string" } } }, "then": { "properties": { "alpha_id": { "type": "string" }, "alpha_reason_code": { "type": "null" } } }, "else": { "properties": { "alpha_reason_code": { "type": "string" } } } },
+          { "if": { "required": ["portfolio_name"], "properties": { "portfolio_name": { "type": "string" } } }, "then": { "properties": { "portfolio_name_reason_code": { "type": "null" } } }, "else": { "properties": { "portfolio_name_reason_code": { "type": "string" } } } }
+        ]
+      },
+      "DeploymentRecord": { "description": "FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys.", "allOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "object", "properties": { "alpha_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] }, "alpha_name": { "$ref": "#/components/schemas/DeploymentDisplayName" }, "portfolio_name": { "$ref": "#/components/schemas/DeploymentDisplayName" }, "alpha_reason_code": { "$ref": "#/components/schemas/AlphaIdentityReason" }, "portfolio_name_reason_code": { "$ref": "#/components/schemas/PortfolioNameReason" } } }, { "$ref": "#/components/schemas/DeploymentIdentityRules" }] },
+      "PositionsBySideRow": { "type": "object", "additionalProperties": false, "required": ["instrument_id", "long_quantity", "short_quantity", "gross_quantity", "position_count"], "properties": { "instrument_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+/-]{0,190}$" }, "long_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "short_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "gross_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "position_count": { "type": "integer", "minimum": 1 } } },
+      "PositionsBySide": {
+        "description": "S3-U4 / FE-051: Long, Short and Gross by side for the deployment's open positions: exact quantity per instrument (gross = long + short, magnitudes), no total across instruments. Notional by side is never derived: the position page publishes no currency or mark lineage (E5), so notional is a typed unavailable, not a number.",
+        "type": "object", "additionalProperties": false,
+        "required": ["state", "reason_code", "basis", "rows", "excluded", "notional"],
+        "properties": {
+          "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
+          "reason_code": { "enum": ["POSITIONS_NOT_PUBLISHED", "SOURCE_POSITIONS_PARTIAL", "POSITION_ROWS_UNCLASSIFIED", null] },
+          "basis": { "const": "OPEN_POSITION_ROWS_QUANTITY_BY_SIDE_PER_INSTRUMENT" },
+          "rows": { "type": "array", "maxItems": 200, "items": { "$ref": "#/components/schemas/PositionsBySideRow" } },
+          "excluded": { "type": "object", "additionalProperties": false, "required": ["flat_rows", "closed_rows", "unclassified_rows", "no_instrument_rows"], "properties": { "flat_rows": { "type": "integer", "minimum": 0 }, "closed_rows": { "type": "integer", "minimum": 0 }, "unclassified_rows": { "type": "integer", "minimum": 0 }, "no_instrument_rows": { "type": "integer", "minimum": 0 } } },
+          "notional": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code"], "properties": { "state": { "const": "UNAVAILABLE" }, "reason_code": { "const": "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED" } } }
+        },
+        "allOf": [
+          { "if": { "properties": { "state": { "const": "UNAVAILABLE" } } }, "then": { "properties": { "rows": { "type": "array", "maxItems": 0 }, "reason_code": { "const": "POSITIONS_NOT_PUBLISHED" } } } },
+          { "if": { "properties": { "state": { "enum": ["AVAILABLE", "EMPTY"] } } }, "then": { "properties": { "reason_code": { "type": "null" } } } },
+          { "if": { "properties": { "state": { "const": "EMPTY" } } }, "then": { "properties": { "rows": { "type": "array", "maxItems": 0 } } } },
+          { "if": { "properties": { "state": { "const": "AVAILABLE" } } }, "then": { "properties": { "rows": { "type": "array", "minItems": 1 } } } },
+          { "if": { "properties": { "state": { "const": "PARTIAL" } } }, "then": { "properties": { "reason_code": { "type": "string" } } } }
+        ]
+      },
+      "NarrowRecord": {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 40,
+        "propertyNames": {
+          "pattern": "^(?!record_key$)(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$"
+        },
+        "additionalProperties": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/Scalar"
+            },
+            {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "$ref": "#/components/schemas/Scalar"
+              }
+            }
+          ]
+        }
+      },
       "PaperData": {
         "type": "object", "additionalProperties": false,
         "properties": {
-          "deployment": { "oneOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "null" }] },
+          "history_windows": { "$ref": "#/components/schemas/PaperHistoryWindows" },
+          "deployment": { "oneOf": [{ "$ref": "#/components/schemas/DeploymentRecord" }, { "type": "null" }] },
           "deployments": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "positions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "performance": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
-          "account_equity": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
+          "account_equity": { "$ref": "#/components/schemas/PaperHistoryRecords" },
           "portfolio_equity": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "orders": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "fills": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
@@ -91,14 +1349,31 @@
           "reconciliation": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "command_journal": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "observation_gate": { "oneOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "null" }] },
+          "positions_by_side": { "$ref": "#/components/schemas/PositionsBySide" },
           "query_analytics": { "type": ["object", "null"], "additionalProperties": true },
           "page": { "type": "object", "additionalProperties": false, "required": ["limit", "next_cursor", "previous_cursor"], "properties": { "limit": { "type": "integer" }, "next_cursor": { "type": ["string", "null"] }, "previous_cursor": { "type": ["string", "null"] } } },
-          "query": { "type": "object", "additionalProperties": false, "required": ["filters", "sort", "filter_allowlist", "sort_allowlist", "count_scope"], "properties": { "filters": { "type": "object", "additionalProperties": false, "required": ["status", "status_bucket", "venue", "symbol", "side"], "properties": { "status": { "type": ["string", "null"], "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED", null] }, "status_bucket": { "type": ["string", "null"], "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN", null] }, "venue": { "type": ["string", "null"] }, "symbol": { "type": ["string", "null"] }, "side": { "type": ["string", "null"], "enum": ["BUY", "SELL", null] } } }, "sort": { "type": "string", "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] }, "filter_allowlist": { "type": "array", "prefixItems": [{ "const": "status" }, { "const": "venue" }, { "const": "symbol" }, { "const": "side" }], "items": false }, "sort_allowlist": { "type": "array", "prefixItems": [{ "const": "submitted_at_desc" }, { "const": "submitted_at_asc" }, { "const": "updated_at_desc" }], "items": false }, "count_scope": { "type": "string", "const": "COMMITTED_HOT_PROJECTION" } } },
+          "query": { "type": "object", "additionalProperties": false, "required": ["filters", "sort", "filter_allowlist", "sort_allowlist", "count_scope"], "properties": {
+            "filters": { "type": "object", "additionalProperties": false, "required": ["status", "status_bucket", "venue", "symbol", "side", "stage", "deployment_id", "account_id", "alpha_id"], "properties": {
+              "status": { "type": ["string", "null"], "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED", null] },
+              "status_bucket": { "type": ["string", "null"], "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN", null] },
+              "venue": { "type": ["string", "null"] }, "symbol": { "type": ["string", "null"] }, "side": { "type": ["string", "null"], "enum": ["BUY", "SELL", null] },
+              "stage": { "type": ["string", "null"], "enum": ["PAPER", null] },
+              "deployment_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] },
+              "account_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] },
+              "alpha_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] }
+            } },
+            "sort": { "type": "string", "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] },
+            "filter_allowlist": { "type": "array", "minItems": 8, "maxItems": 8, "prefixItems": [{ "const": "status" }, { "const": "venue" }, { "const": "symbol" }, { "const": "side" }, { "const": "stage" }, { "const": "deployment_id" }, { "const": "account_id" }, { "const": "alpha_id" }], "items": false },
+            "sort_allowlist": { "type": "array", "prefixItems": [{ "const": "submitted_at_desc" }, { "const": "submitted_at_asc" }, { "const": "updated_at_desc" }], "items": false },
+            "count_scope": { "type": "string", "const": "COMMITTED_HOT_PROJECTION" }
+          } },
           "exact_total": { "type": ["integer", "null"], "minimum": 0 },
           "filtered_total": { "type": ["integer", "null"], "minimum": 0 },
           "aggregates": { "type": ["object", "null"], "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } } },
           "exact_query": { "$ref": "#/components/schemas/BlotterExactQuery" },
-          "derived_insights": { "oneOf": [{ "$ref": "#/components/schemas/DerivedInsights" }, { "type": "null" }] }
+          "derived_insights": { "oneOf": [{ "$ref": "#/components/schemas/DerivedInsights" }, { "type": "null" }] },
+          "stage_facts": { "$ref": "#/components/schemas/StageFacts" },
+          "venue_calendar": { "$ref": "#/components/schemas/VenueCalendar" }
         }
       },
       "BlotterMirrorRevision": {
@@ -159,6 +1434,9 @@
           "schema_version": { "type": "string", "enum": ["execution.paper-overview.v1", "execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1", "execution.full-blotter.v1"] },
           "record_authority": { "type": "string", "const": "PORTAL_CONTROL" }, "source_authority": { "type": "string", "const": "TRADING_SYSTEM" }, "delivery_profile": { "type": "string", "const": "PAPER_BINANCE_USDM" },
           "workspace_id": { "$ref": "#/components/schemas/Identifier" }, "read_at": { "type": "string", "format": "date-time" }, "as_of": { "type": ["string", "null"], "format": "date-time" },
+          "read_at_ms": { "$ref": "#/components/schemas/UtcEpochMs" },
+          "as_of_ms": { "oneOf": [{ "$ref": "#/components/schemas/UtcEpochMs" }, { "type": "null" }] },
+          "panels": { "type": "object", "maxProperties": 34, "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,127}$" }, "additionalProperties": { "$ref": "#/components/schemas/PanelEnvelope" } },
           "state": { "type": "string", "enum": ["ready", "empty", "stale", "partial", "unavailable"] }, "freshness": { "type": "string", "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] }, "completeness": { "type": "string", "enum": ["COMPLETE", "PARTIAL"] },
           "actor": { "$ref": "#/components/schemas/Actor" }, "resource": { "type": "object", "additionalProperties": false, "required": ["kind", "id"], "properties": { "kind": { "type": "string", "const": "DEPLOYMENT" }, "id": { "$ref": "#/components/schemas/Identifier" } } },
           "capabilities": { "type": "array", "items": { "$ref": "#/components/schemas/Capability" } }, "data": { "$ref": "#/components/schemas/PaperData" }

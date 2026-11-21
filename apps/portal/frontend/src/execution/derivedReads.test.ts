@@ -62,6 +62,15 @@ describe("conditional order group", () => {
     expect(group.legs.map((leg) => leg.role)).toEqual(["TAKE_PROFIT", "STOP"]);
   });
 
+  it("reads the server's `contingency_type` spelling, with the older `contingency` as a fallback", () => {
+    const withType = structuredClone(CONDITIONAL_GROUP) as Record<string, unknown>;
+    const data = (withType.data ?? withType) as Record<string, unknown>;
+    const holder = (data.group ?? data) as Record<string, unknown>;
+    delete holder.contingency;
+    holder.contingency_type = "OUO";
+    expect(readConditionalGroup(withType)!.contingency).toBe("OUO");
+  });
+
   it("drops a leg with no identifier of any kind", () => {
     const raw = structuredClone(CONDITIONAL_GROUP) as Record<string, unknown>;
     const data = raw.data as Record<string, unknown>;

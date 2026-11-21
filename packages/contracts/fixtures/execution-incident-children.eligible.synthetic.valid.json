@@ -1,0 +1,33 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.incident-children.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "incident_id": "TEST_ONLY:incident-1",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "evidence": [],
+    "assigned_to": {
+      "actor": "TEST_ONLY:actor-1",
+      "assigned_at_ms": 1799827200000
+    },
+    "resolution_gate": {
+      "eligible": true,
+      "blocker_codes": []
+    },
+    "timeline": [],
+    "linked_operations": [
+      {
+        "operation_id": "TEST_ONLY:op-1",
+        "original_target": {
+          "type": "DEPLOYMENT",
+          "id": "TEST_ONLY:dep-1"
+        }
+      },
+      {
+        "operation_id": "TEST_ONLY:op-2",
+        "original_target": null
+      }
+    ]
+  }
+}

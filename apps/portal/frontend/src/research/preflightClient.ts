@@ -1,0 +1,337 @@
+/**
+ * Research Loop — preflight client (P08, Screens 02 and 05).
+ *
+ * Two same-origin operations and nothing else. Every shape comes from
+ * `@portal/contracts-research-preflight`; no field name is retyped here and no
+ * server payload is parsed into a local structure, because P08's whole point is
+ * that the browser preview, the submitted spec and the worker input are the
+ * same immutable manifest. A frontend that re-derives any part of it has
+ * already broken that.
+ *
+ * Two prohibitions are structural rather than stylistic:
+ *
+ *  - **`requested_spec_digest` is never sent.** Control API canonicalises the
+ *    spec and derives the digest. A digest computed here would be a second
+ *    canonicalisation, and the first time the two disagreed the mismatch would
+ *    surface as an unexplained refusal.
+ *  - **`effective_spec` is authoritative.** Anything the form estimates —
+ *    fold counts above all — is a visual hint and may never overwrite it.
+ *
+ * The refusal map is a `Record` over the contract's own code union, so a code
+ * added backend-side fails this build instead of degrading into a generic
+ * message.
+ */
+
+import { withUtcInstants } from "./utcInstants";
+import type { components } from "@portal/contracts-research-preflight";
+
+import { CSRF_HEADER, csrfTokenFromCookie } from "../auth/authApi";
+import { PortalApiError } from "../lib/api";
+import type { ResearchState } from "./state";
+import { reportSessionExpired } from "../auth/sessionExpiry";
+import { REFUSAL_COPY } from "./researchRefusal";
+
+type Schemas = components["schemas"];
+
+/**
+ * The requested spec as it goes on the wire.
+ *
+ * The generated declaration carries the JSON-Schema `$defs` block as a required
+ * property; the Control API's strict parser refuses any payload that contains
+ * it, so every preflight built from the generated type was a 400 (CG-P02-01,
+ * RF-04 FE-S02-01). Until the contract drops it, the wire type does.
+ */
+export type RequestedSpec = Omit<Schemas["RequestedSpec"], "$defs">;
+export type CreateRequest = Omit<Schemas["CreateRequest"], "requested_spec"> & {
+  requested_spec: RequestedSpec;
+};
+export type PreflightResponse = Schemas["ResearchPreflightV1"];
+
+export type EffectiveSpec = Schemas["EffectiveSpec"];
+export type Snapshot = Schemas["Snapshot"];
+export type Quality = Schemas["Quality"];
+export type UtcRange = Schemas["UtcRange"];
+export type Warmup = Schemas["Warmup"];
+export type Topology = Schemas["Topology"];
+export type ThreeWindowTopology = Schemas["ThreeWindowTopology"];
+export type AdvancedTopology = Schemas["AdvancedTopology"];
+export type Fold = Schemas["Fold"];
+export type SealedHoldout = Schemas["SealedHoldout"];
+export type ResourceEstimate = Schemas["ResourceEstimate"];
+export type DatasetBinding = Schemas["DatasetBinding"];
+export type Capability = Schemas["Capability"];
+
+/** The contract's own refusal vocabulary. Not a local list. */
+export type PreflightProblemCode = Schemas["Problem"]["error"]["code"];
+
+const BASE = "/api/v1/research/preflights";
+
+async function call<T>(path: string, init?: RequestInit): Promise<T> {
+  const isWrite = (init?.method ?? "GET").toUpperCase() !== "GET";
+  const csrf = isWrite ? csrfTokenFromCookie() : null;
+  const response = await fetch(path, {
+    ...init,
+    credentials: "same-origin",
+    headers: {
+      ...(init?.body ? { "content-type": "application/json" } : {}),
+      ...(csrf ? { [CSRF_HEADER]: csrf } : {}),
+      ...(init?.headers as Record<string, string> | undefined),
+    },
+  });
+
+  if (!response.ok) {
+    let message = `${response.status} ${response.statusText}`;
+    let code: string | null = null;
+    let requestId: string | null = response.headers.get("x-request-id");
+    let details: Schemas["Problem"]["details"] | null = null;
+    try {
+      const body = (await response.json()) as Partial<Schemas["Problem"]>;
+      if (body?.error?.message) message = body.error.message;
+      code = body?.error?.code ?? null;
+      requestId = body?.request_id ?? requestId;
+      details = body?.details ?? null;
+    } catch {
+      /* non-JSON error body: keep the status line the server gave */
+    }
+    throw new PreflightApiError(message, response.status, code, requestId, details);
+  }
+  return (await response.json()) as T;
+}
+
+/** CG-P08-03: a refusal that also names the gate and the requested-spec field path. */
+export class PreflightApiError extends PortalApiError {
+  readonly details: Schemas["Problem"]["details"] | null;
+
+  constructor(
+    message: string,
+    status: number,
+    code: string | null,
+    requestId: string | null,
+    details: Schemas["Problem"]["details"] | null,
+  ) {
+    super(message, status, code, requestId);
+    this.details = details;
+  }
+}
+
+function query(workspaceId?: string): string {
+  return workspaceId ? `?${new URLSearchParams({ workspace_id: workspaceId }).toString()}` : "";
+}
+
+export const preflightApi = {
+  /** Authoritative preflight. The body carries the spec, never a digest of it. */
+  create: (body: CreateRequest) =>
+    call<PreflightResponse>(BASE, { method: "POST", body: JSON.stringify({ ...body, requested_spec: withUtcInstants(body.requested_spec) }) }),
+
+  /** Reopen an unchanged preview. Returns current immutable metadata only. */
+  get: (preflightToken: string, workspaceId?: string) =>
+    call<PreflightResponse>(`${BASE}/${encodeURIComponent(preflightToken)}${query(workspaceId)}`),
+} as const;
+
+/* -------------------------------------------------------------------------
+ * Refusal mapping
+ * ---------------------------------------------------------------------- */
+
+interface PreflightRefusalPresentation {
+  /** Which Portal state word this refusal is. */
+  state: ResearchState["state"];
+  /** Whether re-sending the same request could ever succeed. */
+  mayRetry: boolean;
+  /** True when the locally held token is dead and must be dropped. */
+  invalidatesToken: boolean;
+  /** True when the submitted spec is at fault, so the form is what to point at. */
+  highlightsInput: boolean;
+  /** True when the caller must re-read something before trying again. */
+  requiresRefresh: boolean;
+  /**
+   * FG-08 (FE-A1-03): the fixed client sentence the refusal alert and the
+   * preview panels print. The server's `error.message` is never rendered.
+   */
+  copy: string;
+}
+
+/** FG-08: the sentence for a refusal whose code this client does not know. */
+export const PREFLIGHT_REFUSAL_GENERIC_COPY = "Preflight refused this request.";
+
+/** FG-08: the sentence for a request that never reached the server. */
+export const PREFLIGHT_TRANSPORT_COPY = "The request did not reach the server.";
+
+const NO: Omit<PreflightRefusalPresentation, "state" | "copy"> = {
+  mayRetry: false,
+  invalidatesToken: false,
+  highlightsInput: false,
+  requiresRefresh: false,
+};
+
+const REFUSAL: Record<PreflightProblemCode, PreflightRefusalPresentation> = {
+  SESSION_REQUIRED: { ...NO, state: "denied", invalidatesToken: true, requiresRefresh: true, copy: "The session has ended. Sign in again, then run preflight." },
+  REQUEST_REJECTED: { ...NO, state: "terminal", copy: "Preflight rejected the request before checking it." },
+
+  /* The spec is at fault. Keep every edit and point at the field, because the
+     alternative — clearing the form on a validation error — destroys exactly
+     the work the reader now has to correct. */
+  RESEARCH_PREFLIGHT_INVALID: { ...NO, state: "terminal", highlightsInput: true, copy: "Preflight cannot accept a field of this declaration. Fix it and run preflight again." },
+  RESEARCH_PREFLIGHT_TOPOLOGY_INVALID: { ...NO, state: "terminal", highlightsInput: true, copy: "Preflight cannot accept this window layout. Fix it and run preflight again." },
+
+  /* A declared dependency has nothing to give for this request. There is no
+     fallback read and no empty preview; the server's own sentence stays off
+     screen (FG-08) and the code says which dependency it was. */
+  RESEARCH_PREFLIGHT_DATA_UNAVAILABLE: { ...NO, state: "unavailable", copy: "The historical source has no data for this request." },
+  RESEARCH_PREFLIGHT_REQUIRED_COLUMNS_UNAVAILABLE: { ...NO, state: "unavailable", copy: "The dataset does not carry every column this route needs." },
+  RESEARCH_PREFLIGHT_FUNDING_UNAVAILABLE: { ...NO, state: "unavailable", copy: "Funding data is not available for this request." },
+  RESEARCH_PREFLIGHT_WARMUP_UNAVAILABLE: { ...NO, state: "unavailable", copy: "There is not enough history before the start for the warm-up." },
+
+  /* The engine refused this configuration. Retrying it unchanged cannot help. */
+  RESEARCH_PREFLIGHT_ROUTE_NOT_ADMITTED: { ...NO, state: "terminal", copy: "Portal has not admitted this route for runs." },
+  RESEARCH_PREFLIGHT_ROUTE_UNKNOWN: { ...NO, state: "terminal", copy: "The installed engine release does not know this route." },
+  /* W4 CG-P08-03: an invalid mode × schedule used to surface as a 502. */
+  RESEARCH_PREFLIGHT_SCHEDULE_NOT_ADMITTED: { ...NO, state: "terminal", highlightsInput: true, copy: "This mode and schedule are not admitted together. Change one and run preflight again." },
+  RESEARCH_PREFLIGHT_TOPOLOGY_UNSUPPORTED: { ...NO, state: "terminal", highlightsInput: true, copy: "The installed engine release does not support this walk-forward plan." },
+  RESEARCH_PREFLIGHT_RESOURCE_REFUSED: { ...NO, state: "terminal", highlightsInput: true, copy: "This request exceeds a resource limit of the installed release." },
+  RESEARCH_PREFLIGHT_SNAPSHOT_TOO_LARGE: { ...NO, state: "terminal", highlightsInput: true, copy: "The data snapshot for this request is too large. Narrow the range or the symbols." },
+
+  /* The installed release moved under the form; the manifest must be re-read
+     before the same declaration means the same thing. */
+  RESEARCH_PREFLIGHT_RELEASE_STALE: {
+    ...NO,
+    state: "terminal",
+    invalidatesToken: true,
+    requiresRefresh: true,
+    copy: "The installed release changed. Reload the page, then run preflight again.",
+  },
+
+  /* Transient, and typed as such: the dependency answered, it said "not now". */
+  RESEARCH_PREFLIGHT_UNAVAILABLE: { ...NO, state: "failed-retryable", mayRetry: true, copy: "Preflight is unavailable right now. Try again." },
+  RESEARCH_PREFLIGHT_REJECTED: { ...NO, state: "failed-retryable", mayRetry: true, copy: "Preflight could not take this request right now. Try again." },
+
+  /* The token is gone. It is never retried: a run must not be built on a
+     preview the server no longer stands behind. */
+  RESEARCH_PREFLIGHT_NOT_FOUND: { ...NO, state: "terminal", invalidatesToken: true, copy: "That preflight is not on record. Run preflight again." },
+  RESEARCH_PREFLIGHT_EXPIRED: { ...NO, state: "terminal", invalidatesToken: true, copy: "That preflight expired. Run preflight again." },
+  RESEARCH_PREFLIGHT_STALE: { ...NO, state: "terminal", invalidatesToken: true, copy: "That preflight no longer matches this declaration. Run preflight again." },
+};
+
+export interface PreflightRefusal extends PreflightRefusalPresentation {
+  code: PreflightProblemCode | null;
+  /**
+   * The server's own sentence, kept for tests and diagnostics only. FG-08:
+   * nothing renders it — the alert and the panels print `copy`.
+   */
+  message: string;
+  status: number;
+  requestId: string | null;
+  /** CG-P08-03: the gate that refused, when the server named one. */
+  gate?: string | null;
+  /** CG-P08-03: the requested-spec field path at fault (first of a 400's). */
+  fieldPath?: readonly string[] | null;
+  /** The active-preview limit: seconds until the oldest of the actor's held previews expires and one slot frees, when the server said. */
+  retryAfterSeconds?: number | null;
+}
+
+/** The gate the server names when the actor already holds the maximum number of active preflights. */
+export const PREFLIGHT_QUOTA_GATE = "preflight_manifest_quota";
+
+/** The one sentence for the preview limit: no fault in the declaration, only a wait. */
+export function previewLimitCopy(retryAfterSeconds: number | null): string {
+  if (retryAfterSeconds === null || retryAfterSeconds <= 0) return "Preview limit reached: you hold the maximum number of active previews. Try again in a few minutes.";
+  const minutes = Math.max(1, Math.ceil(retryAfterSeconds / 60));
+  return `Preview limit reached: you hold the maximum number of active previews. A slot frees in about ${minutes} min.`;
+}
+
+/**
+ * Turns a failed call into a refusal the UI can render.
+ *
+ * A transport failure is reported as one without naming the transport: the
+ * reader can act on "the request did not reach the server", not on a status
+ * line from a proxy.
+ */
+export function toPreflightRefusal(error: unknown): PreflightRefusal {
+  if (!(error instanceof PortalApiError)) {
+    return {
+      ...NO,
+      code: null,
+      message: PREFLIGHT_TRANSPORT_COPY,
+      copy: PREFLIGHT_TRANSPORT_COPY,
+      status: 0,
+      requestId: null,
+      state: "failed-retryable",
+      mayRetry: true,
+    };
+  }
+  /* RF01-F3: an expired session goes to the shell's sign-in path. */
+  if (error.status === 401) reportSessionExpired();
+  const known =
+    error.code && error.code in REFUSAL ? REFUSAL[error.code as PreflightProblemCode] : null;
+  const fieldPath = error instanceof PreflightApiError
+    ? (error.details?.field_path ?? error.details?.field_paths?.[0] ?? null)
+    : null;
+  /* G10 (real preview, 2026-09-30): a 403/404 that names no field is an
+     access refusal (e.g. origin not allowed), not a declaration error — it
+     reads the one F-04 sentence instead of "fix a field" with nothing to fix. */
+  const denied = (error.status === 403 || error.status === 404) && !(fieldPath && fieldPath.length > 0);
+  const details = error instanceof PreflightApiError ? ((error.details ?? null) as { gate?: string; retry_after_seconds?: number } | null) : null;
+  const quota = details?.gate === PREFLIGHT_QUOTA_GATE;
+  const retryAfterSeconds = quota && typeof details?.retry_after_seconds === "number" ? details.retry_after_seconds : null;
+  return {
+    ...(denied
+      ? { ...NO, state: "denied" as const, copy: REFUSAL_COPY.denied }
+      : quota
+        ? { ...NO, state: "failed-retryable" as const, mayRetry: true, copy: previewLimitCopy(retryAfterSeconds) }
+        : known ?? {
+      ...NO,
+      state: error.status >= 500 ? "unavailable" : "terminal",
+      copy: PREFLIGHT_REFUSAL_GENERIC_COPY,
+    }),
+    code: (error.code as PreflightProblemCode | null) ?? null,
+    message: error.message,
+    status: error.status,
+    requestId: error.requestId,
+    gate: error instanceof PreflightApiError ? (error.details?.gate ?? null) : null,
+    fieldPath,
+    retryAfterSeconds,
+  };
+}
+
+/** Every code the contract declares, for exhaustiveness tests. */
+export const PREFLIGHT_PROBLEM_CODES = Object.keys(REFUSAL) as PreflightProblemCode[];
+
+/* -------------------------------------------------------------------------
+ * Local token invalidation
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Key-ordered JSON of a requested spec.
+ *
+ * This is **not** a canonicalisation and **not** a digest. It never leaves the
+ * browser, is never compared against `requested_spec_digest`, and is used for
+ * exactly one decision: whether the spec on screen is still the spec the held
+ * token was issued for. Control API owns canonicalisation; this owns "did the
+ * reader change something since the preview".
+ *
+ * Keys are sorted so a rebuild that happens to construct the object in a
+ * different order cannot silently turn "unchanged" into "changed".
+ */
+function stableShape(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stableShape);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+        .map(([key, entry]) => [key, stableShape(entry)]),
+    );
+  }
+  return value;
+}
+
+/**
+ * Whether two requested specs are the same declaration.
+ *
+ * Every difference is material. P08's contract has no "cosmetic" field: a
+ * changed seed, a changed trial count and a changed symbol all produce a
+ * different effective spec, so treating any of them as harmless would let a run
+ * be built from a preview of something else.
+ */
+export function sameRequestedSpec(a: RequestedSpec | null, b: RequestedSpec | null): boolean {
+  if (a === null || b === null) return a === b;
+  return JSON.stringify(stableShape(a)) === JSON.stringify(stableShape(b));
+}

@@ -1,0 +1,509 @@
+{
+  "schema": "research-loop.p01-prototype-controls.v1",
+  "controls": [
+    {
+      "screen_id": "03",
+      "control": "Timer-based run progress demo",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:68",
+      "source_excerpt": "<span style=\"font-size:9.5px; color:#939db0; font-family:'JetBrains Mono',monospace\">demo transport</span>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "03",
+      "control": "Timer-based run progress demo",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:123",
+      "source_excerpt": "<span style=\"color:#939db0\">ETA is engine time from the trial rate — not the demo transport speed</span>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "03",
+      "control": "Timer-based run progress demo",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 03 Run Progress.dc.html:273",
+      "source_excerpt": "componentDidMount() { this.timer = setInterval(() => this.tick(), 280); }",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "04",
+      "control": "Synthetic evidence/replay prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:938",
+      "source_excerpt": "<div style=\"font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0; text-align:center; padding-top:8px\">hi-fi prototype · synthetic data · every claim rendered from an engine-issued table — the UI never infers</div>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "04",
+      "control": "Synthetic evidence/replay prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 04 Evidence Flow.dc.html:1271",
+      "source_excerpt": "this.timer = setInterval(() => {",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "06",
+      "control": "Search-selection prototype data",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:45",
+      "source_excerpt": "<span style=\"font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0\">demo tape · schema mirrors the r1a export — panels degrade when a field is missing, never infer</span>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "06",
+      "control": "Search-selection prototype data",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:353",
+      "source_excerpt": "<span style=\"font-size:9.5px; color:#939db0\">synthetic Sharpe distribution of θ* — {{ m2N }} stationary-bootstrap paths · no OOS term anywhere in J₂</span>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "06",
+      "control": "Search-selection prototype data",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:420",
+      "source_excerpt": "<sc-for list=\"{{ jScaleOpts }}\" as=\"js\" hint-placeholder-count=\"2\"><button title=\"scale demo — how this panel reads at WFO scale\" onClick=\"{{ js.onPick }}\" style=\"{{ js.style }}\">{{ js.label }}</button></sc-for>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "06",
+      "control": "Search-selection prototype data",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:503",
+      "source_excerpt": "{ k: \"μ_boot\", detail: \"mean Sharpe of 256 synthetic IS paths\", v: \"1.212\" },",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "06",
+      "control": "Search-selection prototype data",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:504",
+      "source_excerpt": "{ k: \"σ_boot\", detail: \"std of the synthetic distribution\", v: \"0.284\" },",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "06",
+      "control": "Search-selection prototype data",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 06 S2 Search and Selection.dc.html:1024",
+      "source_excerpt": ": \"Scale demo — 32 folds render as a density strip: darker cell = more folds froze θ* there; amber line = this fold. A single tight dark band (window) is stability; two bands (entry_z) means the optimum migrated mid-history — read that as r",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "07",
+      "control": "Freeze verification prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:57",
+      "source_excerpt": "<span style=\"margin-left:auto; font-size:10px; color:#939db0\">scenarios are demo runs — the ordering verdict is derived by the engine, never entered</span>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "07",
+      "control": "Freeze verification prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:164",
+      "source_excerpt": "<button onClick=\"{{ onVerify }}\" style=\"{{ verifyBtnStyle }}\">{{ verifyLabel }}</button>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "07",
+      "control": "Freeze verification prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:175",
+      "source_excerpt": "<span style=\"font-size:10px; color:#939db0; line-height:1.5\">Verify recomputes from the downloaded canonical form and compares with the engine's recorded value. <span style=\"color:#4e5a6e\">The UI never issues a digest.</span> This checks ar",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "07",
+      "control": "Freeze verification prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:200",
+      "source_excerpt": "<script type=\"text/x-dc\" data-dc-script data-props=\"{&quot;scenario&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;causal&quot;, &quot;decay&quot;, &quot;global&quot;, &quot;mode5&quot;], &quot;default&quot;: &quo",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "07",
+      "control": "Freeze verification prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:238",
+      "source_excerpt": "this.state = { scen: props.scenario || \"causal\", drift: false, fold: 3, attempts: [], verify: \"idle\", copied: false };",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "07",
+      "control": "Freeze verification prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:354",
+      "source_excerpt": "onVerify: () => { this.setState({ verify: \"busy\" }); setTimeout(() => this.setState({ verify: \"done\" }), 700); },",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "07",
+      "control": "Freeze verification prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:355",
+      "source_excerpt": "verifyLabel: s.verify === \"busy\" ? \"recomputing…\" : s.verify === \"done\" ? \"✓ match — integrity only\" : \"verify digest\",",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "07",
+      "control": "Freeze verification prototype",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 07 S3 Freeze.dc.html:356",
+      "source_excerpt": "verifyBtnStyle: \"border:1px solid \" + (s.verify === \"done\" ? \"#1e7b4f\" : \"#0f4c5c\") + \"; border-radius:6px; background:transparent; color:\" + (s.verify === \"done\" ? \"#1e7b4f\" : \"#0f4c5c\") + \"; padding:2px 10px; font-family:'JetBrains Mono',",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:11",
+      "source_excerpt": "<title>QuantBT Stage 4 — Execute Replay</title>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:31",
+      "source_excerpt": "<div data-screen-label=\"S4 Execute Replay\" style=\"min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px\"><div style=\"position:sticky; top:0; z-index:",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:38",
+      "source_excerpt": "<span style=\"color:#1c2532\">Stage 4 · Execute Replay</span><span style=\"color:#939db0\">·</span><a href=\"QuantBT 09 Run Report.dc.html\" style=\"font-family:'JetBrains Mono',monospace; font-size:10px\">next: Run Report →</a>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:41",
+      "source_excerpt": "<div style=\"font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0\">Replay reads immutable artifacts, one event at a time — it never re-runs the strategy. One cursor drives everything: chart, tape, ledger, ",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:65",
+      "source_excerpt": "<span style=\"font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0\">scale demo</span>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:109",
+      "source_excerpt": "<div ref=\"{{ replayRef }}\" style=\"position:absolute; inset:0\"></div>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:110",
+      "source_excerpt": "<div style=\"{{ replayFallbackStyle }}\">{{ replayFallback }}</div>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:144",
+      "source_excerpt": "<button onClick=\"{{ onToggleAcross }}\" title=\"when this fold's tape ends, replay continues into the next fold with its own frozen params — the boundary handoff is shown, never hidden\" style=\"{{ acrossStyle }}\">{{ acrossLabel }}</button>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:278",
+      "source_excerpt": "<span style=\"font-size:11px; color:#4e5a6e; line-height:1.6\">Scrubbing the timeline replays checkpoints; it never re-runs strategy or accounting — \"reproduce run\" is a separate command that creates a new attempt with its own parity verdict.",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:292",
+      "source_excerpt": "this.replayRef = this.mkRef(\"replay\");",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:296",
+      "source_excerpt": "index: 0, selected: null, playing: false, speed: 4, reveal: false, copied: false, replayError: null,",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:407",
+      "source_excerpt": "componentWillUnmount() { if (this.timer) clearInterval(this.timer); if (this._bt) clearTimeout(this._bt); this.disposeChart(\"replay\"); this.disposeChart(\"mae\"); }",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:410",
+      "source_excerpt": "if (window.LightweightCharts) this.syncReplay();",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:437",
+      "source_excerpt": "syncReplay() {",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:438",
+      "source_excerpt": "const el = this.refEls.replay; if (!el) return;",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:441",
+      "source_excerpt": "let R = this.charts.replay;",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:443",
+      "source_excerpt": "this.disposeChart(\"replay\");",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:457",
+      "source_excerpt": "this.charts.replay = R;",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:487",
+      "source_excerpt": "if (this.state.replayError) this.setState({ replayError: null });",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:488",
+      "source_excerpt": "} catch (err) { this.setState({ replayError: \"chart adapter error: \" + String(err && err.message ? err.message : err) }); }",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:705",
+      "source_excerpt": "title: f.id + \" · OOS \" + f.test + \" · θ* \" + f.digest + (activeF ? \" · replaying\" : doneF ? \" · replayed\" : \" · queued\"),",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:787",
+      "source_excerpt": "replayRef: this.replayRef,",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:788",
+      "source_excerpt": "replayFallbackStyle: \"position:absolute; inset:0; display:\" + (s.replayError ? \"flex\" : \"none\") + \"; align-items:center; justify-content:center; text-align:center; padding:24px; font-size:11px; color:#9a6a1f; background:repeating-linear-gra",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "08",
+      "control": "Replay prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 08 S4 Execute Replay.dc.html:789",
+      "source_excerpt": "replayFallback: s.replayError || \"\",",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "11",
+      "control": "Release-publish prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:156",
+      "source_excerpt": "<button onClick=\"{{ onPublish }}\" disabled=\"{{ publishDisabled }}\" style=\"{{ publishStyle }}\">{{ publishLabel }}</button>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "11",
+      "control": "Release-publish prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:164",
+      "source_excerpt": "<button onClick=\"{{ onReset }}\" style=\"border:0; background:transparent; color:#939db0; font-family:'JetBrains Mono',monospace; font-size:9px; padding:0\">reset demo</button>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "11",
+      "control": "Release-publish prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:199",
+      "source_excerpt": "<script type=\"text/x-dc\" data-dc-script data-props=\"{&quot;$preview&quot;: {&quot;width&quot;: 1500}, &quot;demoState&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;draft&quot;, &quot;published&quot;], &quot;defau",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "11",
+      "control": "Release-publish prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:203",
+      "source_excerpt": "this.state = { published: (props.demoState ?? \"draft\") === \"published\", copied: false };",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "11",
+      "control": "Release-publish prototype control",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 11 Release Candidate and Publish.dc.html:281",
+      "source_excerpt": "onPublish: () => { if (!unbound) this.setState({ published: true }); },",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "12",
+      "control": "Mode atlas demo",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:114",
+      "source_excerpt": "<a href=\"{{ r.demoHref }}\" style=\"margin-left:auto; font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.05em\">open demo →</a>",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "12",
+      "control": "Mode atlas demo",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:161",
+      "source_excerpt": "<tr style=\"border-bottom:1px solid #efede4\"><td style=\"padding:7px 12px; font-family:'JetBrains Mono',monospace\">mode_2_sbb</td><td style=\"padding:7px 12px; color:#4e5a6e\">Stress a candidate against synthetic regimes before spending OOS on ",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "12",
+      "control": "Mode atlas demo",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:289",
+      "source_excerpt": "key: \"mode_2_sbb\", identity: \"stationary block bootstrap — synthetic stress on IS\", valid: [\"global\"], thisRun: false,",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "12",
+      "control": "Mode atlas demo",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 12 Mode Atlas.dc.html:295",
+      "source_excerpt": "[\"η_sbb·σ_boot\", \"dispersion tax across synthetic paths · η = 0.25\"],",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "13",
+      "control": "Compare demo scale",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:100",
+      "source_excerpt": "<sc-for list=\"{{ cScaleOpts }}\" as=\"cs\" hint-placeholder-count=\"2\"><button title=\"scale demo — at WFO scale grouped bars become unreadable; the chart switches to one line per attempt\" onClick=\"{{ cs.onPick }}\" style=\"{{ cs.style }}\">{{ cs.l",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "13",
+      "control": "Compare demo scale",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 13 Compare.dc.html:385",
+      "source_excerpt": ": \"scale demo — 32 synthesized folds: grouped bars become unreadable here, so the chart switches to one line per attempt (ACTIVE drawn heavier). Read crossings, not columns: where the strict line sits above a selection-adjusted one, honesty",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "14",
+      "control": "Alpha import prototype frame",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:189",
+      "source_excerpt": "<script type=\"text/x-dc\" data-dc-script data-props=\"{&quot;$preview&quot;: {&quot;width&quot;: 1400, &quot;height&quot;: 1050}, &quot;step&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;manifest&quot;, &quot;pipel",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    },
+    {
+      "screen_id": "14",
+      "control": "Alpha import prototype frame",
+      "classification": "PROTOTYPE_ONLY",
+      "production_command_candidate": false,
+      "source_locator": "upgrade/research_loop/release-v1.1/QuantBT 14 Alpha Import.dc.html:268",
+      "source_excerpt": "code: \"def warm_up(params=None): …\\n # compile Numba ONCE on a synthetic frame\\n # deterministic · side-effect free · idempotent\\n\\n# forbidden anywhere in the package:\\n# print/display/plot · mutable module globals\\n# absolute paths · exte",
+      "rationale": "P01 source evidence only; no server command contract is proposed."
+    }
+  ]
+}

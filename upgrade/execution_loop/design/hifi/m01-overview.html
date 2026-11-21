@@ -1,0 +1,80 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M01 Overview — HIFI</title><link rel="stylesheet" href="hifi.css"></head>
+<body data-state="healthy">
+<div class="strip"><span>Design preview · M01</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / <b>Overview</b></span></header>
+<nav class="side"><h6>Execution</h6><a aria-current="page" href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+<div class="mast"><div><h1 data-s="healthy sparse">Overview</h1><h1 data-s="researcher">My overview</h1><div class="sub" data-s="healthy sparse">Fund · USDT</div><div class="sub" data-s="researcher">Alphas you own</div></div>
+ <div class="ctrls"><span class="seg" data-local="env" data-s="healthy sparse"><button data-v="live" aria-pressed="true">Live</button><button data-v="paper" aria-pressed="false">Paper</button><button data-v="sandbox" aria-pressed="false">Sandbox</button></span>
+ <span class="seg" data-local="win"><button aria-pressed="false" data-v="7">7D</button><button aria-pressed="true" data-v="30">30D</button><button aria-pressed="false" data-v="90">90D</button></span>
+ <span class="fresh" data-s="healthy researcher"><i class="dot"></i>Fresh · 12:04Z</span><span class="fresh" data-s="sparse"><i class="dot warn"></i>Source not qualified</span></div></div>
+
+<div class="banner" data-s="sparse">Live source is not qualified yet. Figures stay unavailable until it is.</div>
+<div class="banner info" data-s="researcher">Your slice only. Fund totals and peers are hidden.</div>
+
+<div class="kpis" data-s="healthy">
+ <div class="kpi"><div class="l">Net asset value</div><div class="v">1,204,210.55 <small>USDT</small></div><div class="n">Live · real-funded</div></div>
+ <div class="kpi"><div class="l">Net PnL · 30D</div><div class="v pos" id="kpnl">+84,210.55</div><div class="n">Fees and funding incl.</div></div>
+ <div class="kpi"><div class="l">Return · 30D</div><div class="v pos">+7.5%</div><div class="n">Modified Dietz</div></div>
+ <div class="kpi"><div class="l">Drawdown</div><div class="v neg" id="kdd">−2.1%</div><div class="n" id="kddm">Max −6.8%</div></div>
+ <div class="kpi"><div class="l">Portfolio score</div><div class="v na">Pending</div><div class="n">Policy not set</div></div></div>
+<div class="kpis" data-s="sparse">
+ <div class="kpi"><div class="l">Net asset value</div><div class="v na">Not available</div><div class="n">Source not qualified</div></div>
+ <div class="kpi"><div class="l">Net PnL · 30D</div><div class="v na">Not available</div><div class="n">Fees incomplete</div></div>
+ <div class="kpi"><div class="l">Return · 30D</div><div class="v na">Not available</div><div class="n">Method not certified</div></div>
+ <div class="kpi"><div class="l">Drawdown</div><div class="v na">Not available</div><div class="n">No NAV series</div></div>
+ <div class="kpi"><div class="l">Portfolio score</div><div class="v na">Pending</div><div class="n">Policy not set</div></div></div>
+<div class="kpis" data-s="researcher" style="grid-template-columns:repeat(3,1fr)">
+ <div class="kpi"><div class="l">My allocation</div><div class="v">120,000 <small>USDT</small></div></div>
+ <div class="kpi"><div class="l">Net PnL · 30D</div><div class="v pos">+21,430</div></div>
+ <div class="kpi"><div class="l">My alphas</div><div class="v">3</div><div class="n">2 live · 1 paper</div></div></div>
+
+<div class="grid2" data-s="healthy sparse">
+ <div class="panel"><div class="ph"><span class="seg" data-local="mode"><button data-v="pnl" aria-pressed="true">Net PnL</button><button data-v="ret" aria-pressed="false">Return</button><button data-v="eq" aria-pressed="false">Equity</button></span><span class="r">▲ added · ▼ returned</span></div>
+  <div class="chart" id="eq" data-s="healthy"></div>
+  <div data-s="sparse" class="empty na">No series published</div>
+  <div class="cap"><span>30D</span><span>1D</span><span>USDT</span><span>Trading System</span><span>720/720</span></div></div>
+ <div class="panel"><div class="ph">Capital <span class="r">USDT · real-funded</span></div>
+  <table><tbody>
+   <tr><td>Initial funds</td><td class="n" data-s="healthy">1,000,000.00</td><td class="n na" data-s="sparse">Not available</td></tr>
+   <tr><td>Added funds</td><td class="n" data-s="healthy">120,000.00</td><td class="n na" data-s="sparse">Not available</td></tr>
+   <tr><td>Returned</td><td class="n" data-s="healthy">0.00</td><td class="n na" data-s="sparse">Not available</td></tr>
+   <tr><td><b>Current NAV</b></td><td class="n" data-s="healthy"><b>1,204,210.55</b></td><td class="n na" data-s="sparse">Not available</td></tr></tbody></table>
+  <div style="margin-top:16px" data-s="healthy"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft)"><span>Budget used</span><span class="mono">842,300 / 1,100,000</span></div><div class="sla" style="height:6px"><i style="width:76.5%;background:var(--accent)"></i></div></div>
+  <details style="margin-top:12px"><summary>By funding source</summary><div class="na" style="padding:6px 0">Not available</div></details></div></div>
+
+<div class="grid3" data-s="healthy sparse">
+ <div class="panel"><div class="ph">Needs attention <a href="#" class="r">All</a></div>
+  <div data-s="healthy"><div class="item"><div class="t"><span><span class="tagu bad">INCIDENT</span> Broker sync diverged</span><a href="#">Investigate →</a></div><div class="m">Binance-02 · overdue 2:00</div><div class="sla bad"><i style="width:100%"></i></div></div>
+   <div class="item"><div class="t"><span><span class="tagu warn">OPERATION</span> Recall pending</span><a href="#">Verify →</a></div><div class="m">Core · due in 4:00</div><div class="sla"><i style="width:62%"></i></div></div>
+   <div class="item"><div class="t"><span><span class="tagu">APPROVAL</span> Archive request</span><a href="#">Review →</a></div><div class="m">asmith · due in 1:00h</div><div class="sla"><i style="width:30%"></i></div></div></div>
+  <div class="na" data-s="sparse">Not available</div></div>
+ <div class="panel"><div class="ph">Contributors <span class="seg" data-local="cm"><button data-v="a" aria-pressed="true">Amount</button><button data-v="r" aria-pressed="false">Return</button><button data-v="s" aria-pressed="false">Score</button></span></div>
+  <div id="contrib" data-s="healthy"></div><div class="na" data-s="sparse">Not available</div></div>
+ <div class="panel"><div class="ph">Portfolios <a href="#" class="r">All</a></div>
+  <div class="tw" data-s="healthy"><table><thead><tr><th>Name</th><th class="n">NAV</th><th class="n">30D</th><th>Health</th></tr></thead><tbody>
+   <tr><td><a href="#">Core</a></td><td class="n">612,040</td><td class="n pos">+4.1%</td><td><i class="dot"></i> OK</td></tr>
+   <tr><td><a href="#">Satellite</a></td><td class="n">380,120</td><td class="n pos">+9.8%</td><td><i class="dot warn"></i> Stale</td></tr>
+   <tr><td><a href="#">Canary</a></td><td class="n">256,170</td><td class="n neg">−0.6%</td><td><i class="dot bad"></i> Attention</td></tr></tbody></table></div><div class="na" data-s="sparse">Not available</div></div></div>
+
+<div class="panel" data-s="healthy sparse"><details><summary>All performance rows</summary><div class="tw"><table><thead><tr><th>Measure</th><th class="n">Value</th><th>Method</th></tr></thead><tbody>
+ <tr><td>Current total</td><td class="n"><span data-s="healthy">1,204,210.55</span><span class="na" data-s="sparse">Not available</span></td><td>Selected valuation basis</td></tr>
+ <tr><td>Profit amount</td><td class="n"><span data-s="healthy">+84,210.55</span><span class="na" data-s="sparse">Not available</span></td><td>Net of fees and funding</td></tr>
+ <tr><td>Total PnL %</td><td class="n"><span data-s="healthy">+7.5%</span><span class="na" data-s="sparse">Not available</span></td><td>Modified Dietz</td></tr>
+ <tr><td>Realized / Unrealized %</td><td class="n"><span data-s="healthy">+5.1% / +2.1%</span><span class="na" data-s="sparse">Not available</span></td><td>Declared denominator</td></tr>
+ <tr><td>Drawdown current / max</td><td class="n"><span data-s="healthy">−2.1% / −6.8%</span><span class="na" data-s="sparse">Not available</span></td><td>30D window</td></tr>
+ <tr><td>Portfolio score</td><td class="n na">Pending</td><td>Direct, v1.1</td></tr>
+ <tr><td>Alpha score</td><td class="n na">Pending</td><td>Weighted by allocation</td></tr></tbody></table></div></details></div>
+
+<div class="panel" data-s="researcher"><div class="ph">My alphas</div><div class="tw"><table><thead><tr><th>Alpha</th><th>Stage</th><th class="n">Allocation</th><th class="n">Net PnL</th><th>Health</th></tr></thead><tbody>
+ <tr><td><a href="#">BTC-Trend</a> <span class="mono" style="color:var(--ink-faint)">v3</span></td><td><span class="stage live"><i></i>Live</span><span class="stage paper"><i></i>Paper</span></td><td class="n">120,000</td><td class="n pos">+21,430</td><td><i class="dot"></i> OK</td></tr>
+ <tr><td><a href="#">SOL-Break</a> <span class="mono" style="color:var(--ink-faint)">v1</span></td><td><span class="stage paper"><i></i>Paper</span></td><td class="n">—</td><td class="n na">Not available</td><td><i class="dot mute"></i> Pending</td></tr></tbody></table></div></div>
+</div></main></div>
+<script src="hifi.js"></script>
+<script>
+var mode="pnl";function draw(){var h=document.getElementById("eq");if(h&&h.offsetParent){var r=equityChart(h,{mode:mode,seed:11,drift:2800,vol:30000,flows:[{ago:62,v:120000}],label:"Fund performance",base:1120000,end:84210.55});var f=r.data[r.data.length-1],cd=r.dd[r.dd.length-1],md=Math.min.apply(0,r.dd);var a=document.getElementById("kpnl"),b=document.getElementById("kdd"),c=document.getElementById("kddm");if(a){a.textContent=(f>=0?"+":"\u2212")+Math.abs(f).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});a.className="v "+(f>=0?"pos":"neg")}if(b){b.textContent="\u2212"+Math.abs(cd).toFixed(1)+"%"}if(c){c.textContent="Max \u2212"+Math.abs(md).toFixed(1)+"%"}}}
+window.onseg=function(k,v){if(k==="mode"){mode=v;draw()}};window.onctl=function(){setTimeout(function(){draw();rb()},0)};
+function rb(){var c=document.getElementById("contrib");if(c&&c.offsetParent)divBars(c,[{n:"BTC-Trend v3",v:21430},{n:"ETH-Mean v2",v:12980},{n:"SOL-Break v1",v:3120},{n:"AVAX-Rev v1",v:-1840},{n:"DOGE-Mom v2",v:-4120}])}
+draw();rb();window.addEventListener("resize",function(){draw();rb()});
+</script></body></html>

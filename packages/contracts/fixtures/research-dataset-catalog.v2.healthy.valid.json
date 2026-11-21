@@ -1,0 +1,404 @@
+{
+  "schema_version": "research.dataset-catalog.v2",
+  "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "as_of_utc_ms": 1783036800000,
+  "index_availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "datasets": [
+    {
+      "dataset_id": "crypto-binance-1m",
+      "venue": "BINANCE",
+      "availability": "available",
+      "unavailable_reason": null,
+      "source_class": "historical_market_data",
+      "usage_scopes": [
+        "backtest",
+        "research"
+      ],
+      "excluded_scopes": [
+        "realtime_market_data",
+        "paper_execution",
+        "paper_account_state"
+      ],
+      "source_timezone": "UTC",
+      "calendar_policy": "CRYPTO_24_7",
+      "timeframes": [
+        {
+          "timeframe": "1min",
+          "resolution_seconds": 60,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "5min",
+          "resolution_seconds": 300,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "15min",
+          "resolution_seconds": 900,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "30min",
+          "resolution_seconds": 1800,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "1h",
+          "resolution_seconds": 3600,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "4h",
+          "resolution_seconds": 14400,
+          "availability": "available",
+          "reason_code": null
+        },
+        {
+          "timeframe": "1d",
+          "resolution_seconds": 86400,
+          "availability": "available",
+          "reason_code": null
+        }
+      ],
+      "symbols": {
+        "state": "PUBLISHED",
+        "reason": null,
+        "items": [
+          {
+            "symbol": "BTCUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-01",
+              "last_month": "2026-09",
+              "months": 81,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "resolution_seconds": 3600,
+                "availability": "AVAILABLE",
+                "reason_code": null,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1783036800000,
+                "first_bar_utc_ms": 1782864000000,
+                "last_bar_utc_ms": 1783033200000,
+                "last_closed_bar_end_utc_ms": 1783036800000,
+                "bar_count": 48,
+                "expected_bar_count": 48,
+                "missing_ratio": "0.000000000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "duplicate_bar_count": 0,
+                "coverage_scope": "INDEXED_RANGE",
+                "indexed_start_utc_ms": 1782864000000,
+                "indexed_end_exclusive_utc_ms": 1783036800000,
+                "closed_bar_policy": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
+              }
+            ],
+            "coverage_availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "BTCUSDT_210326",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2021-02",
+              "last_month": "2021-03",
+              "months": 2,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "resolution_seconds": 3600,
+                "availability": "AVAILABLE",
+                "reason_code": null,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1783036800000,
+                "first_bar_utc_ms": 1782864000000,
+                "last_bar_utc_ms": 1783033200000,
+                "last_closed_bar_end_utc_ms": 1783036800000,
+                "bar_count": 48,
+                "expected_bar_count": 48,
+                "missing_ratio": "0.000000000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "duplicate_bar_count": 0,
+                "coverage_scope": "INDEXED_RANGE",
+                "indexed_start_utc_ms": 1782864000000,
+                "indexed_end_exclusive_utc_ms": 1783036800000,
+                "closed_bar_policy": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
+              }
+            ],
+            "coverage_availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "BTCUSDT_260327",
+            "contract_kind": "QUARTERLY",
+            "coverage": {
+              "first_month": "2025-09",
+              "last_month": "2026-04",
+              "months": 8,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "resolution_seconds": 3600,
+                "availability": "AVAILABLE",
+                "reason_code": null,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1783036800000,
+                "first_bar_utc_ms": 1782864000000,
+                "last_bar_utc_ms": 1783033200000,
+                "last_closed_bar_end_utc_ms": 1783036800000,
+                "bar_count": 48,
+                "expected_bar_count": 48,
+                "missing_ratio": "0.000000000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "duplicate_bar_count": 0,
+                "coverage_scope": "INDEXED_RANGE",
+                "indexed_start_utc_ms": 1782864000000,
+                "indexed_end_exclusive_utc_ms": 1783036800000,
+                "closed_bar_policy": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
+              }
+            ],
+            "coverage_availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "ETHUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-01",
+              "last_month": "2026-09",
+              "months": 81,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "resolution_seconds": 3600,
+                "availability": "AVAILABLE",
+                "reason_code": null,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1783036800000,
+                "first_bar_utc_ms": 1782864000000,
+                "last_bar_utc_ms": 1783033200000,
+                "last_closed_bar_end_utc_ms": 1783036800000,
+                "bar_count": 48,
+                "expected_bar_count": 48,
+                "missing_ratio": "0.000000000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "duplicate_bar_count": 0,
+                "coverage_scope": "INDEXED_RANGE",
+                "indexed_start_utc_ms": 1782864000000,
+                "indexed_end_exclusive_utc_ms": 1783036800000,
+                "closed_bar_policy": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
+              }
+            ],
+            "coverage_availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          },
+          {
+            "symbol": "SOLUSDT",
+            "contract_kind": "PERPETUAL",
+            "coverage": {
+              "first_month": "2020-09",
+              "last_month": "2026-09",
+              "months": 73,
+              "granularity": "MONTH_PARTITION"
+            },
+            "coverage_by_timeframe": [
+              {
+                "timeframe": "1h",
+                "resolution_seconds": 3600,
+                "availability": "AVAILABLE",
+                "reason_code": null,
+                "origin": "PORTAL_DERIVED",
+                "as_of_utc_ms": 1783036800000,
+                "first_bar_utc_ms": 1782864000000,
+                "last_bar_utc_ms": 1783033200000,
+                "last_closed_bar_end_utc_ms": 1783036800000,
+                "bar_count": 48,
+                "expected_bar_count": 48,
+                "missing_ratio": "0.000000000000",
+                "gap_count": 0,
+                "largest_gap_seconds": 0,
+                "duplicate_bar_count": 0,
+                "coverage_scope": "INDEXED_RANGE",
+                "indexed_start_utc_ms": 1782864000000,
+                "indexed_end_exclusive_utc_ms": 1783036800000,
+                "closed_bar_policy": "INTERVAL_END_AT_OR_BEFORE_AS_OF_V1"
+              }
+            ],
+            "coverage_availability": {
+              "state": "AVAILABLE",
+              "reason_code": null
+            },
+            "instrument": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_READER_INSTRUMENT_METADATA_NOT_PUBLISHED",
+              "origin": "HMD_DIRECT",
+              "as_of_utc_ms": null,
+              "contract_kind": null,
+              "display_name": null,
+              "underlying": null,
+              "base": null,
+              "quote": null,
+              "settle_currency": null,
+              "tick_size": null,
+              "lot_size": null,
+              "contract_multiplier": null,
+              "listing_utc_ms": null,
+              "expiry_utc_ms": null
+            },
+            "quality": {
+              "state": "NOT_PUBLISHED",
+              "reason_code": "HMD_QUALITY_IS_TIMEFRAME_SPECIFIC",
+              "origin": "PORTAL_DERIVED",
+              "gap_count": null,
+              "missing_ratio": null,
+              "duplicate_bar_count": null,
+              "as_of_utc_ms": 1783036800000
+            }
+          }
+        ],
+        "total": 5,
+        "truncated": false
+      },
+      "catalog_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "as_of_utc_ms": 1783036800000,
+      "asset_class": null,
+      "asset_class_availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "HMD_READER_ASSET_CLASS_NOT_PUBLISHED"
+      }
+    }
+  ],
+  "coverage_rule": "Exact target bars in the declared indexed range; preflight is authoritative. No prices or instrument guesses."
+}

@@ -2,12 +2,13 @@ import { createHash } from "crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { constantTimeEqual } from "../auth/argon";
 import { ControlApiConfig, governanceApplySigningKeys } from "../config";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
 import { newUlid } from "../id";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { GovernanceApplyTokenSigner } from "./apply-token";
 import { PaperExitDecision } from "./contracts";
-import { computeEvidenceManifestHash, GovernanceError } from "./governance.service";
+import { computeEvidenceManifestHash, GovernanceError, assertGovernanceParentCompatibility } from "./governance.service";
+import { paperExitDecisionContext } from "./review-context";
 import {
   PaperExitEvaluationState,
   PaperExitPlanRecord,
@@ -80,7 +81,18 @@ function sameStrings(left: readonly string[], right: readonly string[]): boolean
  * Hashes only immutable source facts and their policy identity. Portal decision
  * state, actor identity and read time are deliberately excluded.
  */
-export function computePaperExitSourceSnapshotHash(snapshot: PaperExitSnapshot): string {
+export interface PaperExitSourceSnapshotInput {
+  review: Pick<PaperExitSnapshot["review"],
+    "reviewId" | "deploymentId" | "portfolioId" | "venue" | "artifactDigest" |
+    "observationPolicyId" | "observationPolicyVersion" | "observationPolicyDigest" |
+    "evidencePackId" | "evidencePackDigest" | "evaluationPolicyVersion" | "evaluationFormulaVersion">;
+  approval: Pick<PaperExitSnapshot["approval"], "evidenceSetHash">;
+  lineage: readonly Omit<PaperExitSnapshot["lineage"][number], "lineageId">[];
+  panels: readonly PaperExitSnapshot["panels"][number][];
+  findings: readonly PaperExitSnapshot["findings"][number][];
+}
+
+export function computePaperExitSourceSnapshotHash(snapshot: PaperExitSourceSnapshotInput): string {
   return digest({
     review_id: snapshot.review.reviewId,
     deployment_id: snapshot.review.deploymentId,
@@ -221,8 +233,12 @@ export class PaperExitService {
     );
   }
 
-  async detail(user: PortalUser, workspaceId: string, reviewId: string) {
+  async detail(user: PortalUser, workspaceId: string, reviewId: string, session?: AuthSession) {
+    await this.assertReadAuthority(user, workspaceId, session);
     const snapshot = await this.verifiedSnapshot(workspaceId, reviewId);
+    // A membership/lifecycle change while the evidence was loading must not
+    // return the previously authorized snapshot. Preserve USER read access.
+    await this.assertReadAuthority(user, workspaceId, session);
     const evaluation = evaluatePaperExit(snapshot);
     const { approval, review } = snapshot;
     const expired = approval.expiresAt <= new Date();
@@ -277,6 +293,10 @@ export class PaperExitService {
         formula_version: review.evaluationFormulaVersion,
         evidence_set_hash: approval.evidenceSetHash,
         source_snapshot_hash: review.sourceSnapshotHash,
+        decision_context: paperExitDecisionContext(snapshot, !role ? "APPROVER_ROLE_REQUIRED"
+          : expired ? "EXIT_REVIEW_EXPIRED" : !open ? "EXIT_REVIEW_NOT_PENDING"
+            : alreadyDecided ? "ACTOR_ALREADY_DECIDED"
+              : approval.quorumRequired !== 1 ? "PAPER_EXIT_QUORUM_UNSUPPORTED" : null),
         eligibility: {
           can_approve: canPromote,
           can_approve_with_condition: canSafeDecide,
@@ -358,6 +378,7 @@ export class PaperExitService {
       await this.rejected(user, input, requestId, "APPROVER_ROLE_REQUIRED", "DENIED");
       throw new GovernanceError("APPROVER_ROLE_REQUIRED", "Access denied.", 403);
     }
+    await this.assertActorAuthority(user, input.workspaceId);
     const snapshot = await this.verifiedSnapshot(input.workspaceId, input.reviewId);
     const { approval, review } = snapshot;
     const evaluation = evaluatePaperExit(snapshot);
@@ -400,7 +421,7 @@ export class PaperExitService {
     try {
       created = await this.repository.createPlan({
         operationId, workspaceId: input.workspaceId, reviewId: input.reviewId,
-        actorUserId: user.userId, requestKey: input.requestKey, payloadHash,
+        actorUserId: user.userId, actor: user, requestKey: input.requestKey, payloadHash,
         decision: input.decision, reason: input.reason, extensionDays: input.extensionDays,
         expectedReviewVersion: input.expectedReviewVersion,
         evidenceSetHash: approval.evidenceSetHash, sourceSnapshotHash: review.sourceSnapshotHash,
@@ -411,6 +432,8 @@ export class PaperExitService {
         expiresAt, requestId, auditEventId: newUlid("evt"), outboxMessageId: newUlid("msg"),
       });
     } catch (error) {
+      const typed = error as { governanceCode?: string; status?: number };
+      if (typed.governanceCode) throw new GovernanceError(typed.governanceCode, "Operation could not be planned.", typed.status ?? 409);
       if ((error as { code?: string }).code !== "23505") throw error;
       const raced = await this.repository.findPlanByKey(input.workspaceId, user.userId, input.requestKey);
       if (!raced) throw error;
@@ -439,7 +462,7 @@ export class PaperExitService {
     }
     try {
       const result = await this.repository.applyDecision({
-        workspaceId, actorUserId: user.userId, actorUsername: user.username,
+        workspaceId, actorUserId: user.userId, actorUsername: user.username, actor: user,
         operationId, requestId, decisionId: newUlid("dec"), grantId: newUlid("grant"),
         auditEventId: newUlid("evt"), outboxMessageId: newUlid("msg"),
         reasonHash: digest(plan.reason),
@@ -470,6 +493,7 @@ export class PaperExitService {
   async operationOrNull(user: PortalUser, workspaceId: string, operationId: string) {
     const plan = await this.repository.findPlan(workspaceId, user.userId, operationId);
     if (!plan) return null;
+    await this.assertActorAuthority(user, workspaceId);
     const status = plan.status === "APPLIED" ? "SUCCEEDED"
       : plan.expiresAt <= new Date() ? "EXPIRED" : "PENDING";
     return {
@@ -484,6 +508,27 @@ export class PaperExitService {
       expires_at: plan.expiresAt.toISOString(), applied_at: plan.appliedAt?.toISOString() ?? null,
       receipt: plan.responseJson, external_side_effect_requested: false,
     };
+  }
+
+  async assertReadAuthority(user: PortalUser, workspaceId: string, session?: AuthSession): Promise<void> {
+    try {
+      await this.repository.assertReadAuthority(user, workspaceId);
+      await assertGovernanceParentCompatibility(this.repository.pool, user, workspaceId, "PAPER_EXIT", session);
+    } catch (error) {
+      const typed = error as { governanceCode?: string; status?: number };
+      if (!typed.governanceCode) throw error;
+      throw new GovernanceError(typed.governanceCode, "Access denied.", typed.status ?? 403);
+    }
+  }
+
+  private async assertActorAuthority(user: PortalUser, workspaceId: string): Promise<void> {
+    try {
+      await this.repository.assertActorAuthority(user, workspaceId);
+    } catch (error) {
+      const typed = error as { governanceCode?: string; status?: number };
+      if (!typed.governanceCode) throw error;
+      throw new GovernanceError(typed.governanceCode, "Access denied.", typed.status ?? 403);
+    }
   }
 
   private async verifiedSnapshot(workspaceId: string, reviewId: string) {

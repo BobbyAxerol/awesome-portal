@@ -1,0 +1,27 @@
+{
+  "schema_version": "research.dataset-bar-metadata.v1",
+  "catalog_revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "as_of_utc_ms": 1785862800000,
+  "dataset_id": "vn-stock-daily",
+  "symbol": "FPT",
+  "timeframe": "1d",
+  "start_utc_ms": 1785690000000,
+  "end_exclusive_utc_ms": 1785862800000,
+  "scope": "INDEX_METADATA_ONLY_NOT_PREFLIGHT_ADMISSION",
+  "availability": "AVAILABLE",
+  "reason_code": null,
+  "bars": 2,
+  "first_bar_utc_ms": 1785690000000,
+  "last_bar_utc_ms": 1785776400000,
+  "warmup_bars_required": 2,
+  "warmup_bars_available_before_start": 2,
+  "verified_range": {
+    "start_utc_ms": 1785344400000,
+    "end_exclusive_utc_ms": 1785862800000,
+    "basis": "INDEXED_OBSERVED_LOCAL_DATE_RANGE_V1"
+  },
+  "earliest_start_with_warmup_utc_ms": 1785690000000,
+  "clock_basis": "OBSERVED_SOURCE_LOCAL_DATE_V1",
+  "source_timezone": "Asia/Ho_Chi_Minh",
+  "warmup_start_utc_ms": 1785344400000
+}

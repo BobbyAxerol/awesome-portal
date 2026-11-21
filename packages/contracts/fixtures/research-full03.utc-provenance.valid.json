@@ -1,0 +1,9 @@
+{
+  "clock_basis": "UTC_FIXED_INTERVAL_OPEN_TIME_V1",
+  "source_timezone": "UTC",
+  "metadata_index_revision": "1111111111111111111111111111111111111111111111111111111111111111",
+  "metadata_index_source_manifest_digest": "2222222222222222222222222222222222222222222222222222222222222222",
+  "metadata_index_as_of_utc_ms": 1790895894892,
+  "warmup_semantics": "FIXED_INTERVAL_PREDECESSORS_V1",
+  "warmup_start_utc_ms": 1780197000000
+}

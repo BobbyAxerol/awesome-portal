@@ -1,0 +1,14 @@
+{
+  "schema_version": "portal.execution.phase-test-results.v1",
+  "phase": "ELP2-10",
+  "tier": "R1",
+  "status": "ISOLATED_SYNTHETIC_SOURCE_PASS_CONNECTED_NOT_MET",
+  "observed_on_utc": "2026-10-26",
+  "source_commit": "37ea39142",
+  "checks": [
+    {"name": "Native STREAM PostgreSQL, mTLS and SSE", "passed": 52, "failed": 0, "skipped": 0, "duration_seconds": 126.42, "external_source": "TEST_ONLY_SYNTHETIC_PM"},
+    {"name": "Owned test network and containers removed", "status": "PASS"}
+  ],
+  "not_claimed": ["CONNECTED_EDGE_SOURCE", "ACTUAL_STREAM_GRANT", "BROWSER", "LOAD_OR_G2", "FULL_R2", "ELP2_10_CLOSEOUT"],
+  "evidence": "STREAM_NATIVE_PG_SSE_ISOLATED_2026-10-26.md"
+}

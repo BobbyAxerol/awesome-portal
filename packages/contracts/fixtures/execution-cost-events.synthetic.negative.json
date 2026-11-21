@@ -1,0 +1,59 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-cost-events.published.synthetic.valid.json",
+    "none": "execution-cost-events.none.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "amount-number",
+      "base": "published",
+      "rule": "money is exact decimal text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "events",
+            0,
+            "amount"
+          ],
+          "value": 1.25
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "kind-unknown",
+      "base": "published",
+      "rule": "kinds are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "events",
+            0,
+            "kind"
+          ],
+          "value": "TIP"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "no-currency",
+      "base": "published",
+      "rule": "one currency per event",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "events",
+            0,
+            "currency"
+          ]
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

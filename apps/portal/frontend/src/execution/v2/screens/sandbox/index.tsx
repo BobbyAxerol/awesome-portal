@@ -1,0 +1,395 @@
+/**
+ * Sandbox certification V2 (S3 W-SANDBOX, flag key `sandbox`).
+ *
+ * "Is the exchange integration certified? Fail closed until every step passes." One deployment,
+ * one URL: the stage header (frame on the left in the Sandbox colour, three state chips, the
+ * lifecycle spine), the tabs Reconciliation, Steps, Promotion plans and Timeline in `?tab=`, a
+ * strip of five facts, and a rail with the exit review and the review note.
+ *
+ * Two bodies answer `GET /deployments/{id}/certification`, and the screen reads both through the
+ * version-aware port: V1 `governance.sandbox-certification.v1` (server sentences, a server passed
+ * count, findings, a timeline, plans, three source panels) and V2 `portal.execution.following-parent.v2`
+ * (the stored certification and seven stored step evaluations). `readSandbox.ts` turns either into
+ * one view; an `unsupported` answer reads its own sentence and shows nothing else.
+ *
+ * What it will not do (certification.ts rules, AGENT_WORKING_RULES): recompute. The passed count,
+ * the gate, the freshness, the expiry are the server's; where the body does not carry a fact the
+ * cell says `Not published (FE-xxx)` or `Not available`, never 0 and never a dash. The runtime
+ * chip is `Not published (FE-027)` because the source never states one; no green "Running".
+ * Source figures (Equity, Fees paid, Position, Open orders) are `Not available`: their keys are
+ * not in the contract (FE-072), and Difference is never subtracted here.
+ *
+ * Writes: one, `Record review note` (POST /governance/sandbox/capture-note), open only when the
+ * server's capability says so. Submit for review and Request Sandbox exit review have no route and
+ * are disabled with their reason (BR-EX-61).
+ *
+ * URL: `tab` (default Reconciliation; V1 labels and the short slugs of review2/07 resolve),
+ * `workspace_id`, `from` (carried). The integrator locks the window ("Certification run") and the
+ * environment (`effective: "sandbox"`) from the route.
+ *
+ * | Cardinality | Break point | Degradation | Server contract | Invariant | Perf budget |
+ * |---|---|---|---|---|---|
+ * | 1 certification, 7 steps, 3 source panels; findings up to 50 (server page), timeline up to 250, plans up to 20 | 200 table rows (never reached: the schema caps every list at or under 250) | tables show what the server returned and print `Showing N of M` when `truncated`; cards under 660px | one read per open (`getSandboxCertificationVersioned`), a re-read after a recorded note; capabilities read once per workspace | no count, gate or open-findings figure is computed; absent is `Not published (FE-xxx)` or `Not available`; the key of a note follows its intent | one certification read, one capabilities read; at most 250 table rows, under 150 nodes in the steps grid |
+ */
+import { useMemo, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+
+import type { ExecutionApi } from "../../../api/ports";
+import { PanelState } from "../../../components/states";
+import { useExecutionRuntime } from "../../../useExecutionRuntime";
+import { Flag } from "../../Flag";
+import { CompactGaps, GapLine, GapWhy, KpiStrip, SectionPanel, StageHeader, Triad, UrlTabs, gapTitle, type GapItem } from "../../blocks";
+import { formatAsOf } from "../../boundary";
+import { figuresUnpublished, triadRowsOf } from "../stage/triadRows";
+import { AlphaNameLine } from "../stage/AlphaNameLine";
+import { useFixtureView } from "../stage/useFixtureView";
+import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
+import { mergeSpine, spineHistory, useLifecycleStages, useStageLifecycle, viewingLifecycle } from "../stage/useStageLifecycle";
+import { parseUrlParams, withContext } from "../../urlState";
+import { ExitReviewPanel } from "./ExitReviewPanel";
+import { lineageRoute } from "./lineageRoute";
+import { ReviewNoteForm } from "./ReviewNoteForm";
+import { StepsGrid } from "./StepsGrid";
+import { FindingsPanel, PlansPanel, TimelinePanel } from "./Tables";
+import {
+  WHY_MISSING,
+  LINEAGE_LABEL,
+  LOADING_CHIPS,
+  RECON_ROWS,
+  chipsOf,
+  isDecided,
+  figuresSuppressed,
+  gateOf,
+  humanize,
+  kpiCells,
+  panelById,
+  panelLine,
+  spineFacts,
+  subtitleOf,
+  tabsOf,
+  type KpiCell,
+} from "./model";
+import { readSandboxView, type SandboxView } from "./readSandbox";
+import { useNoteCapability, useSandboxRead, type NoteCapability } from "./useSandboxReads";
+
+import "../../css/sandbox.css";
+
+export const SANDBOX_SCREEN_KEY = "sandbox" as const;
+
+export interface SandboxScreenProps {
+  api: ExecutionApi;
+  /** The route's `:deploymentId`. */
+  deploymentId: string;
+  /** Carried to the reads that take it (`workspace_id`); the URL's value wins. */
+  workspaceId?: string;
+}
+
+const ACCESS_HREF = "/administration/profile-access";
+const FLEET_HREF = "/deployments/alphas";
+
+/* ── pieces ───────────────────────────────────────────────────────────────── */
+
+function Fig({ cell }: { cell: KpiCell }) {
+  return (
+    <div className="exec-blk-kpi" data-kpi={cell.key}>
+      <dt className="exec-blk-kpi-label">{cell.label}</dt>
+      <dd className="exec-blk-kpi-body">
+        <span className="exec-blk-kpi-value">
+          {cell.flag !== undefined ? <Flag kind={cell.flag.kind} label={cell.flag.label} /> : <span className="exec-blk-num">{cell.value}</span>}
+        </span>
+        {cell.basis !== undefined ? <span className="exec-blk-kpi-note">{cell.basis}</span> : null}
+      </dd>
+    </div>
+  );
+}
+
+/** A fact the strip can print: a published figure or a published verdict. The rest are ONE `Not available` line under it. */
+const hasFact = (cell: KpiCell): boolean => cell.value !== undefined || cell.flag !== undefined;
+
+function Facts({ cells }: { cells: readonly KpiCell[] }) {
+  const shown = cells.filter(hasFact);
+  const gaps: GapItem[] = cells.filter((cell) => !hasFact(cell)).map((cell) => ({ label: cell.label, id: cell.np, reason: cell.absent }));
+  return (
+    <>
+      {shown.length > 0 ? (
+        <KpiStrip label="Certification facts" columns={shown.length}>
+          {shown.map((cell) => (
+            <Fig key={cell.key} cell={cell} />
+          ))}
+        </KpiStrip>
+      ) : null}
+      <GapLine items={gaps} />
+    </>
+  );
+}
+
+function Reconciliation({ view }: { view: SandboxView }) {
+  const internal = panelById(view, "internal");
+  const broker = panelById(view, "broker");
+  // No figure at all (a V2 body, or no figures block): one line, not three columns of the same words. A withheld Broker still draws its column.
+  const unpublished = figuresUnpublished(view.figures);
+  const noFigures = unpublished.all && !figuresSuppressed(view);
+  return (
+    <div className="exec-sbx-recon">
+      {noFigures ? (
+        <>
+          <GapLine items={[{ label: "Internal, Broker and Difference figures", id: "FE-072", reason: unpublished.reason }]} />
+          <p className="exec-sbx-note" data-role="why-missing">{view.version === "v2" ? WHY_MISSING.reconciliationStored : WHY_MISSING.reconciliationNoFigures}</p>
+        </>
+      ) : (
+        <Triad
+          titleLevel={2}
+          rows={view.figures === null ? RECON_ROWS : triadRowsOf(view.figures)}
+          // With the server's figures each cell is its own fact, so a source panel that reads unavailable does not blank the column.
+          internal={internal === null ? (view.figures === null ? null : {}) : { asOf: internal.asOf }}
+          broker={broker === null ? (view.figures === null ? null : {}) : { asOf: broker.asOf }}
+          suppressed={figuresSuppressed(view)}
+        />
+      )}
+      <details className="exec-sbx-panels">
+        <summary>Sources</summary>
+        {view.panels.length > 0 ? (
+          <ul aria-label="Source panels">
+            {view.panels.map((panel) => (
+              <li key={panel.id}>
+                <b>{humanize(panel.id)}</b> {panelLine(panel)}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="exec-blk-na">No source panel in this response.</p>
+        )}
+        <p className="exec-sbx-note">The Difference is the server's and is never worked out here.</p>
+      </details>
+      <FindingsPanel view={view} />
+    </div>
+  );
+}
+
+function Lineage({ view }: { view: SandboxView }) {
+  const [params] = useSearchParams();
+  if (view.lineage.length === 0) {
+    return (
+      <SectionPanel level={2} title="Lineage">
+        <p className="exec-blk-na">Not available</p>
+      </SectionPanel>
+    );
+  }
+  return (
+    <SectionPanel level={2} title="Lineage">
+      <ul className="exec-sbx-lineage" aria-label="Lineage">
+        {view.lineage.map((item) => {
+          const to = lineageRoute(item.href);
+          return (
+            <li key={item.kind}>
+              <span className="exec-sbx-lineage-kind">{LINEAGE_LABEL[item.kind] ?? humanize(item.kind)}</span>{" "}
+              {to !== null ? <Link className="exec-blk-link" to={withContext(to, params)}>{item.value}</Link> : <span className="exec-sbx-id">{item.value}</span>}
+            </li>
+          );
+        })}
+      </ul>
+    </SectionPanel>
+  );
+}
+
+function PlainHead({ deploymentId }: { deploymentId: string }) {
+  return (
+    <header className="exec-sbx-plain">
+      <h1 className="exec-stage-title">Sandbox certification</h1>
+      <p className="exec-stage-sub">Deployment {deploymentId}</p>
+    </header>
+  );
+}
+
+/** What a person sees when the server says they may not open the page (the researcher frame of the hi-fi). */
+function Denied({ deploymentId, reason }: { deploymentId: string; reason: string }) {
+  const [params] = useSearchParams();
+  return (
+    <div className="exec-sbx-v2" data-screen="sandbox-v2" data-state="denied">
+      <PlainHead deploymentId={deploymentId} />
+      <section className="exec-sbx-denied" aria-label="Access">
+        <p className="exec-sbx-denied-title">You can’t open this page.</p>
+        <p>
+          <Link className="exec-blk-link" to={withContext(ACCESS_HREF, params)}>See what you can access</Link>
+          {" · "}
+          <Link className="exec-blk-link" to={withContext(FLEET_HREF, params)}>Alpha Fleet</Link>
+        </p>
+        <p className="exec-sbx-note">{reason}</p>
+      </section>
+    </div>
+  );
+}
+
+function Banners({ view }: { view: SandboxView }) {
+  const staleAt = view.panels.find((p) => p.freshness === "STALE");
+  const reported = view.panels.some((p) => p.state === "ok");
+  return (
+    <>
+      {view.sourceActed ? (
+        <div className="exec-blk-banner" role="alert">
+          <Flag kind="attention" label="Not trusted" size="sm" /> A source action was requested; the figures below are not trusted.
+        </div>
+      ) : null}
+      {view.version === "v2" ? (
+        <div className="exec-blk-banner" role="status">
+          <Flag kind="partial" label="Partial" size="sm" /> Stored certification and step evaluations only.
+          <GapWhy name="Why only stored certification and step evaluations" rows={[gapTitle("FE-072", "Findings, plans, timeline and reconciliation figures")]} />
+        </div>
+      ) : !reported ? (
+        <div className="exec-blk-banner" role="status">
+          <Flag kind="partial" label="Partial" size="sm" /> Source panels did not report.
+        </div>
+      ) : null}
+      {staleAt !== undefined ? (
+        <div className="exec-blk-banner" role="status">
+          <Flag kind="stale" label="Stale" size="sm" /> {staleAt.asOf === null ? "A source is past its freshness budget." : `Data as of ${formatAsOf(staleAt.asOf)}.`}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/* ── the screen ───────────────────────────────────────────────────────────── */
+
+export default function SandboxScreen(props: SandboxScreenProps) {
+  return (
+    <CompactGaps>
+      <SandboxBody {...props} />
+    </CompactGaps>
+  );
+}
+
+function SandboxBody({ api, deploymentId, workspaceId }: SandboxScreenProps) {
+  const [params] = useSearchParams();
+  const routeWorkspace = parseUrlParams(params).value.workspace_id ?? workspaceId ?? null;
+  const { read, reload } = useSandboxRead(api, deploymentId, routeWorkspace);
+  const runtime = useExecutionRuntime(api);
+
+  const parsed = useMemo(() => (read.phase === "ready" ? readSandboxView(read.value) : null), [read]);
+  const view = parsed !== null && parsed.kind === "ready" ? parsed.view : null;
+  const fixtureBase = useFixtureView(deploymentId, routeWorkspace ?? undefined, view !== null);
+
+  // A V2 body names its workspace; a V1 body does not, and the runtime manifest is the V1 screen's source for it.
+  const noteWorkspace = view?.workspaceId ?? routeWorkspace ?? runtime?.manifest?.workspaceId ?? null;
+  // The stages the alpha has completed (FE-027): the ticks of the spine, from the alpha's Manager dataset when it publishes them.
+  const sandboxAlpha = view === null ? null : stageIdentity(view.identity).alphaId;
+  const lifecycleStages = useLifecycleStages(api, sandboxAlpha, "sandbox", routeWorkspace);
+  const viewing = viewingLifecycle(lifecycleStages, "sandbox");
+  const datasetHistory = spineHistory(useStageLifecycle(api, sandboxAlpha, "sandbox", "sandbox", routeWorkspace));
+  const history = datasetHistory === undefined && lifecycleStages === null ? undefined : { ...(datasetHistory ?? {}), ...viewing.done };
+  const asked = useNoteCapability(api, view === null ? null : noteWorkspace);
+  const capability: NoteCapability = view === null || (noteWorkspace === null && runtime === null) ? { state: "loading" } : asked;
+
+  const renderLink = (to: string, children: ReactNode) => <Link to={withContext(to, params)}>{children}</Link>;
+  // The portfolio is linked only when the read published its id. The account is an external reference and the alpha id is
+  // not in this read: neither is linked.
+  const crumb = (id: string, portfolioId?: string | null, who: ReturnType<typeof stageIdentity> = stageIdentity(null)) => {
+    // The Alpha is linked only when the body published `alpha_id` (FE-066); the portfolio shows its published name, else its id.
+    const alpha = alphaCrumb(who);
+    return [
+      { label: "Alpha Fleet", to: FLEET_HREF },
+      ...(alpha === null ? [] : [alpha]),
+      { label: id },
+      ...(portfolioId ? [{ label: portfolioLabel(who, portfolioId), to: `/deployments/portfolios/${encodeURIComponent(portfolioId)}` }] : []),
+      { label: "Sandbox" },
+    ];
+  };
+
+  if (read.phase === "loading") {
+    return (
+      <div className="exec-sbx-v2" data-screen="sandbox-v2" data-state="loading">
+        <StageHeader stage="sandbox" crumb={crumb(deploymentId)} title="Sandbox certification" chips={LOADING_CHIPS} spine={{ current: "sandbox" }} renderLink={renderLink} />
+        <PanelState status="loading" />
+      </div>
+    );
+  }
+
+  if (read.phase === "error") {
+    if (read.status === "denied") return <Denied deploymentId={deploymentId} reason={read.reason} />;
+    return (
+      <div className="exec-sbx-v2" data-screen="sandbox-v2" data-state={read.status}>
+        <PlainHead deploymentId={deploymentId} />
+        <PanelState
+          status={read.status}
+          reason={read.reason}
+          actions={<button type="button" className="exec-dock-btn" onClick={reload} aria-label="Try the read again">Try again</button>}
+        />
+      </div>
+    );
+  }
+
+  if (parsed === null || parsed.kind === "unsupported" || view === null) {
+    return (
+      <div className="exec-sbx-v2" data-screen="sandbox-v2" data-state="unsupported">
+        <PlainHead deploymentId={deploymentId} />
+        <PanelState status="terminal" reason={parsed !== null && parsed.kind === "unsupported" ? parsed.text : "The response could not be read."} />
+      </div>
+    );
+  }
+
+  const gate = gateOf(view);
+  const cells = kpiCells(view);
+  const shownId = view.deploymentId ?? deploymentId;
+  const identity = stageIdentity(view.identity);
+
+  return (
+    <div className="exec-sbx-v2" data-screen="sandbox-v2" data-version={view.version} data-refreshing={read.refreshing ? "true" : undefined}>
+      <StageHeader
+        stage="sandbox"
+        crumb={crumb(shownId, view.portfolioId, identity)}
+        title="Sandbox certification"
+        subtitle={
+          <>
+            {subtitleOf(view) === null ? null : <>{subtitleOf(view)} · </>}
+            {fixtureBase === null ? null : <>Fixture view of {fixtureBase} · </>}
+            <AlphaNameLine identity={identity} />
+          </>
+        }
+        chips={chipsOf(view)}
+        spine={{ current: "sandbox", blocked: gate === "blocked", stages: mergeSpine(isDecided(view) ? { ...(history ?? {}), sandbox: { outcome: "done" } } : history, spineFacts(view)), label: "Lifecycle", lockAhead: true }}
+        extra={<p className="exec-sbx-note" data-testid="spine-viewing">{viewing.note}</p>}
+        actions={
+          <button type="button" className="exec-dock-btn" disabled={read.refreshing} title={read.refreshing ? "Reading the certification again" : "Read the certification again"} aria-busy={read.refreshing ? "true" : undefined} onClick={reload}>
+            Refresh
+          </button>
+        }
+        renderLink={renderLink}
+      />
+      <Banners view={view} />
+      <UrlTabs surface="sandbox" tabs={tabsOf(view)} label="Sandbox certification sections">
+        {(tab) => (
+          <div className="exec-sbx-body">
+            <Facts cells={cells} />
+            <div className="exec-sbx-grid">
+              <div className="exec-sbx-main">
+                {tab === "steps" ? (
+                  <>
+                    <StepsGrid steps={view.steps} hasSentences={view.version === "v1"} />
+                    <Lineage view={view} />
+                  </>
+                ) : tab === "promotion-plans" ? (
+                  <PlansPanel view={view} />
+                ) : tab === "timeline" ? (
+                  <TimelinePanel view={view} />
+                ) : (
+                  <Reconciliation view={view} />
+                )}
+              </div>
+              <aside className="exec-sbx-rail" aria-label="Exit review and review note">
+                <ExitReviewPanel view={view} />
+                {isDecided(view) ? null : (
+                  <ReviewNoteForm
+                    api={api}
+                    capability={capability}
+                    identity={{ workspaceId: noteWorkspace, certificationId: view.certificationId, workflowVersion: view.workflowVersion }}
+                    onRecorded={reload}
+                  />
+                )}
+              </aside>
+            </div>
+          </div>
+        )}
+      </UrlTabs>
+    </div>
+  );
+}

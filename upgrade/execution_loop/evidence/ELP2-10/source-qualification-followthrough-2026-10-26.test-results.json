@@ -1,0 +1,62 @@
+{
+  "phase": "ELP2-10",
+  "tier": "R1",
+  "code_commit": "4ecaa23c418c567205c681dd8d0853af50254aed",
+  "code_tree": "f5d3d48cf51806aa61828135cb5893a5abea8689",
+  "runtime_effect": "NONE",
+  "source_status": "SOURCE_ONLY",
+  "public_contract_changed": false,
+  "focused_tests": {
+    "spec_files": 5,
+    "initial_pass": 144,
+    "initial_fail": 2,
+    "retake_pass": 3,
+    "compatible_unique_pass_after_retakes": 146,
+    "single_full_green_run": false,
+    "initial_failures": ["snapshot Buffer versus Uint8Array assertion corrected", "sandbox loopback TLS listener denied"],
+    "node": "20.20.2"
+  },
+  "production_typecheck": {
+    "command": "node --max-old-space-size=3072 node_modules/typescript/bin/tsc --noEmit -p tsconfig.build.json",
+    "exit_code": 0,
+    "node": "20.20.2",
+    "pinned_node22_typecheck_pass": false
+  },
+  "full_pg_runner": {
+    "attempts": 2,
+    "status": "COMPILE_HEAP_OOM_BEFORE_SQL_TESTS",
+    "exit_codes": [134, 134],
+    "restore_rerun": false
+  },
+  "focused_real_pg": {
+    "spec": "apps/control-api/test/financial-multi-source-pg.spec.ts",
+    "pass": 14,
+    "fail": 0,
+    "duration_s": 27.01,
+    "sql_test_duration_s": 11.93,
+    "node_image": "sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+    "pg_image": "sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6",
+    "cpu_limit_total": 2,
+    "memory_limit_total_mib": 1536,
+    "timeout_s": 300,
+    "node_oom_killed": false,
+    "pg_oom_killed": false,
+    "log_sha256": "ab5fd2e7ba7b428aac688c0c768fd6fcf5cd6f206d693d32a95a8028708bf34a",
+    "context_port": "TEST_ONLY",
+    "real_financial_source_proof": false,
+    "own_resources_cleaned": true
+  },
+  "baseline_control": {
+    "original_blob": "47f56b63f9964c57bef4b2a48d1fc315bf5ba34c",
+    "unchanged_default": "PASS",
+    "new_pin_race_regression_on_original": "FAIL_EXPECTED",
+    "new_pin_race_regression_on_fixed_source": "PASS",
+    "temporary_files_removed": true
+  },
+  "release_integrity_check": "PASS",
+  "landing_r2": "NOT_RUN_PREVIOUS_INTEGRATION_RED",
+  "connected_acceptance": "NOT_MET",
+  "browser_acceptance": "NOT_RUN",
+  "calendar_source": "SOURCE_DARK",
+  "phase_closed": false
+}

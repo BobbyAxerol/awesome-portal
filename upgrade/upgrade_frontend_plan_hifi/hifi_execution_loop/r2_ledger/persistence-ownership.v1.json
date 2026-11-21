@@ -12,6 +12,104 @@
     "VIEW_DERIVED"
   ],
   "tables": [
+    {"table":"execution_command_status_preparations","writer_owner":"PORTAL_WORKFLOW","ingress":"AUTHORIZED_COMMAND_STATUS_PREPARATION","verbs":{"insert":1,"update":1,"delete":1,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"BOUNDED_ACTIVE_OR_CONSUMED_PREISSUANCE_CORRELATION","disposal_decision":"EXPIRED_OR_LOCALLY_CONSUMED_CORRELATION_UNDER_AUTHORITY_LOCK","note":"Migration158 stores a public nonce, comparison digests and local read-consumed marker only. Removal never resolves or erases source custody, attempts, original, lease links, terminal receipts or ACKs. Not yet runtime commissioned or connected-source qualified.","reached_via":"CommandSourceAssertionAuthority.prepare/acknowledgeRetainedRead -> PgCommandStatusPreparations"},
+    {"table":"execution_command_status_context_links","writer_owner":"PORTAL_WORKFLOW","ingress":"AUTHENTICATED_EDGE_COMMAND_STATUS_IDENTITY_ISSUE","verbs":{"insert":1,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"ONE_IMMUTABLE_LINK_PER_STATUS_DELIVERY_LEASE","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Migration157; digest-only context/original/call/binding and lease correlation inserted atomically with the identity lease. No bearer token, source payload, ACK, or terminal receipt; source-backed recovery and production retention qualification are still required.","reached_via":"CommandSourceAssertionAuthority.issue -> CurrentHumanCandidate.issueCommandStatus"},
+    {"table":"execution_command_status_delivery_acks","writer_owner":"PORTAL_WORKFLOW","ingress":"AUTHENTICATED_EDGE_COMMAND_STATUS_DELIVERY_ACK","verbs":{"insert":1,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"ONE_IMMUTABLE_ACK_PER_DELIVERED_STATUS_LEASE","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Migration156; stores identity references and request, response, terminal receipt digests only after authenticated terminal and Edge delivery ACK. No tokens or payloads. Retention is cumulative; a production budget and owner-approved archival policy remain required.","reached_via":"CommandSourceAssertionTransport.complete -> CommandSourceAssertionAuthority.complete -> CurrentHumanCandidate.acknowledgeCommandStatusIssue"},
+    {"table":"execution_command_status_original_fingerprints","writer_owner":"PORTAL_WORKFLOW","ingress":"AUTHENTICATED_EDGE_COMMAND_ORIGINAL_READ","verbs":{"insert":1,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"ONE_IMMUTABLE_FINGERPRINT_PER_RETAINED_CORE_COMMAND","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Migration155; one-to-one FK to bounded immutable Core command, comparison hashes only, not source outcome custody or economic ledger. No status bytes, credentials or tokens; storage qualification and an owner-approved retention lifecycle are still required.","reached_via":"CommandStatusComposition -> EdgeCommandStatusTransport -> PgCommandStatusOriginalFingerprints"},
+    {"table":"execution_operation_health_heads","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_VERIFIED_SOURCE_PUBLICATION_OR_RETIREMENT","verbs":{"insert":1,"update":1,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"ONE_HEAD_PER_WORKSPACE_AND_SOURCE_RETAIN_RETIREMENT","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Migration154; source epoch, contiguous sequence and retired state are Portal projection custody, not source authority. No qualified provider is commissioned by this ledger.","reached_via":"OperationalHealthPublicationRepository.publish/retire -> execution_operation_queue_health_v2"},
+    {"table":"execution_operation_health_receipts","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_VERIFIED_SOURCE_PUBLICATION","verbs":{"insert":1,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_RECEIPTS_CONFIGURED_SOURCE_CAP_STOP_ON_CAP","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Migration154 immutable source publication receipt; configured maximum at most10000 per workspace/source, input at most512KiB and2000 observations per publication. Expiry does not delete receipt or prove source qualification.","reached_via":"OperationalHealthPublicationRepository.publish -> atomic verified receipt/head/observations"},
+    {"table":"execution_operation_health_observations","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_VERIFIED_SOURCE_PUBLICATION","verbs":{"insert":1,"update":1,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"CURRENT_SOURCE_OBSERVATION_PER_WORKSPACE_OPERATION","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Migration154 source-bound upsert within the same transaction as receipt and head; maximum2000 rows per publication is not a total-retention bound. A source cannot overwrite another source's operation.","reached_via":"OperationalHealthPublicationRepository.publish -> execution_operation_queue_health_v2"},
+    {"table":"execution_operation_queue_health_v2","relkind":"VIEW","writer_owner":"VIEW_DERIVED","ingress":"NONE","backing_tables":"execution_operation_queue_v2,execution_operation_health_heads,execution_operation_health_receipts,execution_operation_health_observations","verbs":{"insert":0,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"INHERITED_FROM_BACKING_TABLES","disposal_decision":"FOLLOWS_BACKING_TABLES","note":"Migration154 derived health overlay; missing, retired or expired source returns NOT_REPORTED without altering queue authority or execution status.","reached_via":"OperationalReadService -> scoped operational queue health projection"},
+    {"table":"execution_visit_baselines","writer_owner":"PORTAL_WORKFLOW","ingress":"AUTHENTICATED_EXPLICIT_MARK_SEEN","verbs":{"insert":1,"update":1,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"ONE_BOUNDED_BASELINE_PER_CURRENT_USER_WORKSPACE_MEMBERSHIP","disposal_decision":"CASCADE_ON_MEMBERSHIP_USER_OR_WORKSPACE_REMOVAL","note":"Package3 migration150; fingerprints only, at most200 facts/96KiB. Baseline is not a business/audit ledger or Edge authority; explicit seen overwrites prior baseline with CAS and current authorization fences. GET never advances state. Two inflight writers per process, nonblocking advisory lock.","reached_via":"VisitDigestController -> VisitDigestService -> VisitDigestStore"},
+    {"table":"portal_native_review_schema","writer_owner":"MIGRATION_ONLY","ingress":"EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE","verbs":{"insert":1,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_SCHEMA_TARGET_AND_CATALOGUE_RECEIPT","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-10 Research opt-in registry only, not normal startup or numbered global migration. Exact Core system/role/owner/workspace, full frozen SQL and actual function/trigger/constraint catalog hashes. No credential, user or business grant seed; runtime installation remains separately evidenced.","reached_via":"cli/execution-native-install schema -> current-human-schema.ts"},
+    {"table":"elp210_candidate.authority","writer_owner":"PORTAL_WORKFLOW","ingress":"SAME_CORE_CURRENT_HUMAN_COORDINATOR","verbs":{"insert":1,"update":1,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"MONOTONIC_REVISION_AND_DRAIN_ANCHOR","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Research-only explicit frozen schema installation; technical singleton is not a business grant. Global identity trigger fences and same-Core mutations retain revision across rollback/restart.","reached_via":"current-human-candidate.ts/current-human-mutations.ts and frozen authority_change trigger"},
+    {"table":"elp210_candidate.leases","writer_owner":"PORTAL_WORKFLOW","ingress":"SAME_CORE_CURRENT_HUMAN_COORDINATOR","verbs":{"insert":1,"update":1,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"RETAIN_NATIVE_TERMINAL_AND_UNRESOLVED_CUSTODY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Bounded candidate custody, not copied identity authority. Expiry never proves COMMIT/ROLLBACK or permits forgetting UNKNOWN. No token/method credentials stored.","reached_via":"CurrentHumanCandidate private issue/enter/resolve and CurrentHumanMutations recovery"},
+    {"table":"elp210_candidate.native_read_obligations","writer_owner":"PORTAL_WORKFLOW","ingress":"SAME_CORE_NATIVE_PHYSICAL_DELIVERY","verbs":{"insert":1,"update":1,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"RETAIN_UNTIL_GENUINE_SOURCE_ACK_AND_AUDIT","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Native finite/frame original identity and source receipt custody; explicit admission caps stop new work, never evict unresolved rows or restore a revoked grant.","reached_via":"CurrentHumanCandidate manager HTTP/SSE native delivery and original recovery registry"},
+    {"table":"elp210_candidate.native_read_events","writer_owner":"PORTAL_WORKFLOW","ingress":"ATOMIC_NATIVE_CUSTODY_TRIGGER","verbs":{"insert":1,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_NATIVE_READ_AUDIT","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Frozen native_read_event trigger; no raw business rows or credentials. Preserve failed/unknown/terminal history on Research rollback.","reached_via":"current-human-candidate.sql native_read_event"},
+    {"table":"elp210_candidate.events","writer_owner":"PORTAL_WORKFLOW","ingress":"ATOMIC_CURRENT_HUMAN_LEASE_TRIGGER","verbs":{"insert":1,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_HUMAN_LEASE_AUDIT","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Frozen lease_event trigger; structural custody audit only, not TS economic ledger or app entitlement source.","reached_via":"current-human-candidate.sql lease_event"},
+    {"table":"elp210_candidate.mutations","writer_owner":"PORTAL_WORKFLOW","ingress":"SAME_CORE_VERIFIED_MUTATION_COORDINATOR","verbs":{"insert":1,"update":1,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"RETAIN_ORIGINAL_KEY_TERMINAL_AND_PENDING_DRAIN","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Verified local authority transaction/recovery ledger; one-view credential is never reconstructed after lost response. No automatic grant repair, reset or delete.","reached_via":"CurrentHumanMutations executeVerified/recovery"},
+    {"table":"elp210_candidate.mutation_events","writer_owner":"PORTAL_WORKFLOW","ingress":"ATOMIC_VERIFIED_MUTATION_TRIGGER","verbs":{"insert":1,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_AUTHORITY_MUTATION_AUDIT","disposal_decision":"NO_AUTOMATIC_DELETE","note":"Frozen mutation_event trigger records outcomes without returning old credentials; preserve source identity and original attempt on rollback/restart.","reached_via":"current-human-candidate.sql mutation_event"},
+    {"table":"elp210_candidate.obligations","relkind":"VIEW","writer_owner":"VIEW_DERIVED","ingress":"NONE","backing_tables":"elp210_candidate.leases,elp210_candidate.native_read_obligations","verbs":{"insert":0,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"INHERITED_FROM_BACKING_TABLES","disposal_decision":"FOLLOWS_BACKING_TABLES","note":"Global drain barrier; expiry is not proof an unknown native attempt can be forgotten. Not a second authority or independently disposable materialization.","reached_via":"CurrentHumanMutations pendingState and authority_change trigger"},
+    {"table":"governance_approval_decision_inbox","relkind":"VIEW","writer_owner":"VIEW_DERIVED","ingress":"NONE (a view has no writer; rows derive from existing governance records)","backing_tables":"governance_approval_inbox, governance_r2_lineage, governance_approval_requests","verbs":{"insert":0,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"INHERITED_FROM_BACKING_TABLES","disposal_decision":"FOLLOWS_BACKING_TABLES","note":"DEBT-UXM07-009: migration133 adds this read-only derived view for R2 parent readiness and immutable plan-author facts. No new writer, table, materialization, TTL, authority installation or row disposal. Retention follows existing backing records; migration is not proof of mounted runtime.","reached_via":"GovernanceService -> approvalInboxResource (governance/contracts.ts) -> ControlPlaneQueryService"},
+    {"table":"execution_pending_recall_commands","writer_owner":"PORTAL_WORKFLOW","ingress":"NAMED_COMMAND_WITH_CURRENT_AUTHORITY","verbs":{"insert":1,"update":2,"delete":0,"read":3},"readers":3,"rows_dev":null,"rows_stable":null,"retention":"RETAIN_ACCEPTED_UNKNOWN_AND_IDEMPOTENCY_HISTORY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-07 migration144 separate Core pending-recall transport correlation, not source economic postings. Three private JSON objects each32KiB;100 local unresolved/1024 total per workspace stop NEW intake, never evict or recycle keys. PM owns original/linked recall receipts. Runtime source/history capacity remains unqualified.","reached_via":"PendingControlController -> PendingControlService -> PendingControlStore; original-key recovery lookup only"},
+    {"table":"execution_pending_recall_events","writer_owner":"PORTAL_WORKFLOW","ingress":"ATOMIC_COMMAND_STATE_TRANSITION","verbs":{"insert":1,"update":0,"delete":0,"read":0},"readers":0,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_COMMAND_HISTORY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-07 migration144 append-only exact-attempt custody/event/status plus product_audit_events in one transaction. No economic-source writer, grant, token or raw source reply. Retain on rollback; total history budget is separate from intent count.","reached_via":"PendingControlStore atomic command/event/product audit transaction"},
+    {"table":"execution_operation_queue_v2","relkind":"VIEW","writer_owner":"VIEW_DERIVED","ingress":"NONE (a view has no writer; rows derive from its backing table)","backing_tables":"execution_operation_queue_items","verbs":{"insert":0,"update":0,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"INHERITED_FROM_BACKING_TABLES","disposal_decision":"FOLLOWS_BACKING_TABLES","note":"DEBT-UXM07-002 source review: migration141 creates this additive read-only view, not a separately retained table. Scoped repeatable-read operational query only. Backing execution_operation_queue_items still has its original owner/retention disposition; no new writer, TTL, runtime migration or disposal is authorized.","reached_via":"OperationsV2Controller -> scoped queue reader -> execution_operation_queue_v2"},
+    {"table":"execution_instance_registration_commands","writer_owner":"PORTAL_WORKFLOW","ingress":"NAMED_COMMAND_WITH_CURRENT_AUTHORITY","verbs":{"insert":1,"update":2,"delete":0,"read":3},"readers":3,"rows_dev":null,"rows_stable":null,"retention":"RETAIN_ACCEPTED_UNKNOWN_AND_IDEMPOTENCY_HISTORY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-07 migration143 additive Core registration transport correlation, not source registry/economic authority. Three private JSON objects each32KiB;100pending/1024total per workspace stop NEW intake, never evict accepted/UNKNOWN identities or recycle TTL-expired keys. Default selected provider unqualified; actual source retention/runtime pacing require commissioning.","reached_via":"InstanceRegistrationController -> InstanceRegistrationService -> InstanceRegistrationStore; internal recovery only queries original source registration key"},
+    {"table":"execution_instance_registration_events","writer_owner":"PORTAL_WORKFLOW","ingress":"ATOMIC_COMMAND_STATE_TRANSITION","verbs":{"insert":1,"update":0,"delete":0,"read":0},"readers":0,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_COMMAND_HISTORY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-07 migration143 append-only registration transport-state history plus existing product_audit_events in the same transaction. No source economic posting, funding/binding/activation, token or raw source response. Preserve events on rollback and unresolved recovery.","reached_via":"InstanceRegistrationStore atomic state/event/product audit transaction"},
+    {"table":"execution_manager_score_mode_heads","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_QUALIFIED_ADAPTER","verbs":{"insert":2,"update":1,"delete":0,"read":5},"readers":2,"rows_dev":null,"rows_stable":null,"retention":"ONE_IMMUTABLE_ORIGINAL_AND_ONE_RESTATED_POINTER_PER_SOURCE","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-06 migration139 forward-only: immutable ORIGINAL_INPUTS pointer and separate historical RESTATED_CURRENT_POLICY CAS head. All payloads remain in138 under the same combined actual-byte/revision caps. No financial-source head, source ACK, policy installation or operational-current claim. Preserve originals/derived rows on rollback.","reached_via":"ManagerScoreOriginalCustody same source transaction; ManagerScoreRestatement existing serial consumer IDLE lease; authorized explicit historical reads"},
+    {"table":"execution_manager_calculation_revisions","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_QUALIFIED_ADAPTER","verbs":{"insert":1,"update":0,"delete":0,"read":4},"readers":2,"rows_dev":null,"rows_stable":null,"retention":"EXPLICIT_PER_SOURCE_REVISION_AND_BYTE_CAP_STOP_ON_LIMIT","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-06 optional private original PATH custody and immutable policy-only Score results; source revision FK, current policy/source/consumer lease fences. No runtime defaults, source-clock rewrite, source ACK, identity or economic authority. Migration138 forward only; preserve all rows on rollback.","reached_via":"Existing ManagerProjectionConsumer initial source transaction and IDLE lease -> ManagerScoreRecalculation; scoped ManagerModelService detached read overlay"},
+    {"table":"execution_manager_calculation_heads","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_QUALIFIED_ADAPTER","verbs":{"insert":1,"update":1,"delete":0,"read":4},"readers":2,"rows_dev":null,"rows_stable":null,"retention":"ONE_DERIVED_HEAD_PER_IMMUTABLE_SOURCE_REVISION","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-06 derived CAS head only, separate from financial/source checkpoint. Source/profile advisory lock and existing lease fence before promotion; no source sequence or ACK emitted.","reached_via":"ManagerScoreRecalculation same-TX immutable append and CAS head; current-scope API read fences"},
+    {"table":"execution_manager_consumer_fences","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_QUALIFIED_ADAPTER","verbs":{"insert":1,"update":4,"delete":0,"read":1},"readers":1,"rows_dev":null,"rows_stable":null,"retention":"ONE_MONOTONIC_FENCE_ROW_PER_WORKSPACE_ENV_PROFILE_RETAIN_ON_RELEASE","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-10 private unmounted Manager consumer coordination. DB-clock expiry and deferred COMMIT trigger fence stale writers; quiesce plus explicit epoch-reset receipt required after restore. No financial/identity authority, default runtime TTL or legacy worker activation.","reached_via":"ManagerProjectionLeases private port; persistManagerProjection validates SOURCE_VERIFIED lease in same transaction; no public API"},
+    {"table":"execution_trusted_commands","writer_owner":"PORTAL_WORKFLOW","ingress":"NAMED_COMMAND_WITH_CURRENT_AUTHORITY","verbs":{"insert":1,"update":2,"delete":0,"read":5},"readers":3,"rows_dev":null,"rows_stable":null,"retention":"RETAIN_ACCEPTED_UNKNOWN_AND_IDEMPOTENCY_HISTORY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-07 Core transport ledger, NOT TS financial authority. Row bytes bounded32KiB per object,100 in-flight and1024 total intents per workspace; stop on cap. Never erase ambiguous outcome or recycle key on TTL.","reached_via":"ExecutionCommandController -> ExecutionCommandService -> CommandStore; internal recover only reads same source key"},
+    {"table":"execution_trusted_command_events","writer_owner":"PORTAL_WORKFLOW","ingress":"ATOMIC_COMMAND_STATE_TRANSITION","verbs":{"insert":1,"update":0,"delete":0,"read":0},"readers":0,"rows_dev":null,"rows_stable":null,"retention":"IMMUTABLE_COMMAND_HISTORY","disposal_decision":"NO_AUTOMATIC_DELETE","note":"ELP2-07 append-only transport-state and product-audit transaction. No credentials/raw PM reason in audit; no financial compensations.","reached_via":"CommandStore state transaction -> event + existing product_audit_events"},
+    {
+      "table":"execution_manager_model_revisions","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_QUALIFIED_ADAPTER",
+      "verbs":{"insert":1,"update":0,"delete":0,"read":3},"readers":3,"rows_dev":null,"rows_stable":null,
+      "retention":"BOUNDED_1024_REVISIONS_8MIB_INPUT_PER_PROFILE_STOP_ON_CAP","disposal_decision":"NO_AUTOMATIC_DELETE",
+      "note":"ELP2-06 immutable rebuildable projection, not source/economic authority. Private prepared input only; no runtime producer mounted. Explicit source-epoch/generation replacement retains old revisions; raw read role SELECT only.",
+      "reached_via":"ExecutionProfileProjectionRepository.commit -> persistManagerProjection (same transaction); no HTTP ingestion"
+    },
+    {
+      "table":"execution_manager_model_heads","writer_owner":"PORTAL_PROJECTION","ingress":"INTERNAL_QUALIFIED_ADAPTER",
+      "verbs":{"insert":1,"update":1,"delete":0,"read":4},"readers":4,"rows_dev":null,"rows_stable":null,
+      "retention":"ONE_CURRENT_CHECKPOINT_PER_WORKSPACE_ENV_PROFILE","disposal_decision":"NO_AUTOMATIC_DELETE",
+      "note":"ELP2-06 atomic head + source checkpoint FK to immutable revision; no post-commit ACK emitted here, no business command or hidden cache. Core identity remains separate.",
+      "reached_via":"ExecutionProfileProjectionRepository.commit -> persistManagerProjection; ManagerModelService scoped reads"
+    },
+    {
+      "table": "portal_access_policy_state",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "INTERNAL_QUALIFIED_ADAPTER",
+      "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "RETAIN_WITH_AUTHORITY_HISTORY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-03 additive current reviewed Portal policy, not TS authority. Default adapter unqualified; no migration seed or public installer.",
+      "reached_via": "ExecutionAccessService.installReviewedPolicy (internal qualified port only)"
+    },
+    {
+      "table": "portal_access_grants_v2",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER_AND_EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE",
+      "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "RETAIN_WITH_AUTHORITY_HISTORY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-03 scoped Portal policy/CAS/revoke with independent TS acceptance; current grants never created by migration defaults. BE-P10 adds the offline remove-only manager-domain revoke/narrow (revoked_at_ms or a shorter valid_until_ms, never a widening, same-Core coordinator REVIEWED_POLICY/REVOKE_MANAGER_GRANT) through the existing grant UPDATE; no new statement, no route.",
+      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports; cli/execution-native-revoke -> ExecutionAccessService.revokeReviewedManagerDomainGrants"
+    },
+    {
+      "table": "portal_access_proposals",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER",
+      "verbs": {"insert": 1, "update": 2, "delete": 0, "read": 2}, "readers": 2,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "RETAIN_WITH_AUTHORITY_HISTORY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-03 immutable submission/receipt with mutable reconciliation state. Unknown/pending/rejected do not grant TS rights.",
+      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService.acceptTsReceipt (internal qualified port only)"
+    },
+    {
+      "table": "portal_access_policy_events",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER_AND_EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE",
+      "verbs": {"insert": 1, "update": 0, "delete": 0, "read": 4}, "readers": 4,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "IMMUTABLE_AUTHORITY_AUDIT", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-03 append-only before/after decisions and original outcomes; scoped audit reads, no credentials. BE-P10 adds one immutable row per revoked/narrowed/no-op grant from the offline manager-domain revoke (operation='REVOKE', source='portal.private-owner-manager-revoke.v1', source_receipt_id=<revocation_id>:<grant_id>) through the existing insert; no new statement.",
+      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports; cli/execution-native-revoke -> ExecutionAccessService.revokeReviewedManagerDomainGrants"
+    },
+    {
+      "table": "portal_native_current_read_obligations",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "INTERNAL_QUALIFIED_NATIVE_CURRENT_READ_PROVIDER",
+      "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "IMMUTABLE_ORIGINAL_AND_PHYSICAL_EGRESS_TERMINAL_SOURCE_CUSTODY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-10 migration153 bounds independently registered ordinary CURRENT READ cuts. Original/terminal custody is immutable; actual Core authority writers drain unresolved reads. Physical HTTP completion or abort is required for a genuine source terminal; restart, expiry or DTO return is not a terminal. No default source binding, STREAM/HISTORY grant or runtime activation.",
+      "reached_via": "execution-v2/native-current-relations-provider.ts; explicit finite HTTP egress composition and CurrentHumanMutations same-original recovery"
+    },
+    {
+      "table": "portal_native_root_obligations",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "INTERNAL_QUALIFIED_NATIVE_ROOT_PROVIDER",
+      "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,
+      "rows_dev": null, "rows_stable": null,
+      "retention": "IMMUTABLE_ORIGINAL_AND_TERMINAL_SOURCE_CUSTODY", "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "ELP2-10 additive source-attempt custody. Original Base and exact Core mutation are immutable. UNKNOWN/expiry never release source authority. COMMITTED requires same-transaction Core receipt or serialized physical readback; ROLLED_BACK requires exact original mutation tombstone. No migration seed, grants, installer or default runtime activation.",
+      "reached_via": "execution-v2/native-root-provider.ts; explicit source-only composition and recovery"
+    },
     {
       "table": "activation_credentials",
       "writer_owner": "PORTAL_WORKFLOW",
@@ -33,7 +131,7 @@
     {
       "table": "auth_audit_events",
       "writer_owner": "PORTAL_WORKFLOW",
-      "ingress": "ROUTE",
+      "ingress": "ROUTE_AND_EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE",
       "verbs": {
         "insert": 1,
         "update": 0,
@@ -45,26 +143,26 @@
       "rows_stable": 70,
       "retention": "UNDECLARED",
       "disposal_decision": "PENDING_OWNER",
-      "note": "written on a Portal request path",
-      "reached_via": "activation.controller.ts,admin.controller.ts"
+      "note": "written on a Portal request path. BE-P10 adds two secret-free event types from the offline Research acceptance-session tool (research_acceptance_session_issued / _revoked) through the existing AuditRepository insert; no new statement, no token.",
+      "reached_via": "activation.controller.ts,admin.controller.ts; cli/execution-native-session -> research-acceptance-session.ts"
     },
     {
       "table": "auth_sessions",
       "writer_owner": "PORTAL_WORKFLOW",
-      "ingress": "ROUTE",
+      "ingress": "ROUTE_AND_EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE",
       "verbs": {
         "insert": 1,
         "update": 4,
         "delete": 0,
-        "read": 2
+        "read": 3
       },
-      "readers": 2,
+      "readers": 3,
       "rows_dev": 499,
       "rows_stable": 25,
       "retention": "UNDECLARED",
       "disposal_decision": "PENDING_OWNER",
-      "note": "written on a Portal request path",
-      "reached_via": "activation.controller.ts,admin.controller.ts"
+      "note": "written on a Portal request path. BE-P10 adds the offline Research acceptance session (access_subject research-acceptance:v1, at most one ACTIVE, TTL <= 2 h, same-Core coordinator VERIFIED_AUTH_ISSUANCE/RESEARCH_ACCEPTANCE and REVIEWED_POLICY/REVOKE_ACCEPTANCE_SESSION) through the existing createSession/revokeSession statements, plus one new locked read (SELECT ... FOR UPDATE by session_id) that also binds the token-file cleanup to the exact session hash.",
+      "reached_via": "activation.controller.ts,admin.controller.ts; cli/execution-native-session -> AuthService.issueResearchAcceptanceSession, research-acceptance-session.ts"
     },
     {
       "table": "execution_activation_capabilities",
@@ -281,6 +379,78 @@
       "disposal_decision": "PENDING_OWNER",
       "note": "written on a Portal request path",
       "reached_via": "activation.controller.ts,admin.controller.ts"
+    },
+    {
+      "table": "execution_f0_apply_attempts",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAIN_IDEMPOTENCY_HISTORY_NO_RECYCLE",
+      "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "BE-P13 migration146 append-only record of the FIRST use of an F0 apply request_key (workspace, actor, key) -> operation and the constant COMMAND_RELAY_DISABLED denial, so the denial is replayable, conflict-detectable and recoverable by key. Not a dispatch ledger: CHECKs make sent or retryable unrepresentable and no outbox row is written. Keys are never recycled (a recycled key would let a replay become a different answer). New table: null counts until deployment.",
+      "reached_via": "governance.controller.ts,f0-read.controller.ts"
+    },
+    {
+      "table": "execution_manager_series_checkpoints",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 4,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAIN_BACKFILL_RESUME_POINTER",
+      "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "BE-P16 migration147: keyset checkpoint for the bounded NAV / NET_PNL series backfill; written inside the Manager runtime lease transaction, never by a route. Migration148 (additive column, CR-02): repair_attempts = revision-scoped retry budget, a jsonb array hard-capped at 16 entries [{revision,attempts}], cleared per revision on repair, live record or stated gap; writer state, not a diagnostic, not an observation. Observation and revision tables stay append-only.",
+      "reached_via": "manager-series.store.ts"
+    },
+    {
+      "table": "execution_manager_series_observations",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAIN_SOURCE_VERIFIED_OBSERVATIONS",
+      "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "BE-P16 migration147: append-only value-or-typed-reason observations per series revision; exact decimal strings, no FX, no rebase, no interpolation.",
+      "reached_via": "manager-series.store.ts"
+    },
+    {
+      "table": "execution_manager_series_revisions",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 4
+      },
+      "readers": 4,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAIN_SERIES_REVISION_HISTORY",
+      "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "BE-P16 migration147: append-only series revision header (methodology ref, window, digest); head never moves backwards.",
+      "reached_via": "manager-series.store.ts"
     },
     {
       "table": "execution_durable_mirror_batches",
@@ -735,6 +905,42 @@
       "reached_via": "profile-projection.worker.ts"
     },
     {
+      "table": "execution_retained_imports",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "OWNER_OPERATOR_IMPORT",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAINED_DATASET_LINEAGE_LIFETIME",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "Codex UDB-03 review: importRetainedStore is an owner-operated, digest-verified transactional import; append-only idempotency/parity receipt, not a cache or Trading System writer. Keep with the retained dataset and its restore/rollback evidence; dataset disposal requires a separately approved scope.",
+      "reached_via": "retained-store-transfer.ts"
+    },
+    {
+      "table": "execution_retained_review_access",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "OWNER_OPERATOR_GRANT_REVOKE",
+      "verbs": {
+        "insert": 1,
+        "update": 1,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "ACCESS_EXPIRY_MAX_30_DAYS_KEEP_REVOKE_HISTORY",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "Codex UDB-03 review: Core-only local GET grant, issued/revoked by provisionRetainedReviewAccess with product_audit_events; canReadExecution checks active user and expiry/revocation on each request. Expiry invalidates access, not the row; retain expired/revoked records to prevent implicit reissue. Not membership, Research/Governance permission, cache or upstream delegation.",
+      "reached_via": "retained-review-access.ts,workspaces.ts"
+    },
+    {
       "table": "execution_shared_admission_leases",
       "writer_owner": "TRADING_SYSTEM_READ",
       "ingress": "ROUTE,WORKER",
@@ -807,6 +1013,24 @@
       "reached_via": "activation.controller.ts,admin.controller.ts"
     },
     {
+      "table": "execution_store_migrations",
+      "writer_owner": "MIGRATION_ONLY",
+      "ingress": "OWNER_OPERATOR_MIGRATION",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "EXECUTION_DATABASE_SCHEMA_LIFETIME",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "Codex UDB-03 review: migrateExecutionStore records immutable schema-input version/digest under an advisory transaction lock and refuses Core/drift targets. No normal request/worker writer; retained for migration, restore and rollback integrity throughout this database's lifetime.",
+      "reached_via": "store-schema.ts"
+    },
+    {
       "table": "execution_timeseries_history",
       "writer_owner": "TRADING_SYSTEM_READ",
       "ingress": "WORKER",
@@ -823,6 +1047,24 @@
       "disposal_decision": "PENDING_OWNER",
       "note": "local mirror/projection of Trading System facts",
       "reached_via": "profile-projection.worker.ts"
+    },
+    {
+      "table": "execution_workspace_references",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "OWNER_OPERATOR_IMPORT_CORE_REFERENCE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 0
+      },
+      "readers": 0,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "REFERENCING_EXECUTION_DATASET_LIFETIME",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "Codex UDB-03 review: importRetainedStore verifies the workspace against Core, then registers only its reference receipt for domain-local foreign keys. This is NOT identity/membership/resource authority and must never grant access. Keep while referencing retained data/import receipts exist; no automatic delete.",
+      "reached_via": "retained-store-transfer.ts"
     },
     {
       "table": "external_identity_bindings",
@@ -1191,6 +1433,24 @@
       "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService (review-capture.service.ts)"
     },
     {
+      "table": "governance_review_captures",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "IMMUTABLE_GOVERNANCE_AUDIT",
+      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
+      "note": "BE-R2-8: append-only idempotency response journal, atomic with review rows and product audit; immutable trigger. Not a projection/cache/TS table.",
+      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService.capture"
+    },
+    {
       "table": "governance_sandbox_certification_events",
       "writer_owner": "PORTAL_WORKFLOW",
       "ingress": "ROUTE,WORKER",
@@ -1441,24 +1701,6 @@
       "disposal_decision": "PENDING_OWNER",
       "note": "write method exists but the call graph does not reach a controller or worker",
       "reached_via": "-"
-    },
-    {
-      "table": "governance_review_captures",
-      "writer_owner": "PORTAL_WORKFLOW",
-      "ingress": "ROUTE",
-      "verbs": {
-        "insert": 1,
-        "update": 0,
-        "delete": 0,
-        "read": 1
-      },
-      "readers": 1,
-      "rows_dev": null,
-      "rows_stable": null,
-      "retention": "IMMUTABLE_GOVERNANCE_AUDIT",
-      "disposal_decision": "KEEP_NO_AUTOMATIC_DELETE",
-      "note": "BE-R2-8: append-only idempotency response journal, atomic with review rows and product audit; immutable trigger. Not a projection/cache/TS table.",
-      "reached_via": "governance.controller.ts -> GovernanceReviewCaptureService.capture"
     }
   ],
   "views_note": "PostgreSQL reports four views in public. They are read by the control-api, so they are listed; a view never has its own writer.",

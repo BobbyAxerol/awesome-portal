@@ -1,0 +1,15 @@
+{
+  "schema_version": "research.run-create.v1",
+  "run_id": "run_01HZQ7PROBE",
+  "status": "QUEUED",
+  "replayed": false,
+  "requested_spec_digest": "sha256:66e09b4410",
+  "effective_spec_digest": "sha256:3b81c7aa15",
+  "dataset_binding_digest": "sha256:9d44f2c880",
+  "manifest_digest": "sha256:11ab07dd3e",
+  "legacy": {
+    "strategy_id": "delta_rsi_polynomial",
+    "dataset_id": "ds_btcusdt_4h",
+    "protocol": "three_window_decay"
+  }
+}

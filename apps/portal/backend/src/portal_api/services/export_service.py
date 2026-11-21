@@ -8,7 +8,9 @@ re-run.
 
 from __future__ import annotations
 
+import os
 import shutil
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -39,14 +41,7 @@ _FRAME_PATHS = (
 )
 
 
-def export_run(artifacts: ArtifactRepository, run_id: str) -> Path:
-    """Materialize the audit export directory and return its path."""
-    run_dir = artifacts.run_directory(run_id)
-    export_dir = run_dir / "export"
-    if export_dir.exists():
-        shutil.rmtree(export_dir)
-    export_dir.mkdir(parents=True)
-
+def _populate_export(run_dir: Path, export_dir: Path) -> None:
     for relative in _JSON_PATHS:
         source = run_dir / relative
         if source.is_file():
@@ -62,15 +57,35 @@ def export_run(artifacts: ArtifactRepository, run_id: str) -> Path:
             frame = pd.read_parquet(source)
             frame.to_csv(target, index=True)
 
+
+def export_run(artifacts: ArtifactRepository, run_id: str) -> Path:
+    """Materialize the audit export directory and return its path."""
+    run_dir = artifacts.run_directory(run_id)
+    export_dir = run_dir / "export"
+    if export_dir.exists():
+        shutil.rmtree(export_dir)
+    export_dir.mkdir(parents=True)
+    _populate_export(run_dir, export_dir)
     return export_dir
 
 
 def export_bundle(artifacts: ArtifactRepository, run_id: str) -> Path:
-    """Zip the export directory; returns the bundle path."""
-    export_dir = export_run(artifacts, run_id)
+    """Build away from readers and publish one complete archive atomically."""
+    run_dir = artifacts.run_directory(run_id)
+    export_dir = run_dir / "export"
+    if export_dir.is_symlink():
+        raise ValueError("legacy export directory must not be a symlink")
+    export_dir.mkdir(parents=True, exist_ok=True)
     bundle = export_dir / f"{run_id}-export.zip"
-    with zipfile.ZipFile(bundle, "w", zipfile.ZIP_DEFLATED) as handle:
-        for path in sorted(export_dir.rglob("*")):
-            if path.is_file() and path.suffix != ".zip":
-                handle.write(path, path.relative_to(export_dir))
+    with tempfile.TemporaryDirectory(prefix=".export-build-", dir=run_dir) as scratch_name:
+        scratch = Path(scratch_name)
+        _populate_export(run_dir, scratch)
+        candidate = scratch / bundle.name
+        with zipfile.ZipFile(candidate, "w", zipfile.ZIP_DEFLATED) as handle:
+            for path in sorted(scratch.rglob("*")):
+                if path.is_file() and path != candidate:
+                    handle.write(path, path.relative_to(scratch))
+        with candidate.open("rb") as stream:
+            os.fsync(stream.fileno())
+        os.replace(candidate, bundle)
     return bundle

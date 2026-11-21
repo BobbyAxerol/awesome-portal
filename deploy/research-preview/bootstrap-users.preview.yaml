@@ -1,0 +1,8 @@
+# RF02-B3 preview identities. Same parser and rules as
+# deploy/control-api/bootstrap-users.yaml; seeded INVITED, activated by hand.
+users:
+  - username: bobby
+    role: ADMIN
+    owner: true
+  - username: claude-preview
+    role: ADMIN

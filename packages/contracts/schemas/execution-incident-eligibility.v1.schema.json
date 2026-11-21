@@ -1,0 +1,271 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "execution-incident-eligibility.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "incident_id",
+    "environment",
+    "workflow_version",
+    "observed_at_ms",
+    "current_only",
+    "advisory_only",
+    "authority_basis",
+    "family_check",
+    "source_side_effect_requested",
+    "deployment_resume_requested",
+    "actions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.incident-action-eligibility.v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,191}$",
+      "maxLength": 96
+    },
+    "incident_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+    },
+    "environment": {
+      "enum": [
+        "PAPER",
+        "SANDBOX",
+        "LIVE"
+      ]
+    },
+    "workflow_version": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "observed_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "current_only": {
+      "const": true
+    },
+    "advisory_only": {
+      "const": true
+    },
+    "authority_basis": {
+      "const": "EXISTING_PORTAL_ADMIN_INCIDENT_WORKFLOW"
+    },
+    "family_check": {
+      "const": "PORTAL_INCIDENT_WORKFLOW_RECHECK_REQUIRED"
+    },
+    "source_side_effect_requested": {
+      "const": false
+    },
+    "deployment_resume_requested": {
+      "const": false
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "eligible",
+            "blocker_codes",
+            "required_inputs"
+          ],
+          "properties": {
+            "action": {
+              "const": "incident.acknowledge"
+            },
+            "eligible": {
+              "type": "boolean"
+            },
+            "blocker_codes": {
+              "type": "array",
+              "uniqueItems": true,
+              "maxItems": 2,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "INCIDENT_ALREADY_RESOLVED",
+                  "INCIDENT_NOT_ACKNOWLEDGEABLE"
+                ]
+              }
+            },
+            "required_inputs": {
+              "const": []
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "eligible": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "eligible"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "blocker_codes": {
+                    "maxItems": 0
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "blocker_codes": {
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "eligible",
+            "blocker_codes",
+            "required_inputs"
+          ],
+          "properties": {
+            "action": {
+              "const": "incident.mitigate"
+            },
+            "eligible": {
+              "type": "boolean"
+            },
+            "blocker_codes": {
+              "type": "array",
+              "uniqueItems": true,
+              "maxItems": 5,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "INCIDENT_ALREADY_RESOLVED",
+                  "INCIDENT_NOT_MITIGATABLE",
+                  "INCIDENT_ACKNOWLEDGEMENT_REQUIRED",
+                  "INCIDENT_ASSIGNEE_REQUIRED",
+                  "MITIGATION_EVIDENCE_REQUIRED"
+                ]
+              }
+            },
+            "required_inputs": {
+              "const": [
+                "mitigation_evidence_hash"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "eligible": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "eligible"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "blocker_codes": {
+                    "maxItems": 0
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "blocker_codes": {
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action",
+            "eligible",
+            "blocker_codes",
+            "required_inputs"
+          ],
+          "properties": {
+            "action": {
+              "const": "incident.resolve"
+            },
+            "eligible": {
+              "type": "boolean"
+            },
+            "blocker_codes": {
+              "type": "array",
+              "uniqueItems": true,
+              "maxItems": 3,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "INCIDENT_ALREADY_RESOLVED",
+                  "INCIDENT_NOT_MITIGATED",
+                  "CLEAN_DRY_RUN_EVIDENCE_REQUIRED"
+                ]
+              }
+            },
+            "required_inputs": {
+              "const": [
+                "clean_dry_run_evidence_hash",
+                "reason"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "eligible": {
+                    "const": true
+                  }
+                },
+                "required": [
+                  "eligible"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "blocker_codes": {
+                    "maxItems": 0
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "blocker_codes": {
+                    "minItems": 1
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "items": false
+    }
+  },
+  "description": "Current advisory preconditions for the EXISTING Portal ADMIN incident workflow, not a scoped grant, command permit or trading-safety assessment. Same ADMIN/workspace and pre/post reader-mode checks as the legacy incident workflow. SCOPED_V2 refuses INCIDENT_SCOPED_PARENT_NOT_COMMISSIONED before lookup; no ADMIN override into that scoped family. Evidence presence is an EXISTS by kind over the full incident, not a truncated detail page. Eligible does not attest the submitted hash: POST checks exact evidence hash, current session/admin/workspace, Origin/CSRF, request key and expected_workflow_version again. No source effect or deployment resume."
+}

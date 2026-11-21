@@ -11,6 +11,8 @@
 interface ImportMetaEnv {
   /** Dev-only fixture product routes; never grants source, SSE or command authority. */
   readonly VITE_EXECUTION_PREVIEW_ENABLED?: string;
+  /** Comma list of Execution V2 screen keys (see `execution/v2/flags.ts`); empty keeps every screen on V1. */
+  readonly VITE_EXECUTION_V2_SCREENS?: string;
   readonly VITE_ROADMAP_TASK_BOARD_API_BASE?: string;
   readonly VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY?: string;
   /** `legacy` is the safe default; `v1` only after backend workspace UAT. */

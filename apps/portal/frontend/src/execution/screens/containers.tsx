@@ -44,6 +44,9 @@ import {
 import { IncidentDetailScreen } from "./IncidentDetail";
 import { SandboxCertificationScreen } from "./SandboxCertification";
 import { ReviewCapturePanel, captureCapability } from "../components/ReviewCapture";
+import { CaptureNextStep } from "../components/CaptureNextStep";
+import { bindGateDecision, type DecisionGate } from "../api/governanceContext";
+import { useRetainedReview } from "../retainedReview";
 import { useExecutionRuntime } from "../useExecutionRuntime";
 import { CanaryControlRoomScreen } from "./CanaryControlRoom";
 import { LiveFullOperationsScreen } from "./LiveFullOperations";
@@ -349,6 +352,16 @@ export function ApprovalInboxContainer({
   );
 }
 
+/**
+ * FE-GOV-C06: a retained-review stack refuses EVERY Execution POST at its session guard — including Portal-local governance decisions — whatever the gate's
+ * policy or the reviewer's eligibility says. So the decision controls stay read-only up front, with that reason, instead of answering a click with a refusal.
+ * The retained context is read without a Research workspace override; a missing retained context never counts as permission to write.
+ */
+const RETAINED_WRITE_CLOSED = "This stack is a retained review: it is read-only, so no decision is sent from here.";
+function useRetainedWriteClosed(): string | null {
+  return useRetainedReview().status === "retained" ? RETAINED_WRITE_CLOSED : null;
+}
+
 /** Polling cadence. Bounded here so the reducer stays pure. */
 const POLL_MS = 1_500;
 const MAX_POLLS = 40;
@@ -360,6 +373,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
   // the one thing it exists to mean.
   const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
   const [note, setNote] = useState("");
+  const retainedClosed = useRetainedWriteClosed();
   const [decision, dispatch] = useReducer(decisionReducer, undefined, () =>
     initialDecision(newRequestKey()),
   );
@@ -384,7 +398,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
     return () => {
       cancelled = true;
     };
-  }, [api, approvalId]);
+  }, [api, approvalId, workspaceId]);
 
   // The poll loop. It stops on settled and on UNCERTAIN — the latter because
   // the ruling stops the automatic retry there, not because the question is
@@ -436,27 +450,25 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
     ) => {
       const detail = state.value;
       if (!detail) return;
+      // The exact pins of THIS read: workspace, approval, version and every evidence hash. No pins, no plan — the buttons are closed with the reason, and this is the
+      // second gate on the same fact (a plan posted with `[]` for a request that has evidence would only come back as EVIDENCE_HASH_MISMATCH).
+      const binding = detail.binding;
+      if (binding.state !== "ready") return;
       dispatch({ type: "PLAN_REQUESTED" });
-      // The review must have named a workspace; the caller keeps the buttons
-      // disabled until it does, and this is the second gate on the same fact.
-      const workspaceId = detail.workspaceId;
-      if (!workspaceId) return;
+      // Typed conditions travel with approve-with-condition and with request-changes (the remediation asked for); with no other verb.
+      const conditions = verdict === "APPROVE_WITH_CONDITION" || verdict === "REQUEST_CHANGES" ? (extra?.conditions ?? []) : [];
       const planned = await api.planDecision({
-        approvalId,
-        workspaceId,
+        approvalId: binding.approvalId,
+        workspaceId: binding.workspaceId,
         decision: verdict,
         reason,
-        // The schema refuses this decision without conditions, and refuses
-        // conditions with any other — so they travel only where they belong.
-        // Typed objects now, never a flattened sentence: the server checks each
-        // for an owner, holds its expiry against its deadline and rejects
-        // duplicates, and none of that survives being turned into prose.
-        conditions: verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : [],
-        expectedApprovalVersion: detail.expectedVersion,
+        conditions,
+        expectedApprovalVersion: binding.expectedVersion,
+        evidenceHashes: binding.evidenceHashes,
         // Keyed by the intent, so a DENY after an APPROVE is a new command and
-        // not an idempotent replay of the one before it (BR-EX-18).
-        requestKey: intentKey(decisionRef.current.requestKey, approvalId, verdict,
-          JSON.stringify([workspaceId, detail.expectedVersion, reason, verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : []])),
+        // not an idempotent replay of the one before it (BR-EX-18). The pins are part of the intent: a re-read that changed them is a new command.
+        requestKey: intentKey(decisionRef.current.requestKey, binding.approvalId, verdict,
+          JSON.stringify([binding.workspaceId, binding.expectedVersion, binding.evidenceHashes, reason, conditions])),
       });
       if (!planned.ok) {
         dispatch(
@@ -485,7 +497,8 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
       const applied = await api.applyPlan(
         planned.value.operationId,
         planned.value.applyToken,
-        workspaceId,
+        binding.workspaceId,
+        planned.value.kind,
       );
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
@@ -494,7 +507,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
       // 202. The drawer does not close and nothing is called success.
       dispatch({ type: "APPLY_ACCEPTED", ...applied.value });
     },
-    [api, approvalId, state.value],
+    [api, state.value],
   );
 
   const detail = state.value;
@@ -502,7 +515,8 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
   return (
     <>
       <GateR1Review
-        decisionsBlockedReason={state.value && !state.value.workspaceId ? "This review published no workspace, so a decision cannot be addressed to one. The controls stay closed rather than sending a request the server would refuse." : null}
+        // Every verb stays closed, with the reason, unless this read published the pins a decision needs (or the older manifest can supply them completely).
+        decisionsBlockedReason={retainedClosed ?? (detail && detail.binding.state !== "ready" ? detail.binding.reason : null)}
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         note={note}
         onNoteChange={setNote}
@@ -510,6 +524,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
         approvalId={detail?.approvalId ?? approvalId}
         alphaLabel={detail?.alphaLabel ?? approvalId}
         releaseCandidate={detail?.releaseCandidate ?? undefined}
+        evidenceWorkspaceId={detail?.workspaceId ?? workspaceId ?? null}
         quorumMet={detail?.quorumMet ?? 0}
         quorumRequired={detail?.quorumRequired ?? 0}
         policyVersion={detail?.policyVersion ?? "unversioned"}
@@ -529,7 +544,7 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
         onApprove={() => void decide("APPROVE", note.trim() || "Evidence reviewed and accepted.")}
         onDeny={() => void decide("DENY", note.trim() || "Evidence rejected.")}
-        onRequestChanges={() => void decide("REQUEST_CHANGES", note.trim())}
+        onRequestChanges={() => void decide("REQUEST_CHANGES", note.trim(), { conditions })}
         conditions={conditions}
         onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
         onRequestCondition={() => {
@@ -542,9 +557,22 @@ export function GateR1ReviewContainer({ api, approvalId, workspaceId }: { api: E
           // one flattened into a sentence. `latest` only gates the click.
           void decide("APPROVE_WITH_CONDITION", note.trim() || "Approved with a condition.", { conditions });
         }}
-      />
+      >
+        {detail ? (
+          <CaptureNextStep
+            context={detail.capture}
+            submit={{ r2: async (input) => outcomeOf(await api.captureR2(input)), paperExit: async (input) => outcomeOf(await api.createPaperExit(input)) }}
+            recordHref={(capture) => `/governance/approvals/${encodeURIComponent(capture.approval_id ?? capture.aggregate_id)}/r2?workspace_id=${encodeURIComponent(capture.workspace_id)}`}
+          />
+        ) : null}
+      </GateR1Review>
     </>
   );
+}
+
+/** A capture result as the panel's outcome: a recorded review, or the server's own refusal. */
+function outcomeOf(result: Awaited<ReturnType<ExecutionApi["captureR2"]>>) {
+  return result.ok ? { kind: "captured" as const, capture: result.value } : { kind: "failed" as const, reason: result.reason };
 }
 
 /**
@@ -636,7 +664,7 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
       verdict: Parameters<ExecutionApi["planDecision"]>[0]["decision"],
       reason: string,
       expectedApprovalVersion: number | null,
-      extra?: { conditions?: readonly TypedCondition[]; workspaceId?: string },
+      extra?: { conditions?: readonly TypedCondition[]; workspaceId?: string; evidenceHashes?: readonly string[] | null; gate?: DecisionGate },
     ) => {
       // No workspace, no decision. The caller keeps the controls disabled with
       // a reason; this is the second gate on the same fact, so a decision can
@@ -644,19 +672,23 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
       const target = extra?.workspaceId ?? workspaceId;
       if (!target) return;
       dispatch({ type: "PLAN_REQUESTED" });
+      // Typed conditions travel with approve-with-condition and request-changes only.
+      const carriesConditions = verdict === "APPROVE_WITH_CONDITION" || verdict === "REQUEST_CHANGES";
       const planned = await api.planDecision({
+        ...(extra?.gate ? { gate: extra.gate } : {}),
         approvalId: subjectId,
         workspaceId: target,
         decision: verdict,
         reason,
-        conditions: verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : [],
+        conditions: carriesConditions ? (extra?.conditions ?? []) : [],
+        ...(extra?.evidenceHashes ? { evidenceHashes: extra.evidenceHashes } : {}),
         expectedApprovalVersion,
         // Per intent, not per container. One key reused across APPROVE and
         // DENY makes the second call an idempotent replay of the first: the
         // server answers with the original operation and the reviewer is told
         // their refusal succeeded when what was recorded was an approval.
         requestKey: intentKey(ref.current.requestKey, subjectId, verdict,
-          JSON.stringify([target, expectedApprovalVersion, reason, verdict === "APPROVE_WITH_CONDITION" ? (extra?.conditions ?? []) : []])),
+          JSON.stringify([extra?.gate ?? null, target, expectedApprovalVersion, extra?.evidenceHashes ?? [], reason, carriesConditions ? (extra?.conditions ?? []) : []])),
       });
       if (!planned.ok) {
         dispatch(
@@ -687,6 +719,7 @@ function useDecision(api: ExecutionApi, workspaceId: string | null) {
         planned.value.operationId,
         planned.value.applyToken,
         target,
+        planned.value.kind,
       );
       if (!applied.ok) {
         dispatch({ type: "APPLY_FAILED", error: applied.reason });
@@ -739,11 +772,11 @@ export function GateR2ReviewContainer({
   preview?: CapitalPreviewInput;
 }) {
   const [state, setState] = useState<LoadState<GateR2Detail>>(loading);
-  const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
   const [note, setNote] = useState("");
+  const [conditions, setConditions] = useState<readonly TypedCondition[]>([]);
   const [preview, setPreview] = useState<CapitalPreviewState>(null);
   const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
-
+  const retainedClosed = useRetainedWriteClosed();
   useEffect(() => {
     let cancelled = false;
     setState(loading);
@@ -758,7 +791,7 @@ export function GateR2ReviewContainer({
     return () => {
       cancelled = true;
     };
-  }, [api, approvalId]);
+  }, [api, approvalId, workspaceId]);
 
   // Its own request, keyed on the amount. Folding it into the effect above
   // would refetch the whole review whenever the amount moved, and leaving it
@@ -799,20 +832,24 @@ export function GateR2ReviewContainer({
   }, [api, approvalId, previewScope?.portfolioId, previewScope?.requestedAmount, previewScope?.currency]);
 
   const d = state.value;
-  const run = (
-    verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION" | "REQUEST_CHANGES",
-    reason: string,
-    attached?: readonly TypedCondition[],
-  ) =>
-    void decide(approvalId, verdict, reason, d?.expectedVersion ?? null, {
-      conditions: attached ?? [],
+  // R2's decision is its OWN command (`GOVERNANCE_R2_DECISION`), never R1's, and its pins are the child evidence of this same read. With no ready binding every
+  // verb stays closed with the reason; per-verb eligibility still applies on top, and the retained runtime can still refuse the write.
+  const r2Closed = retainedClosed ?? (d && d.binding.state !== "ready" ? d.binding.reason : null);
+  const r2Decide = (verdict: "APPROVE" | "DENY" | "APPROVE_WITH_CONDITION" | "REQUEST_CHANGES", reason: string) => {
+    if (!d || d.binding.state !== "ready") return;
+    void decide(d.binding.approvalId, verdict, reason, d.binding.expectedVersion, {
+      workspaceId: d.binding.workspaceId,
+      evidenceHashes: d.binding.evidenceHashes,
+      gate: "R2",
+      conditions,
     });
+  };
   const served = preview && !("failed" in preview) ? preview : null;
 
   return (
     <>
       <GateR2Review
-        decisionsBlockedReason={state.value && !state.value.workspaceId ? "This review published no workspace, so a decision cannot be addressed to one. The controls stay closed rather than sending a request the server would refuse." : null}
+        decisionsBlockedReason={r2Closed}
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         note={note}
         onNoteChange={setNote}
@@ -865,24 +902,32 @@ export function GateR2ReviewContainer({
         status={state.status}
         reason={state.reason}
         partialReason={state.warnings.length ? state.warnings.join("; ") : undefined}
-        onApprove={() => run("APPROVE", note.trim() || "Operational readiness accepted.")}
-        onRequestChanges={() => run("REQUEST_CHANGES", note.trim())}
-        onDeny={() => run("DENY", note.trim() || "Operational readiness rejected.")}
         conditions={conditions}
         onAttachCondition={(condition) => setConditions((prior) => [...prior, condition])}
+        onApprove={() => r2Decide("APPROVE", note.trim() || "Evidence reviewed and accepted.")}
+        onDeny={() => r2Decide("DENY", note.trim() || "Evidence rejected.")}
+        onRequestChanges={() => r2Decide("REQUEST_CHANGES", note.trim())}
         onRequestCondition={() => {
-          const latest = conditions.at(-1);
-          if (!latest) return;
-          run("APPROVE_WITH_CONDITION", note.trim() || "Approved with a condition.", conditions);
+          if (conditions.length === 0) return;
+          r2Decide("APPROVE_WITH_CONDITION", note.trim() || "Approved with a condition.");
         }}
-      />
+      >
+        {d ? (
+          <CaptureNextStep
+            context={d.capture}
+            submit={{ r2: async (input) => outcomeOf(await api.captureR2(input)), paperExit: async (input) => outcomeOf(await api.createPaperExit(input)) }}
+            recordHref={(capture) => `/governance/exit-reviews/${encodeURIComponent(capture.review_id ?? capture.aggregate_id)}?workspace_id=${encodeURIComponent(capture.workspace_id)}`}
+          />
+        ) : null}
+      </GateR2Review>
     </>
   );
 }
 
-export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi; reviewId: string | null }) {
+export function PaperExitReviewContainer({ api, reviewId, workspaceId }: { api: ExecutionApi; reviewId: string | null; workspaceId?: string }) {
   const [state, setState] = useState<LoadState<PaperExitDetail>>(loading);
   const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
+  const retainedClosed = useRetainedWriteClosed();
 
   useEffect(() => {
     let cancelled = false;
@@ -893,7 +938,7 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
       setState({ status: "empty", reason: "No exit review is named in this route, and none is published for this workspace.", value: null, warnings: [] });
       return undefined;
     }
-    void api.getPaperExit(reviewId).then((result) => {
+    void api.getPaperExit(reviewId, workspaceId).then((result) => {
       if (cancelled) return;
       setState(
         result.ok
@@ -904,7 +949,7 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
     return () => {
       cancelled = true;
     };
-  }, [api, reviewId]);
+  }, [api, reviewId, workspaceId]);
 
   const d = state.value;
 
@@ -914,6 +959,8 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
         onCopyProvenance={(full) => void navigator.clipboard?.writeText(full)}
         trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
         eligibility={d?.eligibility}
+        // Every verb stays closed, with the reason, unless this read published the pins a decision needs; per-verb eligibility still applies on top.
+        decisionsClosedReason={retainedClosed ?? (d && d.binding.state !== "ready" ? d.binding.reason : null)}
         reviewId={d?.reviewId ?? reviewId ?? "no review named"}
         deploymentId={d?.deploymentId ?? "unknown"}
         subject={d?.subject ?? reviewId ?? "the exit review register"}
@@ -953,7 +1000,9 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
           // No review named, nothing to decide on. The control is already
           // disabled in that state; this is the second lock.
           if (reviewId === null) return;
-          void decide(reviewId, outcome, `Exit review decision: ${outcome}.`, d?.expectedVersion ?? null);
+          // The exact pins of THIS read's Paper Exit decision context; with none ready the controls are closed and this is the second gate on the same fact.
+          if (!d || d.binding.state !== "ready") return;
+          void decide(d.binding.reviewId, outcome, `Exit review decision: ${outcome}.`, d.binding.expectedVersion, { workspaceId: d.binding.workspaceId, evidenceHashes: d.binding.evidenceHashes });
         }}
       />
     </>
@@ -970,7 +1019,6 @@ export function PaperExitReviewContainer({ api, reviewId }: { api: ExecutionApi;
 export function GateLiveReviewContainer({ api, approvalId, workspaceId }: { api: ExecutionApi; approvalId: string; workspaceId?: string }) {
   const [state, setState] = useState<LoadState<LiveReviewPayload>>(loading);
   const [note, setNote] = useState("");
-  const { decision, decide } = useDecision(api, state.value?.workspaceId ?? null);
   useEffect(() => {
     let cancelled = false;
     setState(loading);
@@ -985,12 +1033,15 @@ export function GateLiveReviewContainer({ api, approvalId, workspaceId }: { api:
     return () => {
       cancelled = true;
     };
-  }, [api, approvalId]);
+  }, [api, approvalId, workspaceId]);
   // The governance backbone rides inside the live payload as a full
   // r2-review document — same reader, same eligibility semantics.
   const d = state.value ? readGateR2Detail(state.value.governanceBackbone) : null;
-  const locked = !(d?.eligibility.canApprove ?? false);
-  const denyLocked = !(d?.eligibility.canDeny ?? false);
+  // Live has its own gate (`LIVE_GATE`), command and context, and it is closed for every verb: no Live predecessor policy is published, whatever a response's
+  // eligibility says (FE-GOV-C03). Nothing here ever plans R1's or R2's command in its place, and nothing enables a Live or source action.
+  const locked = true;
+  const denyLocked = true;
+  const liveBinding = d ? bindGateDecision({ gate: "LIVE_GATE", context: d.decision, envelopeWorkspaceId: d.workspaceId ?? state.value?.workspaceId ?? null, approvalId }) : null;
   /*
    * PHASE 6 (round 2) · §3.5. `separationOfDuties` exists precisely to explain
    * why the verbs are false, and this screen was dropping it.
@@ -999,7 +1050,9 @@ export function GateLiveReviewContainer({ api, approvalId, workspaceId }: { api:
     ? "This review published no governance document, so no decision can be addressed to it."
     : d.eligibility.separationOfDuties === "VIOLATION"
       ? "You requested or created this artifact, so you may not decide it — separation of duties."
-      : undefined;
+      : liveBinding && liveBinding.state !== "ready"
+        ? liveBinding.reason
+        : "Live decisions stay closed on this build. Viewing this review grants no execution, and no other gate's decision is sent in its place.";
   return (
     <GateLiveReview
       approvalId={approvalId}
@@ -1017,9 +1070,8 @@ export function GateLiveReviewContainer({ api, approvalId, workspaceId }: { api:
       denyLocked={denyLocked}
       lockReason={lockReason}
       denyLockReason={lockReason}
-      trail={decision.phase !== "idle" ? <DecisionTrail decision={decision} /> : undefined}
-      onApprove={() => void decide(approvalId, "APPROVE", note.trim() || "Canary evidence accepted for the live step.", d?.expectedVersion ?? null, { conditions: [] })}
-      onDeny={() => void decide(approvalId, "DENY", note.trim() || "Back to canary observation.", d?.expectedVersion ?? null, { conditions: [] })}
+      onApprove={() => undefined}
+      onDeny={() => undefined}
       canaryDeploymentId={state.value?.canaryDeploymentId ?? null}
       branches={state.value?.derivedBranches}
       currentSource={state.value?.currentSource ?? null}

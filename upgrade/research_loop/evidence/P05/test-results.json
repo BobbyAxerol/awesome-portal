@@ -1,0 +1,46 @@
+{
+  "phase": "P05",
+  "status": "PASS_BACKEND",
+  "receipts": [
+    {
+      "gate": "P05 Python bounded storage, recovery and actual Delta persistence",
+      "command": "PYTHONPATH=apps/portal/backend/src:apps/portal apps/portal/.venv/bin/python -m pytest apps/portal/backend/tests/test_research_artifacts.py -q",
+      "result": "12 passed",
+      "notes": "Project interpreter was verified as quantbt-engine==1.1.1; includes P05-T01..T13 and V11-P05-DR technical bundle readback."
+    },
+    {
+      "gate": "P05 Control API type authority",
+      "command": "apps/control-api/node_modules/.bin/tsc --noEmit -p apps/control-api/tsconfig.build.json",
+      "result": "PASS",
+      "notes": "No emit, no runtime/deployment change."
+    },
+    {
+      "gate": "P05 bounded Rust reader",
+      "command": "cargo fmt --check; cargo test --offline; cargo clippy --all-targets --offline -- -D warnings",
+      "result": "5 passed; clippy PASS",
+      "notes": "Includes multiple-underlying-Parquet-batch cursor-resume and full cross-language manifest invariant-drift regressions. Temporary CARGO_TARGET_DIR was removed after the gate."
+    },
+    {
+      "gate": "P05 PostgreSQL fresh/upgrade/repeat/fence retention authority",
+      "command": "scripts/research-loop-v11/test-p05-postgres.sh",
+      "result": "1 file passed; 4 tests passed",
+      "notes": "Uses a named tmpfs-only research-p05-postgres-* container with an exact self-removal trap."
+    },
+    {
+      "gate": "Contract snapshot, fixtures and lockfile-pinned generated types",
+      "command": "scripts/contracts-test.sh",
+      "result": "131 passed; all generated OpenAPI types match",
+      "notes": "Regenerated snapshot includes P05 schema/fixture/README and the pre-existing P04 Atlas portal-api type. The temporary Docker/Node workspace self-cleaned; host node_modules was also removed by exact path."
+    },
+    {
+      "gate": "Whitespace and accidental patch check",
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "not_run_by_design": [
+    "Browser build, visual regression and route journey: P05 has no browser route; Claude owns future P09/P11 consumer composition.",
+    "Deployment/Compose/runtime probe: P05 changes no runtime input or service.",
+    "5GB actual worker workload, scheduler, NATS, child isolation, retry/cancel: owned by P06, not silently simulated by P05."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "portal.execution.phase-test-results.v1",
+  "phase": "ELP2-10",
+  "tier": "R1",
+  "status": "FOCUSED_SOURCE_TESTED_CONNECTED_NOT_MET",
+  "observed_on_utc": "2026-10-26",
+  "entry_commit": "a68c4483e",
+  "code_commit": "3d0ee663f",
+  "checks": [
+    {"name": "Existing identity mapping and native current Accounts", "status": "PASS", "passed": 100, "skipped": 17, "note": "First sandbox run could not bind loopback (EPERM); rerun with loopback allowed passed."},
+    {"name": "Financial runtime, assertion transport and recovery", "status": "PASS", "passed": 102},
+    {"name": "Execution tracking reconciliation", "status": "PASS"},
+    {"name": "First TypeScript emitting build", "status": "EXIT_NOT_CAPTURED", "note": "Do not claim PASS from empty output."},
+    {"name": "TypeScript noEmit", "status": "STOPPED_RESOURCE_GUARD", "note": "Stopped before 3 GiB at approximately 2.88 GiB RSS; no PASS claimed."},
+    {"name": "Bounded TypeScript emitting build retake", "status": "PASS", "exit_code": 0, "node_max_old_space_mib": 2048, "deadline_seconds": 300}
+  ],
+  "not_claimed": ["FULL_R2", "INSTALLED_NEW_SOURCE", "CONNECTED_READ_STREAM", "FINANCIAL_SOURCE_PROOF", "ELP2_10_CLOSEOUT"],
+  "evidence": "CORE_INDEPENDENT_COMPOSITION_TLS_FIXES_2026-10-26.md"
+}

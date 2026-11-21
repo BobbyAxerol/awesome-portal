@@ -1,0 +1,65 @@
+{
+  "schema_version": "research.p24-unsigned-source-candidate.v4",
+  "recorded_date_utc": "2026-10-04",
+  "status": "AFFECTED_FRONTEND_READ_ACCEPTED_FULL_PRODUCT_OPEN",
+  "inherits": {
+    "file": "current-source-candidate-manifest.v3.json",
+    "sha256": "09d239b1e38bfdf89cb0eacf81e3c2384a4f55d3542f37a5395a91fccb5f4d0c",
+    "rule": "Preserve every earlier exact acceptance scope and failure; replace only the web image for this affected frontend read slice. No inherited evidence becomes full product GO."
+  },
+  "frontend_build": {
+    "source_base_commit": "ef218408bd3fabd1d891535208702318ec7496b6",
+    "source_dirty_at_build": true,
+    "source_inputs_sha256": {
+      "apps/portal/frontend/src/research/ReleaseCandidateDetail.tsx": "98dd804e63ffd92594e52656cb5f31e0f9cd06fd35d0dd89a83190aa224f3190",
+      "apps/portal/frontend/src/research/ReleaseCandidateRoute.tsx": "307a6fc4f3d0d7e3394c0b2ded1b4c86993d578985b2a8860336a24c2a912893",
+      "apps/portal/frontend/src/research/ReportDetail.tsx": "e0eb821987fba57dcfd3ce6149c7141fb1a168cddd4d15238f674fff9faf6836",
+      "apps/portal/frontend/src/research/ReportRoute.tsx": "f11d76f8570924607477902feefc4a006f52ff360be5e0b8613f3e3d7dfbf945",
+      "apps/portal/frontend/src/research/releaseCandidateClient.ts": "f235f0c6277ca6a9a68fd6016131d8d63246166267afad93691ba61fc82b844d",
+      "apps/portal/frontend/src/research/reportClient.ts": "1636cffcc34374b05fd2236125b9fd6833f06332ab650a1466c76158da99526c",
+      "apps/portal/frontend/src/research/runLinks.ts": "122539f251cd8a9c8490b9f6284d79f4651ae9e307be2564f82e44c10e82c0aa",
+      "apps/portal/frontend/src/research/LinkedAuditConsumer.tsx": "dcf31729f5ffdf2104b1826d3349d9ba7d2c43cd3d4d49c83ea3a4ae03675536",
+      "apps/portal/frontend/src/research/linkedAuditClient.ts": "05328055e05d883b227d7dcb2e1d2842a1bac0d1643615c0f68174fca58f40db",
+      "apps/portal/frontend/src/research/useLinkedAudit.ts": "e3c5ecca0d93862399a8303bc1c84633572de0d00e1a868385ad74316406d564",
+      "apps/portal/frontend/src/research/workspaceAudit.test.tsx": "440271a8636368ccbcea64ecf564024a7c0f8664d1b667459c438c7d3dc02d9e"
+    },
+    "image_id": "sha256:1191dde6e869e41d80670ffddc43d829027853b41314c0d149c065a5838d6146",
+    "bundle": "/assets/index-CloiB-zT.js",
+    "bundle_sha256": "76b40df4456c5b0f73d2f2b56e9fdbade43af7b99f9c197e37e957f407e1c1e4",
+    "signed_release": false
+  },
+  "reused_control": {
+    "source_commit": "128276d70a8f0d47e69617d8dcaedf4fed05cfde",
+    "image_id": "sha256:629d9bef43e83b10ce8565722a932c5c52e3d5c5b2455dd58f6e765b853b7a46",
+    "compiled_module_parity": "INHERITED_UNCHANGED_11_MODULES",
+    "all_other_images": "UNCHANGED_V3_PINS_WORKER_OFF"
+  },
+  "affected_acceptance": {
+    "focused_frontend_tests": { "passed": 285, "failed": 0, "suites": 11 },
+    "typescript": "PASS",
+    "node22_official_web_build": "PASS",
+    "real_restored_workspace_browser": { "passed": 4, "required": 4, "viewports": [1280, 660], "screens": ["S09", "S11"] },
+    "audit_verified_proof_frozen_core_job_count_unchanged": true,
+    "read_navigation_mutations": 0,
+    "foreign_workspace_denied": true,
+    "pack_redirect_and_create_intent": "FOCUSED_TESTS_NOT_FRESH_BROWSER_ALLOCATION",
+    "owner_visual_acceptance": false
+  },
+  "private_receipts": [
+    { "file": "workspace-audit-browser-20261004-attempt02.json", "sha256": "2f3171575abfb46005ebcc0b0eaef532275599c3a07ba118f8e22f20fc0ef86f", "disposition": "AFFECTED_FOUR_READS_PASS" },
+    { "file": "workspace-audit-hifi-reference-20261004.json", "sha256": "6a62cf9bbaa1e4e21be02a18bd94931eff4157f42543af48e401c39114c31d4c", "disposition": "REFERENCE_BROWSER_ONLY" },
+    { "file": "workspace-audit-completion-capacity-20261004.json", "sha256": "a6c6956725c4f6afaef77ef1e14403cab3adff0df5785b9193bc1a7eb498bde2", "disposition": "EXACT_C4_PASS" },
+    { "file": "workspace-audit-browser-20261004.json", "sha256": "4506bc5dad6f689732c75a7ee540ec3b708575ddb7234b7873838eb70aa6761a", "disposition": "SETUP_PROVENANCE_FAILURE_NOT_PRODUCT_PASS" }
+  ],
+  "full_store_integrity": false,
+  "verified_historical_manifests": 83,
+  "required_historical_manifests": 86,
+  "owner_scope_exception_approved": false,
+  "actual_second_qualified_engine": false,
+  "open_gates": [
+    "THREE_ORIGINAL_MANIFEST_BYTES_OR_BOBBY_SCOPE_DISPOSITION",
+    "REAL_SECOND_QUALIFIED_ENGINE_T07_T13_P24_T05",
+    "FULL_P24_SCENARIO_FIELD_ACTION_VISUAL_PRINT_OWNER_ACCEPTANCE",
+    "SIGNED_RELEASE_SBOM_PROVENANCE_NOT_DISPATCHED"
+  ]
+}

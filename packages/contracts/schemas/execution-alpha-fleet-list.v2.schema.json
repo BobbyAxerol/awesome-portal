@@ -4,7 +4,7 @@
   "$defs": {
     "Identifier": { "type": "string", "minLength": 1, "maxLength": 191 },
     "Timestamp": { "type": "string", "format": "date-time" },
-    "Decimal": { "type": "string", "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
+    "Decimal": { "type": "string", "maxLength": 128, "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
     "CurrencyValue": {
       "type": "object", "additionalProperties": false, "required": ["currency", "value"],
       "properties": { "currency": { "$ref": "#/$defs/Identifier" }, "value": { "$ref": "#/$defs/Decimal" } }
@@ -26,7 +26,7 @@
     "MetricState": {
       "type": "object", "additionalProperties": false, "required": ["state", "reason_code"],
       "properties": {
-        "state": { "enum": ["AVAILABLE", "EMPTY", "UNAVAILABLE"] },
+        "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
         "reason_code": { "type": ["string", "null"], "maxLength": 128 }
       }
     },

@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "CURRENT_HUMAN_MUTATION_PENDING",
+    "message": "The access change is not confirmed. Retry the same request and idempotency key."
+  },
+  "request_id": "TEST_ONLY-current-human-pending"
+}

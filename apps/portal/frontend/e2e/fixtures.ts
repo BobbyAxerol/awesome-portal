@@ -15,9 +15,30 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 
 const REGISTRY = join(dirname(fileURLToPath(import.meta.url)), "../../registry");
+const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "packages", "contracts", "fixtures");
+
+/** A canonical contract fixture, read from the package that publishes it. */
+function contractFixture(name: string): unknown {
+  return JSON.parse(readFileSync(join(CONTRACTS, name), "utf8"));
+}
 
 function fixture(relative: string): unknown {
   return JSON.parse(readFileSync(join(REGISTRY, relative), "utf8"));
+}
+
+/**
+ * A response fixture owned by this suite rather than by the registry.
+ *
+ * The Atlas and the alpha registry are generated from the repository's own
+ * sources — the engine catalog and the registry shape — and regenerated when
+ * those change. `CG-P09-02` is closed for the journey read: it now comes from
+ * `packages/contracts/fixtures`, so this suite can never drift from the
+ * descriptor the server publishes. It had drifted to revision 1.
+ */
+function local(name: string): unknown {
+  return JSON.parse(
+    readFileSync(join(dirname(fileURLToPath(import.meta.url)), "research-foundation", name), "utf8"),
+  );
 }
 
 /** Summary fixtures, by the state each one demonstrates. */
@@ -176,6 +197,195 @@ export async function stubPortalApi(
     void json(route, fixture("engine-capabilities.v1.json")),
   );
   await page.route("**/api/v1/alphas", (route) => void json(route, fixture("alphas.v1.json")));
+
+  // The QuantBT module header reads these on every route it owns. They were
+  // unstubbed, so the catch-all answered 501 and every QuantBT screen carried
+  // two console errors that had nothing to do with the screen. Empty is the
+  // truthful answer for a fixture environment with no runs.
+  await page.route("**/api/runs", (route) => void json(route, []));
+  await page.route("**/api/strategies", (route) => void json(route, []));
+
+  // P08/P10 · the preflight preview and the run producer. Both answer the
+  // product route's own writes, so Screen 02 can be driven end to end without
+  // a backend.
+  await page.route("**/api/v1/research/preflights*", (route) =>
+    void json(route, local("preflight.json")),
+  );
+  await page.route("**/api/v1/research/runs", (route) => void json(route, local("run-create.json")));
+
+  /*
+   * P11 · the progress stream.
+   *
+   * One heartbeat and then end-of-body. EventSource sees the close as an
+   * error, which is precisely the handover the screen must perform: close the
+   * stream and fall back to the 5-second poll floor rather than letting the
+   * native reconnect spin. Leaving the route unstubbed would have produced a
+   * 501 and two console errors that say nothing about the screen.
+   */
+  await page.route("**/api/v1/research/runs/*/events*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "text/event-stream",
+      headers: { "cache-control": "no-store" },
+      body:
+        'data: {"schema_version":"research.progress-stream.v1","event_type":"research.progress.heartbeat","terminal":false}\n\n',
+    }),
+  );
+
+  // P11 · the progress read and console page.
+  await page.route("**/api/v1/research/runs/*/progress*", (route) =>
+    void json(route, local("progress-read.json")),
+  );
+  await page.route("**/api/v1/research/runs/*/console*", (route) =>
+    void json(route, local("progress-console.json")),
+  );
+  await page.route("**/api/v1/research/runs/*/cancel", (route) =>
+    void json(route, {
+      schema_version: "research.progress-cancel.v1",
+      run_id: "run_01HZQ7PROBE",
+      status: "CANCEL_REQUESTED",
+      source_marker: "REQUESTED",
+    }),
+  );
+
+  // P09 · the two Research foundation BFF reads. The journey descriptor is the
+  // canonical contract fixture and the Atlas is generated from
+  // `research-engine-catalog.v1.json`, so the probe renders the facts the
+  // server actually serves rather than a hand-written approximation.
+  // P07 registry, now carrying the safe version declaration Screen 02's
+  // validators read. Generated from the same shape the contract publishes.
+  await page.route("**/api/v1/research/alphas*", (route) =>
+    void json(route, local("alpha-registry.json")),
+  );
+
+  await page.route("**/api/v1/research/journey*", (route) =>
+    void json(route, contractFixture("research-foundation.journey-v4.valid.json")),
+  );
+  await page.route("**/api/v1/research/quantbt/atlas*", (route) => {
+    const url = new URL(route.request().url());
+    const historical = url.searchParams.get("release_id") === "er_quantbt_108";
+    return void json(route, local(historical ? "atlas-historical.json" : "atlas.json"));
+  });
+
+  /*
+   * P16 · the freeze detail, its explicit verification and the retained check.
+   *
+   * The verify route is a POST, so a probe can assert that nothing but a click
+   * reaches it.
+   */
+  await page.route("**/api/v1/quantbt/runs/*/freeze/verify*", (route) =>
+    void json(route, local("freeze-verification.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/freeze*", (route) =>
+    void json(route, local("freeze-detail.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/current-source/freeze*", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED",
+          message: "This run was produced by the fixed P04 profile, which the retained-source lane does not admit.",
+        },
+      }),
+    }),
+  );
+
+  /*
+   * P15 · the search detail and the retained trial ledger.
+   *
+   * Same shape as P14: the fixed-profile run is answered in full, and the
+   * retained lane refuses it — which is what puts the ledger's own reason
+   * code on screen instead of an empty chart.
+   */
+  await page.route("**/api/v1/quantbt/runs/*/search*", (route) =>
+    void json(route, local("search-detail.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/current-source/search*", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED",
+          message: "This run was produced by the fixed P04 profile, which the retained-source lane does not admit.",
+        },
+      }),
+    }),
+  );
+
+  /*
+   * P14 · the split detail, and the retained-source fold read it may ask for.
+   *
+   * This fixture run is the fixed P04 profile, so the current-source split
+   * refuses it — the case Screen 05 must keep inside its fold panel.
+   */
+  await page.route("**/api/v1/quantbt/runs/*/split*", (route) =>
+    void json(route, local("split-detail.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/current-source/split*", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED",
+          message: "This run was produced by the fixed P04 profile, which the retained-source lane does not admit.",
+        },
+      }),
+    }),
+  );
+
+  /*
+   * P13 · the Evidence Flow hub and its lazy series.
+   *
+   * The series handler answers per `kind`, so a probe can assert that a tab
+   * read only what it draws. The retained-source passport answers a typed
+   * refusal: this fixture run is the fixed P04 profile, which the RS-02 lane
+   * admits nothing of — exactly the case the panel has to state rather than
+   * escalate.
+   */
+  await page.route("**/api/v1/quantbt/runs/*/evidence/series*", (route) => {
+    const kind = new URL(route.request().url()).searchParams.get("kind");
+    const file =
+      kind === "MONTHLY_RETURNS"
+        ? "evidence-series-monthly.json"
+        : kind === "ROLLING_RETURNS_20"
+          ? "evidence-series-rolling.json"
+          : "evidence-series-equity.json";
+    return void json(route, local(file));
+  });
+  await page.route("**/api/v1/quantbt/runs/*/evidence*", (route) =>
+    void json(route, local("evidence-hub.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/current-source/evidence*", (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: "application/json",
+      body: JSON.stringify({
+        error: {
+          code: "RESEARCH_CURRENT_SOURCE_NOT_ADMITTED",
+          message: "This run was produced by the fixed P04 profile, which the retained-source lane does not admit.",
+        },
+      }),
+    }),
+  );
+
+  /*
+   * P12 · the Run Library list and the lazy sparkline.
+   *
+   * Registered list-first: Playwright matches the most recently added handler
+   * first, and the sparkline URL also matches the list glob. The two paths are
+   * the ones `research-run-library.openapi.json` publishes, so a handler that
+   * stops matching is a signal the client drifted off the contract.
+   */
+  await page.route("**/api/v1/quantbt/runs*", (route) =>
+    void json(route, local("run-library.json")),
+  );
+  await page.route("**/api/v1/quantbt/runs/*/sparkline*", (route) =>
+    void json(route, local("run-sparkline.json")),
+  );
 
   // Service health, read by the sign-in plate before any session exists. Pinned
   // versions: the strip prints them, so a real deployment's version would

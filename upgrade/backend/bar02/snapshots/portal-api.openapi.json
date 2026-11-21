@@ -3488,6 +3488,311 @@
         "title": "RegistryDependency",
         "type": "object"
       },
+      "ResearchRunProducerEnvelope": {
+        "additionalProperties": false,
+        "description": "The server-owned P08/P10 immutable facts needed by the worker.",
+        "properties": {
+          "adapter_contract_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Adapter Contract Digest",
+            "type": "string"
+          },
+          "alpha_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Alpha Id",
+            "type": "string"
+          },
+          "alpha_version_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Alpha Version Id",
+            "type": "string"
+          },
+          "client_intent_id": {
+            "maxLength": 191,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Client Intent Id",
+            "type": "string"
+          },
+          "dataset_binding_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Dataset Binding Digest",
+            "type": "string"
+          },
+          "effective_spec_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Effective Spec Digest",
+            "type": "string"
+          },
+          "execution_adapter_id": {
+            "enum": [
+              "p04.delta-rsi.v1",
+              "p17.imported-signal-notional.v1"
+            ],
+            "title": "Execution Adapter Id",
+            "type": "string"
+          },
+          "execution_profile_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Profile Digest"
+          },
+          "execution_profile_id": {
+            "default": "p04.fixed-qualification.v1",
+            "enum": [
+              "p04.fixed-qualification.v1",
+              "p10.delta-signal-notional-wfo.v1",
+              "p16.delta-whatif-grid.v1",
+              "p17.imported-signal-notional.v1"
+            ],
+            "title": "Execution Profile Id",
+            "type": "string"
+          },
+          "imported_entrypoint": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z][A-Za-z0-9_]{0,127}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Entrypoint"
+          },
+          "imported_parameters": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                },
+                "maxProperties": 12,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Parameters"
+          },
+          "imported_source_digest": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Imported Source Digest"
+          },
+          "intent_kind": {
+            "enum": [
+              "NEW",
+              "DIAGNOSTIC"
+            ],
+            "title": "Intent Kind",
+            "type": "string"
+          },
+          "manifest_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Manifest Digest",
+            "type": "string"
+          },
+          "p04_parameters": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "maxProperties": 8,
+                "minProperties": 8,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P04 Parameters"
+          },
+          "preflight_token": {
+            "maxLength": 191,
+            "pattern": "^rpft_[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Preflight Token",
+            "type": "string"
+          },
+          "requested_spec": {
+            "additionalProperties": true,
+            "maxProperties": 64,
+            "minProperties": 1,
+            "title": "Requested Spec",
+            "type": "object"
+          },
+          "requested_spec_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Requested Spec Digest",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "research.run-producer.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "snapshot_content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Content Hash",
+            "type": "string"
+          },
+          "snapshot_id": {
+            "pattern": "^dss_[0-9a-f]{32}$",
+            "title": "Snapshot Id",
+            "type": "string"
+          },
+          "whatif": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WhatIfJob"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "work_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Work Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "client_intent_id",
+          "intent_kind",
+          "preflight_token",
+          "requested_spec",
+          "requested_spec_digest",
+          "effective_spec_digest",
+          "dataset_binding_digest",
+          "manifest_digest",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "alpha_id",
+          "alpha_version_id",
+          "execution_adapter_id",
+          "adapter_contract_digest",
+          "work_digest"
+        ],
+        "title": "ResearchRunProducerEnvelope",
+        "type": "object"
+      },
+      "ResearchRunProducerRequest": {
+        "additionalProperties": false,
+        "description": "Exact private payload sent by Control API through the existing facade.",
+        "properties": {
+          "dataset_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Dataset Id",
+            "type": "string"
+          },
+          "job_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Job Id",
+            "type": "string"
+          },
+          "lease_epoch": {
+            "maximum": 2147483647.0,
+            "minimum": 1.0,
+            "title": "Lease Epoch",
+            "type": "integer"
+          },
+          "protocol": {
+            "enum": [
+              "three_window_decay",
+              "advanced"
+            ],
+            "title": "Protocol",
+            "type": "string"
+          },
+          "research": {
+            "$ref": "#/components/schemas/ResearchRunProducerEnvelope"
+          },
+          "research_contract_version": {
+            "const": "research.run-request.v1",
+            "title": "Research Contract Version",
+            "type": "string"
+          },
+          "run_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "strategy_id": {
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$",
+            "title": "Strategy Id",
+            "type": "string"
+          },
+          "worker_attempt_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Worker Attempt Id",
+            "type": "string"
+          },
+          "workspace_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Workspace Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_id",
+          "dataset_id",
+          "protocol",
+          "research_contract_version",
+          "run_id",
+          "workspace_id",
+          "job_id",
+          "worker_attempt_id",
+          "lease_epoch",
+          "research"
+        ],
+        "title": "ResearchRunProducerRequest",
+        "type": "object"
+      },
       "ResourceProfile": {
         "additionalProperties": false,
         "properties": {
@@ -4069,6 +4374,71 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "WhatIfEvaluation": {
+        "additionalProperties": false,
+        "description": "One admitted what-if configuration: the full exact parameter map.",
+        "properties": {
+          "evaluation_key": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Evaluation Key",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 24,
+            "minProperties": 1,
+            "title": "Parameters",
+            "type": "object"
+          }
+        },
+        "required": [
+          "evaluation_key",
+          "parameters"
+        ],
+        "title": "WhatIfEvaluation",
+        "type": "object"
+      },
+      "WhatIfJob": {
+        "additionalProperties": false,
+        "description": "W5a A10c: the bounded evaluation list of one what-if diagnostic job.",
+        "properties": {
+          "evaluations": {
+            "items": {
+              "$ref": "#/components/schemas/WhatIfEvaluation"
+            },
+            "maxItems": 81,
+            "minItems": 1,
+            "title": "Evaluations",
+            "type": "array"
+          },
+          "grid_key": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Grid Key",
+            "type": "string"
+          },
+          "parent_run_id": {
+            "maxLength": 160,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$",
+            "title": "Parent Run Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "research.whatif-job.v1",
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "parent_run_id",
+          "grid_key",
+          "evaluations"
+        ],
+        "title": "WhatIfJob",
+        "type": "object"
+      },
       "WindowSummary": {
         "additionalProperties": false,
         "properties": {
@@ -4299,7 +4669,15 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PortalRunRequest"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PortalRunRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ResearchRunProducerRequest"
+                  }
+                ],
+                "title": "Payload"
               }
             }
           },

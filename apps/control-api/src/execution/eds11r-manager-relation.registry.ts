@@ -3,6 +3,8 @@ import type {
 } from "./current-source.proxy";
 import { EDS11R_MANAGER_RELATION_REGISTRY_SOURCE } from "./eds11r-manager-relation-registry.generated";
 import { MAXIMUM_DATA_INTAKE_V1, MaximumDataEnvironment } from "./maximum-data-intake";
+import { assertPublicationFieldName, browserPublicationCatalogue } from "../execution-v2/publication-catalogue";
+import { EDS11R_MANAGER_EXTRA_OPERATIONS, type ManagerPayloadProjection } from "./eds11r-manager-extra-operations";
 
 export type ManagerRelationScalarKind =
   | "BOOLEAN"
@@ -38,6 +40,11 @@ export interface ManagerRelationOperation {
   readonly sourceRetentionSemantics: string;
   /** Frontend-facing screen ownership, never an Edge upstream route. */
   readonly screenIds: readonly string[];
+  /**
+   * Only on hand-authored extra operations: the jsonb column whose allow-listed top-level keys are flattened into
+   * scalar `fields`. The column itself is never emitted. Absent on all 54 generated operations.
+   */
+  readonly payloadProjection?: ManagerPayloadProjection;
 }
 
 type GeneratedOperation = {
@@ -101,6 +108,7 @@ function compileOperation(value: GeneratedOperation): ManagerRelationOperation {
     throw new Error(`EDS11R generated registry operation is invalid: ${value.operation_id}`);
   }
   const fields = value.fields.map((field) => {
+    assertPublicationFieldName(field.name);
     if (
       !/^[a-z][a-z0-9_]{0,127}$/.test(field.name) ||
       !["BOOLEAN", "INTEGER", "DECIMAL", "TEXT", "TIMESTAMP"].includes(field.kind)
@@ -148,6 +156,31 @@ if (byRoute.size !== 54 || byOperation.size !== 54 || byRelation.size !== 54) {
 
 export const EDS11R_MANAGER_RELATION_OPERATION_REGISTRY = Object.freeze(compiled);
 
+// Extra (hand-authored, additive) operations: resolvable by route and operation id ONLY. They are deliberately absent
+// from `byRelation` and from EDS11R_MANAGER_RELATION_OPERATION_REGISTRY so every ledger, projection catalogue and
+// coverage count that iterates the 54 generated operations is unchanged.
+const extraByRoute = new Map<string, ManagerRelationOperation>();
+const extraByOperation = new Map<string, ManagerRelationOperation>();
+for (const operation of EDS11R_MANAGER_EXTRA_OPERATIONS) {
+  const names = new Set(operation.fields.map((field) => field.name));
+  for (const field of operation.fields) assertPublicationFieldName(field.name);
+  if (
+    byRoute.has(operation.routeId) || byOperation.has(operation.operationId) || byRelation.has(operation.relation) ||
+    extraByRoute.has(operation.routeId) || extraByOperation.has(operation.operationId) ||
+    !operation.identityFields.every((field) => names.has(field)) ||
+    names.has(operation.payloadProjection?.column ?? "\u0000") || names.has("raw")
+  ) throw new Error(`EDS11R extra operation is invalid: ${operation.operationId}`);
+  extraByRoute.set(operation.routeId, operation);
+  extraByOperation.set(operation.operationId, operation);
+}
+
+export { EDS11R_MANAGER_EXTRA_OPERATIONS };
+
+/** True for a hand-authored operation outside the generated 54. */
+export function isManagerExtraOperation(operation: ManagerRelationOperation): boolean {
+  return extraByOperation.get(operation.operationId) === operation;
+}
+
 /** Server-only explicit disposition of every non-browser Manager relation. */
 export const EDS11R_MANAGER_NON_BROWSER_RELATION_DISPOSITIONS = Object.freeze(
   generated.non_browser_dispositions.map((disposition) => Object.freeze({ ...disposition })),
@@ -171,11 +204,11 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_MANIFEST = Object.freeze({
 
 /** Returns a server-owned static operation; arbitrary relation strings never resolve. */
 export function managerRelationOperationByRoute(routeId: string): ManagerRelationOperation | null {
-  return byRoute.get(routeId) ?? null;
+  return byRoute.get(routeId) ?? extraByRoute.get(routeId) ?? null;
 }
 
 export function managerRelationOperationById(operationId: string): ManagerRelationOperation | null {
-  return byOperation.get(operationId) ?? null;
+  return byOperation.get(operationId) ?? extraByOperation.get(operationId) ?? null;
 }
 
 /**
@@ -200,6 +233,9 @@ export function managerRelationProfileBinding(environment: MaximumDataEnvironmen
  * catalogue and carries enough information to bind product panels by name.
  */
 export function browserManagerRelationOperationManifest() {
+  // The browser manifest keeps its pinned 54-operation OpenAPI shape (additionalProperties:false); extra operations are
+  // intentionally NOT listed here, so no contract regeneration is needed. The route itself answers with the generic
+  // manager-relation-page record shape.
   return {
     schema_version: EDS11R_MANAGER_RELATION_REGISTRY_MANIFEST.schemaVersion,
     source_catalogue_sha256: EDS11R_MANAGER_RELATION_REGISTRY_MANIFEST.sourceCatalogueSha256,
@@ -214,6 +250,7 @@ export function browserManagerRelationOperationManifest() {
       fields: operation.fields.map((field) => ({ name: field.name, kind: field.kind })),
       screen_ids: operation.screenIds,
     })),
+    publication_catalogue: browserPublicationCatalogue(),
   };
 }
 

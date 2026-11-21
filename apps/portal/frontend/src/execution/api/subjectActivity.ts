@@ -20,6 +20,8 @@ export interface SubjectActivityQuery {
   limit?: number;
   /** Opaque Portal continuation; it is only echoed to this exact operation. */
   after?: string | null;
+  /** `?workspace_id=`; omitted means the caller's own workspace (the request is then byte-identical to the legacy one). */
+  workspaceId?: string | null;
 }
 
 export interface SubjectActivityPage {
@@ -36,7 +38,9 @@ export interface SubjectActivityPage {
   coverage: { retainedRowCount: number | null; oldestObservedAtMs: number | null; newestObservedAtMs: number | null; sourceCompleteness: string | null; sourceWindow: string | null };
   state: string;
   page: { limit: number | null; maximumPageRows: number | null; returnedCount: number | null; hasMore: boolean; nextCursor: string | null };
-  records: readonly { recordId: string; values: Record<string, RelationScalar> }[];
+  records: readonly { recordId: string; values: Record<string, RelationScalar>; timeReason?: string | null }[];
+  /** SCOPED_V2 only: the page's own clock statement (`time_unit`, `observed_at_basis`). Absent on a v1 page. */
+  clock?: { timeUnit: string; observedAtBasis: string };
   projection: { epochId: string | null; sequence: number | null; sourceAsOfMs: number | null; lastRefreshMs: number | null; completeness: string | null };
 }
 
@@ -62,6 +66,11 @@ export function readSubjectActivity(raw: unknown): SubjectActivityPage | null {
   const projection = obj(root.projection);
   const timeframeValue = interval(timeframe.value);
   const provenance = str(timeframe.provenance);
+  // A records container that is not a list while the page claims AVAILABLE and publishes no positive returned_count would read as an
+  // empty history ("nothing happened"). It is unreadable instead (DEBT-UXM07-013). With a positive returned_count the screen already
+  // says how many records could not be read, so that case keeps its page.
+  const returned = int(page.returned_count);
+  if (!Array.isArray(root.records) && str(root.state) === "AVAILABLE" && !(returned !== null && returned > 0)) return null;
   const records = (Array.isArray(root.records) ? root.records : []).flatMap((candidate) => {
     const row = obj(candidate);
     const recordId = str(row.record_id);
@@ -125,5 +134,6 @@ export function subjectActivityPath(query: SubjectActivityQuery): string {
   const limit = declaredSubjectCeiling === null ? asked : Math.min(declaredSubjectCeiling, asked);
   const params = new URLSearchParams({ environment: query.environment, limit: String(limit) });
   if (query.after) params.set("after", query.after);
+  if (query.workspaceId) params.set("workspace_id", query.workspaceId);
   return `/resources/${prefix}/${encodeURIComponent(query.subjectId)}/${query.relation}?${params.toString()}`;
 }

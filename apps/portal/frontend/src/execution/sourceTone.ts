@@ -110,6 +110,8 @@ export function liveDot(
       return { live: false, tone: "warn", title: "The stream reported a gap and is resnapshotting; values are the last good read." };
     case "auth_expired":
       return { live: false, tone: "bad", title: "The session expired, so the stream closed. Sign in again to resume live updates." };
+    case "retained":
+      return { live: false, tone: "warn", title: "Retained review: this page shows earlier Portal observations. There is no stream by design, so values are stale and partial until you refresh." };
     case "closed":
       return { live: false, tone: "bad", title: "The projection stream is closed; values are the last read and will not update on their own." };
     default:

@@ -33,6 +33,9 @@ x-control-api-environment: &control-api-environment
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: "false"
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: "false"
   INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:?Set CONTROL_API_INTERNAL_PRINCIPAL_SECRET}
+  RESEARCH_ALPHA_IMPORT_TTL_SECONDS: ${CONTROL_API_RESEARCH_ALPHA_IMPORT_TTL_SECONDS:-600}
+  RESEARCH_ALPHA_IMPORT_ANALYSIS_TIMEOUT_MS: ${CONTROL_API_RESEARCH_ALPHA_IMPORT_ANALYSIS_TIMEOUT_MS:-1500}
+  RESEARCH_ALPHA_IMPORT_MAXIMUM_ACTIVE_SOURCES_PER_ACTOR: ${CONTROL_API_RESEARCH_ALPHA_IMPORT_MAXIMUM_ACTIVE_SOURCES_PER_ACTOR:-8}
   QUERY_CURSOR_ACTIVE_KEY_ID: ${CONTROL_API_QUERY_CURSOR_ACTIVE_KEY_ID:-query-k1}
   QUERY_CURSOR_KEYS_JSON: '${CONTROL_API_QUERY_CURSOR_KEYS_JSON:-}'
   QUERY_CURSOR_KEYS_FILE: ${CONTROL_API_QUERY_CURSOR_KEYS_FILE:-}
@@ -72,6 +75,9 @@ services:
       PORTAL_PLANNING_API_BASE_URL: http://roadmap-task-board-api:8000
       PORTAL_PLANNING_SUMMARY_TIMEOUT_MS: ${PORTAL_PLANNING_SUMMARY_TIMEOUT_MS:-500}
       PORTAL_PLANNING_SUMMARY_MAX_BYTES: ${PORTAL_PLANNING_SUMMARY_MAX_BYTES:-65536}
+      # P07 private Control API → AST analyser authentication; kept inside
+      # the Compose network and never exposed through the browser facade.
+      INTERNAL_PRINCIPAL_SECRET: ${CONTROL_API_INTERNAL_PRINCIPAL_SECRET:?Set CONTROL_API_INTERNAL_PRINCIPAL_SECRET}
     volumes:
       - portal-artifacts:/var/lib/portal/artifacts
       - ${PORTAL_HISTORICAL_DATA_DIR:?Set PORTAL_HISTORICAL_DATA_DIR}:/data:ro
@@ -195,14 +201,20 @@ services:
       start_period: 15s
 
   portal-postgres:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${PORTAL_CONTROL_DB_USER:-portal}
       POSTGRES_PASSWORD: ${PORTAL_CONTROL_DB_PASSWORD:?Set PORTAL_CONTROL_DB_PASSWORD}
       POSTGRES_DB: ${PORTAL_CONTROL_DB_NAME:-portal_control}
+    # One reviewed Postgres config for every stack (deploy/postgres/portal.conf): the default config let the
+    # Execution cache TOAST grow to 92 GB. Memory-limited so shared_buffers/effective_cache_size stay truthful.
+    command: ["postgres", "-c", "config_file=/etc/postgresql/portal.conf"]
+    mem_limit: 4g
+    shm_size: 256m
     volumes:
       - portal-postgres-data:/var/lib/postgresql/data
+      - ./postgres/portal.conf:/etc/postgresql/portal.conf:ro
     expose:
       - "5432"
     networks:

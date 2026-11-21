@@ -11,6 +11,7 @@ import { PortalDerivationError, PortalDerivationsService } from "./portal-deriva
 interface DerivationRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -77,14 +78,15 @@ export class PortalDerivationsController {
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new PortalDerivationError("EDS05_PROJECTION_WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new PortalDerivationError("WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
     if (requireEnvironment && !parsed.data.environment) {
       throw new PortalDerivationError("EDS05_ENVIRONMENT_REQUIRED", 400, "Environment is required.");
     }
     return {
-      principal: { user: request.portalUser, session: request.portalSession, workspaceId },
+      principal: { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       environment: parsed.data.environment,
     };
   }

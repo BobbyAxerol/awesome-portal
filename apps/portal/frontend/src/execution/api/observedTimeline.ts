@@ -68,6 +68,8 @@ export function readObservedTimeline(raw: unknown): ObservedTimeline | null {
   const projection = obj(root.projection);
   const panel = obj(root.observed_timeline);
   const data = obj(panel.data);
+  // The producer's panel carries `clocks` (as_of_ms, read_at_ms, ...); `freshness` is the earlier hand-written double's name for the same pair.
+  const clocks = obj(panel.clocks);
   const freshness = obj(panel.freshness);
   const entries: ObservedEntry[] = (Array.isArray(data.entries) ? data.entries : []).flatMap((row) => {
     const e = obj(row);
@@ -107,7 +109,7 @@ export function readObservedTimeline(raw: unknown): ObservedTimeline | null {
     projection: { epochId: str(projection.epoch_id), sequence: int(projection.sequence), sourceAsOfMs: int(projection.source_as_of_ms), receivedAtMs: int(projection.received_at_ms), lastRefreshMs: int(projection.last_successful_refresh_at_ms), completeness: str(projection.completeness) },
     timeline: {
       state: panelState(panel.state), reasonCode: str(panel.reason_code), retryable: panel.retryable === true,
-      asOfMs: int(freshness.as_of_ms), readAtMs: int(freshness.read_at_ms),
+      asOfMs: int(clocks.as_of_ms) ?? int(freshness.as_of_ms), readAtMs: int(clocks.read_at_ms) ?? int(freshness.read_at_ms),
       label: str(data.label), orderingRule: str(data.ordering_rule), historySemantics: str(panel.source_history_semantics) ?? str(data.source_history_semantics),
       entries, segments,
     },

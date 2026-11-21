@@ -26,6 +26,7 @@ import type { ReactNode } from "react";
 import { EMPTY_COMPOSITION, type EmptyRecordScreen } from "./emptyComposition";
 import { producerSentence } from "./recordProducer";
 import { PanelState } from "./states";
+import { QuietEmpty } from "./quietEmpty";
 
 /** `PanelState` draws every status except `ok`, and a frame is only drawn
  *  when the screen could not draw itself, so `ok` cannot reach here. */
@@ -39,6 +40,26 @@ export type AbsentStatus = Exclude<PanelStatus, "ok">;
 export function framesAbsence(status: AbsentStatus): boolean {
   return status !== "denied" && status !== "loading";
 }
+
+/** The contract codes a reader actually meets, in plain words; the code stays after it for the person who quotes it. */
+const PLAIN: Readonly<Record<string, string>> = {
+  WORKSPACE_NOT_FOUND: "This record is not in the workspace named in the link",
+  APPROVAL_NOT_FOUND: "No approval with this id is visible to you",
+  EXIT_REVIEW_NOT_FOUND: "No exit review with this id is visible to you",
+  INCIDENT_NOT_FOUND: "No incident with this id is visible to you",
+};
+export function plainReason(reason: string): string {
+  const match = /^([A-Z][A-Z0-9_]{5,}):\s*(.*)$/.exec(reason);
+  const sentence = match ? PLAIN[match[1]!] : undefined;
+  return match && sentence ? `${sentence} (${match[1]}${match[2] ? `: ${match[2]}` : ""})` : reason;
+}
+
+const BACK: Readonly<Partial<Record<EmptyRecordScreen, { href: string; label: string }>>> = {
+  "gate-r1": { href: "/governance/approvals", label: "Back to the Inbox" },
+  "gate-r2": { href: "/governance/approvals", label: "Back to the Inbox" },
+  "gate-live": { href: "/governance/approvals", label: "Back to the Inbox" },
+  "paper-exit-review": { href: "/governance/approvals", label: "Back to the Inbox" },
+};
 
 export function EmptyRecordFrame({
   screen,
@@ -54,7 +75,7 @@ export function EmptyRecordFrame({
   controls?: ReactNode;
 }) {
   const spec = EMPTY_COMPOSITION[screen];
-  const why = reason ?? "This record cannot be shown.";
+  const why = plainReason(reason ?? "This record cannot be shown.");
   if (!framesAbsence(status)) {
     // `PanelState` already prints the reason. The first version printed it
     // again underneath, so a refusal said the same sentence twice — the exact
@@ -62,36 +83,41 @@ export function EmptyRecordFrame({
     // that removes it. Caught by an existing Paper Workbench test, not by me.
     return <PanelState status={status} reason={why} />;
   }
+  const noun: Partial<Record<EmptyRecordScreen, string>> = {
+    "gate-r1": "R1 review", "gate-r2": "R2 review", "gate-live": "live-gate review", "canary-control-room": "canary record",
+    "sandbox-certification": "certification", incident: "incident", "paper-exit-review": "exit review",
+    "live-full-operations": "live operations record", "paper-workbench": "deployment",
+  };
+  const back = BACK[screen];
   return (
     <>
-      <PanelState status={status} reason={why} />
+      {/* One card says the record is not there, in one sentence; who writes such a record and what the screen would hold are folded under "Why?" (Research states an absence once). */}
+      <QuietEmpty
+        icon="doc"
+        label={`${noun[screen] ?? "record"} not available`}
+        title={`No ${noun[screen] ?? "record"} to show`}
+        line={why}
+        actions={back ? <a className="exec-btn-ghost exec-gov-cta" href={back.href}>{back.label}</a> : null}
+        more={
+          <>
+            <p className="exec-disabled-reason">{producerSentence(spec.recordKind)}</p>
+            <p className="exec-qe-would">This screen shows: {spec.panels.map((panel) => panel.title).join(" · ")}.</p>
+            <div className="exec-inc2-grid exec-empty-frame" hidden>
+              {spec.panels.map((panel) => (
+                <section className="exec-pf2-panel" key={panel.title} aria-label={panel.title}>
+                  <header className="exec-pf2-head"><span className="exec-pf2-title">{panel.title}</span></header>
+                  <PanelState
+                    status="empty"
+                    title={panel.missing}
+                    reason={panel.relation ? `Holds ${panel.holds}, read from ${panel.relation}.` : `Holds ${panel.holds}.`}
+                  />
+                </section>
+              ))}
+            </div>
+          </>
+        }
+      />
       {controls}
-      {/* The one sentence, and only the part `PanelState` does not already
-          say. `absenceReason` prefixes the contract's own code, which the
-          panel above has just printed — repeating it here made the reason
-          appear twice on every empty screen, which is the exact shape of
-          boilerplate this phase exists to remove. */}
-      <p className="exec-disabled-reason">{producerSentence(spec.recordKind)}</p>
-      <div className="exec-inc2-grid exec-empty-frame">
-        {spec.panels.map((panel) => (
-          <section className="exec-pf2-panel" key={panel.title} aria-label={panel.title}>
-            <header className="exec-pf2-head"><span className="exec-pf2-title">{panel.title}</span></header>
-            {/* The sentence above already said no record is published. Each
-                panel says only what IS missing and what the panel would hold —
-                the first draft repeated "No record is published here, so this
-                panel is empty" once per panel, eight times on Gate Live. */}
-            <PanelState
-              status="empty"
-              title={panel.missing}
-              reason={
-                panel.relation
-                  ? `Holds ${panel.holds}, read from ${panel.relation}.`
-                  : `Holds ${panel.holds}.`
-              }
-            />
-          </section>
-        ))}
-      </div>
     </>
   );
 }

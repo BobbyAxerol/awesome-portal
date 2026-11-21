@@ -1,0 +1,61 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.entity-search.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "query": {
+      "q": "carry",
+      "kinds": [
+        "alpha",
+        "portfolio",
+        "account",
+        "operation",
+        "incident",
+        "approval"
+      ],
+      "limit": 3
+    },
+    "groups": [
+      {
+        "kind": "alpha",
+        "total_matched": 4,
+        "rows": [
+          {
+            "kind": "alpha",
+            "id": "TEST_ONLY:alpha-a",
+            "label": "Carry A",
+            "detail": "v2 · Canary",
+            "route_hint": "/deployments/alphas/TEST_ONLY%3Aalpha-a"
+          },
+          {
+            "kind": "alpha",
+            "id": "TEST_ONLY:alpha-b",
+            "label": "Carry B",
+            "detail": null,
+            "route_hint": "/deployments/alphas/TEST_ONLY%3Aalpha-b"
+          }
+        ]
+      },
+      {
+        "kind": "portfolio",
+        "total_matched": 0,
+        "rows": []
+      },
+      {
+        "kind": "operation",
+        "total_matched": null,
+        "rows": [
+          {
+            "kind": "operation",
+            "id": "TEST_ONLY:op-1",
+            "label": "Carry rebalance",
+            "detail": "Paper",
+            "route_hint": "/operations?operation=TEST_ONLY%3Aop-1"
+          }
+        ]
+      }
+    ]
+  }
+}

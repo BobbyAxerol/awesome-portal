@@ -1,0 +1,235 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C3 Lifecycle spine — concept</title><link rel="stylesheet" href="../hifi.css">
+<style>
+[hidden]{display:none!important}
+.stack>*{min-width:0}
+.why{display:block;font-size:11px;line-height:14px;color:var(--ink-faint)}
+.tabs{overflow-x:auto}.tabs button{white-space:nowrap}
+/* state flag (spine) */
+.st{display:inline-flex;gap:6px;align-items:center;padding:0 6px;border:1px solid var(--line-strong);font:500 10.5px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;color:var(--ink-faint)}
+.st.done{color:var(--flag-applied);border-color:color-mix(in srgb,var(--flag-applied) 55%,transparent)}
+.st.cur{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+.st.blk{color:var(--flag-rejected);border-color:var(--flag-rejected);background:var(--bad-bg)}
+.st.nos{border-style:dashed}
+/* A: spine */
+.nds{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));padding-right:1px}
+.nd{position:relative;text-align:left;background:var(--panel);border:1px solid var(--line-strong);margin:0 -1px 0 0;padding:10px 12px;color:var(--ink);font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:176px;min-width:0}
+.nd:hover{background:var(--cell)}.nd:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;z-index:2}
+.nd.cur{border:2px solid var(--accent);background:var(--accent-soft);z-index:1}.nd.blk{border:2px solid var(--flag-rejected);background:var(--bad-bg);z-index:1}.nd.nos{border-style:dashed;background:var(--paper)}
+.nd.sel{box-shadow:inset 0 -3px 0 var(--ink)}
+.nd .nh{display:flex;justify-content:space-between;gap:6px;align-items:center;flex-wrap:wrap}
+.nd .gt{font:500 11px/16px var(--font-mono);letter-spacing:.1em;text-transform:uppercase}
+.nd .nm{font:400 24px/28px var(--font-mono)}.nd .nm small{font-size:11px;color:var(--ink-faint);letter-spacing:.08em;margin-left:4px}
+.nd .nl{font:400 11px/14px var(--font-mono);color:var(--ink-faint)}
+.nd .nx{margin-top:auto;font:400 11px/14px var(--font-mono);color:var(--ink-soft);border-top:1px solid var(--line);padding-top:6px}
+.mt{display:flex;gap:2px}.mt i{flex:1;height:8px;background:var(--cell);border:1px solid var(--line)}.mt i.on{background:var(--flag-applied);border-color:var(--flag-applied)}.cur .mt i.on{background:var(--accent);border-color:var(--accent)}.blk .mt i.on{background:var(--flag-recall);border-color:var(--flag-recall)}
+.nd::after{content:"";position:absolute;right:-7px;top:50%;width:12px;height:12px;background:var(--paper);border-top:1px solid var(--line-strong);border-right:1px solid var(--line-strong);transform:translateY(-50%) rotate(45deg);z-index:3}.nd:last-child::after{display:none}
+.nd.cur::after{border-color:var(--accent);border-width:2px}
+@media(max-width:1100px){.nds{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:8px}.nd::after{display:none}}
+@media(max-width:660px){.nds{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.cmp{display:flex;align-items:flex-start;min-width:420px}.cmp .it{flex:1;text-align:center;position:relative;font:500 10.5px/14px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+.cmp .it::before{content:"";position:absolute;left:-50%;right:50%;top:10px;border-top:2px solid var(--line-strong);z-index:0}.cmp .it:first-child::before{display:none}.cmp .it.done::before,.cmp .it.cur::before{border-top-color:var(--flag-applied)}
+.cmp .sq{position:relative;z-index:1;display:grid;place-items:center;width:22px;height:22px;margin:0 auto 4px;border:2px solid var(--line-strong);background:var(--paper);font:600 11px/1 var(--font-mono);color:var(--ink-faint)}
+.cmp .done .sq{background:var(--flag-applied);border-color:var(--flag-applied);color:#0b0b0c}.cmp .cur .sq{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}.cmp .blk .sq{border-color:var(--flag-rejected);background:var(--bad-bg);color:var(--flag-rejected)}.cmp .nos .sq{border-style:dashed}
+.cmp .cur,.cmp .blk{color:var(--ink)}
+.gate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 24px;align-items:center}@media(max-width:900px){.gate{grid-template-columns:1fr}}
+.facts{display:flex;gap:24px;flex-wrap:wrap;font:400 12px/16px var(--font-mono);color:var(--ink-faint)}.facts b{display:block;font:400 18px/24px var(--font-mono);color:var(--ink)}
+.twx{overflow-x:auto}.twx table{min-width:460px}
+/* B: board */
+.brd{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr)) 220px;gap:12px;min-width:1100px}
+.col{border:1px solid var(--line-strong);background:var(--panel);display:flex;flex-direction:column;min-width:0}
+.col>header{padding:8px 12px;background:var(--sunken);border-bottom:1px solid var(--line-strong);border-top:4px solid var(--stage-paper)}
+.col.sim>header{background:repeating-linear-gradient(135deg,var(--sunken) 0 6px,var(--panel) 6px 7px)}
+.col.sandbox>header{border-top-color:var(--stage-sandbox)}.col.canary>header,.col.live>header{border-top-color:var(--stage-live)}
+.col.real{border:2px solid var(--stage-live)}
+.col.arch{border-style:dashed;background:var(--paper)}.col.arch>header{border-top-color:var(--ink-faint);background:var(--sunken)}
+.col h3{margin:0;font:500 11px/16px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;display:flex;justify-content:space-between;gap:8px}
+.col .ds{font:400 11px/16px var(--font-mono);color:var(--ink-faint);display:flex;gap:8px;align-items:center;margin-top:2px}
+.cards{display:flex;flex-direction:column;gap:8px;padding:8px}
+.card{display:block;background:var(--paper);border:1px solid var(--line-strong);padding:8px 10px;color:var(--ink);text-decoration:none;min-width:0}
+.card:hover{background:var(--cell);text-decoration:none}.card:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.card .c1{display:flex;justify-content:space-between;gap:8px;font-weight:500}.card .c1 .mono{color:var(--ink-faint);font-weight:400}
+.card .c2{font-size:12px;color:var(--ink-faint)}
+.card .c3{display:flex;justify-content:space-between;align-items:baseline;margin:6px 0 4px;font:400 13px/18px var(--font-mono)}.card .c3 .u{font-size:10.5px;letter-spacing:.08em;color:var(--ink-faint)}
+.card .c4{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.card.mut{opacity:.7}
+.cnt{font:400 11px/16px var(--font-mono);color:var(--ink-faint)}
+.rdy{display:flex;gap:8px;align-items:center}.rdy .mt{flex:1}.rdy .nl{font:400 11px/14px var(--font-mono);color:var(--ink-faint)}
+.card .mt i.on{background:var(--accent);border-color:var(--accent)}
+/* C: ribbon */
+.rib{position:relative;margin-left:0}.rib .ln{position:absolute;left:0;font:500 9px/14px var(--font-mono);letter-spacing:.08em;color:var(--ink-faint);width:56px;text-align:right}
+.rib .lane{position:absolute;left:60px;right:78px;border-top:1px solid var(--line)}
+.ev{position:absolute;width:13px;height:13px;margin-left:-6px;border:0;padding:0;display:grid;place-items:center;font:700 9px/1 var(--font-mono);color:#0b0b0c;cursor:pointer}
+.ev:hover,.ev:focus-visible{outline:2px solid var(--ink);outline-offset:1px;z-index:5}
+.vl{position:absolute;width:0;border-left:1px dashed var(--ink);opacity:.8;pointer-events:none;display:none;z-index:4}
+.hc{position:absolute;z-index:8;background:var(--cell);border:1px solid var(--line-strong);padding:8px 10px;min-width:200px;max-width:260px;display:none;pointer-events:none}
+.hc .k{display:flex;gap:8px;align-items:center;font:500 10.5px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}.hc .k i{width:10px;height:10px;display:inline-block}
+.hc b{display:block;font-weight:500;margin:4px 0 2px}.hc .m{font:400 11px/16px var(--font-mono);color:var(--ink-faint)}
+.chp{display:inline-flex;gap:8px;align-items:center;background:var(--paper);border:1px solid var(--line-strong);color:var(--ink);padding:3px 10px;font:500 11px/16px var(--font-mono);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.chp i{width:10px;height:10px;display:inline-block}.chp[aria-pressed=false]{opacity:.45;border-style:dashed}.chp[aria-pressed=true]{border-color:var(--ink-soft)}.chp:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chp b{font-weight:400;color:var(--ink-faint)}
+.band{position:relative;height:34px;margin:6px 78px 0 60px}.band i{position:absolute;top:0;height:20px;display:block;overflow:hidden;font:500 10px/18px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;padding:0 6px;color:var(--ink);white-space:nowrap}
+.band .p{background:repeating-linear-gradient(135deg,var(--stage-paper) 0 2px,transparent 2px 6px);box-shadow:inset 0 0 0 1px var(--stage-paper)}
+.band .s{background:repeating-linear-gradient(45deg,var(--stage-sandbox) 0 2px,transparent 2px 6px);box-shadow:inset 0 0 0 1px var(--stage-sandbox)}
+.band .c{background:transparent;box-shadow:inset 0 0 0 2px var(--stage-live)}.band .l{background:var(--stage-live);color:#0b0b0c}
+.band .p span,.band .s span,.band .c span{background:var(--paper);padding:0 4px;display:inline-block;line-height:14px;margin-top:2px}
+.band em{position:absolute;top:22px;font:400 10px/12px var(--font-mono);color:var(--ink-faint);font-style:normal;white-space:nowrap}
+.mixed{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.q{font:400 12px/16px var(--font-mono);color:var(--ink-faint)}
+.ctrls2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+</style></head>
+<body data-state="healthy">
+<div class="strip"><span>Concept · C3 lifecycle</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / <a href="#">Alpha Fleet</a> / <b>Lifecycle</b></span></header>
+<nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a aria-current="page" href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+<div class="mast"><div><h1>Lifecycle</h1><div class="sub">Spine · Board · Ribbon</div></div>
+ <div class="ctrls"><span class="fresh" data-s="healthy researcher"><i class="dot"></i>Fresh · 12:04Z</span><span class="fresh" data-s="sparse"><i class="dot warn"></i>Source not qualified</span></div></div>
+<div class="banner info" data-s="researcher">Your slice only. Peers and fund totals are hidden.</div>
+<div class="banner" data-s="sparse">Source not qualified. Money figures are not available.</div>
+
+<div>
+<div class="tabs" role="tablist" id="tabs"><button role="tab" data-tab="A" aria-selected="true">A · Journey spine</button><button role="tab" data-tab="B" aria-selected="false">B · Fleet board</button><button role="tab" data-tab="C" aria-selected="false">C · Event ribbon</button></div>
+
+<!-- ============ A ============ -->
+<div class="stack" data-pane="A">
+ <div class="panel"><div class="ph">Alpha page header <span class="seg" data-local="mdl"><button data-v="progress" aria-pressed="true">In Sandbox</button><button data-v="blocked" aria-pressed="false">Blocked</button><button data-v="live" aria-pressed="false">In Live</button></span></div>
+  <div class="mast" style="margin-bottom:16px"><div><h1 id="an">ETH-Mean <span class="tagu" style="background:var(--cell)">v2</span></h1><div class="sub" id="as">Owner bjones · Core</div></div>
+   <div class="ctrls"><button class="btn pri" id="abtn">Open exit review</button><button class="btn" data-s="researcher">Request archive</button></div></div>
+  <div id="spine"></div>
+  <div class="panel" id="det" style="margin-top:16px;background:var(--paper)"></div></div>
+
+ <div class="panel"><div class="ph">Gate header · compact <span class="r">Approval Inbox / Exit review</span></div>
+  <div class="gate"><div><div class="mono" style="font-size:11px;letter-spacing:.1em;color:var(--ink-faint);text-transform:uppercase">Exit review · Sandbox → Canary</div>
+   <div style="font:400 20px/28px var(--font-sans);margin:4px 0 12px">ETH-Mean <span class="mono" style="color:var(--ink-faint)">v2</span></div><div class="twx"><div class="cmp" id="cmp"></div></div></div>
+   <div><div class="facts"><span><b>5 / 7</b>Criteria</span><span><b>12D</b>In stage</span><span><b>Manager</b>Decides</span></div><div style="margin-top:12px;display:flex;gap:8px"><button class="btn pri">Review</button><button class="btn">Evidence</button></div></div></div></div>
+</div>
+
+<!-- ============ B ============ -->
+<div class="stack" data-pane="B" hidden>
+ <div class="panel"><div class="ph">Alpha Fleet <span class="seg" data-local="vw"><button data-v="table" aria-pressed="false">Table</button><button data-v="board" aria-pressed="true">Board</button></span></div>
+  <div class="ctrls2"><span class="seg" data-local="own"><button data-v="all" aria-pressed="true">All owners</button><button data-v="me" aria-pressed="false">Mine</button></span><span class="cnt">Counts per lane. Money is per card only, never totalled.</span></div>
+  <div class="twx" id="board" style="overflow-x:auto"><div class="brd" id="brd"></div></div>
+  <div class="tw" id="tbl" hidden></div></div>
+</div>
+
+<!-- ============ C ============ -->
+<div class="stack" data-pane="C" hidden>
+ <div class="panel"><div class="ph">Equity path <span class="mixed"><span class="tagu" data-k="stale" data-g="◷" style="--c:var(--series-sim)">Mixed forward observation · not actual</span></span></div>
+  <div class="ctrls2"><span id="chips"></span><span style="flex:1"></span><span class="seg" data-local="rng"><button data-v="8" aria-pressed="false">7D</button><button data-v="31" aria-pressed="false">30D</button><button data-v="71" aria-pressed="true">70D</button></span></div>
+  <div class="chart" id="ev" data-s="healthy researcher"></div><div class="empty na" data-s="sparse" style="min-height:260px">No series published<span class="why">Source not qualified</span></div>
+  <div id="bandw" data-s="healthy researcher"><div class="band" id="band"></div></div>
+  <div class="cap" data-s="healthy researcher"><span>Unitized return</span><span>Hatched = simulated</span><span>Solid = actual</span><span>Mixed series is not an actual track record</span></div>
+  <details style="margin-top:8px"><summary>Events <span id="evn"></span></summary><div class="tw"><table><thead><tr><th>Date (UTC)</th><th>Kind</th><th>Event</th><th>Actor</th><th>Receipt</th></tr></thead><tbody id="evt"></tbody></table></div></details></div>
+</div>
+</div>
+</div></main></div>
+<script src="../hifi.js"></script>
+<script>
+function $(s,r){return (r||document).querySelector(s)}function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+function showGroup(a,v){$$("["+a+"]").forEach(function(e){e.hidden=e.getAttribute(a)!==v})}
+var HEALTHY=function(){return document.body.getAttribute("data-state")!=="sparse"};
+/* ---------- A: spine ---------- */
+var ST=[["R1","gate"],["R2","gate"],["Paper","paper"],["Sandbox","sandbox"],["Canary","canary"],["Live","live"]];
+var GL={done:"✓",cur:"●",blk:"✕",nos:"○"},GT={done:"Done",cur:"Current",blk:"Blocked",nos:"Not started"},GS={done:"Done",cur:"Now",blk:"Blocked",nos:"Todo"};
+var CRIT=[["Observation days","20","12D","no"],["Net return","> 0","+2.2%","ok"],["Max drawdown","≥ −5.0%","−2.1%","ok"],["Fills reconcile","Pass","Pass","ok"],["Cost drift","Within band","+0.4%","ok"],["Evidence drift","Within band",null,"na"],["Risk checks","No breach","None","ok"]];
+var MODELS={
+ progress:{n:"ETH-Mean",v:"v2",sub:"Owner bjones · Core",btn:"Open exit review",sel:3,nodes:[
+  {s:"done",l:"Aug 05",by:"bjones"},{s:"done",l:"Aug 19",by:"bjones"},{s:"done",days:40,met:7,l:"Exit Oct 06",by:"bjones"},
+  {s:"cur",days:12,met:5,who:"Manager"},{s:"nos",gate:"Needs Sandbox exit"},{s:"nos",gate:"Needs Canary exit"}]},
+ blocked:{n:"ETH-Mean",v:"v2",sub:"Owner bjones · Core",btn:"See blocker",sel:3,nodes:[
+  {s:"done",l:"Aug 05",by:"bjones"},{s:"done",l:"Aug 19",by:"bjones"},{s:"done",days:40,met:7,l:"Exit Oct 06",by:"bjones"},
+  {s:"blk",days:12,met:4,who:"Platform",why:"Evidence join not activated"},{s:"nos",gate:"Needs Sandbox exit"},{s:"nos",gate:"Needs Canary exit"}]},
+ live:{n:"BTC-Trend",v:"v3",sub:"Owner asmith · Core",btn:"Open Live review",sel:5,nodes:[
+  {s:"done",l:"Jul 02",by:"bjones"},{s:"done",l:"Jul 20",by:"bjones"},{s:"done",days:40,met:7,l:"Exit Aug 29",by:"bjones"},
+  {s:"done",days:20,met:7,l:"Exit Oct 07",by:"bjones"},{s:"done",days:4,met:7,l:"Exit Oct 11",by:"bjones"},{s:"cur",days:6,who:"Manager"}]}};
+var cur="progress",selNode=3;
+function meter(met,tot){var h='<div class="mt" title="'+met+' of '+tot+' criteria met">';for(var i=0;i<tot;i++)h+='<i'+(i<met?' class="on"':'')+'></i>';return h+'</div>'}
+function nodeHtml(n,i,sel){var st=ST[i],gate=st[1]==="gate",sq=gate?'<i style="width:8px;height:8px;display:inline-block;background:var(--ink-faint)"></i>':'<span class="stage '+st[1]+'" style="margin:0"><i></i></span>';
+ var h='<button class="nd '+n.s+(sel?' sel':'')+'" data-i="'+i+'" aria-label="'+st[0]+' · '+GT[n.s]+'"><div class="nh"><span class="gt">'+sq+' '+st[0]+'</span><span class="st '+n.s+'">'+GL[n.s]+' '+GS[n.s]+'</span></div>';
+ if(gate){h+='<div class="nm">'+GL.done+'</div><div class="nl">Approved</div><div class="nl">'+n.l+'</div><div class="nx">By '+n.by+'</div>'}
+ else if(n.s==="nos"){h+='<div class="nm" style="color:var(--ink-faint);font:400 16px/28px var(--font-sans)">Locked</div><div class="nl">'+n.gate+'</div><div class="nx">Decides: Manager</div>'}
+ else{h+='<div class="nm">'+n.days+'<small>D IN STAGE</small></div>';
+  if(n.met!=null&&!(i===5))h+=meter(n.met,7)+'<div class="nl">'+n.met+' / 7 criteria'+(n.why?' · '+n.why:'')+'</div>';else h+='<div class="nl"><span class="na">Not available</span> · no exit gate</div>';
+  h+='<div class="nx">'+(n.s==="done"?(n.l+' · '+n.by):'Decides: '+n.who)+'</div>'}
+ return h+'</button>'}
+function renderA(){var m=MODELS[cur];$("#an").innerHTML=m.n+' <span class="tagu" style="background:var(--cell)">'+m.v+'</span>';$("#as").textContent=m.sub;$("#abtn").textContent=m.btn;
+ $("#spine").innerHTML='<div class="nds" role="group" aria-label="Lifecycle">'+m.nodes.map(function(n,i){return nodeHtml(n,i,i===selNode)}).join("")+'</div>';
+ var cm=MODELS.progress.nodes;$("#cmp").innerHTML=cm.map(function(n,i){var c=n.s;return '<div class="it '+c+'"><div class="sq">'+GL[c]+'</div>'+ST[i][0]+'</div>'}).join("");renderDet()}
+function renderDet(){var m=MODELS[cur],n=m.nodes[selNode],st=ST[selNode][0],h='<div class="ph" style="background:var(--sunken)">'+st+' · '+GT[n.s]+'</div>';
+ if(n.s==="cur"||n.s==="blk"){var k=0;var rows=CRIT.map(function(c,j){var ok=c[3]==="ok";if(cur==="blocked"&&j===4){ok=false}if(ok)k++;var obs=c[2]===null?'<span class="na">Not available</span><span class="why">Approved-evidence join not activated</span>':(cur==="blocked"&&j===4?'+1.4%':c[2]);var res=ok?'<span class="st done">✓ Met</span>':(c[3]==="na"?'<span class="st blk">✕ Blocked</span>':'<span class="st nos">○ Not met</span>');return '<tr><td>'+c[0]+'</td><td class="n">'+c[1]+'</td><td class="n">'+obs+'</td><td>'+res+'</td></tr>'}).join("");
+  h+='<div class="twx"><table><thead><tr><th>Criterion</th><th class="n">Required</th><th class="n">Observed</th><th>State</th></tr></thead><tbody>'+rows+'</tbody></table></div><div class="cap"><span>Sample criteria</span><span>Decides: '+n.who+'</span></div>'}
+ else if(n.s==="done"){h+='<table><tbody><tr><td>Decided by</td><td class="n">'+n.by+'</td></tr><tr><td>Date</td><td class="n">'+(n.l||"")+'</td></tr><tr><td>Receipt</td><td class="n">rc-'+(8700+selNode*13)+'</td></tr></tbody></table>'}
+ else{h+='<div class="na">Locked · '+n.gate+'</div>'}
+ $("#det").innerHTML=h}
+$("#spine").addEventListener("click",function(e){var b=e.target.closest(".nd");if(!b)return;selNode=+b.getAttribute("data-i");renderA()});
+/* ---------- B: board ---------- */
+var COLS=[["paper","Paper","sim"],["sandbox","Sandbox","sim"],["canary","Canary","real"],["live","Live","real"],["arch","Archived","arch"]];
+var CARDS=[
+ ["paper","SOL-Break","v1","asmith",50000,"OK",3],["paper","AVAX-Rev","v1","bjones",40000,"Stale",5],["paper","DOGE-Mom","v2","asmith",30000,"OK",7],["paper","LINK-Pair","v1","cwu",25000,"OK",2],
+ ["sandbox","ETH-Mean","v2","bjones",76000,"Attention",5],["sandbox","ADA-Grid","v1","asmith",20000,"OK",7],["sandbox","XRP-Trend","v1","cwu",30000,"OK",4],
+ ["canary","BNB-Rev","v3","bjones",60000,"OK",6],["canary","NEAR-Mom","v1","asmith",35000,"Stale",3],
+ ["live","BTC-Trend","v3","asmith",120000,"OK",null],["live","ETH-Trend","v4","bjones",200000,"OK",null],["live","SOL-Mean","v2","cwu",90000,"Attention",null],
+ ["arch","LTC-Rev","v1","asmith",null,"Paper monitor",null],["arch","DOT-Grid","v2","bjones",null,"Paper monitor",null]];
+var own="all",view="board";
+function num(v){return v==null?'':v.toLocaleString("en-US")}
+function cardHtml(c){var real=c[0]==="canary"||c[0]==="live",ready=c[6]===7&&(c[0]==="paper"||c[0]==="sandbox"||c[0]==="canary"),arch=c[0]==="arch";
+ var mine=c[3]==="asmith",vis=(own==="me"&&!mine)?' hidden':'',who=' data-own="'+(mine?"me":"x")+'"';
+ var money=arch?'<span class="na">No allocation</span>':'<span class="n"><span data-s="healthy researcher">'+num(c[4])+'</span><span class="na" data-s="sparse">Not available</span></span><span class="u">'+(real?'USDT':'SIM')+'</span>';
+ var h='<a class="card'+(arch?' mut':'')+'" href="#" data-col="'+c[0]+'"'+who+vis+' data-s="'+(mine?'healthy sparse researcher':'healthy sparse')+'"><div class="c1"><span>'+c[1]+'</span><span class="mono">'+c[2]+'</span></div><div class="c2">'+c[3]+'</div><div class="c3">'+money+'</div>';
+ if(c[6]!=null)h+='<div class="rdy">'+meter(c[6],7)+'<span class="nl">'+c[6]+'/7</span></div>';
+ h+='<div class="c4"><span class="tagu">'+c[5]+'</span>'+(ready?'<span class="tagu" data-k="approval" data-g="◈">Exit review ready</span>':'')+'</div></a>';return h}
+function renderB(){var h='';COLS.forEach(function(k){var cs=CARDS.filter(function(c){return c[0]===k[0]&&(own==="all"||c[3]==="asmith")}),sim=k[2]==="sim",real=k[2]==="real",arch=k[2]==="arch";
+  h+='<section class="col '+k[0]+' '+(sim?'sim':'')+(real?' real':'')+(arch?' arch':'')+'" aria-label="'+k[1]+'"><header><h3><span>'+(arch?'':'<span class="stage '+k[0]+'" style="margin:0"><i></i></span> ')+k[1]+'</span><span class="cnt">'+cs.length+'</span></h3><div class="ds">'+(sim?'<span class="tagu" style="border-style:dashed">SIMULATED</span>':real?'<span class="tagu" style="color:var(--stage-live);border-color:var(--stage-live)">REAL-FUNDED · USDT</span>':'<span class="tagu">PAPER MONITOR</span>')+'</div></header><div class="cards">'+cs.map(cardHtml).join("")+'</div></section>'});
+ $("#brd").innerHTML=h;
+ var t='<table><thead><tr><th>Alpha</th><th>Owner</th><th>Stage</th><th class="n">Allocation</th><th>Health</th><th>Readiness</th></tr></thead><tbody>';
+ CARDS.filter(function(c){return own==="all"||c[3]==="asmith"}).forEach(function(c){var real=c[0]==="canary"||c[0]==="live";t+='<tr><td><a href="#">'+c[1]+'</a> <span class="mono" style="color:var(--ink-faint)">'+c[2]+'</span></td><td>'+c[3]+'</td><td><span class="stage '+(c[0]==="arch"?'':c[0])+'"><i></i>'+(c[0]==="arch"?"Archived":c[0])+'</span></td><td class="n">'+(c[4]==null?'<span class="na">No allocation</span>':'<span data-s="healthy researcher">'+num(c[4])+' '+(real?'USDT':'SIM')+'</span><span class="na" data-s="sparse">Not available</span>')+'</td><td><span class="tagu">'+c[5]+'</span></td><td>'+(c[6]==null?'<span class="na">Not available</span>':c[6]+' / 7')+'</td></tr>'});
+ $("#tbl").innerHTML=t+'</tbody></table>';applyView();if(window.__reflag)window.__reflag()}
+function applyView(){$("#board").hidden=view!=="board";$("#tbl").hidden=view!=="table"}
+$("#brd").addEventListener("keydown",function(e){var k=e.key;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].indexOf(k)<0)return;var a=document.activeElement;if(!a||!a.classList.contains("card"))return;e.preventDefault();
+ var cols=$$(".col",$("#brd")),ci=cols.indexOf(a.closest(".col")),cards=$$(".card",a.closest(".col")),ri=cards.indexOf(a),t;
+ if(k==="ArrowDown")t=cards[ri+1];else if(k==="ArrowUp")t=cards[ri-1];else{var nc=cols[ci+(k==="ArrowRight"?1:-1)];if(nc){var cc=$$(".card",nc);t=cc[Math.min(ri,cc.length-1)]}}
+ if(t)t.focus()});
+/* ---------- C: ribbon ---------- */
+var END=Date.UTC(2026,9,17),DAY=864e5;
+var KIND={stage:{n:"Stage",g:"→",c:"var(--series-2)"},decision:{n:"Decision",g:"◈",c:"var(--flag-approval)"},incident:{n:"Incident",g:"▲",c:"var(--flag-incident)"},recall:{n:"Recall",g:"↩",c:"var(--flag-recall)"},flow:{n:"Flow",g:"+",c:"var(--accent)"}};
+var LANES=["stage","decision","incident","recall","flow"];
+var EVENTS=[
+ {k:"decision",ago:73,t:"R2 approved",a:"bjones",r:"rc-8610"},{k:"stage",ago:70,t:"Paper start",a:"system",r:"rc-8622",c:"var(--stage-paper)"},
+ {k:"decision",ago:31,t:"Sandbox exit approved",a:"bjones",r:"rc-8731"},{k:"stage",ago:30,t:"Sandbox start",a:"system",r:"rc-8735",c:"var(--stage-sandbox)"},
+ {k:"incident",ago:18,t:"Sandbox feed gap",a:"system",r:"inc-0421"},{k:"stage",ago:10,t:"Canary start",a:"bjones",r:"rc-8745",c:"var(--stage-live)"},
+ {k:"flow",ago:10,t:"Allocation +40k",a:"bjones",r:"rc-8746",v:"+40,000 USDT"},{k:"decision",ago:11,t:"Canary approved",a:"bjones",r:"rc-8741"},
+ {k:"decision",ago:7,t:"Live approved",a:"bjones",r:"rc-8801"},{k:"stage",ago:6,t:"Live start",a:"bjones",r:"rc-8812",c:"var(--stage-live)"},
+ {k:"flow",ago:6,t:"Allocation +40k",a:"bjones",r:"rc-8813",v:"+40,000 USDT"},{k:"incident",ago:4,t:"Broker sync diverged",a:"system",r:"inc-0433"},{k:"recall",ago:2,t:"Recall 20k pending",a:"bjones",r:"rc-8830",v:"20,000 USDT"}];
+var STAGES=[["p","Paper",70,30],["s","Sandbox",30,10],["c","Canary",10,6],["l","Live",6,0]]; // [cls,name,agoStart,agoEnd]
+var on={stage:true,decision:true,incident:true,recall:true,flow:true},rn=71,M={l:60,r:78};
+function fdate(ago){var d=new Date(END-ago*DAY);return d.toISOString().slice(5,10)}
+function chips(){$("#chips").innerHTML=LANES.map(function(k){var c=EVENTS.filter(function(e){return e.k===k&&e.ago<=rn-1}).length;return '<button class="chp" data-k="'+k+'" aria-pressed="'+on[k]+'"><i style="background:'+KIND[k].c+'"></i>'+KIND[k].n+' <b>'+c+'</b></button>'}).join(" ")}
+function drawC(){var h=$("#ev");if(!h||!h.offsetParent)return;
+ var n=rn;equityChart(h,{mode:"ret",n:n,base:1e6,end:120000,seed:17,drift:2400,vol:9000,h:280,sim:Math.max(0,n-1-10),seriesName:"Cumulative return (unitized)",drawdown:true});
+ var svg=h.querySelector("svg"),W=h.clientWidth,iw=W-M.l-M.r,LH=14,rh=LANES.length*LH+8;
+ function x(i){return M.l+iw*i/(n-1)}
+ var rib=document.createElement("div");rib.className="rib";rib.style.height=rh+"px";rib.style.width=W+"px";
+ LANES.forEach(function(k,j){var ln=document.createElement("div");ln.className="ln";ln.style.top=(4+j*LH)+"px";ln.textContent=KIND[k].n.slice(0,3).toUpperCase();rib.appendChild(ln);var lane=document.createElement("div");lane.className="lane";lane.style.top=(4+j*LH+LH-1)+"px";rib.appendChild(lane)});
+ var vl=document.createElement("div");vl.className="vl";rib.appendChild(vl);var hc=document.createElement("div");hc.className="hc";h.style.position="relative";h.appendChild(hc);
+ EVENTS.forEach(function(e,idx){if(!on[e.k]||e.ago>n-1)return;var i=n-1-e.ago,j=LANES.indexOf(e.k),b=document.createElement("button");b.className="ev";b.style.left=x(i)+"px";b.style.top=(4+j*LH)+"px";b.style.background=e.c||KIND[e.k].c;b.textContent=KIND[e.k].g;b.setAttribute("aria-label",KIND[e.k].n+": "+e.t+", "+fdate(e.ago));
+  function show(){var rect=rib.getBoundingClientRect(),sr=svg.getBoundingClientRect();vl.style.left=x(i)+"px";vl.style.top=(4+j*LH+13)+"px";vl.style.height=(sr.bottom-rect.top-(4+j*LH+13)-100)+"px";vl.style.display="block";
+   hc.innerHTML='<div class="k"><i style="background:'+(e.c||KIND[e.k].c)+'"></i>'+KIND[e.k].n+'</div><b>'+e.t+'</b><div class="m">'+fdate(e.ago)+' · '+e.a+' · '+e.r+(e.v?'<br>'+e.v:'')+'</div>';hc.style.display="block";
+   var hr=h.getBoundingClientRect(),left=x(i)+14;if(left+hc.offsetWidth>W-4)left=x(i)-hc.offsetWidth-14;hc.style.left=Math.max(4,left)+"px";hc.style.top=(rib.offsetTop+4+j*LH+16)+"px"}
+  function hide(){vl.style.display="none";hc.style.display="none"}
+  b.addEventListener("mouseenter",show);b.addEventListener("focus",show);b.addEventListener("mouseleave",hide);b.addEventListener("blur",hide);rib.appendChild(b)});
+ h.insertBefore(rib,svg);
+ // stage band
+ var band=$("#band");band.innerHTML="";band.style.marginLeft=M.l+"px";band.style.marginRight=M.r+"px";var bw=band.clientWidth;
+ function bx(ago){var i=Math.max(0,Math.min(n-1,n-1-ago));return bw*i/(n-1)}
+ STAGES.forEach(function(s){var a=s[2],b=s[3];if(a<=0&&b<=0)return;var l=bx(Math.min(a,n-1)),r=bx(b),w=r-l;if(w<=0||a<b)return;var d=document.createElement("i");d.className=s[0];d.style.left=l+"px";d.style.width=w+"px";d.innerHTML=(w>70||w>16)?"<span>"+(w>70?s[1]:s[1][0])+"</span>":"";d.title=s[1]+" · "+(s[2]-s[3])+"D";band.appendChild(d)});
+ var e1=document.createElement("em");e1.style.left="0";e1.textContent="Simulated";var simR=bx(10);if(simR>60)band.appendChild(e1);var e2=document.createElement("em");e2.style.left=Math.max(simR,0)+"px";e2.textContent="Actual · 10D";band.appendChild(e2);
+ $("#evn").textContent="· "+EVENTS.filter(function(e){return e.ago<=n-1}).length;
+ $("#evt").innerHTML=EVENTS.filter(function(e){return e.ago<=n-1}).sort(function(a,b){return b.ago-a.ago}).map(function(e){return '<tr><td class="mono">'+fdate(e.ago)+'</td><td>'+KIND[e.k].n+'</td><td>'+e.t+'</td><td>'+e.a+'</td><td class="mono">'+e.r+'</td></tr>'}).join("")}
+$("#chips").addEventListener("click",function(e){var b=e.target.closest(".chp");if(!b)return;var k=b.getAttribute("data-k");on[k]=!on[k];chips();drawC()});
+/* ---------- wiring ---------- */
+$("#tabs").addEventListener("click",function(e){var t=e.target.closest("[data-tab]");if(!t)return;$$("#tabs [data-tab]").forEach(function(x){x.setAttribute("aria-selected",x===t?"true":"false")});showGroup("data-pane",t.getAttribute("data-tab"));setTimeout(function(){drawC()},0)});
+window.onseg=function(k,v){if(k==="mdl"){cur=v;selNode=MODELS[v].sel;renderA()}if(k==="vw"){view=v;applyView()}if(k==="own"){own=v;renderB()}if(k==="rng"){rn=+v;chips();drawC()}};
+window.onctl=function(){setTimeout(function(){renderB();drawC()},0)};
+renderA();renderB();chips();drawC();window.addEventListener("resize",drawC);
+</script></body></html>

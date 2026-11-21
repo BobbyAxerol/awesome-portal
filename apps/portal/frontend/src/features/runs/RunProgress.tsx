@@ -542,8 +542,9 @@ function StageLog({
         {events.map((event, index) => {
           const elapsed = event.at - createdMs / 1000;
           return (
-            <div key={`evt-${index}`} className="flex gap-3">
+            <div key={`evt-${index}`} className="flex gap-3" data-stage-event="orchestration" title="Portal orchestration clock — not an engine pool freeze or first out-of-sample read">
               <span style={{ color: C.faint }}>+{elapsed >= 0 ? elapsed.toFixed(1) : "0.0"}s</span>
+              <span className="text-[10px]" style={{ color: C.faint }}>orchestration ·</span>
               <span style={{ color: C.accent }}>{event.state.replaceAll("_", " ")}</span>
             </div>
           );

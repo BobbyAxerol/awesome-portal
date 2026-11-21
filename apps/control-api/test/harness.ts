@@ -1,4 +1,3 @@
-import { runner as migrate } from "node-pg-migrate";
 import { join } from "node:path";
 import { Pool } from "pg";
 import { loadConfig } from "../src/config";
@@ -6,7 +5,143 @@ import { buildPool } from "../src/db/pool";
 import { createControlApiApp } from "../src/app";
 import { ControlApiConfig } from "../src/config";
 
+// Match the production migration CLI's narrow CommonJS shape: the package's
+// conditional type exports are not resolved by this project's legacy Node
+// resolver. This is only the disposable test harness, not a migration change.
+type TestMigrationRunner = (options: { databaseUrl: string; dir: string; direction: "up";
+  migrationsTable: string; count: number; noLock: boolean; log: (line: string) => void }) => Promise<unknown>;
+const migrate = (require("node-pg-migrate") as { runner: TestMigrationRunner }).runner;
+
 export const TEST_TABLES = [
+  "execution_command_status_preparations",
+  // STATUS context links intentionally survive a test-app reset: the production
+  // table refuses TRUNCATE. Tests use unique IDs and the disposable database
+  // itself is removed after the suite; never disable its immutability trigger.
+  "execution_command_status_delivery_acks",
+  "execution_command_status_original_fingerprints",
+  "execution_pending_recall_events",
+  "execution_pending_recall_commands",
+  "execution_instance_registration_events",
+  "execution_instance_registration_commands",
+  "execution_manager_score_mode_heads",
+  "execution_manager_calculation_heads",
+  "execution_manager_calculation_revisions",
+  "execution_trusted_command_events",
+  "execution_trusted_commands",
+  "execution_manager_model_heads",
+  "execution_manager_model_revisions",
+  "portal_native_current_read_obligations",
+  "portal_native_root_obligations",
+  "portal_access_policy_events",
+  "portal_access_proposals",
+  "portal_access_grants_v2",
+  "portal_access_policy_state",
+  "execution_retained_review_access",
+  "research.window_execution_seals_v1",
+  "research.window_execution_rows_v1",
+  "research.window_execution_batches_v1",
+  // P03 Research metadata is deliberately a separate schema.  Explicitly
+  // listing it keeps test cleanup bounded and makes a new relation visible to
+  // the shared harness rather than relying on an incidental CASCADE path.
+  "research.audit_log",
+  "research.pinned_audit_receipts_v1",
+  "research.pinned_audit_targets_v1",
+  "research.child_audit_companion_seals_v1",
+  "research.fixed_replay_companion_seals_v1",
+  "research.fixed_replay_companion_rows_v1",
+  "research.fixed_replay_companion_batches_v1",
+  "research.child_audit_companion_rows_v1",
+  "research.child_audit_companion_batches_v1",
+  "research.enriched_chart_amendments_v1",
+  "research.enriched_analysis_v1",
+  // AN-29/P05 retained rows have no FK to runs. A reused test cell must not
+  // inherit an old seal or a derived sidecar after its run metadata is reset.
+  "research.current_source_analytics_sidecars_v2",
+  "research.current_source_seals_v1",
+  "research.current_source_rows_v1",
+  "research.current_source_import_batches_v1",
+  // P21 local Release Candidate evidence must be discarded before its legacy
+  // compatibility row and all source parents.  Keeping the full four-table
+  // plane named prevents a reusable test database from inheriting a local
+  // seal, delivery state or retention pin across an unrelated test.
+  "research.p22_promotion_pick_receipts_v1",
+  "research.p22_run_read_model_bridges_v1",
+  "research.release_candidate_publications_v1",
+  "research.release_candidate_retention_pins_v1",
+  "research.release_candidate_delivery_states_v1",
+  "research.release_candidate_packs_v1",
+  "research.release_candidate_drafts_v1",
+  // P20 cache rows are operational only, but still reference an Alpha. Keep
+  // them explicit and first: a reused disposable database must never return a
+  // prior test's derived compare response merely because its truth rows were
+  // truncated later in this list.
+  "research.compare_projection_cache_v1",
+  // P10 producer rows reference the immutable binding, run, attempt, job and
+  // preflight records. They must be truncated before all of those parents so
+  // each disposable test cell proves P10 cleanup rather than inheriting rows.
+  // P12's trigger-maintained search projection has no FK to individual runs.
+  // PostgreSQL TRUNCATE does not invoke row triggers, so clean it explicitly
+  // before its source rows; a reused test run ID must never inherit an old
+  // display-safe search document.
+  "research.run_library_search_documents",
+  // P18 report manifests are immutable dependants of a run; annotations and
+  // bounded export jobs must be reset explicitly in disposable test cells.
+  "research.run_report_export_jobs_v1",
+  "research.run_report_materialization_retries_v1",
+  // P19 immutable promotion facts reference the Alpha version, attempt and
+  // run below.  Name this dependency explicitly so reused test cells cannot
+  // preserve a source-attested decision by accidental CASCADE behaviour.
+  "research.attempt_promotion_pick_facts_v1",
+  "research.run_report_annotations_v1",
+  "research.run_report_manifests_v1",
+  // P13 source/projection/series use explicit immutable foreign-key order.
+  // Keep them visible in test cleanup: a future reader must not inherit an
+  // evidence revision merely because PostgreSQL happened to CASCADE it.
+  "research.run_evidence_series_v1",
+  "research.run_evidence_projections_v1",
+  "research.run_evidence_sources_v1",
+  // RS-01 terminal checkpoint is an immutable dependant of the source event.
+  "research.run_terminal_materializations_v1",
+  // P14 chronology source/projection rows are immutable dependants of the
+  // exact P10/P11 run attempt. Name them explicitly so stale truth never
+  // leaks between disposable test cells.
+  "research.run_split_projections_v1",
+  "research.run_split_sources_v1",
+  // P11 event/snapshot materialisations are dependants of the exact P10/P06
+  // run and worker attempt. Keep them visible and first in the bounded test
+  // cleanup list rather than relying on incidental CASCADE behavior.
+  "research.run_progress_events",
+  "research.run_progress_snapshots",
+  "research.run_producers",
+  "research.preflight_manifests",
+  "research.command_dedup",
+  "research.release_candidates",
+  "research.inspection_states",
+  "research.exposure_facts",
+  // P05 references point at the immutable artifact metadata, so cleanup must
+  // name dependants first.  This remains an explicit bounded test list rather
+  // than a schema-wide truncate that could hide a new relation from review.
+  "research.artifact_references",
+  "research.artifact_ingest_batches",
+  "research.artifact_parts",
+  "research.artifacts",
+  "research.evaluations",
+  "research.selection_records",
+  "research.trial_index",
+  "research.studies",
+  "research.input_bindings",
+  "research.worker_attempts",
+  "research.jobs",
+  "research.runs",
+  "research.attempts",
+  // P07 source custody is explicitly listed: tests must never leave source
+  // bytes or immutable digest claims behind in a shared database cell.
+  "research.import_sessions",
+  "research.alpha_digest_claims",
+  "research.execution_adapter_bindings",
+  "research.alpha_versions",
+  "research.import_sources",
+  "research.alphas",
   "governance_review_captures",
   "execution_financial_query_cursors",
   "execution_durable_mirror_conflicts",
@@ -83,6 +218,60 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       has_durable_gaps: boolean;
       has_durable_conflicts: boolean;
       has_financial_query_cursors: boolean;
+      has_research_schema: boolean;
+      has_research_attempts: boolean;
+      has_research_runs_cursor_index: boolean;
+      has_research_runtime_role: boolean;
+      has_research_artifact_parts: boolean;
+      has_research_artifact_references: boolean;
+      has_research_artifact_ingest_batches: boolean;
+      has_research_artifact_transition_guard: boolean;
+      has_research_import_sources: boolean;
+      has_research_alpha_digest_claims: boolean;
+      has_research_import_source_guard: boolean;
+      has_research_alpha_source_reference: boolean;
+      has_research_preflight_manifests: boolean;
+      has_research_preflight_immutable_guard: boolean;
+      has_research_journey_descriptor_registry: boolean;
+      has_research_journey_descriptor_immutable_guard: boolean;
+      has_research_progress_events: boolean;
+      has_research_progress_snapshots: boolean;
+      has_research_terminal_materializations: boolean;
+      has_research_terminal_materialization_guard: boolean;
+      has_research_progress_event_guard: boolean;
+      has_research_run_library_view: boolean;
+      has_research_run_library_search_documents: boolean;
+      has_research_run_library_search_index: boolean;
+      has_research_evidence_sources: boolean;
+      has_research_evidence_projections: boolean;
+      has_research_evidence_series: boolean;
+      has_research_evidence_r2_sampling_constraints: boolean;
+      has_research_evidence_source_guard: boolean;
+      has_research_evidence_projection_guard: boolean;
+      has_research_evidence_series_guard: boolean;
+      has_research_split_sources: boolean;
+      has_research_split_projections: boolean;
+      has_research_split_source_guard: boolean;
+      has_research_split_projection_guard: boolean;
+      has_research_compare_cache: boolean;
+      has_research_report_manifests: boolean;
+      has_research_report_annotations: boolean;
+      has_research_report_export_jobs: boolean;
+      has_research_report_manifest_guard: boolean;
+      has_research_report_export_guard: boolean;
+      research_role_can_write_reports: boolean;
+      research_role_can_update_report_exports: boolean;
+      has_research_compare_cache_expiry_index: boolean;
+      has_research_release_candidate_plane: boolean;
+      research_role_can_read_legacy_run_models: boolean;
+      research_role_can_write_run_library_search: boolean;
+      research_role_can_write_evidence: boolean;
+      research_role_can_write_split: boolean;
+      research_role_can_write_compare_cache: boolean;
+      research_role_can_update_compare_cache: boolean;
+      research_role_can_write_release_candidate_packs: boolean;
+      research_role_can_update_release_candidate_delivery: boolean;
+      research_role_can_write_execution: boolean;
       source_dark_constraint_count: number;
     }>(
       `SELECT
@@ -127,6 +316,152 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
          to_regclass('public.execution_durable_mirror_gaps') IS NOT NULL AS has_durable_gaps,
          to_regclass('public.execution_durable_mirror_conflicts') IS NOT NULL AS has_durable_conflicts,
          to_regclass('public.execution_financial_query_cursors') IS NOT NULL AS has_financial_query_cursors,
+         EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'research') AS has_research_schema,
+         to_regclass('research.attempts') IS NOT NULL AS has_research_attempts,
+         EXISTS (
+           SELECT 1 FROM pg_indexes
+            WHERE schemaname = 'research'
+              AND indexname = 'research_runs_library_cursor_idx'
+         ) AS has_research_runs_cursor_index,
+         EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'portal_research_runtime') AS has_research_runtime_role,
+         to_regclass('research.artifact_parts') IS NOT NULL AS has_research_artifact_parts,
+         to_regclass('research.artifact_references') IS NOT NULL AS has_research_artifact_references,
+         to_regclass('research.artifact_ingest_batches') IS NOT NULL AS has_research_artifact_ingest_batches,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_artifacts_p05_transition_guard'
+             AND NOT tgisinternal
+         ) AS has_research_artifact_transition_guard,
+         to_regclass('research.import_sources') IS NOT NULL AS has_research_import_sources,
+         to_regclass('research.alpha_digest_claims') IS NOT NULL AS has_research_alpha_digest_claims,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_import_sources_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_import_source_guard,
+         EXISTS (
+           SELECT 1 FROM information_schema.columns
+            WHERE table_schema = 'research'
+              AND table_name = 'alpha_versions'
+              AND column_name = 'source_file_ref'
+         ) AS has_research_alpha_source_reference,
+         to_regclass('research.preflight_manifests') IS NOT NULL AS has_research_preflight_manifests,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_preflight_manifests_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_preflight_immutable_guard,
+         to_regclass('research.journey_descriptor_registry') IS NOT NULL AS has_research_journey_descriptor_registry,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_journey_descriptor_registry_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_journey_descriptor_immutable_guard,
+         to_regclass('research.run_progress_events') IS NOT NULL AS has_research_progress_events,
+         to_regclass('research.run_progress_snapshots') IS NOT NULL AS has_research_progress_snapshots,
+         to_regclass('research.run_terminal_materializations_v1') IS NOT NULL AS has_research_terminal_materializations,
+         to_regclass('research.run_report_manifests_v1') IS NOT NULL AS has_research_report_manifests,
+         to_regclass('research.run_report_annotations_v1') IS NOT NULL AS has_research_report_annotations,
+         to_regclass('research.run_report_export_jobs_v1') IS NOT NULL AS has_research_report_export_jobs,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_terminal_materializations_v1_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_terminal_materialization_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_report_manifests_v1_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_report_manifest_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_report_export_jobs_v1_guard'
+              AND NOT tgisinternal
+         ) AS has_research_report_export_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_progress_events_immutable_guard'
+              AND NOT tgisinternal
+         ) AS has_research_progress_event_guard,
+         to_regclass('research.run_library_rows_v1') IS NOT NULL AS has_research_run_library_view,
+         to_regclass('research.run_library_search_documents') IS NOT NULL AS has_research_run_library_search_documents,
+         EXISTS (
+           SELECT 1 FROM pg_indexes
+            WHERE schemaname = 'research'
+              AND indexname = 'research_run_library_search_documents_trgm_idx'
+         ) AS has_research_run_library_search_index,
+         to_regclass('research.run_evidence_sources_v1') IS NOT NULL AS has_research_evidence_sources,
+         to_regclass('research.run_evidence_projections_v1') IS NOT NULL AS has_research_evidence_projections,
+         to_regclass('research.run_evidence_series_v1') IS NOT NULL AS has_research_evidence_series,
+         (
+           EXISTS (
+             SELECT 1
+             FROM pg_constraint
+             WHERE conname = 'run_evidence_series_v1_sampling_check'
+               AND pg_get_constraintdef(oid) LIKE '%TAIL_WINDOW_V1%'
+               AND pg_get_constraintdef(oid) LIKE '%FULL_RETURN_HISTOGRAM_V2%'
+           )
+           AND EXISTS (
+             SELECT 1
+             FROM pg_constraint
+             WHERE conname = 'run_evidence_series_v1_source_observation_count_check'
+               AND pg_get_constraintdef(oid) LIKE '%>= 0%'
+           )
+         ) AS has_research_evidence_r2_sampling_constraints,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_evidence_sources_v1_immutable_guard'
+             AND NOT tgisinternal
+         ) AS has_research_evidence_source_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_evidence_projections_v1_immutable_guard'
+             AND NOT tgisinternal
+         ) AS has_research_evidence_projection_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_evidence_series_v1_immutable_guard'
+             AND NOT tgisinternal
+         ) AS has_research_evidence_series_guard,
+         to_regclass('research.run_split_sources_v1') IS NOT NULL AS has_research_split_sources,
+         to_regclass('research.run_split_projections_v1') IS NOT NULL AS has_research_split_projections,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_split_sources_v1_immutable_guard'
+             AND NOT tgisinternal
+         ) AS has_research_split_source_guard,
+         EXISTS (
+           SELECT 1 FROM pg_trigger
+            WHERE tgname = 'research_run_split_projections_v1_immutable_guard'
+             AND NOT tgisinternal
+         ) AS has_research_split_projection_guard,
+         to_regclass('research.compare_projection_cache_v1') IS NOT NULL AS has_research_compare_cache,
+         EXISTS (
+           SELECT 1 FROM pg_indexes
+            WHERE schemaname = 'research'
+              AND indexname = 'research_compare_projection_cache_expiry_idx'
+         ) AS has_research_compare_cache_expiry_index,
+         (
+           to_regclass('research.release_candidate_drafts_v1') IS NOT NULL
+           AND to_regclass('research.release_candidate_packs_v1') IS NOT NULL
+           AND to_regclass('research.release_candidate_delivery_states_v1') IS NOT NULL
+           AND to_regclass('research.release_candidate_retention_pins_v1') IS NOT NULL
+           AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_drafts_v1_guard' AND NOT tgisinternal)
+           AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_packs_v1_immutable_guard' AND NOT tgisinternal)
+           AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_delivery_states_v1_guard' AND NOT tgisinternal)
+           AND EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'research_release_candidate_retention_pins_v1_immutable_guard' AND NOT tgisinternal)
+         ) AS has_research_release_candidate_plane,
+         has_table_privilege('portal_research_runtime', 'public.run_read_models', 'SELECT') AS research_role_can_read_legacy_run_models,
+         has_table_privilege('portal_research_runtime', 'research.run_library_search_documents', 'INSERT') AS research_role_can_write_run_library_search,
+         has_table_privilege('portal_research_runtime', 'research.run_evidence_sources_v1', 'INSERT') AS research_role_can_write_evidence,
+         has_table_privilege('portal_research_runtime', 'research.run_split_sources_v1', 'INSERT') AS research_role_can_write_split,
+         has_table_privilege('portal_research_runtime', 'research.compare_projection_cache_v1', 'INSERT') AS research_role_can_write_compare_cache,
+         has_table_privilege('portal_research_runtime', 'research.compare_projection_cache_v1', 'UPDATE') AS research_role_can_update_compare_cache,
+         has_table_privilege('portal_research_runtime', 'research.release_candidate_packs_v1', 'INSERT') AS research_role_can_write_release_candidate_packs,
+         has_table_privilege('portal_research_runtime', 'research.release_candidate_delivery_states_v1', 'UPDATE') AS research_role_can_update_release_candidate_delivery,
+         has_table_privilege('portal_research_runtime', 'research.run_report_manifests_v1', 'INSERT') AS research_role_can_write_reports,
+         has_table_privilege('portal_research_runtime', 'research.run_report_export_jobs_v1', 'UPDATE') AS research_role_can_update_report_exports,
+         has_table_privilege('portal_research_runtime', 'public.run_read_models', 'UPDATE') AS research_role_can_write_execution,
          (SELECT count(*)::integer FROM pg_constraint
           WHERE conname IN (
             'execution_activation_capabilities_effective_profile_check',
@@ -137,7 +472,7 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
     );
     const row = result.rows[0];
     if (
-      row.migration_count < 23 ||
+      row.migration_count < 57 ||
       !row.has_f0 ||
       !row.has_hash_only_policy ||
       !row.has_hash_only_constraint ||
@@ -170,10 +505,64 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
       !row.has_durable_gaps ||
       !row.has_durable_conflicts ||
       !row.has_financial_query_cursors ||
+      !row.has_research_schema ||
+      !row.has_research_attempts ||
+      !row.has_research_runs_cursor_index ||
+      !row.has_research_runtime_role ||
+      !row.has_research_artifact_parts ||
+      !row.has_research_artifact_references ||
+      !row.has_research_artifact_ingest_batches ||
+      !row.has_research_artifact_transition_guard ||
+      !row.has_research_import_sources ||
+      !row.has_research_alpha_digest_claims ||
+      !row.has_research_import_source_guard ||
+      !row.has_research_alpha_source_reference ||
+      !row.has_research_preflight_manifests ||
+      !row.has_research_preflight_immutable_guard ||
+      !row.has_research_journey_descriptor_registry ||
+      !row.has_research_journey_descriptor_immutable_guard ||
+      !row.has_research_progress_events ||
+      !row.has_research_progress_snapshots ||
+      !row.has_research_terminal_materializations ||
+      !row.has_research_terminal_materialization_guard ||
+      !row.has_research_report_manifests ||
+      !row.has_research_report_annotations ||
+      !row.has_research_report_export_jobs ||
+      !row.has_research_report_manifest_guard ||
+      !row.has_research_report_export_guard ||
+      !row.has_research_progress_event_guard ||
+      !row.has_research_run_library_view ||
+      !row.has_research_run_library_search_documents ||
+      !row.has_research_run_library_search_index ||
+      !row.has_research_evidence_sources ||
+      !row.has_research_evidence_projections ||
+      !row.has_research_evidence_series ||
+      !row.has_research_evidence_r2_sampling_constraints ||
+      !row.has_research_evidence_source_guard ||
+      !row.has_research_evidence_projection_guard ||
+      !row.has_research_evidence_series_guard ||
+      !row.has_research_split_sources ||
+      !row.has_research_split_projections ||
+      !row.has_research_split_source_guard ||
+      !row.has_research_split_projection_guard ||
+      !row.has_research_compare_cache ||
+      !row.has_research_compare_cache_expiry_index ||
+      !row.has_research_release_candidate_plane ||
+      !row.research_role_can_read_legacy_run_models ||
+      row.research_role_can_write_run_library_search ||
+      !row.research_role_can_write_evidence ||
+      !row.research_role_can_write_split ||
+      !row.research_role_can_write_compare_cache ||
+      row.research_role_can_update_compare_cache ||
+      !row.research_role_can_write_release_candidate_packs ||
+      row.research_role_can_update_release_candidate_delivery ||
+      !row.research_role_can_write_reports ||
+      !row.research_role_can_update_report_exports ||
+      row.research_role_can_write_execution ||
       row.source_dark_constraint_count !== 4
     ) {
       throw new Error(
-        `Control API test migration gate did not reach EDS-07 financial query plane ` +
+        `Control API test migration gate did not reach Research P18 report plane ` +
         `(count=${row.migration_count}, has_f0=${row.has_f0}, ` +
         `hash_only_policy=${row.has_hash_only_policy}, ` +
         `hash_only_constraint=${row.has_hash_only_constraint}, ` +
@@ -206,6 +595,53 @@ export async function migrateTestDatabase(databaseUrl: string): Promise<void> {
         `durable_gaps=${row.has_durable_gaps}, ` +
         `durable_conflicts=${row.has_durable_conflicts}, ` +
         `financial_query_cursors=${row.has_financial_query_cursors}, ` +
+        `research_schema=${row.has_research_schema}, ` +
+        `research_attempts=${row.has_research_attempts}, ` +
+        `research_runs_cursor_index=${row.has_research_runs_cursor_index}, ` +
+        `research_runtime_role=${row.has_research_runtime_role}, ` +
+        `research_artifact_parts=${row.has_research_artifact_parts}, ` +
+        `research_artifact_references=${row.has_research_artifact_references}, ` +
+        `research_artifact_ingest_batches=${row.has_research_artifact_ingest_batches}, ` +
+        `research_artifact_transition_guard=${row.has_research_artifact_transition_guard}, ` +
+        `research_import_sources=${row.has_research_import_sources}, ` +
+        `research_alpha_digest_claims=${row.has_research_alpha_digest_claims}, ` +
+        `research_import_source_guard=${row.has_research_import_source_guard}, ` +
+        `research_alpha_source_reference=${row.has_research_alpha_source_reference}, ` +
+        `research_preflight_manifests=${row.has_research_preflight_manifests}, ` +
+        `research_preflight_immutable_guard=${row.has_research_preflight_immutable_guard}, ` +
+        `research_journey_descriptor_registry=${row.has_research_journey_descriptor_registry}, ` +
+        `research_journey_descriptor_immutable_guard=${row.has_research_journey_descriptor_immutable_guard}, ` +
+        `research_progress_events=${row.has_research_progress_events}, ` +
+        `research_progress_snapshots=${row.has_research_progress_snapshots}, ` +
+        `research_terminal_materializations=${row.has_research_terminal_materializations}, ` +
+        `research_terminal_materialization_guard=${row.has_research_terminal_materialization_guard}, ` +
+        `research_progress_event_guard=${row.has_research_progress_event_guard}, ` +
+        `research_run_library_view=${row.has_research_run_library_view}, ` +
+        `research_run_library_search_documents=${row.has_research_run_library_search_documents}, ` +
+        `research_run_library_search_index=${row.has_research_run_library_search_index}, ` +
+        `research_evidence_sources=${row.has_research_evidence_sources}, ` +
+        `research_evidence_projections=${row.has_research_evidence_projections}, ` +
+        `research_evidence_series=${row.has_research_evidence_series}, ` +
+        `research_evidence_r2_sampling_constraints=${row.has_research_evidence_r2_sampling_constraints}, ` +
+        `research_evidence_source_guard=${row.has_research_evidence_source_guard}, ` +
+        `research_evidence_projection_guard=${row.has_research_evidence_projection_guard}, ` +
+        `research_evidence_series_guard=${row.has_research_evidence_series_guard}, ` +
+        `research_split_sources=${row.has_research_split_sources}, ` +
+        `research_split_projections=${row.has_research_split_projections}, ` +
+        `research_split_source_guard=${row.has_research_split_source_guard}, ` +
+        `research_split_projection_guard=${row.has_research_split_projection_guard}, ` +
+        `research_compare_cache=${row.has_research_compare_cache}, ` +
+        `research_compare_cache_expiry_index=${row.has_research_compare_cache_expiry_index}, ` +
+        `research_release_candidate_plane=${row.has_research_release_candidate_plane}, ` +
+        `research_role_can_read_legacy_run_models=${row.research_role_can_read_legacy_run_models}, ` +
+        `research_role_can_write_run_library_search=${row.research_role_can_write_run_library_search}, ` +
+        `research_role_can_write_evidence=${row.research_role_can_write_evidence}, ` +
+        `research_role_can_write_split=${row.research_role_can_write_split}, ` +
+        `research_role_can_write_compare_cache=${row.research_role_can_write_compare_cache}, ` +
+        `research_role_can_update_compare_cache=${row.research_role_can_update_compare_cache}, ` +
+        `research_role_can_write_release_candidate_packs=${row.research_role_can_write_release_candidate_packs}, ` +
+        `research_role_can_update_release_candidate_delivery=${row.research_role_can_update_release_candidate_delivery}, ` +
+        `research_role_can_write_execution=${row.research_role_can_write_execution}, ` +
         `source_dark_constraints=${row.source_dark_constraint_count}, ` +
         `dir=${migrationsDir})`,
       );

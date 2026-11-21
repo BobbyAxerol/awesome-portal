@@ -1,0 +1,348 @@
+{
+ "receipt": "W1 REAL_API_E2E_RECEIPT \u2014 a real QuantBT 1.1.1 Delta signal-notional WFO run created through the same-origin BFF, executed by the P06 isolated child and retained through P05 + RS-02 ingest, then read back through the five current-source lanes.",
+ "recorded_at_utc": "2026-09-24T17:01:48Z",
+ "stack": {
+  "project": "portal-research-preview",
+  "built_from": "worktree at dec66741 plus exactly the receipt-fix diff committed right after it (see RF-03 W1 design \u00a76)",
+  "images": {
+   "portal-api": "sha256:84d6f31f83f4c3bd978f518e987940c40d228df156d9289f90c6403f4f1cf4c6",
+   "control-api": "sha256:b2f1a71a77fabb8ff1f659bc929748b4e46237a5e8637e41710da301cad1365c",
+   "portal-web": "sha256:a11f722ad5ad59a4c7aae9a0eecd67e235e0305ff0831725fd9d77814e5fe02d",
+   "roadmap-task-board-api": "sha256:70e4c5d30530df5597c95698c2a75923e379dec7c9e7b949b2656bf53a584097",
+   "quant-worker-py": "sha256:84d6f31f83f4c3bd978f518e987940c40d228df156d9289f90c6403f4f1cf4c6"
+  },
+  "last_migration": "1723680000062_research-delta-wfo-profile-v1.sql"
+ },
+ "dataset": {
+  "symbol": "BTCUSDT",
+  "timeframe": "1h",
+  "walk_forward": {
+   "start": "2026-06-01T00:00:00Z",
+   "end_exclusive": "2026-07-15T00:00:00Z",
+   "first_oos": "2026-07-01T00:00:00Z",
+   "frequency": "weekly",
+   "window_mode": "expanding"
+  },
+  "optuna_trials": 3,
+  "seed": 42
+ },
+ "wfo_run": "rrun_93bd9b92c086051a590f9747efe0d02e",
+ "progress": {
+  "status": 200,
+  "effective_status": "COMPLETED",
+  "terminal_materialization": "READY",
+  "source_latest_sequence": 26
+ },
+ "lanes": {
+  "evidence": {
+   "http": 200,
+   "schema_version": "research.current-source-evidence.v1",
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "provenance": {
+    "source_adapter_id": "rs02.quantbt-signal-notional-wfo.v1",
+    "profile_id": "rs02.delta-signal-notional-wfo.v1",
+    "engine_version": "1.1.1",
+    "source_manifest_digest": "07713bae92f2a8dea960d6a81dfb5201c06cd927ecd9934ec23eb0da710d2ced",
+    "source_transform_digest": "1dac082bf6667e9a4111d4895269e8cb63fe970a61ca3ca1bc27ca455c8a664b",
+    "retained_import_digest": "d836056513af3ab0c5009720206d3870d36aef1b93ff09b00b6ae753a356b361",
+    "requested_spec_digest": "e79aa65eb3d308ce17da9a465817e99f5a3e1dbe71d85ef0d13b0ae9362feec8",
+    "effective_spec_digest": "b740327b3c9912565fd618f648650d2fc47ddfcb928a5f6e17299b1ecf67fa67",
+    "dataset_binding_digest": "e6394a52e21a36f96aa11ae5b3724cc4dfa436c7acba2ade1fb5243483443ddd",
+    "retained_at_utc_ms": 1790269236911
+   }
+  },
+  "split": {
+   "http": 200,
+   "schema_version": "research.current-source-split.v1",
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "provenance": {
+    "source_adapter_id": "rs02.quantbt-signal-notional-wfo.v1",
+    "profile_id": "rs02.delta-signal-notional-wfo.v1",
+    "engine_version": "1.1.1",
+    "source_manifest_digest": "07713bae92f2a8dea960d6a81dfb5201c06cd927ecd9934ec23eb0da710d2ced",
+    "source_transform_digest": "1dac082bf6667e9a4111d4895269e8cb63fe970a61ca3ca1bc27ca455c8a664b",
+    "retained_import_digest": "d836056513af3ab0c5009720206d3870d36aef1b93ff09b00b6ae753a356b361",
+    "requested_spec_digest": "e79aa65eb3d308ce17da9a465817e99f5a3e1dbe71d85ef0d13b0ae9362feec8",
+    "effective_spec_digest": "b740327b3c9912565fd618f648650d2fc47ddfcb928a5f6e17299b1ecf67fa67",
+    "dataset_binding_digest": "e6394a52e21a36f96aa11ae5b3724cc4dfa436c7acba2ade1fb5243483443ddd",
+    "retained_at_utc_ms": 1790269236911
+   }
+  },
+  "search": {
+   "http": 200,
+   "schema_version": "research.current-source-search.v1",
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "provenance": {
+    "source_adapter_id": "rs02.quantbt-signal-notional-wfo.v1",
+    "profile_id": "rs02.delta-signal-notional-wfo.v1",
+    "engine_version": "1.1.1",
+    "source_manifest_digest": "07713bae92f2a8dea960d6a81dfb5201c06cd927ecd9934ec23eb0da710d2ced",
+    "source_transform_digest": "1dac082bf6667e9a4111d4895269e8cb63fe970a61ca3ca1bc27ca455c8a664b",
+    "retained_import_digest": "d836056513af3ab0c5009720206d3870d36aef1b93ff09b00b6ae753a356b361",
+    "requested_spec_digest": "e79aa65eb3d308ce17da9a465817e99f5a3e1dbe71d85ef0d13b0ae9362feec8",
+    "effective_spec_digest": "b740327b3c9912565fd618f648650d2fc47ddfcb928a5f6e17299b1ecf67fa67",
+    "dataset_binding_digest": "e6394a52e21a36f96aa11ae5b3724cc4dfa436c7acba2ade1fb5243483443ddd",
+    "retained_at_utc_ms": 1790269236911
+   }
+  },
+  "freeze": {
+   "http": 200,
+   "schema_version": "research.current-source-freeze.v1",
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "provenance": {
+    "source_adapter_id": "rs02.quantbt-signal-notional-wfo.v1",
+    "profile_id": "rs02.delta-signal-notional-wfo.v1",
+    "engine_version": "1.1.1",
+    "source_manifest_digest": "07713bae92f2a8dea960d6a81dfb5201c06cd927ecd9934ec23eb0da710d2ced",
+    "source_transform_digest": "1dac082bf6667e9a4111d4895269e8cb63fe970a61ca3ca1bc27ca455c8a664b",
+    "retained_import_digest": "d836056513af3ab0c5009720206d3870d36aef1b93ff09b00b6ae753a356b361",
+    "requested_spec_digest": "e79aa65eb3d308ce17da9a465817e99f5a3e1dbe71d85ef0d13b0ae9362feec8",
+    "effective_spec_digest": "b740327b3c9912565fd618f648650d2fc47ddfcb928a5f6e17299b1ecf67fa67",
+    "dataset_binding_digest": "e6394a52e21a36f96aa11ae5b3724cc4dfa436c7acba2ade1fb5243483443ddd",
+    "retained_at_utc_ms": 1790269236911
+   }
+  },
+  "replay": {
+   "http": 200,
+   "schema_version": "research.current-source-replay.v1",
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "provenance": {
+    "source_adapter_id": "rs02.quantbt-signal-notional-wfo.v1",
+    "profile_id": "rs02.delta-signal-notional-wfo.v1",
+    "engine_version": "1.1.1",
+    "source_manifest_digest": "07713bae92f2a8dea960d6a81dfb5201c06cd927ecd9934ec23eb0da710d2ced",
+    "source_transform_digest": "1dac082bf6667e9a4111d4895269e8cb63fe970a61ca3ca1bc27ca455c8a664b",
+    "retained_import_digest": "d836056513af3ab0c5009720206d3870d36aef1b93ff09b00b6ae753a356b361",
+    "requested_spec_digest": "e79aa65eb3d308ce17da9a465817e99f5a3e1dbe71d85ef0d13b0ae9362feec8",
+    "effective_spec_digest": "b740327b3c9912565fd618f648650d2fc47ddfcb928a5f6e17299b1ecf67fa67",
+    "dataset_binding_digest": "e6394a52e21a36f96aa11ae5b3724cc4dfa436c7acba2ade1fb5243483443ddd",
+    "retained_at_utc_ms": 1790269236911
+   }
+  }
+ },
+ "evidence_passport": {
+  "artifact_table_rows": {
+   "observations": 1056,
+   "folds": 2,
+   "trials": 3,
+   "candidates": 1,
+   "selection": 1
+  },
+  "initial_equity": "20000",
+  "final_equity": "19926.50808204798",
+  "net_return_fraction": "-0.003674595897601",
+  "max_drawdown_fraction": "-0.006740604275658146",
+  "retained_position_count": 1056
+ },
+ "split_fold_plan": {
+  "state": "AVAILABLE",
+  "folds": [
+   {
+    "source_ordinal": 0,
+    "fold_id": "0",
+    "train_start_utc_ms": 1780272000000,
+    "train_end_utc_ms": 1782860400000,
+    "test_start_utc_ms": 1782864000000,
+    "test_end_utc_ms": 1783465200000
+   },
+   {
+    "source_ordinal": 1,
+    "fold_id": "1",
+    "train_start_utc_ms": 1780272000000,
+    "train_end_utc_ms": 1783465200000,
+    "test_start_utc_ms": 1783468800000,
+    "test_end_utc_ms": 1784070000000
+   }
+  ],
+  "chronology": "SOURCE_OBSERVED_ADVANCED_WFO",
+  "availability": {
+   "state": "AVAILABLE",
+   "reason_code": null
+  }
+ },
+ "split_data_use": {
+  "warmup": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_WARMUP_CONVENTION",
+   "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_WARMUP_CONVENTION"
+   }
+  },
+  "purge": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PURGE_CONVENTION",
+   "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_PURGE_CONVENTION"
+   }
+  },
+  "embargo": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EMBARGO_CONVENTION",
+   "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EMBARGO_CONVENTION"
+   }
+  },
+  "strict_outer_oos_selection": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_EVIDENCE",
+   "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_STRICT_OUTER_OOS_SELECTION_EVIDENCE"
+   }
+  }
+ },
+ "search_selection": {
+  "state": "AVAILABLE",
+  "selected_trial_id": "0",
+  "objective": "-9.806075711302508",
+  "parameters": {
+   "rvol": "1.2",
+   "rsi_l": "30",
+   "window": "34",
+   "len_vol": "8",
+   "len_atr1": "14",
+   "len_atr2": "30",
+   "slpercent": "2.3",
+   "signalLength": "16"
+  },
+  "availability": {
+   "state": "AVAILABLE",
+   "reason_code": null
+  }
+ },
+ "search_ledger": {
+  "source_trial_count": 3,
+  "returned_rows": 3,
+  "trials": [
+   {
+    "source_ordinal": 0,
+    "trial_id": "0",
+    "state": "COMPLETE",
+    "objective": "-1.4435308120735202",
+    "parameters": {},
+    "playback_cursor": "<signed cursor omitted>"
+   },
+   {
+    "source_ordinal": 1,
+    "trial_id": "1",
+    "state": "COMPLETE",
+    "objective": "-3.947864414203043",
+    "parameters": {},
+    "playback_cursor": "<signed cursor omitted>"
+   },
+   {
+    "source_ordinal": 2,
+    "trial_id": "2",
+    "state": "COMPLETE",
+    "objective": "-2.4825773090158583",
+    "parameters": {},
+    "playback_cursor": "<signed cursor omitted>"
+   }
+  ],
+  "page": {
+   "limit": 100,
+   "next_cursor": null,
+   "prev_cursor": null,
+   "has_more": false,
+   "has_previous": false,
+   "order": "SOURCE_TABLE_ORDINAL_ASC"
+  },
+  "availability": {
+   "state": "AVAILABLE",
+   "reason_code": null
+  }
+ },
+ "freeze_integrity": {
+  "state": "MATCH",
+  "expected_manifest_digest": "07713bae92f2a8dea960d6a81dfb5201c06cd927ecd9934ec23eb0da710d2ced",
+  "observed_manifest_digest": "07713bae92f2a8dea960d6a81dfb5201c06cd927ecd9934ec23eb0da710d2ced",
+  "expected_retained_import_digest": "d836056513af3ab0c5009720206d3870d36aef1b93ff09b00b6ae753a356b361",
+  "observed_retained_import_digest": "d836056513af3ab0c5009720206d3870d36aef1b93ff09b00b6ae753a356b361",
+  "retained_row_count": 1063,
+  "verification_scope": "PORTAL_RETAINED_MANIFEST_ROW_COUNTS_AND_BATCH_RECEIPT",
+  "availability": {
+   "state": "AVAILABLE",
+   "reason_code": null
+  }
+ },
+ "freeze_what_if": {
+  "state": "NOT_PUBLISHED",
+  "reason_code": "RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET",
+  "availability": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "RS02_DOES_NOT_ENQUEUE_EVALUATION_FROM_A_GET"
+  }
+ },
+ "replay_route_capabilities": {
+  "model_positions": {
+   "state": "AVAILABLE",
+   "reason_code": null,
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   }
+  },
+  "returns": {
+   "state": "AVAILABLE",
+   "reason_code": null,
+   "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   }
+  },
+  "orders": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER",
+   "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_EXECUTION_ORDER_LEDGER"
+   }
+  },
+  "fills": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS",
+   "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_AUDITED_FILLS"
+   }
+  },
+  "candles": {
+   "state": "NOT_PUBLISHED",
+   "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_REPLAY_CANDLES",
+   "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "QUANTBT_ADVANCED_WFO_DID_NOT_PUBLISH_REPLAY_CANDLES"
+   }
+  }
+ },
+ "p04_regression": {
+  "run": "rrun_8d756a959ee6ed7c0c408bcf2613aead",
+  "http": 200,
+  "lane": {
+   "state": "NOT_APPLICABLE",
+   "operation": "split",
+   "run_profile": "P04_FIXED_QUALIFICATION",
+   "run_adapter_contract_digest": "9ade757b5c1cd87681a2efb49011c84a96211939710dcd32c9fd1c7777e95784",
+   "retainable_profile_id": "rs02.delta-wfo-global.v1",
+   "reason_code": "RS02_RETAINED_LANE_NOT_APPLICABLE_TO_P04_FIXED_QUALIFICATION"
+  }
+ }
+}

@@ -25,7 +25,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShieldCheck, ShieldOff, Eye, Gavel } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { AuthRequestError } from "../../auth/authApi";
 import { isOwnerAccess, useSession } from "../../auth/session";
@@ -358,14 +358,14 @@ export function ProfileAccess() {
             </tr>
             <tr>
               {GOVERNANCE_GATES.map((gate) => (
-                <>
+                <Fragment key={gate.id}>
                   <th key={`${gate.id}-read`} className="access-mode-head">
                     See
                   </th>
                   <th key={`${gate.id}-decide`} className="access-mode-head">
                     Decide
                   </th>
-                </>
+                </Fragment>
               ))}
             </tr>
           </thead>

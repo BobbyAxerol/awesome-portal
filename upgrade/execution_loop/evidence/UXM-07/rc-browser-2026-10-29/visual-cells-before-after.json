@@ -1,0 +1,382 @@
+{
+ "fleet": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "48587a0f19049f195d492671a2782e303bc872f6bd378f0315ef26525874ae85",
+   "height": 1416
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "48587a0f19049f195d492671a2782e303bc872f6bd378f0315ef26525874ae85",
+   "height": 1416
+  }
+ },
+ "fleet-paper": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "af662c1ce8f27d843455bd437dd3e6bb2cbacc403e64e6c0fd4e20eb0df882bb",
+   "height": 1018
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "af662c1ce8f27d843455bd437dd3e6bb2cbacc403e64e6c0fd4e20eb0df882bb",
+   "height": 1018
+  }
+ },
+ "overview": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "5da246796b92b81792f85fde1ba86f02fa75b30f47c24c794c7c90f1f318bc70",
+   "height": 2286
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "5da246796b92b81792f85fde1ba86f02fa75b30f47c24c794c7c90f1f318bc70",
+   "height": 2286
+  }
+ },
+ "portfolios": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "b56820fa03ce30420fc6d099e2d88aa482f81628bea6e26607bc3f2ad9028ffa",
+   "height": 1075
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "b56820fa03ce30420fc6d099e2d88aa482f81628bea6e26607bc3f2ad9028ffa",
+   "height": 1075
+  }
+ },
+ "portfolio-360": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "7760202c7aa83b7ad871bbae07741a992bc80c9b7e565b4848bd830b82657283",
+   "height": 2161
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "840413f6c82ab8ab293b4b09b06b4e0816f4ddf7029fa5efb2d662d602105bb3",
+   "height": 2161
+  }
+ },
+ "alpha-360-overview": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "37dbe1695730929bf1457c91d9d6067fc2246dce8e3b17ed81dfd6b3656ad21e",
+   "height": 2748
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "37dbe1695730929bf1457c91d9d6067fc2246dce8e3b17ed81dfd6b3656ad21e",
+   "height": 2748
+  }
+ },
+ "alpha-360-orders": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "14dbaa17b4d0a1e796c3966d3ac1db674c9966a79e62817515625c12676a31de",
+   "height": 1872
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "14dbaa17b4d0a1e796c3966d3ac1db674c9966a79e62817515625c12676a31de",
+   "height": 1872
+  }
+ },
+ "alpha-360-deployments": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "2d96ed92d52635cd6e6e1436931e92bc3eca4c2a448f47ae2e9fc73c6f0f86b2",
+   "height": 1342
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "2d96ed92d52635cd6e6e1436931e92bc3eca4c2a448f47ae2e9fc73c6f0f86b2",
+   "height": 1342
+  }
+ },
+ "accounts-list": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "ffccedd51036c786123573b1d0bdc04fc68eba897ba98ce69aa7db0e06991c19",
+   "height": 848
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "ffccedd51036c786123573b1d0bdc04fc68eba897ba98ce69aa7db0e06991c19",
+   "height": 848
+  }
+ },
+ "account-360": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "061fff09fdf15b1112df2cd8112acf0a26be59d4f6ebcfe017a29e1159bedec9",
+   "height": 1948
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "8c06127e360095cbcb95653a9f79be9a801991845bf978d0fcbea3f79e1150ca",
+   "height": 1948
+  }
+ },
+ "compare": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "f03c5b24bfbf26c120ab70c3bf46dee9ca2a0af005f8df34884024ff239c7975",
+   "height": 1569
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "f03c5b24bfbf26c120ab70c3bf46dee9ca2a0af005f8df34884024ff239c7975",
+   "height": 1569
+  }
+ },
+ "blotter": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "5106e88a1f92c41a7dee8e968d9fe58c4f44869966d1802f6a4e833fc9587cc5",
+   "height": 3368
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "4b2d0a587c6052ea116f412e808263e02a64fd9a52e6761a500683c60463dfda",
+   "height": 3368
+  }
+ },
+ "workbench-paper": {
+  "before": {
+   "statuses": [
+    404
+   ],
+   "section": false,
+   "refused": false,
+   "hash": "f21be827f8d24ec8556554718c8459e0bf888ff9f1499105c854ddb12b0dcd54",
+   "height": 1637
+  },
+  "after": {
+   "statuses": [
+    200
+   ],
+   "section": true,
+   "refused": false,
+   "hash": "0eca778543b8b89a1877ab3e5ad7378818f86a3f94918c8f3e3507c3c8c2aeaa",
+   "height": 2280
+  }
+ },
+ "live": {
+  "before": {
+   "statuses": [
+    404
+   ],
+   "section": false,
+   "refused": false,
+   "hash": "39fe72273cb411802d5be4a62c413c8c7c945fb826f6b90d22154071f380eae6",
+   "height": 2968
+  },
+  "after": {
+   "statuses": [
+    200
+   ],
+   "section": true,
+   "refused": false,
+   "hash": "b286fb468c5d96986a4e9ba4420cafedd5d88403b5305e55cb0deb7b065defd5",
+   "height": 3671
+  }
+ },
+ "canary": {
+  "before": {
+   "statuses": [
+    404
+   ],
+   "section": false,
+   "refused": false,
+   "hash": "c9324890b0e11cf5ffa6ada340122aa262b197f5fc413e988231d8db767645b5",
+   "height": 1337
+  },
+  "after": {
+   "statuses": [
+    200
+   ],
+   "section": true,
+   "refused": false,
+   "hash": "c7d443b4901fb41dc7fb4aa991ab0d575b6127ceedc4e776e57f5649c49ec2a6",
+   "height": 1723
+  }
+ },
+ "sandbox": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "7a935c6f23619ec8120e22101c7ce68545743bcd480d0aeef8d0def84103b541",
+   "height": 1153
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "7a935c6f23619ec8120e22101c7ce68545743bcd480d0aeef8d0def84103b541",
+   "height": 1153
+  }
+ },
+ "admin-actions": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "49a912c6c450fb590c1ee7067dbf2e5b7c2c955869d2b4f6e5770ff6aad61c2d",
+   "height": 2764
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "49a912c6c450fb590c1ee7067dbf2e5b7c2c955869d2b4f6e5770ff6aad61c2d",
+   "height": 2764
+  }
+ },
+ "users": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "7a19181e94c76df7355d7d0983d49207ed99dc75fae6034d33042af5e077bb7a",
+   "height": 3192
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "7a19181e94c76df7355d7d0983d49207ed99dc75fae6034d33042af5e077bb7a",
+   "height": 3192
+  }
+ },
+ "trade-replay": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "99443e863631a30d9b49ea5c8951fca61f15a1fb39df919733ae1b32d1c34ddc",
+   "height": 1554
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "99443e863631a30d9b49ea5c8951fca61f15a1fb39df919733ae1b32d1c34ddc",
+   "height": 1554
+  }
+ },
+ "access": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "764b6efc5a22bdf2d6a6e26bb41689d0a0a62c06cb27b4013f01f398b42b69b0",
+   "height": 1751
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "764b6efc5a22bdf2d6a6e26bb41689d0a0a62c06cb27b4013f01f398b42b69b0",
+   "height": 1751
+  }
+ },
+ "cockpit": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "7fe8fbf8a124718bd7bfbc725075319f945ca4251e64652a6a64c0f662fc8f08",
+   "height": 1509
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "7fe8fbf8a124718bd7bfbc725075319f945ca4251e64652a6a64c0f662fc8f08",
+   "height": 1509
+  }
+ },
+ "operations": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "68870ac4c5a2700038e420b7dad6ece8d98e6101ce08688f1decf1b819c87152",
+   "height": 1826
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "68870ac4c5a2700038e420b7dad6ece8d98e6101ce08688f1decf1b819c87152",
+   "height": 1826
+  }
+ },
+ "new-request": {
+  "before": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "164193fd653424d7aa511d6460105fd6c0d620acd81b7be817fd1f223861cdf7",
+   "height": 896
+  },
+  "after": {
+   "statuses": [],
+   "section": false,
+   "refused": false,
+   "hash": "164193fd653424d7aa511d6460105fd6c0d620acd81b7be817fd1f223861cdf7",
+   "height": 896
+  }
+ }
+}

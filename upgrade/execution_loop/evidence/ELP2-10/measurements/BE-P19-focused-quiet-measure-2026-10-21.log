@@ -1,0 +1,70 @@
+# BE-P19 focused result, 2026-10-21 (Claude, post-freeze lane). Focused only: no M-1 rerun, no lock/Docker/PG/hook/visual, no load, no window.
+# base (git HEAD before this change): 91f28db4ba5e4fdb99983f66477440f4dc706d9d   lane base claude/post-freeze-20261021 = 91f28db4
+# host at run: Linux 5.15.0-185-generic, node v20.20.2, loadavg 104.42 85.02 40.29 (very high, shared host: timings are noise, counts are not)
+# source files under test (sha256 of the working-tree bytes):
+#   761f8a0aa7ab771898dab59f8c59c837bf1281be1835098904f9f1b8578e829a  apps/portal/frontend/e2e/quietGate.mjs
+#   d5baf34535bb64267e238f4a6125b744ff6b6fd53204d6c7686ec94462e66e1d  scripts/measure/lib/stage.mjs
+#   06475dad1b92a683790644070e77f3ed2a9530fcd5b0af738ae767cfead1a41b  scripts/measure/lib/g2.mjs
+#   5f38a9d350b7694ed7c7c88af4d5f42d4816c54d8e37befb1c4a6482f2e9ccb1  scripts/measure/m7-g2-window.mjs
+#   cf3021c3155cb73764a01d513fcdaf3e1beb2616b834cc6fc6c9c8d6eefcf0bf  scripts/measure/measure.test.mjs
+
+## 1. node --test scripts/measure/measure.test.mjs   (cwd: worktree root; spec reporter)
+✔ percentile is nearest-rank, like the repo diagnostic (7.912645ms)
+✔ a fixture or double lane is never calibration evidence and never an approved budget (559.209148ms)
+✔ a real lane needs a window id, and only a real ABSOLUTE window run is calibration evidence (400.353129ms)
+✔ the receipt digest does not depend on key order (1.157887ms)
+✔ the window guard refuses what it must refuse (36.895026ms)
+✔ the replay schedule is deterministic and its offered peak is computed before any request (4.217353ms)
+✔ fixture ids are skipped on a real origin unless the id map names them (0.842233ms)
+✔ the replay refuses an offered peak above the window max_rps before sending anything (4.729288ms)
+✔ MEASURE-1 · the tab census of a stage is the SUM of its entries, not the largest entry (1.428388ms)
+✔ MEASURE-1 · an over-bound stage refuses with ZERO fetch calls and before the header file is read (7.322551ms)
+✔ MEASURE-1 · the real runReplay is never reached for an over-bound stage: the fetch spy stays at zero (3.337901ms)
+✔ MEASURE-1 · the exact boundary passes, the approved workload reaches the replay unshrunk (4.84678ms)
+✔ MEASURE-1 · a multi-entry stage is counted by its total (3 entries, 2 + 3 + 5 = 10) (1.697967ms)
+✔ G2 · the original thresholds are applied per feed, trade max differs from quote / mark max (inputs bound) (3.590146ms)
+✔ G2 · Codex repro: one synthetic row {samples:1.25,p95_ms:10,max_ms:1} with no apparatus / source / window / census is REFUSED (2.764521ms)
+✔ G2 · pins: each of apparatus ref, gate revision and source pin must be present and equal the Edge census' (7.890425ms)
+✔ G2 · run times: integers, start < end, inside the authorised window, already ended (3.586216ms)
+✔ G2 · population: exactly the Edge census, none missing, none extra, none duplicated, no empty or malformed identity (5.091711ms)
+✔ G2 · rows: integer positive samples, finite numbers, p95 <= max (equal is allowed), nothing coerced (6.656559ms)
+✔ G2 · the Edge census itself is validated and must name the selected window; Portal invents no feed list (2.952497ms)
+✔ G2 · the m7 driver: refuses (exit 3, no receipt) without a census or with the Codex repro; accepts a fully bound run (38981.141938ms)
+✔ quiet gate: genuine quiet resolves after the quiet interval, counted from the call (0.964277ms)
+✔ quiet gate: a request that finishes inside the cap and then a quiet interval is a pass (0.646123ms)
+✔ quiet gate: a permanently pending request is MEASUREMENT_QUIET_TIMEOUT at the cap, never a normal return (7.090957ms)
+✔ quiet gate: recurring activity (nothing in flight, but never 400 ms still) is MEASUREMENT_QUIET_TIMEOUT (5.411891ms)
+✔ quiet gate: the cap is the caller's, an injected short cap fails at that cap and no silent increase happens (2.117063ms)
+✔ quiet gate: DELAYED WAKE after the deadline cannot turn late activity into a pass (call 0, cap 15000, quiet 400, activity 14900, wake 15500) (4.277054ms)
+✔ quiet gate: exact-cap semantics are inclusive: activity at cap - quiet passes, one ms later is MEASUREMENT_QUIET_TIMEOUT (1 ms steps) (92.655072ms)
+✔ quiet gate: the exact-cap boundary holds on a late wake too (activity at cap - quiet passes at wake 15500; one ms later fails) (0.553582ms)
+✔ quiet gate: pending work at a late wake is a timeout, and early quiet is not penalised by a late first wake (0.353366ms)
+✔ quiet gate: a quiet interval longer than the cap can never pass (0.501529ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 40953.645557
+exit=0
+
+## 2. the five controlled quiet cases of the original change (pre-existing tests 22-26) + the five delayed-wake / exact-cap cases (27-31) are in section 1.
+##    Negative control run before the fix (quietGate.mjs from git HEAD, new tests unchanged): 26 pass / 5 fail; the failing five are the new quiet tests
+##    (test 27 delayed wake 15500 and the bad half of test 29 fail because the old gate returned PASS; 28/30/31 also assert the new quietAchievableAtMs field).
+
+## 3. three browser probes (Workbench wiring of the real meter), apps/portal/frontend:
+##    QUIET_CHECK=1 MEASURE_SKIP_BUILD=1 MEASURE_V2_PORT=4391 npx playwright test -c playwright.measure.config.ts --workers=1 _probe-measure-quiet-timeout
+##    bundle: apps/portal/frontend/dist-v2 was NOT rebuilt here (host memory 1.9 GB available, load >90): it is a copy of the bundle built at
+##    2026-10-21 16:53:19Z in /home/bobby/portal-research-fe, after the last src commit of this lane (776cf9be, 16:47:18Z); src has not changed since.
+##    The probes exercise e2e/measureLane.ts + e2e/quietGate.mjs (working tree, with this change) against that bundle.
+
+Running 3 tests using 1 worker
+
+  ✓  1 [measure-v2] › e2e/_probe-measure-quiet-timeout.spec.ts:27:1 › quiet · workbench settles and is genuinely quiet (3.1s)
+  ✓  2 [measure-v2] › e2e/_probe-measure-quiet-timeout.spec.ts:35:1 › quiet · a request that never answers is MEASUREMENT_QUIET_TIMEOUT, not a normal return (4.8s)
+  ✓  3 [measure-v2] › e2e/_probe-measure-quiet-timeout.spec.ts:46:1 › quiet · recurring requests are MEASUREMENT_QUIET_TIMEOUT (3.7s)
+
+  3 passed (20.8s)
+exit=0

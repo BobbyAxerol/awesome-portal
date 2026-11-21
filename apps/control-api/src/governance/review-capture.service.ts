@@ -8,9 +8,17 @@ import { newUlid } from "../id";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { computeEvidenceManifestHash, GovernanceError } from "./governance.service";
 import { type EvidenceRecord } from "./governance.repository";
-import { PaperExitRepository } from "./paper-exit.repository";
+import { PaperExitRepository, type PaperExitLineageRecord, type PaperExitPanelRecord,
+  type PaperExitFindingRecord } from "./paper-exit.repository";
 import { computePaperExitSourceSnapshotHash } from "./paper-exit.service";
 import type { PaperExitCreate, R2Capture, SandboxReviewNote } from "./review-capture.contracts";
+import type { ApprovalRecord, R2LineageRecord } from "./governance.repository";
+import { blockedCapture, paperCaptureContext, type CaptureContext, type ReviewContextReason } from "./review-context";
+import { retainedReview } from "../execution/retained-read-profile";
+import { OwnerAccessService } from "../auth/owner-access.service";
+import { mayGovern } from "../auth/governance-access";
+import { assertDecisionAuthority, DecisionAuthorityError } from "./decision-authority";
+import { captureRefusal, paperProjectionAuthorized, type CaptureAction } from "./capture-authority";
 
 const POLICY = "portal.review-capture.v1";
 const EXIT_PANELS = ["OBSERVATION_COVERAGE", "DRIFT", "LIMITS_HEALTH", "PORTFOLIO_FIT"] as const;
@@ -30,35 +38,84 @@ export class GovernanceReviewCaptureService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly projections: ExecutionProfileProjectionRepository,
     @Inject(PaperExitRepository) private readonly exits: PaperExitRepository,
+    @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
   ) {}
 
-  capabilities(user: PortalUser) {
+  /** Which capture buttons the member may start HERE. Each AVAILABLE action is judged by the one predicate the
+   * stage-action eligibility read also uses (capture-authority.ts), in the order the routes refuse; the unavailable
+   * ones are fixed facts of this build. Advisory: the routes recheck everything. */
+  async capabilities(user: PortalUser, workspaceId: string) {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const facts = { workspace_id: workspaceId, role: user.role, access, retained_review: retainedReview(this.config),
+      paper_projection_authorized: paperProjectionAuthorized(this.config, workspaceId) };
     return { schema_version: "governance.review-capture-capabilities.v1", authority: "PORTAL",
       source_side_effect_requested: false,
       actions: [
         { id: "R2_CREATE", state: "AVAILABLE", inputs: "APPROVED_R1_AND_PINNED_PAPER_DEPLOYMENT_RISK_GRANT", path: "/api/v1/execution/governance/r2/capture" },
         { id: "PAPER_EXIT_CREATE", state: "AVAILABLE", inputs: "PINNED_R2_AND_PAPER_DEPLOYMENT", path: "/api/v1/execution/governance/paper-exit/create" },
         { id: "SANDBOX_NOTE", state: "AVAILABLE", inputs: "EXISTING_DRAFT_CERTIFICATION", path: "/api/v1/execution/governance/sandbox/capture-note" },
-        { id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" },
+        { id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "R2_UPSTREAM_EXECUTION_NOT_QUALIFIED" },
         { id: "PAPER_EXIT_PROMOTE", state: "UNAVAILABLE", reason_code: GAP },
         { id: "SANDBOX_CERTIFY_SOURCE", state: "UNAVAILABLE", reason_code: "ACCEPTED_SANDBOX_STEP_EVIDENCE_UNAVAILABLE" },
-      ].map(action => action.state === "AVAILABLE" && user.role !== "ADMIN"
-        ? { ...action,state:"UNAVAILABLE",reason_code:"ADMIN_ROLE_REQUIRED" } : action) };
+      ].map(action => {
+        if (action.state !== "AVAILABLE") return action;
+        const refusal = captureRefusal(action.id as CaptureAction, facts);
+        return refusal === null ? action : { ...action, state: "UNAVAILABLE", reason_code: refusal };
+      }) };
+  }
+
+  /** Inputs come from an already-authorized, verified parent read, never a browser-supplied parent. */
+  async context(user: PortalUser, action: CaptureContext["action"], approval: ApprovalRecord,
+    lineage?: (R2LineageRecord & { portfolioId: string }) | null): Promise<CaptureContext> {
+    const blocked = (reason: ReviewContextReason) => blockedCapture(approval, action, reason);
+    if (user.role !== "ADMIN") return blocked("ADMIN_ROLE_REQUIRED");
+    if (!await this.captureReadAllowed(user, action, approval.workspaceId)) return blocked("GOVERNANCE_CAPABILITY_REQUIRED");
+    if (approval.expiresAt <= new Date()) return blocked("APPROVAL_EXPIRED");
+    if (action === "R2_CREATE" && !["APPROVED", "APPROVED_WITH_CONDITION"].includes(approval.status)) return blocked("R1_APPROVAL_REQUIRED");
+    if (action === "R2_CREATE" && !approval.evidenceComplete) return blocked("R1_EVIDENCE_INCOMPLETE");
+    if (action === "PAPER_EXIT_CREATE") {
+      if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(approval.status)) return blocked("R2_APPROVAL_REQUIRED");
+      if (!lineage) return blocked("R2_ACCEPTED_LINEAGE_UNAVAILABLE");
+      if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(lineage.r1Status)) return blocked("R1_APPROVAL_REQUIRED");
+      if (lineage.r1ExpiresAt <= new Date()) return blocked("APPROVAL_EXPIRED");
+      if (!lineage.r1EvidenceComplete) return blocked("R1_EVIDENCE_INCOMPLETE");
+    }
+    if (retainedReview(this.config)) return blocked("CAPTURE_RETAINED_REVIEW_READ_ONLY");
+    const paperProfile = this.config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+    // paperProjectionAuthorized already requires a profile id; the second test only narrows the type.
+    if (!paperProjectionAuthorized(this.config, approval.workspaceId) || !paperProfile) return blocked("CAPTURE_PROJECTION_NOT_AUTHORIZED");
+    let snapshot: Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>;
+    try {
+      snapshot = await this.projections.snapshot(approval.workspaceId, "paper", paperProfile);
+    } catch {
+      // A domain-store outage must not break an otherwise readable Core R1.
+      // No cached permission, source reactivation or guessed candidate on failure.
+      return blocked("CAPTURE_PROJECTION_UNAVAILABLE");
+    }
+    if (!snapshot) return blocked("CAPTURE_PROJECTION_UNAVAILABLE");
+    if (snapshot.document.workspace_id !== approval.workspaceId || snapshot.document.environment !== "paper"
+      || snapshot.document.profile_id !== this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) return blocked("CAPTURE_PROJECTION_SCOPE_MISMATCH");
+    if (Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+      return blocked("CAPTURE_PROJECTION_STALE");
+    }
+    return paperCaptureContext(approval, action, snapshot, lineage);
   }
 
   async createR2(user: PortalUser, input: R2Capture, requestId: string) {
     return this.capture(user, input, "R2_CREATE", requestId, async client => {
       const r1 = await this.parent(client, input.workspace_id, input.r1_approval_id, "R1", input.expected_r1_version);
       if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(r1.status)) fail("R1_APPROVAL_REQUIRED", 422);
+      if (!r1.evidence_complete) fail("R1_EVIDENCE_INCOMPLETE", 422);
       const snapshot = await this.paperSnapshot(client, input.workspace_id, input.expected_projection_digest);
       const deployment = this.deployment(this.deploymentRows(snapshot),
         input.deployment_id, r1.subject_id, input.portfolio_id);
       const grant = snapshot.document.relations["manager.risk:risk_grants"];
-      if (!grant || grant.availability !== "AVAILABLE") fail("R2_RISK_GRANT_SOURCE_UNAVAILABLE", 422);
-      if (!grant.items.some(row => row.fields.risk_grant_id === input.risk_grant_id &&
+      if (!grant || grant.availability !== "AVAILABLE" || ["STALE", "UNKNOWN"].includes(grant.freshness)) fail("R2_RISK_GRANT_SOURCE_UNAVAILABLE", 422);
+      if (!this.scopedRows(snapshot, grant.items).some(row => row.fields.risk_grant_id === input.risk_grant_id &&
         row.fields.strategy_id === r1.subject_id && row.fields.account_id === deployment.account_id)) fail("R2_RISK_GRANT_SCOPE_NOT_FOUND", 422);
       const portfolios = snapshot.document.relations["manager.portfolios:portfolios"];
-      if (!portfolios || portfolios.availability !== "AVAILABLE" || !portfolios.items.some(row => row.fields.portfolio_id === input.portfolio_id)) fail("R2_PORTFOLIO_SCOPE_NOT_FOUND", 422);
+      if (!portfolios || portfolios.availability !== "AVAILABLE" || ["STALE", "UNKNOWN"].includes(portfolios.freshness)
+        || !this.scopedRows(snapshot, portfolios.items).some(row => row.fields.portfolio_id === input.portfolio_id)) fail("R2_PORTFOLIO_SCOPE_NOT_FOUND", 422);
       // Currency is the requested review scope, not an FX conversion or source balance.
       const id = newUlid("apr");
       const evidence = await this.copyEvidence(client, r1.approval_id, r1.evidence_set_hash);
@@ -73,25 +130,26 @@ export class GovernanceReviewCaptureService {
       [id,input.workspace_id,r1.approval_id,input.risk_grant_id,user.userId,user.username]);
       await client.query(`INSERT INTO governance_approval_findings
         (finding_id,approval_id,ordinal,label,outcome,suggestion,blocking,policy_version,formula_version,basis_hashes,evaluated_at)
-        VALUES ($1,$2,0,$3,'INSUFFICIENT','R2_EXECUTION_DECISION_NOT_COMMISSIONED',true,$4,$4,$5,now())`,
+        VALUES ($1,$2,0,$3,'WATCH','PORTAL_REVIEW_ONLY_NOT_EXECUTION_AUTHORIZATION',false,$4,$4,$5,now())`,
       [newUlid("find"),id,`Portal-authored review note: ${input.summary}`,POLICY,[snapshot.payloadDigest, r1.evidence_set_hash]]);
       return { aggregate_id: id, approval_id: id, workflow_version: 1,
         read_path: `/api/v1/execution/governance/approvals/${id}/r2`,
         captured_projection_digest: snapshot.payloadDigest, source_verdict: "NOT_ASSERTED",
-        decision_reason_code: "R2_EXECUTION_DECISION_NOT_COMMISSIONED" };
+        decision_reason_code: "PORTAL_REVIEW_ONLY_NOT_EXECUTION_AUTHORIZATION" };
     });
   }
 
   async createPaperExit(user: PortalUser, input: PaperExitCreate, requestId: string) {
     return this.capture(user, input, "PAPER_EXIT_CREATE", requestId, async client => {
       const r2 = await this.parent(client, input.workspace_id, input.r2_approval_id, "R2", input.expected_r2_version);
-      if (!["PENDING", "APPROVED", "APPROVED_WITH_CONDITION"].includes(r2.status)) fail("R2_REVIEW_CLOSED", 422);
+      if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(r2.status)) fail("R2_APPROVAL_REQUIRED", 422);
       const lineage = (await client.query(`SELECT l.*,s.portfolio_id FROM governance_r2_lineage l
         JOIN governance_approval_analytics_scopes s ON s.approval_id=l.r2_approval_id AND s.workspace_id=l.workspace_id
         WHERE l.workspace_id=$1 AND l.r2_approval_id=$2`, [input.workspace_id,input.r2_approval_id])).rows[0];
       if (!lineage) fail("R2_ACCEPTED_LINEAGE_UNAVAILABLE", 422);
       const r1 = await this.parent(client, input.workspace_id, lineage.r1_approval_id, "R1");
       if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(r1.status)) fail("R1_APPROVAL_REQUIRED", 422);
+      if (!r1.evidence_complete) fail("R1_EVIDENCE_INCOMPLETE", 422);
       const snapshot = await this.paperSnapshot(client, input.workspace_id, input.expected_projection_digest);
       const deployment = this.deployment(this.deploymentRows(snapshot),
         input.deployment_id,r1.subject_id,lineage.portfolio_id);
@@ -107,13 +165,9 @@ export class GovernanceReviewCaptureService {
       // This explicit Portal policy says no source evaluation has been accepted.
       // Its digest is not a fabricated Trading System observation-policy digest.
       const policyHash = projectionDigest({ authority: "PORTAL", policy: POLICY, promote: false, reason: GAP });
-      await client.query(`INSERT INTO governance_paper_exit_reviews
-        (review_id,workspace_id,deployment_id,portfolio_id,venue,artifact_digest,r1_approval_id,r2_approval_id,
-         observation_policy_id,observation_policy_version,observation_policy_digest,evidence_pack_id,evidence_pack_digest,
-         evaluation_policy_version,evaluation_formula_version,source_snapshot_hash,observation_summary,recommendation)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$1,$11,$9,$9,$11,$12,$13)`,
-      [id,input.workspace_id,input.deployment_id,lineage.portfolio_id,deployment.venue,artifact.sha256,
-        r1.approval_id,r2.approval_id,POLICY,policyHash,manifest,input.summary,GAP]);
+      // Allocate the exact immutable children before inserting their root. All
+      // nullable/defaulted hash facts are explicit and match the persisted rows;
+      // a placeholder hash followed by UPDATE is never a capture protocol.
       const pins = [
         ["ARTIFACT",artifact.artifactId ?? artifact.evidenceId,artifact.sha256,"RESEARCH"],
         ["R1_APPROVAL",r1.approval_id,r1.evidence_set_hash,"PORTAL"],
@@ -121,25 +175,59 @@ export class GovernanceReviewCaptureService {
         ["OBSERVATION_POLICY",POLICY,policyHash,"PORTAL"],
         ["EVIDENCE_PACK",id,manifest,"PORTAL"],
       ];
-      for (const [ordinal, pin] of pins.entries()) await client.query(`INSERT INTO governance_paper_exit_lineage
-        (lineage_id,review_id,ordinal,kind,label,value,digest,source_authority) VALUES ($1,$2,$3,$4,$4,$5,$6,$7)`,
-      [newUlid("lineage"),id,ordinal,...pin]);
-      for (const [ordinal, kind] of EXIT_PANELS.entries()) {
+      const sourceLineage: PaperExitLineageRecord[] = pins.map(([kind,value,digest,sourceAuthority],ordinal) => ({
+        lineageId:newUlid("lineage"),ordinal,kind,label:kind,value,href:null,digest,sourceAuthority,required:true,
+      }));
+      const sourcePanels: PaperExitPanelRecord[] = [];
+      const sourceFindings: PaperExitFindingRecord[] = [];
+      for (const [ordinal,kind] of EXIT_PANELS.entries()) {
         const panelId = newUlid("panel");
+        sourcePanels.push({panelId,ordinal,panelKind:kind,title:kind,sourceAuthority:"DERIVED",
+          sourceReference:snapshot.payloadDigest,sourceHref:null,panelState:"UNAVAILABLE",reason:GAP,
+          asOf:null,freshnessState:"UNKNOWN",sourceCompleteness:"UNKNOWN",pollIntervalMs:null,formulaVersion:POLICY});
+        sourceFindings.push({findingId:newUlid("find"),panelId,ordinal:0,metricKey:kind,
+          label:`Portal review: ${input.summary}`,outcome:"INSUFFICIENT",blocking:true,required:true,
+          carriesTo:"PAPER_EXIT_REVIEW",exactValue:null,unit:null,currency:null,thresholdValue:null,
+          sourceLabel:"Portal-authored review note",sourceHref:null,evidenceHash:null,formulaVersion:POLICY,asOf:null});
+      }
+      const sourceSnapshotHash = computePaperExitSourceSnapshotHash({
+        review:{reviewId:id,deploymentId:input.deployment_id,portfolioId:lineage.portfolio_id,
+          venue:deployment.venue,artifactDigest:artifact.sha256,observationPolicyId:POLICY,
+          observationPolicyVersion:POLICY,observationPolicyDigest:policyHash,evidencePackId:id,
+          evidencePackDigest:manifest,evaluationPolicyVersion:POLICY,evaluationFormulaVersion:POLICY},
+        approval:{evidenceSetHash:manifest},lineage:sourceLineage,panels:sourcePanels,findings:sourceFindings,
+      });
+      await client.query(`INSERT INTO governance_paper_exit_reviews
+        (review_id,workspace_id,deployment_id,portfolio_id,venue,artifact_digest,r1_approval_id,r2_approval_id,
+         observation_policy_id,observation_policy_version,observation_policy_digest,evidence_pack_id,evidence_pack_digest,
+         evaluation_policy_version,evaluation_formula_version,source_snapshot_hash,observation_summary,recommendation)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$9,$10,$1,$11,$9,$9,$14,$12,$13)`,
+      [id,input.workspace_id,input.deployment_id,lineage.portfolio_id,deployment.venue,artifact.sha256,
+        r1.approval_id,r2.approval_id,POLICY,policyHash,manifest,input.summary,GAP,sourceSnapshotHash]);
+      for (const item of sourceLineage) await client.query(`INSERT INTO governance_paper_exit_lineage
+        (lineage_id,review_id,ordinal,kind,label,value,href,digest,source_authority,required)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [item.lineageId,id,item.ordinal,item.kind,item.label,item.value,item.href,item.digest,item.sourceAuthority,item.required]);
+      for (const item of sourcePanels) {
         await client.query(`INSERT INTO governance_paper_exit_panels
-          (panel_id,review_id,ordinal,panel_kind,title,source_authority,source_reference,panel_state,reason,
-           freshness_state,source_completeness,formula_version)
-          VALUES ($1,$2,$3,$4,$4,'DERIVED',$5,'UNAVAILABLE',$6,'UNKNOWN','UNKNOWN',$7)`,
-        [panelId,id,ordinal,kind,snapshot.payloadDigest,GAP,POLICY]);
+          (panel_id,review_id,ordinal,panel_kind,title,source_authority,source_reference,source_href,panel_state,reason,
+           as_of,freshness_state,source_completeness,poll_interval_ms,formula_version)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)`,
+        [item.panelId,id,item.ordinal,item.panelKind,item.title,item.sourceAuthority,item.sourceReference,item.sourceHref,
+          item.panelState,item.reason,item.asOf,item.freshnessState,item.sourceCompleteness,item.pollIntervalMs,item.formulaVersion]);
+      }
+      for (const item of sourceFindings) {
         await client.query(`INSERT INTO governance_paper_exit_findings
-          (finding_id,review_id,panel_id,ordinal,metric_key,label,outcome,blocking,carries_to,source_label,formula_version)
-          VALUES ($1,$2,$3,0,$4,$5,'INSUFFICIENT',true,'PAPER_EXIT_REVIEW','Portal-authored review note',$6)`,
-        [newUlid("find"),id,panelId,kind,`Portal review: ${input.summary}`,POLICY]);
+          (finding_id,review_id,panel_id,ordinal,metric_key,label,outcome,blocking,required,carries_to,exact_value,
+           unit,currency,threshold_value,source_label,source_href,evidence_hash,formula_version,as_of)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+        [item.findingId,id,item.panelId,item.ordinal,item.metricKey,item.label,item.outcome,item.blocking,item.required,
+          item.carriesTo,item.exactValue,item.unit,item.currency,item.thresholdValue,item.sourceLabel,item.sourceHref,
+          item.evidenceHash,item.formulaVersion,item.asOf]);
       }
       const captured = await this.exits.detail(input.workspace_id,id,client);
-      if (!captured) fail("CAPTURE_READBACK_FAILED", 500);
-      await client.query("UPDATE governance_paper_exit_reviews SET source_snapshot_hash=$2 WHERE review_id=$1",
-        [id,computePaperExitSourceSnapshotHash(captured)]);
+      if (!captured || captured.review.sourceSnapshotHash !== sourceSnapshotHash ||
+        computePaperExitSourceSnapshotHash(captured) !== sourceSnapshotHash) fail("CAPTURE_READBACK_FAILED", 500);
       return { aggregate_id: id, review_id: id, workflow_version: 1,
         read_path: `/api/v1/execution/governance/exit-reviews/${id}`,
         captured_projection_digest: snapshot.payloadDigest, source_verdict: "NOT_ASSERTED",
@@ -181,6 +269,21 @@ export class GovernanceReviewCaptureService {
     return withTransaction(this.pool,async client => {
       await client.query("SET LOCAL lock_timeout = '5s'");
       await client.query("SET LOCAL statement_timeout = '10s'");
+      // Serialize credential, role, membership and scoped read revocations
+      // with capture AND its idempotent replay. Do not consult a second pool
+      // for an authority snapshot outside this transaction.
+      try {
+        const current = await assertDecisionAuthority(client, { actor: user, workspaceId: input.workspace_id,
+          gate: action === "SANDBOX_NOTE" ? "PAPER_EXIT" : "R2", mode: "read" });
+        if (current.role !== "ADMIN") fail("ADMIN_ROLE_REQUIRED", 403);
+        if (action === "R2_CREATE") await assertDecisionAuthority(client,
+          { actor: user, workspaceId: input.workspace_id, gate: "R1", mode: "read" });
+      } catch (error) {
+        if (error instanceof DecisionAuthorityError) {
+          throw new GovernanceError(error.governanceCode, error.message, error.status);
+        }
+        throw error;
+      }
       // DB-wide serialization of this retry identity, including multi-replica callers.
       await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`${input.workspace_id}:${user.userId}:${input.request_key}`]);
       const prior = (await client.query(`SELECT * FROM governance_review_captures
@@ -205,6 +308,14 @@ export class GovernanceReviewCaptureService {
     });
   }
 
+  private async captureReadAllowed(user: PortalUser, action: "R2_CREATE" | "PAPER_EXIT_CREATE", workspaceId: string) {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    // Existing ADMIN capture authority is not a shortcut around parent/target
+    // gate visibility. Owner and exact delegated workspace scopes use one rule.
+    return mayGovern({ access, gate: "r2", mode: "read", workspaceId })
+      && (action === "PAPER_EXIT_CREATE" || mayGovern({ access, gate: "r1", mode: "read", workspaceId }));
+  }
+
   private async parent(client: PoolClient,workspace: string,id: string,gate: string,version?: number) {
     const row = (await client.query(`SELECT * FROM governance_approval_requests WHERE workspace_id=$1 AND approval_id=$2 AND gate=$3 FOR SHARE`,[workspace,id,gate])).rows[0];
     if (!row) fail("APPROVAL_NOT_FOUND",404);
@@ -214,9 +325,18 @@ export class GovernanceReviewCaptureService {
   }
 
   private async paperSnapshot(client: PoolClient,workspace: string,digest: string) {
-    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || this.config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER !== "true" ||
-      this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID !== workspace) fail("CAPTURE_PROJECTION_NOT_AUTHORIZED",404);
-    const snapshot = await this.projections.snapshot(workspace,"paper",this.config.EXECUTION_EDGE_PAPER_PROFILE_ID!,client);
+    if (retainedReview(this.config)) fail("CAPTURE_RETAINED_REVIEW_READ_ONLY",422);
+    const paperProfile = this.config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+    if (!paperProjectionAuthorized(this.config, workspace) || !paperProfile) fail("CAPTURE_PROJECTION_NOT_AUTHORIZED",404);
+    // UDB isolates Execution rows: a Core transaction must not query the domain table.
+    // In the legacy single-store profile retain transaction-local snapshot semantics.
+    const reader = this.projections.pool === this.pool ? client : this.projections.pool;
+    let snapshot: Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>;
+    try {
+      snapshot = await this.projections.snapshot(workspace,"paper",paperProfile,reader);
+    } catch {
+      fail("CAPTURE_PROJECTION_UNAVAILABLE",503);
+    }
     if (!snapshot) fail("CAPTURE_PROJECTION_UNAVAILABLE",422);
     if (snapshot.document.workspace_id !== workspace || snapshot.document.environment !== "paper" ||
         snapshot.document.profile_id !== this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) fail("CAPTURE_PROJECTION_SCOPE_MISMATCH",422);
@@ -233,10 +353,15 @@ export class GovernanceReviewCaptureService {
 
   private deploymentRows(snapshot: NonNullable<Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>>) {
     const relation = snapshot.document.relations["manager.deployments:strategy_deployments"];
-    if (!relation || relation.availability !== "AVAILABLE" || relation.freshness === "STALE") {
+    if (!relation || relation.availability !== "AVAILABLE" || ["STALE", "UNKNOWN"].includes(relation.freshness)) {
       fail("CAPTURE_DEPLOYMENT_SOURCE_UNAVAILABLE",422);
     }
-    return relation.items;
+    return this.scopedRows(snapshot, relation.items);
+  }
+
+  private scopedRows(snapshot: NonNullable<Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>>, rows: readonly ProjectionRow[]) {
+    return rows.filter(row => row.lineage.workspace_id === snapshot.document.workspace_id
+      && row.lineage.profile_id === snapshot.document.profile_id);
   }
 
   private async copyEvidence(client: PoolClient,parent: string,expectedHash: string): Promise<EvidenceRecord[]> {
@@ -257,9 +382,9 @@ export class GovernanceReviewCaptureService {
       (approval_id,workspace_id,gate,subject_type,subject_id,subject_label,environment,target_label,requester_user_id,requester_username,
        artifact_creator_user_id,artifact_creator_username,status,policy_version,quorum_required,evidence_set_hash,evidence_complete,
        blocker_count,blocker_summary,sla_due_at,expires_at)
-      VALUES ($1,$2,$3,'DEPLOYMENT',$4,$4,'PAPER',$3,$5,$6,$7,$8,'PENDING',$9,1,$10,false,1,$11,now()+interval '24 hours',now()+interval '72 hours')`,
+      VALUES ($1,$2,$3,'DEPLOYMENT',$4,$4,'PAPER',$3,$5,$6,$7,$8,'PENDING',$9,1,$10,$12,$13,$11,now()+interval '24 hours',now()+interval '72 hours')`,
     [id,workspace,gate,subject,user.userId,user.username,parent.artifact_creator_user_id,parent.artifact_creator_username,
-      POLICY,manifest,gate==="R2"?"R2_EXECUTION_DECISION_NOT_COMMISSIONED":GAP]);
+      POLICY,manifest,gate==="R2"?null:GAP,gate === "R2",gate === "R2" ? 0 : 1]);
   }
 
   private async insertEvidence(client: PoolClient,items: EvidenceRecord[],id: string) {

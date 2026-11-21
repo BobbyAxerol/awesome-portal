@@ -1,0 +1,79 @@
+{
+  "schema_version": "research.run-setup-options.v1",
+  "context": {
+    "workspace_id": "ws_fixture",
+    "alpha_id": "delta-rsi-polynomial-alpha",
+    "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_0",
+    "dataset_id": "crypto-binance-1m",
+    "symbol": "BTCUSDT",
+    "timeframe": "1h"
+  },
+  "scope": "CONFIGURATION_FACTS_NOT_RUN_AUTHORIZATION",
+  "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "catalog_revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "as_of_utc_ms": 1783872000000,
+  "warmup_bars": 300,
+  "source_timezone": "UTC",
+  "profiles": [
+    {
+      "profile_id": "p10.delta-three-window-optimized-1h.v2",
+      "state": "ENABLED",
+      "reason_code": null,
+      "engine_release_id": "er_quantbt_111",
+      "execution_route": "signal_notional",
+      "protocol": "three_window_decay",
+      "optimization_mode": "mode_1_decay",
+      "optimization_schedule": "global",
+      "requested_spec_versions": [
+        "research.requested-spec.v1"
+      ],
+      "timeframe": "1h",
+      "trial_count": {
+        "min": 2,
+        "max": 400
+      },
+      "trial_default": 3,
+      "trial_scope": "GLOBAL_STUDY",
+      "max_total_trials": null,
+      "seed_policy": "LOCKED",
+      "random_seed": 42,
+      "max_span_days": null,
+      "fold_bounds": null,
+      "frequencies": [],
+      "window_modes": [],
+      "parameter_policy": "FIXED_NO_OVERRIDES",
+      "allowed_pin_names": [],
+      "inner_validation": "NOT_APPLICABLE",
+      "inner_constraints": null,
+      "temporal_guards": {
+        "policy": "NOT_APPLICABLE",
+        "defaults": null,
+        "max_bars": null,
+        "zero_semantics": "ZERO_APPLIES_NO_TEMPORAL_GUARD"
+      },
+      "independent_holdout": true,
+      "refusals": [],
+      "early_stopping_policy": "OPTIONAL",
+      "early_stopping_guidance": {
+        "scope": "PER_STUDY",
+        "minimum": 1,
+        "maximum_basis": "REQUESTED_TRIALS_PER_STUDY",
+        "suggested_range_ratio": [
+          0.5,
+          0.75
+        ],
+        "suggested_ratio": 0.6666666666666666,
+        "suggestion_is_default": false,
+        "semantics": "CONSECUTIVE_COMPLETED_TRIALS_WITHOUT_OBJECTIVE_IMPROVEMENT"
+      }
+    }
+  ],
+  "preflight_required": true,
+  "preflight_policy": {
+    "maximum_active_unbound_per_actor": 8,
+    "ttl_seconds": 600,
+    "reuse": "IDENTICAL_FRESH_SOURCE_REVALIDATED_UNBOUND_ONLY",
+    "expiry_extension": false
+  },
+  "presentation_revision": "research.recipe-presentation.v1"
+}

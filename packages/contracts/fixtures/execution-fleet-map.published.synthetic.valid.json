@@ -1,0 +1,58 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.fleet-map.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "window": "30D",
+    "total_count": 3,
+    "truncated": false,
+    "rows": [
+      {
+        "row_key": "TEST_ONLY:map-row-0",
+        "name": "Alpha 0",
+        "allocation": {
+          "currency": "USDT",
+          "value": "1000.00"
+        },
+        "window_return": {
+          "ratio_scale": "FRACTION",
+          "value": "0.0025"
+        },
+        "net_pnl": {
+          "currency": "USDT",
+          "value": "-60.50"
+        },
+        "health": "WARN",
+        "stage_presence": [
+          "PAPER"
+        ]
+      },
+      {
+        "row_key": "TEST_ONLY:map-row-1",
+        "name": "Alpha 1",
+        "allocation": {
+          "currency": "USDT",
+          "value": "1001.00"
+        },
+        "window_return": {
+          "ratio_scale": "FRACTION",
+          "value": "0.0125"
+        },
+        "net_pnl": {
+          "currency": "USDT",
+          "value": "-59.50"
+        },
+        "health": "OK",
+        "stage_presence": [
+          "SANDBOX"
+        ]
+      },
+      {
+        "row_key": "TEST_ONLY:map-row-bare",
+        "stage_presence": []
+      }
+    ]
+  }
+}

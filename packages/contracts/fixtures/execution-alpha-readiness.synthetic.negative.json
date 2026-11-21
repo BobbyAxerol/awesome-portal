@@ -1,0 +1,93 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-alpha-readiness.published.synthetic.valid.json",
+    "empty": "execution-alpha-readiness.empty.synthetic.valid.json",
+    "no_source": "execution-alpha-readiness.no_source.synthetic.valid.json",
+    "items_null": "execution-alpha-readiness.items_null.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "met-above-total",
+      "base": "published",
+      "rule": "met never exceeds total",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "readiness",
+            "met"
+          ],
+          "value": 8
+        }
+      ],
+      "refused_by": "READER_ONLY"
+    },
+    {
+      "id": "total-zero",
+      "base": "published",
+      "rule": "a gate has at least one criterion",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "readiness",
+            "total"
+          ],
+          "value": 0
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "archive-unknown",
+      "base": "published",
+      "rule": "archive states are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "archive_state"
+          ],
+          "value": "LOST"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "items-not-an-array",
+      "base": "published",
+      "rule": "items is a list, a null, or absent; never an object or text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items"
+          ],
+          "value": "none"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "environment-missing",
+      "base": "no_source",
+      "rule": "the answer names the environment it is about",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "environment"
+          ]
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

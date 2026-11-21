@@ -1,0 +1,16 @@
+{
+  "schema_version": "research.rs01-resource-cleanup.v1",
+  "phase": "RS-01",
+  "resources_created": [
+    "one UUID-named disposable PostgreSQL database, dropped in test afterAll",
+    "one uniquely named tmpfs P11 PostgreSQL container, removed by EXIT trap"
+  ],
+  "post_run_verification": "no research-p11-postgres-rs01-* container remained",
+  "cleanup_action": "NO_BROAD_PRUNE_REQUIRED",
+  "not_touched": [
+    "dev/stable/production database",
+    "runtime containers, volumes and images",
+    "source data, artifacts and secrets",
+    "Execution shared pool policy"
+  ]
+}

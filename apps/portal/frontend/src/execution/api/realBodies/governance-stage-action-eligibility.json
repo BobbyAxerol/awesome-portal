@@ -1,0 +1,123 @@
+{
+ "schema_version": "portal.stage-action-eligibility.v1",
+ "workspace_id": "ws_TEST_ONLY",
+ "current_only": true,
+ "advisory_only": true,
+ "observed_at_ms": 1794397525261,
+ "session_step_up": {
+  "state": "NOT_ACTIVE",
+  "valid_until_ms": null
+ },
+ "actions": [
+  {
+   "stage_action": "approval.create",
+   "verdict": "NOT_ELIGIBLE",
+   "eligible": false,
+   "reason_class": "RETAINED_REVIEW_READ_ONLY",
+   "public_copy_key": "RETAINED_REVIEW_READ_ONLY",
+   "basis": "WORKSPACE_MEMBERSHIP",
+   "step_up_required": false,
+   "step_up_state": "NOT_REQUIRED",
+   "alpha_scope": "WORKSPACE_ALL_COMPLETED_RUNS"
+  },
+  {
+   "stage_action": "sandbox.review_note",
+   "verdict": "NOT_ELIGIBLE",
+   "eligible": false,
+   "reason_class": "RETAINED_REVIEW_READ_ONLY",
+   "public_copy_key": "RETAINED_REVIEW_READ_ONLY",
+   "basis": "ADMIN_ROLE",
+   "step_up_required": false,
+   "step_up_state": "NOT_REQUIRED",
+   "alpha_scope": null
+  },
+  {
+   "stage_action": "paper.exit_review_request",
+   "verdict": "NOT_ELIGIBLE",
+   "eligible": false,
+   "reason_class": "RETAINED_REVIEW_READ_ONLY",
+   "public_copy_key": "RETAINED_REVIEW_READ_ONLY",
+   "basis": "ADMIN_ROLE_AND_GOVERNANCE_R2_READ",
+   "step_up_required": false,
+   "step_up_state": "NOT_REQUIRED",
+   "alpha_scope": null
+  },
+  {
+   "stage_action": "canary.hold",
+   "verdict": "NOT_COMMISSIONED",
+   "eligible": false,
+   "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "public_copy_key": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "basis": "NONE_PUBLISHED",
+   "step_up_required": null,
+   "step_up_state": "NOT_DETERMINED",
+   "alpha_scope": null
+  },
+  {
+   "stage_action": "canary.reduce",
+   "verdict": "NOT_COMMISSIONED",
+   "eligible": false,
+   "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "public_copy_key": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "basis": "NONE_PUBLISHED",
+   "step_up_required": null,
+   "step_up_state": "NOT_DETERMINED",
+   "alpha_scope": null
+  },
+  {
+   "stage_action": "canary.rollback",
+   "verdict": "NOT_COMMISSIONED",
+   "eligible": false,
+   "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "public_copy_key": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "basis": "NONE_PUBLISHED",
+   "step_up_required": null,
+   "step_up_state": "NOT_DETERMINED",
+   "alpha_scope": null
+  },
+  {
+   "stage_action": "canary.request_scale",
+   "verdict": "NOT_COMMISSIONED",
+   "eligible": false,
+   "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "public_copy_key": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "basis": "NONE_PUBLISHED",
+   "step_up_required": null,
+   "step_up_state": "NOT_DETERMINED",
+   "alpha_scope": null
+  },
+  {
+   "stage_action": "live.halt",
+   "verdict": "NOT_COMMISSIONED",
+   "eligible": false,
+   "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "public_copy_key": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "basis": "NONE_PUBLISHED",
+   "step_up_required": null,
+   "step_up_state": "NOT_DETERMINED",
+   "alpha_scope": null
+  },
+  {
+   "stage_action": "live.reduce",
+   "verdict": "NOT_COMMISSIONED",
+   "eligible": false,
+   "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "public_copy_key": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "basis": "NONE_PUBLISHED",
+   "step_up_required": null,
+   "step_up_state": "NOT_DETERMINED",
+   "alpha_scope": null
+  },
+  {
+   "stage_action": "live.emergency_close",
+   "verdict": "NOT_COMMISSIONED",
+   "eligible": false,
+   "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "public_copy_key": "COMMAND_FAMILY_NOT_COMMISSIONED",
+   "basis": "NONE_PUBLISHED",
+   "step_up_required": null,
+   "step_up_state": "NOT_DETERMINED",
+   "alpha_scope": null
+  }
+ ]
+}

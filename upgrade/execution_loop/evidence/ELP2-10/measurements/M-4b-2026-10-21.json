@@ -1,0 +1,58 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-4",
+  "sub": "b connected mixed load",
+  "title": "Mounted writer with lease + read load from M-2, at least two repetitions",
+  "status": "BLOCKED",
+  "lane": "NOT_RUN",
+  "run_kind": "ABSOLUTE_MEASUREMENT",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 11.58,
+    "loadavg_5m_at_capture": 11.14
+  },
+  "started_at": null,
+  "ended_at": null,
+  "started_at_ms": null,
+  "ended_at_ms": null,
+  "duration_ms": null,
+  "workload": {
+    "target_lane": "REAL_READ_QUALIFIED"
+  },
+  "resource_limits": null,
+  "stop_conditions": [],
+  "results": {
+    "reason": "No writer is mounted (T10-11 worker NOT_MOUNTED) and no connected source ingest exists.",
+    "unmet": [
+      "writer/worker mount + lease (T10-11, ELP2-REQ-06-002)",
+      "upgrade/execution_loop/evidence/ELP2-10/CORE009_INTEGRATION_RETURN_2026-10-21.md section 2: integration prepared; hook, image build and runtime readback PENDING; installed image sha256:7b2c7f34... is NOT Core009"
+    ],
+    "ready": [
+      "read half: scripts/measure/m5-coexistence-window.mjs / lib/replay.mjs can hold the declared read load; the write half has no driver because there is no writer to drive"
+    ],
+    "window_request": "upgrade/execution_loop/evidence/ELP2-10/measurements/WINDOW_REQUESTS_2026-10-21.md section 5 (M-4b, request after the writer mounts)"
+  },
+  "resources": null,
+  "cleanup": null,
+  "limitations": [],
+  "notes": [],
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:8b0c7a101828eb6b68a4c29df4fa153e0e1b3fba118b1ad8c493d5c7c8a0d3bd"
+}

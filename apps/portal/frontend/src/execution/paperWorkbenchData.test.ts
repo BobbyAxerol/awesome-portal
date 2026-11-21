@@ -49,7 +49,7 @@ function envelopeOf(over: Partial<ProfileEnvelope> = {}): ProfileEnvelope {
     objects: {
       deployment: DEPLOYMENT,
       observation_gate: GATE,
-      history_windows: { account_equity: { days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 2, source_rows: 6661, truncated: false, downsample: { method: "PER_SERIES_BUCKET_EXTREMA", bucket_seconds: 3637 } } },
+      history_windows: { account_equity: { days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 2, source_rows: 6661, truncated: false, downsample: { method: "PER_SERIES_BUCKET_EXTREMA", bucket_seconds: 3637, series_count: 1, input_rows: 6661, output_rows: 2 } } },
     },
     ...over,
   } as ProfileEnvelope;
@@ -124,7 +124,9 @@ describe("the equity series", () => {
     const props = workbenchProps(envelopeOf(), null);
     expect(props.equity?.envelope.sourceRows).toBe(6661);
     expect(props.equity?.envelope.returnedRows).toBe(2);
-    expect(props.equity?.envelope.interval).toContain("PER_SERIES_BUCKET_EXTREMA");
+    // UI review D12: the method reads as what it keeps, never as its code.
+    expect(props.equity?.envelope.interval).toContain("min and max kept per bucket");
+    expect(props.equity?.envelope.interval).not.toContain("PER_SERIES_BUCKET_EXTREMA");
     expect(props.equity?.envelope.window).toBe("30d");
   });
 

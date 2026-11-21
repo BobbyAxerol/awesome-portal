@@ -1,0 +1,936 @@
+/* Approvals cockpit (S1b). Three panes: queue 292px | evidence | rail 304px.
+ * Below 1100px the panes stack; below 660px the queue rows are full-width
+ * cards. Tokens and type roles only. No uppercase here, so this file needs no
+ * entry in the v2 hygiene allowlist; every text/background pair sits in one
+ * rule so the contrast gate can read it. */
+/* The shell's top bar is 56px (52px compact); the sticky panes sit under it. A local role: the shell's own token is not a V2 stylesheet token. */
+.exec-ck-page {
+  --exec-topbar-h: 56px;
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-ck-mast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-ck-h {
+  margin: 0;
+  font: var(--exec-font-section);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-ck-page > .exec-ck-mast .exec-ck-h {
+  font: var(--exec-font-title);
+}
+.exec-ck-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-ck-ctrls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+.exec-ck-counts {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-ck-banner {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--warn);
+}
+
+/* The body and the New request drawer. Docked (data-docked, > 1500px) the drawer is a right-hand column; otherwise the
+ * row is one column and the drawer, when open, overlays the page from the shared Drawer's own fixed position. */
+.exec-ck-dockrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  min-width: 0;
+}
+.exec-ck-dockrow[data-docked="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-ck-dockbody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  min-width: 0;
+}
+.exec-ck-dockrow > .exec-dock[data-mode="dock"] {
+  position: sticky;
+  top: var(--space-4);
+}
+/* Beside a 380px drawer the three panes do not fit: the decision rail drops under the evidence. */
+.exec-ck-dockrow[data-docked="true"] .exec-ck {
+  grid-template-columns: 292px minmax(0, 1fr);
+}
+.exec-ck-dockrow[data-docked="true"] .exec-ck-rail {
+  grid-column: 2;
+  position: static;
+}
+.exec-ck {
+  display: grid;
+  grid-template-columns: 292px minmax(0, 1fr) 304px;
+  gap: var(--space-4);
+  align-items: start;
+}
+.exec-ck-main {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.exec-ck-rail {
+  position: sticky;
+  top: calc(var(--exec-topbar-h) + var(--space-3));
+  min-width: 0;
+}
+.exec-ck-railbody {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* panels */
+/* A preview receipt reads as a draft: dashed, as the HIFI .rc. A recorded one (data-recorded) stays solid. */
+.exec-ck-panel[aria-label="Receipt"]:not([data-recorded]) {
+  border-style: dashed;
+  border-color: var(--ink-soft);
+}
+.exec-ck-panel {
+  min-width: 0;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-ph {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-ck-pt {
+  margin: 0;
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+}
+.exec-ck-pr {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+.exec-ck-pad {
+  padding: var(--space-3) var(--space-4);
+  font: var(--exec-font-data);
+}
+.exec-ck-bd {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+}
+.exec-ck-note {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-ck-np {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-ck-id {
+  font: var(--exec-font-id);
+  overflow-wrap: anywhere;
+}
+.exec-ck-unit {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-ck-link {
+  font: var(--exec-font-meta);
+  color: var(--accent);
+}
+.exec-ck-link:focus-visible,
+.exec-ck-chip:focus-visible,
+.exec-ck-qi:focus-visible,
+.exec-ck-more:focus-visible,
+.exec-ck-textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-ck-kd {
+  flex: none;
+  padding: 0 5px;
+  font: var(--exec-font-label);
+  color: var(--ink);
+  border: 1px solid var(--ink-soft);
+}
+
+/* evidence */
+.exec-ck-evidence {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.exec-ck-empty {
+  padding: var(--space-4);
+}
+.exec-ck-head {
+  display: grid;
+  gap: var(--space-2);
+}
+.exec-ck-titleline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.exec-ck-evidence .exec-ck-h {
+  font: var(--exec-font-subtitle);
+}
+.exec-ck-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-ck-verdict {
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--accent);
+}
+.exec-ck-verdict[data-tone="ok"] {
+  border-left-color: var(--good);
+}
+.exec-ck-verdict[data-tone="warn"] {
+  border-left-color: var(--warn);
+}
+.exec-ck-verdict[data-tone="bad"] {
+  border-left-color: var(--bad);
+}
+.exec-ck-verdict[data-tone="mute"] {
+  border-left-color: var(--ink-faint);
+}
+.exec-ck-vh {
+  margin: 0 0 var(--space-1);
+  font: var(--exec-font-section);
+}
+/* Segmented meter (HIFI .meter): one 30x8 segment per criterion, gap 3px, colour by its mark. */
+.exec-ck-meter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin-top: var(--space-2);
+}
+.exec-ck-meter i {
+  display: block;
+  width: 30px;
+  height: 8px;
+  background: var(--accent);
+}
+.exec-ck-meter i[data-m="watch"] {
+  background: var(--warn);
+}
+.exec-ck-meter i[data-m="fail"] {
+  background: var(--bad);
+}
+.exec-ck-meter i[data-m="insufficient"] {
+  background: var(--ink-faint);
+}
+
+.exec-ck-tw {
+  min-width: 0;
+  overflow-x: auto;
+}
+/* A table box that overflows is a focusable region (useKeyboardScroll); it shows where focus is. */
+.exec-ck-tw:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-ck-table,
+.exec-ck-kv {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+}
+.exec-ck-table th {
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.exec-ck-table td {
+  padding: var(--space-2) var(--space-3);
+  vertical-align: top;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line-soft);
+  overflow-wrap: anywhere;
+}
+.exec-ck-table th[data-numeric="true"],
+.exec-ck-table td[data-numeric="true"] {
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.exec-ck-kv th {
+  width: 34%;
+  padding: var(--space-1) var(--space-3);
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-ck-kv td {
+  padding: var(--space-1) var(--space-3);
+  color: var(--ink);
+  border-bottom: 1px solid var(--line-soft);
+  overflow-wrap: anywhere;
+}
+
+/* queue: master-detail (QA1 I-19). The queue is a fixed-height panel whose list scrolls inside it, so the page is as long as the
+ * evidence and the decision rail (sticky, below) stays beside whatever is open. Stacked (<= 1100px) it is a capped panel above the detail. */
+.exec-ck-q {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: calc(var(--exec-topbar-h) + var(--space-3));
+  max-height: calc(100vh - var(--exec-topbar-h) - 2 * var(--space-3));
+  overflow: hidden;
+}
+.exec-ck-q > * {
+  flex: none;
+}
+.exec-ck-q > .exec-ck-list {
+  flex: 1 1 auto;
+  min-height: 80px;
+  overflow-y: auto;
+}
+.exec-ck-decided[open] > .exec-ck-list,
+.exec-ck-decided[open] > .exec-ck-pad {
+  max-height: 24vh;
+  overflow-y: auto;
+}
+.exec-ck-lanes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.exec-ck-chip {
+  padding: 1px 7px;
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ck-chip[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-ck-chip:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-ck-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-ck-qi {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3);
+  text-align: left;
+  font: var(--exec-font-data);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+.exec-ck-qi:hover {
+  background: var(--surface-2);
+}
+.exec-ck-qi[aria-current="true"] {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+.exec-ck-qt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.exec-ck-qt b {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.exec-ck-qm {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-ck-qi[aria-current="true"] .exec-ck-qm {
+  color: var(--ink);
+}
+.exec-ck-qf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: var(--space-1) 0;
+}
+.exec-ck-sla {
+  display: block;
+  height: 4px;
+  background: var(--line);
+}
+.exec-ck-sla i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.exec-ck-sla[data-tone="warn"] i {
+  background: var(--warn);
+}
+.exec-ck-sla[data-tone="bad"] i {
+  background: var(--bad);
+}
+.exec-ck-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-top: 1px solid var(--line-strong);
+}
+/* UI review D9: the queue list scrolls inside its capped panel; this says so while rows are below the fold. */
+.exec-ck-scrollcue {
+  color: var(--accent);
+}
+.exec-ck-more {
+  padding: 1px 8px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ck-more:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  cursor: not-allowed;
+}
+
+/* rail */
+.exec-ck-sod {
+  font: var(--exec-font-data);
+  color: var(--ink);
+}
+.exec-ck-sod[data-state="violation"] {
+  color: var(--bad);
+}
+.exec-ck-quorum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-ck-cells {
+  display: inline-flex;
+  gap: 3px;
+}
+.exec-ck-cells i {
+  width: 18px;
+  height: 10px;
+  border: 1px solid var(--ink-soft);
+}
+.exec-ck-cells i[data-filled="true"] {
+  background: var(--ink-soft);
+}
+.exec-ck-stepup {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-data);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--f-approval);
+}
+.exec-ck-stepup p {
+  margin: 0;
+}
+.exec-ck-label {
+  display: block;
+  font: var(--exec-font-label);
+  color: var(--ink-faint);
+}
+.exec-ck-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 56px;
+  padding: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line);
+  resize: vertical;
+  cursor: not-allowed;
+}
+.exec-ck-actions {
+  display: grid;
+  gap: var(--space-2);
+}
+/* step-up block (FE-015/060): one password field and one Confirm button, only when a re-check can be started */
+.exec-ck-stepup-form {
+  display: grid;
+  gap: var(--space-1);
+}
+.exec-ck-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-input:focus-visible,
+.exec-ck-stepup-go:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-ck-stepup-go {
+  justify-self: start;
+  padding: var(--space-1) var(--space-3);
+  font: var(--exec-font-label);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ck-stepup-go:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+.exec-ck-stepup-failed {
+  color: var(--ink);
+}
+.exec-ck-details > summary {
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  cursor: pointer;
+}
+
+/* keys and announcements. The key strip is the queue panel's footer (HIFI .keys): sunken, a strong rule above. */
+.exec-ck-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-top: 1px solid var(--line-strong);
+}
+.exec-ck-keys kbd,
+.exec-ck-btn kbd,
+.exec-ck-helptable kbd {
+  padding: 0 5px;
+  font: var(--exec-font-label);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-keys-help,
+.exec-ck-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-ck-btn {
+  padding: 2px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-keys-help:focus-visible,
+.exec-ck-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The shortcut list: a small modal over a scrim (HIFI #ck-helpbox). */
+.exec-ck-help-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 120px var(--space-4) var(--space-4);
+  background: var(--scrim);
+}
+.exec-ck-help {
+  box-sizing: border-box;
+  width: min(380px, 100%);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-help:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-ck-helptable {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-body);
+}
+.exec-ck-helptable th,
+.exec-ck-helptable td {
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--line);
+}
+.exec-ck-helptable th {
+  white-space: nowrap;
+  font-weight: inherit;
+}
+.exec-ck-helptable kbd + kbd {
+  margin-left: var(--space-1);
+}
+.exec-ck-helpfoot {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.exec-ck-live {
+  min-height: 16px;
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+
+.exec-ck-denied {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+  padding: var(--space-5);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-denied p {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+
+/* freshness chip, the key chip on a decision button, "Decided today" (WP-E) */
+.exec-ck-fresh {
+  /* UI review D9: one line ("Queue read 11 Sep 09:00Z"), never five at 390px; the controls row wraps around it instead. */
+  white-space: nowrap;
+  padding: 2px var(--space-3);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-rail .exec-dock-btn[data-key]::after {
+  content: attr(data-key);
+  margin-left: var(--space-2);
+  padding: 0 5px;
+  font: var(--exec-font-label);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-decided {
+  border-top: 1px solid var(--line);
+}
+.exec-ck-decided > summary {
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--accent);
+  cursor: pointer;
+}
+.exec-ck-decided > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* the verdict meter's count ("3/4") sits before its segments (hi-fi .meter) */
+.exec-ck-meterline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-ck-meter-count {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-ck-meterline .exec-ck-meter {
+  margin-top: 0;
+}
+
+/* the waiver runway: one line per waiver on a shared 0 to 45 day axis. The track is drawn with tokens only; a marker is a diamond. */
+.exec-ck-runway {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.exec-ck-runway-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The third column is a fixed width: every row is its own grid, and the axis below must line up with all of their tracks. */
+.exec-ck-runway-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 2fr) minmax(0, 3fr) 176px;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  text-align: left;
+  font: var(--exec-font-data);
+  color: var(--ink);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+}
+.exec-ck-runway-row[aria-current="true"] {
+  background: var(--accent-soft);
+}
+.exec-ck-runway-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-ck-runway-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.exec-ck-runway-track {
+  position: relative;
+  display: block;
+  height: 8px;
+  min-width: 0;
+  background: var(--paper-sunken);
+  border: 1px solid var(--line);
+}
+.exec-ck-runway-track[data-kind="none"] {
+  height: auto;
+  background: none;
+  border-style: dashed;
+}
+.exec-ck-runway-note {
+  display: block;
+  padding: 0 var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.exec-ck-runway-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--accent);
+}
+.exec-ck-runway-mark {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.exec-ck-runway-mark[data-lapsed="true"] {
+  background: var(--bad);
+}
+.exec-ck-runway-when {
+  min-width: 0;
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+/* The axis shares the rows' three columns, so its ticks sit under the tracks. */
+.exec-ck-runway-axisrow {
+  display: grid;
+  grid-template-columns: minmax(120px, 2fr) minmax(0, 3fr) 176px;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+}
+.exec-ck-runway-axis {
+  position: relative;
+  height: 16px;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-ck-runway-axis span {
+  position: absolute;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.exec-ck-runway-axis span:first-child {
+  transform: none;
+}
+.exec-ck-runway-axis span:last-child {
+  transform: translateX(-100%);
+}
+@media (max-width: 660px) {
+  .exec-ck-runway-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .exec-ck-runway-track {
+    grid-column: 1 / -1;
+    order: 3;
+  }
+  .exec-ck-runway-axisrow {
+    display: none;
+  }
+}
+
+/* The primary decision stays blue while it is off (dimmed), as the design draws it; its reason is the line beside the buttons (QA2 R3-12). */
+.exec-ck-rail .exec-dock-btn[data-variant="primary"]:disabled {
+  color: var(--on-accent);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  opacity: 0.55;
+}
+
+/* Verdict badges and their cells keep each word whole (QA1 I-18): the flag is one line, the column is as wide as the flag. */
+.exec-ck-table td .exec-flag,
+.exec-ck-kv td .exec-flag {
+  white-space: nowrap;
+}
+.exec-ck-table th:nth-child(2),
+.exec-ck-table td:nth-child(2) {
+  white-space: nowrap;
+  width: 1%;
+}
+.exec-ck-table td {
+  overflow-wrap: break-word;
+}
+/* Counts and exact figures in a detail table: mono, tabular, right-aligned (QA1 I-21). */
+.exec-ck-num {
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* A panel head whose right-hand words do not fit under the title wraps them whole to the next line (a read time never breaks in two). */
+.exec-ck-ph {
+  flex-wrap: wrap;
+}
+.exec-ck-pr {
+  white-space: nowrap;
+}
+.exec-ck-kv[data-numeric="true"] td {
+  text-align: right;
+}
+.exec-ck-jumps {
+  display: none;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exec-ck-backq {
+  justify-self: start;
+  padding: 2px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--accent);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ck-backq:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1100px) {
+  .exec-ck-q {
+    position: static;
+    max-height: 70vh;
+  }
+  .exec-ck-jumps {
+    display: flex;
+  }
+  .exec-ck {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exec-ck-rail {
+    position: static;
+  }
+}
+
+@media (max-width: 660px) {
+  .exec-ck-mast > .exec-ck-ctrls {
+    flex: 1 1 100%;
+  }
+  .exec-ck-list {
+    display: grid;
+    gap: var(--space-2);
+    padding: var(--space-2);
+  }
+  .exec-ck-qi {
+    border: 1px solid var(--line-strong);
+    border-left-width: 3px;
+  }
+  .exec-ck-qi[aria-current="true"] {
+    border-left-color: var(--accent);
+  }
+  .exec-ck-keys {
+    display: none;
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "schema_version": "research.declaration-estimate.v1",
+  "metadata": {
+    "schema_version": "research.declaration-metadata.v1",
+    "catalog_revision": "f071401914c2734171308903cd6390422ac53a99a38dd3f89a8f52699a9a1374",
+    "as_of_utc_ms": 1790895894892,
+    "requested_spec_digest": "ac60477d0d1fce35823da727aa7d2ba0fa4c68d83bb156d409a70eb298f5cf2a",
+    "scope": "INDEX_ESTIMATE_NOT_PREFLIGHT_OR_RUN_AUTHORIZATION",
+    "windows": [
+      {
+        "window": "SPAN",
+        "start_utc_ms": 1704067200000,
+        "end_exclusive_utc_ms": 1740787200000,
+        "availability": "AVAILABLE",
+        "reason_code": null,
+        "bars": 425,
+        "first_bar_utc_ms": 1704067200000,
+        "last_bar_utc_ms": 1740700800000,
+        "warmup_bars_required": 256,
+        "warmup_bars_available_before_start": 256
+      }
+    ],
+    "planned_folds": {
+      "availability": "AVAILABLE",
+      "reason_code": null,
+      "count": 1,
+      "basis": "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1",
+      "min_train_bars": 425,
+      "min_oos_bars": 425,
+      "evaluation_scope": "FULL_SAMPLE_CALIBRATION",
+      "items": [
+        {
+          "ordinal": 1,
+          "train": {
+            "start_utc_ms": 1704067200000,
+            "end_exclusive_utc_ms": 1740787200000,
+            "bars": 425
+          },
+          "outer_oos": {
+            "start_utc_ms": 1704067200000,
+            "end_exclusive_utc_ms": 1740787200000,
+            "bars": 425
+          }
+        }
+      ]
+    },
+    "earliest_start_utc_ms": 1599955200000,
+    "earliest_start_basis": "CONTIGUOUS_INDEXED_WARMUP_BARS_V1"
+  },
+  "profile_id": "p10.imported-mode5-global-1d.v1",
+  "conditions": [
+    {
+      "key": "profile",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "profile_id"
+      ],
+      "observed": "p10.imported-mode5-global-1d.v1",
+      "required": "Enabled execution profile"
+    },
+    {
+      "key": "declared_timeframe",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "data",
+        "timeframe"
+      ],
+      "observed": "1d",
+      "required": "1h, 4h, 1d"
+    },
+    {
+      "key": "executor_version",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "profile_id"
+      ],
+      "observed": "research.requested-spec.v2",
+      "required": "Installed executor for this setup"
+    },
+    {
+      "key": "engine_release",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "client",
+        "engine_release_id"
+      ],
+      "observed": "er_quantbt_111",
+      "required": "er_quantbt_111"
+    },
+    {
+      "key": "profile_timeframe",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "data",
+        "timeframe"
+      ],
+      "observed": "1d",
+      "required": "1d"
+    },
+    {
+      "key": "trials",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "optuna_trials"
+      ],
+      "observed": "3",
+      "required": "3…3"
+    },
+    {
+      "key": "seed",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "random_seed"
+      ],
+      "observed": "42",
+      "required": "42"
+    },
+    {
+      "key": "optimization_mode",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "optimization_mode"
+      ],
+      "observed": "mode_5_full_robust",
+      "required": "mode_5_full_robust"
+    },
+    {
+      "key": "optimization_schedule",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "optimization_schedule"
+      ],
+      "observed": "global",
+      "required": "global"
+    },
+    {
+      "key": "optimizer",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "optimization_schedule"
+      ],
+      "observed": "mode_5_full_robust/global",
+      "required": "mode_5_full_robust/global"
+    },
+    {
+      "key": "early_stopping",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "early_stopping"
+      ],
+      "observed": null,
+      "required": "null"
+    },
+    {
+      "key": "route_params",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "route_params"
+      ],
+      "observed": "0",
+      "required": "0 overrides"
+    },
+    {
+      "key": "optimizer_overrides",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "optimization_config"
+      ],
+      "observed": "0",
+      "required": "0 overrides"
+    },
+    {
+      "key": "fold_frequency",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "walk_forward",
+        "frequency"
+      ],
+      "observed": "monthly",
+      "required": "weekly, monthly, quarterly"
+    },
+    {
+      "key": "window_mode",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "walk_forward",
+        "window_mode"
+      ],
+      "observed": "expanding",
+      "required": "expanding, rolling"
+    },
+    {
+      "key": "inner_validation",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "walk_forward",
+        "inner"
+      ],
+      "observed": "absent",
+      "required": "No nested inner validation for this recipe"
+    },
+    {
+      "key": "span",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "walk_forward"
+      ],
+      "observed": "425",
+      "required": "≤ 3650 UTC days"
+    },
+    {
+      "key": "profile_folds",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "walk_forward"
+      ],
+      "observed": "1",
+      "required": "1…1"
+    },
+    {
+      "key": "fold_plan",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "walk_forward"
+      ],
+      "observed": "1",
+      "required": "P08-compatible indexed fold plan"
+    },
+    {
+      "key": "bars.span",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "walk_forward"
+      ],
+      "observed": "425",
+      "required": "> 0 closed bars in indexed range"
+    },
+    {
+      "key": "warmup",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "walk_forward",
+        "start"
+      ],
+      "observed": "256",
+      "required": "256"
+    },
+    {
+      "key": "alpha_parameters",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "parameter_space_overrides"
+      ],
+      "observed": null,
+      "required": "Overrides and seed satisfy the bound AlphaVersion declaration"
+    },
+    {
+      "key": "imported_executor",
+      "state": "PASS",
+      "reason_code": null,
+      "field_path": [
+        "alpha_binding"
+      ],
+      "observed": null,
+      "required": "Restricted imported fixed executor: declared pins, one trial, requested-spec v1"
+    }
+  ],
+  "ready_for_preflight": true
+}

@@ -1,0 +1,428 @@
+/* Paper workbench (S3, flag key `workbench`). Layout and type only: colour through
+ * carbon tokens, type through the --exec-font-* roles, every text/background pair
+ * inside one rule so the contrast gate can read it. Names: `.exec-wb-*` only.
+ *
+ * Measured from hi-fi v2 deployment.html + kit.css (not from the screenshot):
+ *   page stack gap 24 (`.stack`), panel head 9px 16px, panel body 16px,
+ *   `.grid2` = minmax(0,1fr) 360px with gap 24, KPI tile 12px 16px with a 1px rule,
+ *   table cell 6px 12px / 32px high / 1px rule, h1 24/32, meta 12/16,
+ *   `.mini` bar 8px 16px, 16px gap. Below 1100px the grids collapse, below 660px
+ *   the tables become cards (cards.css) and the tiles stack.
+ *
+ * Uppercase: none here. The kit's caps voice (tile labels, panel heads, tabs) lives
+ * on the shared selectors; the stage word in the title stays as typed. */
+
+.exec-wb-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+
+/* ---- masthead ----------------------------------------------------------- */
+
+.exec-wb-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-4) var(--space-5);
+  align-items: start;
+  min-width: 0;
+}
+.exec-wb-headmain {
+  min-width: 0;
+}
+.exec-wb-path ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-wb-path li + li::before {
+  content: "/";
+  margin-right: var(--space-2);
+}
+.exec-wb-path li[aria-current="page"] {
+  color: var(--ink-soft);
+}
+.exec-wb-path a:focus-visible,
+.exec-wb-sub a:focus-visible,
+.exec-wb-ctrls a:focus-visible,
+.exec-wb-mini a:focus-visible,
+.exec-wb-link a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-wb-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-wb-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2);
+  font: var(--exec-font-label);
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.exec-wb-stage i {
+  width: 8px;
+  height: 8px;
+  background: var(--stage-paper);
+}
+.exec-wb-stage[data-stage="vnm"] {
+  border: 1px solid var(--line-strong);
+}
+/* On the plain deployment page the VN chip is a link to the VN market variant (FE-070). */
+a.exec-wb-stage {
+  color: inherit;
+  text-decoration: none;
+}
+a.exec-wb-stage:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+/* The design's one-line question under the title: what this page is for. */
+.exec-wb-question {
+  margin: 2px 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-wb-sub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+  margin: 2px 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-wb-ctrls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: flex-end;
+  font: var(--exec-font-data);
+}
+.exec-wb-btn {
+  padding: 6px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-wb-btn:hover {
+  background: var(--surface-2);
+}
+.exec-wb-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-wb-btn[aria-busy="true"] {
+  cursor: progress;
+}
+.exec-wb-readat {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-wb-readfail {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  border-left: 3px solid var(--warn);
+  padding-left: var(--space-2);
+}
+.exec-wb-codes {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-wb-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+/* Three state tiles (hi-fi `.kpis --n:3`), drawn from the shared StageChipRow. */
+.exec-wb-chips {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.exec-wb-chips .exec-stage-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exec-wb-chips .exec-stage-chip {
+  min-width: 0;
+  padding: var(--space-1) var(--space-3);
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+.exec-wb-chips .exec-stage-chip dd {
+  font: var(--exec-font-body);
+}
+
+/* ---- lifecycle ---------------------------------------------------------- */
+
+.exec-wb-life {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+}
+.exec-wb-spine {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+.exec-wb-gate {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.exec-wb-aside {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+/* The reason sits directly under its own button here, so the button's name is not printed a second time before it. */
+.exec-wb-v2 .exec-dock-why[data-l]::before {
+  content: none;
+}
+
+/* ---- overview ----------------------------------------------------------- */
+
+.exec-wb-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.exec-wb-grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+  align-items: start;
+}
+.exec-wb-grid2 > * {
+  min-width: 0;
+}
+
+.exec-wb-kv {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-body);
+}
+.exec-wb-kv th,
+.exec-wb-kv td {
+  height: 32px;
+  padding: 6px var(--space-3);
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.exec-wb-kv th {
+  text-transform: none;
+  letter-spacing: 0;
+  font: var(--exec-font-body);
+  text-align: left;
+  color: var(--ink);
+}
+/* The same one body size per table as `cards.css`: a figure, its "of N" and a "Not available" in one column read as one size (13px). */
+.exec-wb-kv td {
+  --exec-font-data: 400 13px/18px var(--font-body);
+  --exec-font-meta: 400 13px/18px var(--font-body);
+  --exec-font-body: 400 13px/18px var(--font-body);
+  --exec-font-num: 400 13px/18px var(--font-mono);
+  --exec-font-id: 400 13px/18px var(--font-mono);
+  --exec-font-term: 400 13px/18px var(--font-mono);
+}
+.exec-wb-kv td {
+  text-align: right;
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.exec-wb-why {
+  display: block;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+.exec-wb-cap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+  border-top: 1px solid var(--line);
+}
+.exec-wb-link {
+  margin: var(--space-3) 0 0;
+  font: var(--exec-font-data);
+}
+/* VN market calendar windows and the by-side block (FE-070, S3-U4) */
+.exec-wb-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-data);
+}
+.exec-wb-sides {
+  margin-top: var(--space-3);
+}
+.exec-wb-sides > h3 {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-wb-prov {
+  margin-top: var(--space-3);
+}
+.exec-wb-prov summary {
+  font: var(--exec-font-meta);
+  color: var(--accent);
+  cursor: pointer;
+}
+.exec-wb-prov summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-wb-id {
+  margin: var(--space-1) 0 0;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+/* ---- table tabs --------------------------------------------------------- */
+
+.exec-wb-tablewrap {
+  min-width: 0;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-wb-tablewrap .exec-wb-cap {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+}
+.exec-wb-empty {
+  margin: 0;
+  padding: var(--space-3);
+  font: var(--exec-font-data);
+  color: var(--ink-faint);
+}
+
+/* ---- "On scroll" summary bar (hi-fi `.mini`) ---------------------------- */
+
+.exec-wb-mini {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-wb-mini[hidden] {
+  display: none;
+}
+.exec-wb-mini-cap {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-wb-mini-name {
+  font: var(--exec-font-control);
+  overflow-wrap: anywhere;
+}
+.exec-wb-mini-item {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: center;
+}
+
+/*
+ * The pinned bar sits over the bottom of the viewport, so a control focused there (the "Overview" tab at 1024px, UXM-10 F-4) is
+ * covered by it (WCAG 2.4.11). A scroll margin that clears the bar (66px at 1024px, 5rem = 80px) makes the browser scroll a
+ * focused control up into the free part of the screen. Static under 661px, where the bar does not float.
+ */
+@media (min-width: 661px) {
+  .exec-wb-v2 :is(a[href], button, summary, input, select, textarea, [tabindex]) {
+    scroll-margin-bottom: 5rem;
+  }
+}
+
+/* ---- narrow ------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .exec-wb-grid2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 660px) {
+  /* Pinned, the bar covers the cards it repeats; on a phone it is an ordinary block at the end of the page. */
+  .exec-wb-mini {
+    position: static;
+  }
+  .exec-wb-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exec-wb-ctrls {
+    justify-content: flex-start;
+  }
+  .exec-wb-kv th,
+  .exec-wb-kv td {
+    height: auto;
+  }
+}
+
+/* QA1 R5/R4 fixes (WP-F3). The alpha id in the sub-line is the id size, not a larger mono than its neighbours (R5-16). */
+.exec-wb-v2 .exec-stage-sub .exec-blk-num,
+.exec-wb-v2 .exec-wb-sub .exec-blk-num {
+  font: var(--exec-font-id);
+}
+/* Touch targets at phone width (R5-26): a 44px hit area for the small controls without enlarging their drawn size. */
+@media (max-width: 660px) {
+  .exec-wb-v2 :is(.exec-blk-link, .exec-dock-access, .exec-blk-btn, .exec-wb-btn, .exec-dock-btn, .exec-cny-refresh) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .exec-wb-v2 .exec-blk-why-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-block: -13px;
+  }
+}
+
+.exec-wb-exitask {
+  margin-top: var(--space-3);
+}

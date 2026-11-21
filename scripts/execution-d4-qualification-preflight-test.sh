@@ -41,6 +41,7 @@ if [[ "${require_root}" == true && "${root_readiness}" != true ]]; then
   exit 1
 fi
 
+
 runtime_gid="$(id -g)"
 if [[ "${runtime_gid}" == 0 ]]; then
   runtime_gid=987

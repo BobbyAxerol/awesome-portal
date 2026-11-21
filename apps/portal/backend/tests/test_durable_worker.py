@@ -40,6 +40,38 @@ def _intent(run_id: str) -> RunIntent:
 # -------------------------------------------------------- attempt lifecycle
 
 
+def test_rf03_cpu_float_and_typed_resource_failure_remain_visible() -> None:
+    from portal_api.services.research_run_producer import ResearchRunProducerError
+
+    usage = DurableQuantWorker._p11_usage({
+        "research_receipt": {"resource": {"peak_rss_bytes": 1000, "cpu_seconds": 1.25}},
+    })
+    # CG-P11-09: the child has no scratch or descriptor probe, so those are
+    # unmeasured (None) rather than a zero that reads as a measurement.
+    assert usage == {"peak_rss_bytes": 1000, "cpu_seconds": 2, "scratch_bytes": None, "fd_peak": None}
+    assert DurableQuantWorker._p11_usage({
+        "research_receipt": {"resource": {"cpu_seconds": float("nan")}},
+    })["cpu_seconds"] is None
+    # A zero RSS delta means the parent could not see the child, not 0 bytes.
+    assert DurableQuantWorker._p11_usage({
+        "research_receipt": {"resource": {"cpu_seconds": 3.0, "peak_rss_bytes": 0}},
+    }) == {"peak_rss_bytes": None, "cpu_seconds": 3, "scratch_bytes": None, "fd_peak": None}
+    # No child ran (cancelled before start, worker shutdown): nothing measured.
+    assert DurableQuantWorker._p11_usage({}) == {
+        "peak_rss_bytes": None, "cpu_seconds": None, "scratch_bytes": None, "fd_peak": None,
+    }
+    assert DurableQuantWorker._classify(
+        ResearchRunProducerError("bounded child exceeded its budget", code="RESOURCE_EXCEEDED")
+    ) == "RESOURCE_EXCEEDED"
+    assert DurableQuantWorker._classify(
+        ResearchRunProducerError("P10 isolated Delta qualification failed")
+    ) == "ENGINE_ERROR"
+    from portal_api.services.current_source_artifacts import CurrentSourceArtifactError
+    assert DurableQuantWorker._classify(CurrentSourceArtifactError(
+        "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE", "The sealed summary is outside its bound."
+    )) == "RESEARCH_CURRENT_SOURCE_METADATA_TOO_LARGE"
+
+
 def test_attempt_claim_heartbeat_and_terminal_transitions(tmp_path: Path) -> None:
     registry = AttemptRegistry(tmp_path / "runs")
     registry.create_run_intent(_intent("run_1"))
@@ -301,4 +333,52 @@ async def test_worker_cancel_is_cooperative_and_terminal(tmp_path: Path) -> None
     assert stored is not None
     assert stored.status in {"CANCELLED", "FAILED"}
 
+    await worker.stop()
+
+
+def test_p23_t03_storage_full_uses_existing_safe_terminal_code() -> None:
+    import errno
+    from portal_api.services.research_artifacts import ResearchArtifactError
+
+    typed = ResearchArtifactError("RESEARCH_ARTIFACT_DISK_FULL", "artifact staging disk is full")
+    raw = OSError(errno.ENOSPC, "private /mnt/path must not enter the receipt")
+    assert DurableQuantWorker._storage_full(typed)
+    assert DurableQuantWorker._storage_full(raw)
+    assert DurableQuantWorker._classify(typed) == "RESOURCE_EXCEEDED"
+    assert DurableQuantWorker._classify(raw) == "RESOURCE_EXCEEDED"
+    assert not DurableQuantWorker._storage_full(OSError(errno.EIO, "other I/O"))
+    assert DurableQuantWorker._classify(OSError(errno.EIO, "other I/O")) == "ENGINE_ERROR"
+
+
+@pytest.mark.anyio
+async def test_p23_t03_worker_disk_full_is_failed_without_private_path(tmp_path: Path) -> None:
+    from portal_api.services.research_artifacts import ResearchArtifactError
+
+    broker = InMemoryJobBroker()
+    registry = AttemptRegistry(tmp_path / "runs")
+    registry.create_run_intent(_intent("run_t03_full"))
+    attempt = registry.create_attempt("run_t03_full")
+
+    async def full_executor(request_json, run_id, artifact_root):
+        raise ResearchArtifactError("RESEARCH_ARTIFACT_DISK_FULL", "private /mnt/t03 path")
+
+    worker = DurableQuantWorker(
+        broker=broker,
+        registry=registry,
+        artifact_store=ContentAddressedArtifactStore(tmp_path / "artifacts"),
+        executor=full_executor,
+    )
+    await worker.start()
+    await broker.publish("quant.run.requested", {
+        "run_id": "run_t03_full", "run_attempt_id": attempt.run_attempt_id, "request_json": {},
+    })
+    stored = registry.attempt("run_t03_full", attempt.run_attempt_id)
+    assert stored is not None
+    assert stored.status == "FAILED"
+    assert stored.failure_code == "RESOURCE_EXCEEDED"
+    assert stored.failure_message == "artifact storage capacity exhausted"
+    failed = [payload for subject, payload in broker.published if subject == "quant.run.failed"]
+    succeeded = [payload for subject, payload in broker.published if subject == "quant.run.succeeded"]
+    assert len(failed) == 1 and failed[0]["failure_code"] == "RESOURCE_EXCEEDED"
+    assert succeeded == []
     await worker.stop()

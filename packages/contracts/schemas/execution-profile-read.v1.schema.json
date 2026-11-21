@@ -37,10 +37,30 @@
       "properties": {
         "capability_id": { "type": "string", "minLength": 1, "maxLength": 128 },
         "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
-        "relations": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
+        "relations": { "type": "array", "minItems": 0, "maxItems": 1, "items": { "type": "string", "minLength": 1, "maxLength": 128 } },
         "reason_code": { "type": ["string", "null"], "maxLength": 128 },
-        "retryable": { "const": false }
+        "retryable": { "const": false },
+        "lineage_rejects": { "type": "object", "maxProperties": 16, "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "lineage_scoped_out": { "type": "object", "maxProperties": 16, "additionalProperties": { "type": "integer", "minimum": 0 } }
       }
+    },
+    "ComparisonCapability": {
+      "type": "object",
+      "description": "Availability of comparisons over the authorized balance set in one complete snapshot; AVAILABLE does not mean in sync.",
+      "additionalProperties": false,
+      "required": ["capability_id", "state", "relations", "reason_code", "retryable"],
+      "properties": {
+        "capability_id": { "const": "derived.differences" },
+        "state": { "enum": ["AVAILABLE", "PARTIAL", "UNAVAILABLE"] },
+        "relations": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "const": "derived.differences" } },
+        "reason_code": { "enum": [null, "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED", "ACCOUNT_COMPARISON_INCOMPLETE"] },
+        "retryable": { "const": false }
+      },
+      "oneOf": [
+        { "type": "object", "properties": { "state": { "const": "AVAILABLE" }, "reason_code": { "type": "null" } } },
+        { "type": "object", "properties": { "state": { "const": "PARTIAL" }, "reason_code": { "const": "ACCOUNT_COMPARISON_INCOMPLETE" } } },
+        { "type": "object", "properties": { "state": { "const": "UNAVAILABLE" }, "reason_code": { "enum": ["ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED", "ACCOUNT_COMPARISON_INCOMPLETE"] } } }
+      ]
     },
     "UnavailableBranch": {
       "type": "object",
@@ -87,7 +107,10 @@
             "roles": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "enum": ["ADMIN", "USER"] } }
           }
         },
-        "capabilities": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/Capability" } },
+        "capabilities": { "type": "array", "maxItems": 20, "items": { "oneOf": [
+          { "allOf": [{ "$ref": "#/$defs/Capability" }, { "not": { "type": "object", "properties": { "capability_id": { "const": "derived.differences" } }, "required": ["capability_id"] } }] },
+          { "$ref": "#/$defs/ComparisonCapability" }
+        ] } },
         "data": {
           "type": "object", "minProperties": 1, "maxProperties": 20,
           "additionalProperties": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/ManagerRecord" } }

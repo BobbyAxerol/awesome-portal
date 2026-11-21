@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<title>QuantBT Stage 3 — Freeze</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<style>
+  html, body { margin:0; padding:0; background:#faf9f5; }
+  * { box-sizing: border-box; }
+  a { color:#0f4c5c; text-decoration:none; }
+  a:hover { color:#226173; text-decoration:underline; }
+  button { font:inherit; cursor:pointer; }
+  ::selection { background:#9a6a1f; color:#ffffff; }
+  button { transition: border-color 120ms cubic-bezier(.2,0,.2,1), color 120ms cubic-bezier(.2,0,.2,1), background 120ms cubic-bezier(.2,0,.2,1); }
+  button:focus-visible, select:focus-visible, a:focus-visible { outline: none; box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f4c5c; }
+  @keyframes fz-pulse { 0%,100% { opacity:1 } 50% { opacity:.4 } }
+</style>
+</helmet>
+
+<div data-screen-label="S3 Freeze" style="min-height:100vh; display:flex; flex-direction:column; background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px"><div style="position:sticky; top:0; z-index:30; display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; min-height:56px; padding:6px 16px; border-bottom:1px solid #e3e0d7; background:#faf9f5"><span style="font-family:Newsreader,Georgia,serif; font-size:16px; white-space:nowrap">Quant Ecosystem Portal</span><span style="font-size:11px; color:#939db0; padding:2px 8px; border:1px solid #e3e0d7; border-radius:3px; white-space:nowrap">Default Workspace</span><span style="display:flex; align-items:center; gap:4px; font-size:12px; color:#4e5a6e; flex:1; min-width:330px; overflow:hidden; white-space:nowrap"><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">Research</span><span style="color:#939db0">/</span><span style="flex:0 1 auto; min-width:48px; overflow:hidden; text-overflow:ellipsis">QuantBT Backtest</span><span style="color:#939db0">/</span><span style="font-family:'JetBrains Mono',monospace; flex:none">R-WFO-118</span><span style="color:#939db0">/</span><span style="color:#1c2532; flex:none">Stage 3 · Freeze</span></span><span style="flex:none; white-space:nowrap; display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#4e5a6e; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; padding:4px 12px">Search <span style="font-size:10px; color:#939db0; border:1px solid #e3e0d7; border-radius:3px; padding:0 4px; font-family:'JetBrains Mono',monospace;">⌘K</span></span><span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:600; letter-spacing:.04em; color:#0f4c5c; border:1px solid #0f4c5c; border-radius:3px; padding:1px 6px">RESEARCH</span><span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Research Light ▾</span><span style="font-size:11px; color:#4e5a6e; padding:3px 10px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; white-space:nowrap">Comfortable ▾</span></div><div style="display:flex; flex:1; min-height:0"><div style="flex-shrink:0; width:248px; border-right:1px solid #e3e0d7; background:#f4f2ec; padding:12px 8px"><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">command</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Command Center</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Portal Map</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#9a6a1f; border:1px solid #9a6a1f; border-radius:3px; padding:0 3px">PROTOTYPE</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">research</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><a href="QuantBT 01 Run Library.dc.html" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; background:#e2edf0; color:#1c2532; font-weight:500; text-decoration:none"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">QuantBT Backtest</span></a><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Pool</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Alpha Mining</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Strategy Composer</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">backtests</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Approvals</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">deployments</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Paper Trading</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Sandbox</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Live Operations</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">data & operations</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Data Catalog</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">planning</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#4e5a6e;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Roadmap & Task Board</span></div></div><div style="margin-bottom:16px"><div style="font-family:'JetBrains Mono',monospace; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#939db0; padding:0 8px 4px">administration</div><div style="height:1px; background:#e3e0d7; margin:0 8px 8px"></div><div style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:3px; font-size:13px; min-height:30px; color:#939db0; opacity:.62;"><span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap">Profile & Access</span><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:600; color:#939db0; border:1px dashed #c9c5ba; border-radius:3px; padding:0 3px">SOON</span></div></div></div><div style="flex:1; min-width:0"><div style="background:#faf9f5; color:#1c2532; font-family:Inter,system-ui,sans-serif; font-size:13px; display:flex; flex-direction:column; gap:14px; padding:16px 24px 56px; max-width:1440px; margin:0 auto; min-width:0; ">
+
+  <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-end; gap:10px 16px; border-bottom:1px solid #e3e0d7; padding-bottom:10px">
+    <div style="display:flex; flex-direction:column; gap:3px">
+      <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#4e5a6e">
+        <a href="{{ backHref }}">Evidence Flow</a><span style="color:#939db0">/</span>
+        <span style="font-family:'JetBrains Mono',monospace">R-WFO-118</span><span style="color:#939db0">/</span>
+        <span style="color:#1c2532">Stage 3 · Freeze</span><span style="color:#939db0">·</span><a href="QuantBT 08 S4 Execute Replay.dc.html" style="font-family:'JetBrains Mono',monospace; font-size:10px">next: S4 Execute →</a>
+      </div>
+      <div style="font-family:Newsreader,Georgia,serif; font-size:22px; font-weight:300; letter-spacing:-.01em">Freeze — what was sealed, and when</div>
+      <div style="font-family:Newsreader,Georgia,serif; font-style:italic; font-size:13.5px; color:#939db0">Three questions, not one table: which params were sealed, sealed when relative to the first OOS read, and is Execute really running them. This screen is read-only — nothing here can write onto a frozen set.</div>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex:none">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">parameter_set.json · bundle manifest · as-of 2026-08-12 04:18Z</span>
+      <button onClick="{{ onCopy }}" style="border:1px solid #0f4c5c; border-radius:6px; background:transparent; color:#0f4c5c; padding:3px 12px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase">{{ copyLabel }}</button>
+    </div>
+  </div>
+
+  <div style="border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05)">
+    <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:9px 14px; border-bottom:1px solid #efede4">
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">ordering scenario · mode × schedule</span>
+      <sc-for list="{{ scenOpts }}" as="sc" hint-placeholder-count="4">
+        <button onClick="{{ sc.onPick }}" title="{{ sc.title }}" style="{{ sc.style }}">{{ sc.label }}</button>
+      </sc-for>
+      <span style="width:1px; height:18px; background:#e3e0d7; margin:0 4px"></span>
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">binding to Stage 4</span>
+      <sc-for list="{{ driftOpts }}" as="dr" hint-placeholder-count="2">
+        <button onClick="{{ dr.onPick }}" style="{{ dr.style }}">{{ dr.label }}</button>
+      </sc-for>
+      <span style="margin-left:auto; font-size:10px; color:#939db0">scenarios are demo runs — the ordering verdict is derived by the engine, never entered</span>
+    </div>
+    <div style="display:flex; flex-wrap:wrap; gap:8px 26px; padding:9px 14px; align-items:center">
+      <span style="{{ verdict.badgeStyle }}">{{ verdict.badge }}</span>
+      <span style="display:flex; flex-direction:column; gap:1px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">ordering</span><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px">{{ verdict.order }}</span></span>
+      <span style="display:flex; flex-direction:column; gap:1px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">claim</span><span style="font-family:'JetBrains Mono',monospace; font-size:11.5px; border-left:2px solid #9a6a1f; padding-left:6px">{{ verdict.claim }}</span></span>
+      <span style="display:flex; flex-direction:column; gap:1px"><span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">cert from this stage</span><span style="{{ verdict.certStyle }}">{{ verdict.cert }}</span></span>
+      <span style="flex:1; min-width:240px; font-size:10.5px; color:#4e5a6e; line-height:1.5">{{ verdict.note }}</span>
+    </div>
+  </div>
+
+  <sc-if value="{{ driftOn }}" hint-placeholder-val="{{ false }}">
+    <div style="border:1px solid #b43a3a; border-radius:6px; background:#f7e8e8; padding:10px 14px; display:flex; gap:12px; align-items:flex-start">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; font-weight:700; color:#b43a3a; flex:none">digest drift</span>
+      <span style="font-size:11.5px; color:#b43a3a; line-height:1.55">The runtime bundle does not match the sealed bundle. Certification → <span style="font-family:'JetBrains Mono',monospace; font-weight:700">BLOCKED</span>; Stage 5 must refuse, and no metric of this run may be presented as validated. Not fixable here: either re-seal the bundle as a <em>new attempt</em>, or re-run Execute on the original sealed digest. Common causes: bundle rebuilt after freeze, or params patched in runtime config.</span>
+    </div>
+  </sc-if>
+
+  <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; box-shadow:0 1px 2px rgba(28,37,50,.05); padding:16px; display:flex; flex-direction:column; gap:10px">
+    <div style="display:flex; justify-content:space-between; align-items:baseline">
+      <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">F1 · two axes — deliberately separate, not the same units</span>
+      <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#939db0">plotting a wall-clock timestamp on the data-time axis would be a lie</span>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:4px">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; letter-spacing:.1em; color:#7a8699">DATA TIME — which bars each frozen set governs</span>
+      <sc-for list="{{ dataRows }}" as="d" hint-placeholder-count="5">
+        <button onClick="{{ d.onPick }}" style="{{ d.rowStyle }}">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10.5px; width:64px; flex:none; text-align:left; color:#4e5a6e">{{ d.id }}</span>
+          <span style="position:relative; flex:1; height:15px; border-radius:3px; background:#f4f2ec">
+            <span style="{{ d.isStyle }}"></span>
+            <span title="{{ d.freezeTitle }}" style="{{ d.freezeStyle }}">❖</span>
+            <span style="{{ d.oosStyle }}"></span>
+          </span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; width:170px; flex:none; text-align:right; color:#9a6a1f">{{ d.digest }}</span>
+        </button>
+      </sc-for>
+      <span style="font-size:10.5px; color:#4e5a6e; line-height:1.5">{{ dataNote }}</span>
+    </div>
+    <div style="border-top:1px dashed #c9c5ba; padding-top:10px; display:flex; flex-direction:column; gap:4px">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; letter-spacing:.1em; color:#9a6a1f">WALL CLOCK — when the three events actually happened (fold {{ curFold }})</span>
+      <div style="position:relative; height:66px; margin:4px 8px 0">
+        <div style="position:absolute; left:0; right:0; top:32px; height:1px; background:#e3e0d7"></div>
+        <sc-for list="{{ clockTicks }}" as="t" hint-placeholder-count="3">
+          <span title="{{ t.title }}" style="{{ t.dotStyle }}"></span>
+          <span style="{{ t.labelStyle }}">{{ t.name }}<br>{{ t.ts }}</span>
+        </sc-for>
+        <sc-for list="{{ clockArrows }}" as="a" hint-placeholder-count="2">
+          <span style="{{ a.style }}">{{ a.label }}</span>
+        </sc-for>
+      </div>
+      <span style="font-size:10.5px; color:#4e5a6e; line-height:1.5; border-left:2px solid {{ verdict.color }}; padding-left:8px">{{ clockNote }}</span>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:stretch">
+    <div style="flex:1.5; min-width:520px; border:1px solid #e3e0d7; border-radius:6px; background:#ffffff; overflow-x:auto; display:flex; flex-direction:column">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:1px solid #e3e0d7; gap:8px; flex-wrap:wrap">
+        <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">F2 · frozen θ* — {{ railTitle }}</span>
+        <span style="display:flex; gap:4px; flex-wrap:wrap; align-items:center">
+          <sc-if value="{{ hasFoldNav }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ onPrevFold }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; color:#4e5a6e; padding:1px 7px; font-family:'JetBrains Mono',monospace; font-size:10.5px">‹</button>
+            <select value="{{ foldSel }}" onChange="{{ onFoldSel }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; padding:1px 6px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#1c2532; max-width:200px">
+              <sc-for list="{{ foldSelOpts }}" as="fo" hint-placeholder-count="5"><option value="{{ fo.v }}">{{ fo.label }}</option></sc-for>
+            </select>
+            <button onClick="{{ onNextFold }}" style="border:1px solid #e3e0d7; border-radius:3px; background:#ffffff; color:#4e5a6e; padding:1px 7px; font-family:'JetBrains Mono',monospace; font-size:10.5px">›</button>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#939db0">{{ foldPosNote }}</span>
+          </sc-if>
+          <sc-for list="{{ setRail }}" as="sr" hint-placeholder-count="1">
+            <button onClick="{{ sr.onPick }}" style="{{ sr.style }}">{{ sr.label }}</button>
+          </sc-for>
+        </span>
+      </div>
+      <table style="width:100%; border-collapse:collapse; font-size:12px">
+        <thead><tr>
+          <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">parameter</th>
+          <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">declared range</th>
+          <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px; min-width:200px">range position</th>
+          <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:right; border-bottom:1px solid #e3e0d7; padding:8px 12px">frozen θ*</th>
+          <th style="font-size:10px; font-weight:500; text-transform:uppercase; letter-spacing:.07em; color:#939db0; text-align:left; border-bottom:1px solid #e3e0d7; padding:8px 12px">reading</th>
+        </tr></thead>
+        <tbody>
+          <sc-for list="{{ paramRows }}" as="p" hint-placeholder-count="7">
+            <tr style="border-top:1px solid #efede4">
+              <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace">{{ p.name }}</td>
+              <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; color:#939db0">{{ p.range }}</td>
+              <td style="padding:7px 12px">
+                <span style="{{ p.trackStyle }}"><span style="{{ p.markStyle }}"></span></span>
+              </td>
+              <td style="padding:7px 12px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600">{{ p.frozen }}</td>
+              <td style="{{ p.noteStyle }}">{{ p.note }}</td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 12px; border-top:1px solid #e3e0d7; background:#f4f2ec; margin-top:auto">
+        <span style="font-size:11px; color:#4e5a6e; flex:1; min-width:260px">Read-only by decision: writing onto a frozen set breaks the invariant the claim rests on. Manually entered params have no lineage — no path for them exists.</span>
+        <sc-for list="{{ attempts }}" as="a" hint-placeholder-count="1">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:10px; border:1px dashed #9a6a1f; border-radius:999px; padding:1px 8px; color:#9a6a1f">{{ a.label }}</span>
+        </sc-for>
+        <button onClick="{{ onPropose }}" style="border:1px solid #0f4c5c; border-radius:6px; background:#0f4c5c; color:#ffffff; padding:4px 14px; font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.05em; text-transform:uppercase">propose new attempt →</button>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:360px; display:flex; flex-direction:column; gap:14px">
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:6px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">F3 · digest chain</span>
+          <button onClick="{{ onVerify }}" style="{{ verifyBtnStyle }}">{{ verifyLabel }}</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px; font-family:'JetBrains Mono',monospace; font-size:10.5px">
+          <span style="color:#4e5a6e">ParameterSetV1 canonical form <span style="color:#939db0">— sorted keys · no whitespace · fixed float repr</span></span>
+          <span style="padding-left:10px; color:#939db0">└▸ params digest <span style="color:#9a6a1f">prm_7c1a9e</span> · sha256:7c1a9e4f21…</span>
+          <span style="padding-left:10px; color:#939db0">+ strategy source <span style="color:#1c2532">delta_rsi.py · PROTECTED_SHA256</span></span>
+          <span style="padding-left:10px; color:#939db0">+ engine pin <span style="color:#1c2532">quantbt-engine 1.1.1[optimization]</span></span>
+          <span style="padding-left:10px; color:#939db0">+ dataset hash <span style="color:#1c2532">ds_btcusdt_4h@sha256:9f2c18d4aa</span></span>
+          <span style="padding-left:10px; color:#939db0">+ config hash <span style="color:#1c2532">sha256:88ae02 — mode · schedule · selector · split · constraints</span></span>
+          <span style="color:#4e5a6e">⇒ bundle digest <span style="color:#0f4c5c; font-weight:700">bdl_e41d7b</span></span>
+        </div>
+        <span style="font-size:10px; color:#939db0; line-height:1.5">Verify recomputes from the downloaded canonical form and compares with the engine's recorded value. <span style="color:#4e5a6e">The UI never issues a digest.</span> This checks artifact integrity — not selection correctness. Note: <span style="font-family:'JetBrains Mono',monospace">fixed_params (issl = True)</span> stays out of the params digest but IS in the bundle digest.</span>
+      </div>
+
+      <div style="border:1px solid #e3e0d7; border-radius:8px; background:#ffffff; padding:14px; display:flex; flex-direction:column; gap:6px">
+        <div style="display:flex; justify-content:space-between; align-items:baseline">
+          <span style="font-size:10px; text-transform:uppercase; letter-spacing:.07em; font-weight:500; color:#939db0">F4 · binding down to Stage 4</span>
+          <span style="{{ bindBadgeStyle }}">{{ bindBadge }}</span>
+        </div>
+        <sc-for list="{{ bindRows }}" as="b" hint-placeholder-count="4">
+          <span style="display:flex; justify-content:space-between; gap:10px; font-family:'JetBrains Mono',monospace; font-size:10.5px; border-bottom:1px solid #efede4; padding:3px 0">
+            <span style="color:#939db0">{{ b.k }}</span>
+            <span style="color:{{ b.color }}; text-align:right">{{ b.v }}</span>
+          </span>
+        </sc-for>
+        <span style="font-size:10px; color:#939db0; line-height:1.5">{{ bindNote }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:3px; border-top:1px solid #e3e0d7; padding-top:8px">
+    <span style="font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#939db0">rules of this screen</span>
+    <span style="font-size:11px; color:#4e5a6e; line-height:1.6">Read-only, always. A what-if is a <a href="QuantBT 10 Attempt Lineage.dc.html">sibling attempt</a> with a new config_hash that must re-run Stage 2 for its own selection_trace — it never supersedes this run. The ordering verdict is derived from three engine timestamps, never entered by hand. Holdout unlock lives in Stage 1, not here. Fields the engine still owes: bundle_frozen_at, outer_oos_first_read_at, runtime_bundle_digest — without them, the panels above render degraded rather than guessing.</span>
+  </div>
+</div></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;scenario&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;causal&quot;, &quot;decay&quot;, &quot;global&quot;, &quot;mode5&quot;], &quot;default&quot;: &quot;causal&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Demo run&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.FOLDS = [
+      { id: "fold_01", t0: 0, t1: 36, s0: 36.6, s1: 45.4, digest: "prm_9d44f2", cutoff: "2024-06-30 23:59Z" },
+      { id: "fold_02", t0: 8, t1: 45, s0: 45.6, s1: 54.4, digest: "prm_3b81c7", cutoff: "2024-08-15 23:59Z" },
+      { id: "fold_03", t0: 17, t1: 54, s0: 54.6, s1: 63.4, digest: "prm_7c1a9e", cutoff: "2024-09-30 23:59Z" },
+      { id: "fold_04", t0: 25, t1: 63, s0: 63.6, s1: 72.4, digest: "prm_c25a1d", cutoff: "2024-11-15 23:59Z" },
+      { id: "fold_05", t0: 33, t1: 72, s0: 72.6, s1: 81.4, digest: "prm_66e09b", cutoff: "2024-12-31 23:59Z" }
+    ];
+    this.SCEN = {
+      causal: { label: "mode_1 + per_fold_causal", order: "params < bundle < oos_read", claim: "strict_outer_oos_after_frozen_selection", cert: "B", color: "#1e7b4f", badge: "✓ ORDER VERIFIED",
+        ticks: [{ n: "params_frozen_at", ts: "2024-09-30 23:59Z", x: 10 }, { n: "bundle_frozen_at", ts: "2024-10-01 00:02Z", x: 42 }, { n: "outer_oos_first_read_at", ts: "2024-10-01 00:05Z", x: 78 }],
+        note: "Both freezes happened before the outer OOS was first read — the ordering that makes the claim strict rather than a guess.",
+        clockNote: "params → bundle → first OOS read, left to right. This geometry IS the claim: nothing about OOS existed when selection closed." },
+      decay: { label: "mode_1 + per_fold_decay", order: "oos_read < params < bundle", claim: "selection_adjusted_oos", cert: "C", color: "#9a6a1f", badge: "⚠ OOS BEFORE FREEZE",
+        ticks: [{ n: "outer_oos_first_read_at", ts: "2024-09-30 22:10Z", x: 10 }, { n: "params_frozen_at", ts: "2024-09-30 23:59Z", x: 46 }, { n: "bundle_frozen_at", ts: "2024-10-01 00:02Z", x: 80 }],
+        note: "The OOS was read before params froze — by design of this schedule. Same mode, weaker claim, cert capped ≤ C.",
+        clockNote: "The first dot is the OOS read, and it sits LEFT of both freezes. Selection saw OOS; the claim says selection-adjusted, and no strict-OOS sentence may be uttered about this run." },
+      global: { label: "any + global", order: "oos_read < params (retrospective)", claim: "retrospective_multi_fold_calibration", cert: "C", color: "#9a6a1f", badge: "⚠ RETROSPECTIVE",
+        ticks: [{ n: "outer_oos_first_read_at", ts: "2025-02-15 23:59Z", x: 10 }, { n: "params_frozen_at", ts: "2025-02-16 09:14Z", x: 50 }, { n: "bundle_frozen_at", ts: "2025-02-16 09:20Z", x: 82 }],
+        note: "Params were refit after the full span was read. Report evidence only — never a deployment claim.",
+        clockNote: "Everything froze after the whole span was read. The freeze marks still prove artifact integrity — they prove nothing about data cleanliness." },
+      mode5: { label: "mode_5 full_robust", order: "no oos_read exists", claim: "none_full_sample_calibration", cert: "D", color: "#b43a3a", badge: "✕ NOTHING WITHHELD",
+        ticks: [{ n: "params_frozen_at", ts: "2025-03-02 11:40Z", x: 30 }, { n: "bundle_frozen_at", ts: "2025-03-02 11:44Z", x: 66 }],
+        note: "Two freeze marks exist, but with train = test they prove nothing about cleanliness — there was never a held-out read to order against.",
+        clockNote: "Only two dots: there is no OOS-read event to place. The UI says so instead of drawing the same green band as a strict route." }
+    };
+    this.PARAMS = [
+      { name: "window", range: "12 – 72 · step 2", lo: 12, hi: 72, step: 2, v: 46 },
+      { name: "entry_z", range: "0.6 – 2.6 · step 0.1", lo: 0.6, hi: 2.6, step: 0.1, v: 2.5 },
+      { name: "atr_mult", range: "1.0 – 6.0 · dynamic", lo: 1, hi: 6, step: 0.05, v: 2.8 },
+      { name: "risk_pct", range: "0.25 – 2.0 · step 0.25", lo: 0.25, hi: 2, step: 0.25, v: 0.75 },
+      { name: "cooldown", range: "0 – 24 · step 4", lo: 0, hi: 24, step: 4, v: 24 },
+      { name: "signal_mode", cat: ["ema", "[sma]", "kama"] },
+      { name: "issl", fixed: true }
+    ];
+    this.state = { scen: props.scenario || "causal", drift: false, fold: 3, attempts: [], verify: "idle", copied: false };
+    const h = this.readHash(); if (h.fold) this.state.fold = Math.max(1, Math.min(5, parseInt(h.fold, 10) || 3)); if (h.scen) this.state.scen = h.scen;
+  }
+  copy() {
+    const s = this.state;
+    const link = "portal://runs/R-WFO-118/stage/freeze?scenario=" + s.scen + "&fold=fold_0" + s.fold + "&params=prm_7c1a9e&bundle=bdl_e41d7b";
+    try { navigator.clipboard.writeText(link); } catch (e) {}
+    this.setState({ copied: true }); setTimeout(() => this.setState({ copied: false }), 1600);
+  }
+  pill(active, warn) {
+    return "border:1px solid " + (active ? (warn ? "#b43a3a" : "#0f4c5c") : "#e3e0d7") + "; background:" + (active ? (warn ? "#f7e8e8" : "#e2edf0") : "#ffffff") + "; color:" + (active ? (warn ? "#b43a3a" : "#0f4c5c") : "#4e5a6e") + "; padding:3px 10px; font-family:'JetBrains Mono',monospace; font-size:10.5px;";
+  }
+  readHash() { const h = {}; (location.hash || "").replace(/^#/, "").split("&").forEach((p) => { const kv = p.split("="); if (kv[0] && kv[1] != null) h[kv[0]] = decodeURIComponent(kv[1]); }); return h; }
+  writeHash(obj) { const cur = this.readHash(); Object.assign(cur, obj); const str = Object.keys(cur).filter((k) => cur[k] != null && cur[k] !== "").map((k) => k + "=" + encodeURIComponent(cur[k])).join("&"); try { history.replaceState(null, "", "#" + str); } catch (e) {} }
+  componentDidUpdate() { this.writeHash({ fold: this.state.fold, stage: "freeze" }); }
+  renderVals() {
+    const s = this.state; const SC = this.SCEN[s.scen];
+    const isM5 = s.scen === "mode5"; const isGlobal = s.scen === "global";
+    const scenOpts = Object.keys(this.SCEN).map(k => ({
+      label: this.SCEN[k].label, title: this.SCEN[k].order,
+      onPick: () => this.setState({ scen: k, fold: 3 }),
+      style: this.pill(s.scen === k, k === "mode5")
+    }));
+    const driftOpts = [{ k: false, label: "binding ok" }, { k: true, label: "digest drift" }].map(d => ({
+      label: d.label, onPick: () => this.setState({ drift: d.k }), style: this.pill(s.drift === d.k, d.k)
+    }));
+    const cert = s.drift ? "BLOCKED" : SC.cert;
+    const certColor = s.drift ? "#b43a3a" : SC.cert === "B" ? "#9a6a1f" : "#b43a3a";
+    const dataRows = (isM5 ? [{ id: "full", full: true, digest: "prm_calib_a91f" }]
+      : isGlobal ? [{ id: "all folds", g: true, digest: "prm_7c1a9e · shared" }]
+      : this.FOLDS).map((f, idx) => {
+      const active = isM5 || isGlobal ? true : idx + 1 === s.fold;
+      return {
+        id: f.id, digest: f.digest,
+        onPick: () => { if (!isM5 && !isGlobal) this.setState({ fold: idx + 1 }); },
+        rowStyle: "display:flex; align-items:center; gap:8px; width:100%; border:0; padding:2px 6px; background:" + (active && !isM5 && !isGlobal ? "#e2edf0" : "transparent") + "; border-left:2px solid " + (active && !isM5 && !isGlobal ? "#0f4c5c" : "transparent") + "; border-radius:3px; cursor:" + (isM5 || isGlobal ? "default" : "pointer") + ";",
+        isStyle: f.full ? "position:absolute; left:0; width:100%; top:0; bottom:0; border-radius:3px; background:repeating-linear-gradient(135deg,#f7e8e8 0 5px,#fdfdfa 5px 10px); border:1px dashed #b43a3a;"
+          : f.g ? "position:absolute; left:0; width:81%; top:0; bottom:0; border-radius:3px; background:#a8c6ce; opacity:.8;"
+          : "position:absolute; left:" + f.t0 + "%; width:" + (f.t1 - f.t0) + "%; top:0; bottom:0; border-radius:3px; background:#a8c6ce; opacity:" + (active ? "1" : ".5") + ";",
+        freezeTitle: f.full ? "freeze exists but proves nothing here — nothing was withheld" : "freeze — " + f.digest + " sealed at " + (f.cutoff || "refit time"),
+        freezeStyle: f.full ? "display:none;" : "position:absolute; left:" + (f.g ? 81.4 : f.t1 + 0.2) + "%; top:-2px; color:#9a6a1f; font-size:12px; z-index:2;" + (active ? " animation:fz-pulse 2.4s infinite;" : ""),
+        oosStyle: f.full ? "display:none;" : f.g ? "position:absolute; left:83%; width:14%; top:0; bottom:0; border-radius:3px; background:#d4b36a;"
+          : "position:absolute; left:" + f.s0 + "%; width:" + (f.s1 - f.s0) + "%; top:0; bottom:0; border-radius:3px; background:" + (s.scen === "decay" ? "#d4b36a" : "#0f4c5c") + "; opacity:" + (active ? "1" : ".55") + ";"
+      };
+    });
+    const dataNote = isM5 ? "One hatched band: the frozen set governs the same bars it was fit on. params_by_fold does not exist for this protocol — different from being empty."
+      : isGlobal ? "One shared set governs every fold. params_by_fold is EMPTY — which is a statement, not missing data."
+      : "Each fold has its own frozen set sealed at its own cutoff ❖ — a later fold never inherits an earlier one. Click a fold; the wall clock below re-anchors.";
+    const clockTicks = SC.ticks.map((t, i) => ({
+      title: t.n + " = " + t.ts, name: t.n, ts: t.ts,
+      dotStyle: "position:absolute; left:" + t.x + "%; top:26px; width:13px; height:13px; border-radius:999px; " + (t.n.indexOf("oos") === 0 ? "border:2px solid #9a6a1f; background:#faf9f5;" : "background:#0f4c5c;"),
+      labelStyle: "position:absolute; left:" + Math.max(0, t.x - 4) + "%; top:" + (i % 2 === 0 ? "0" : "44px") + "; font-family:'JetBrains Mono',monospace; font-size:9.5px; color:" + (t.n.indexOf("oos") === 0 ? "#9a6a1f" : "#4e5a6e") + "; line-height:1.35;"
+    }));
+    const clockArrows = SC.ticks.slice(0, -1).map((t, i) => ({
+      label: "→",
+      style: "position:absolute; left:" + ((t.x + SC.ticks[i + 1].x) / 2) + "%; top:24px; color:#c9c5ba; font-size:11px;"
+    }));
+    const railTitle = isM5 ? "one full-sample set · params_by_fold does not exist" : isGlobal ? "one shared set · params_by_fold empty" : "per-fold sets · fold_0" + s.fold + " shown";
+    const hasFoldNav = !isM5 && !isGlobal;
+    const NF7 = this.FOLDS.length;
+    const goF = (v) => this.setState({ fold: Math.max(1, Math.min(NF7, v)) });
+    const foldSelOpts = this.FOLDS.map((f, i) => ({ v: String(i + 1), label: f.id + " · " + f.digest }));
+    const setRail = (isM5 ? [{ label: "full", on: true }] : isGlobal ? [{ label: "shared", on: true }] : []).map(r => ({
+      label: r.label,
+      onPick: () => {},
+      style: "border:1px solid " + (r.on ? "#0f4c5c" : "#e3e0d7") + "; background:" + (r.on ? "#e2edf0" : "#ffffff") + "; color:" + (r.on ? "#0f4c5c" : "#4e5a6e") + "; padding:1px 8px; font-family:'JetBrains Mono',monospace; font-size:9.5px; border-radius:999px;"
+    }));
+    const paramRows = this.PARAMS.map(p => {
+      if (p.fixed) return {
+        name: p.name + " (fixed)", range: "issl = True", frozen: "true",
+        trackStyle: "display:block; height:8px; border-radius:999px; background:repeating-linear-gradient(135deg,#efede4 0 4px,transparent 4px 8px);", markStyle: "display:none;",
+        note: "fixed_params — outside the params digest, inside the bundle digest", noteStyle: "padding:7px 12px; font-size:10.5px; color:#939db0;"
+      };
+      if (p.cat) return {
+        name: p.name, range: "categorical", frozen: "sma",
+        trackStyle: "display:block; font-family:'JetBrains Mono',monospace; font-size:10px; color:#4e5a6e;", markStyle: "display:none;",
+        note: p.cat.join(" · "), noteStyle: "padding:7px 12px; font-size:10.5px; font-family:'JetBrains Mono',monospace; color:#4e5a6e;"
+      };
+      const pos = (p.v - p.lo) / (p.hi - p.lo) * 100;
+      const atBound = p.v <= p.lo + p.step || p.v >= p.hi - p.step;
+      const near = !atBound && (pos < 12 || pos > 88);
+      const color = atBound ? "#b43a3a" : near ? "#9a6a1f" : "#0f4c5c";
+      return {
+        name: p.name, range: p.range, frozen: String(p.v),
+        trackStyle: "position:relative; display:block; height:8px; border-radius:999px; background:#f4f2ec; border:1px solid #efede4;",
+        markStyle: "position:absolute; left:calc(" + pos.toFixed(1) + "% - 4px); top:-3px; width:8px; height:12px; border-radius:2px; background:" + color + ";",
+        note: atBound ? "AT BOUND — the optimizer was stopped by the declaration, not by an optimum. Widen the range before deploying." : near ? "near bound · " + pos.toFixed(0) + "%" : "mid range · " + pos.toFixed(0) + "%",
+        noteStyle: "padding:7px 12px; font-size:10.5px; line-height:1.45; color:" + (atBound ? "#b43a3a" : near ? "#9a6a1f" : "#939db0") + ";"
+      };
+    });
+    const bindRows = [
+      { k: "sealed params digest", v: "prm_7c1a9e", ok: true },
+      { k: "params digest used by replay", v: "prm_7c1a9e", ok: true },
+      { k: "sealed bundle digest", v: "bdl_e41d7b", ok: true },
+      { k: "runtime bundle digest", v: s.drift ? "bdl_09fa22 ≠ sealed" : "bdl_e41d7b", ok: !s.drift }
+    ].map(b => ({ k: b.k, v: b.v + (b.ok ? "  ✓" : "  ✕"), color: b.ok ? "#1e7b4f" : "#b43a3a" }));
+    return {
+      backHref: "QuantBT 04 Evidence Flow.dc.html#stage=freeze&fold=" + this.state.fold,
+      onCopy: () => this.copy(), copyLabel: s.copied ? "✓ evidence link copied" : "copy evidence link",
+      scenOpts, driftOpts, driftOn: s.drift,
+      verdict: {
+        badge: s.drift ? "✕ DRIFT — BLOCKED" : SC.badge,
+        badgeStyle: "font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; padding:3px 10px; border-radius:3px; border:1.5px solid " + (s.drift ? "#b43a3a" : SC.color) + "; color:" + (s.drift ? "#b43a3a" : SC.color) + "; background:" + (s.drift ? "#f7e8e8" : "#faf9f5") + ";",
+        order: SC.order, claim: SC.claim, cert,
+        certStyle: "font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:700; color:" + certColor + ";",
+        note: SC.note, color: s.drift ? "#b43a3a" : SC.color
+      },
+      dataRows, dataNote, curFold: isM5 ? "—" : isGlobal ? "shared" : "0" + s.fold,
+      clockTicks, clockArrows, clockNote: s.drift ? "Ordering is moot while the binding is broken: whatever this geometry proves, Execute ran something else." : SC.clockNote,
+      railTitle, setRail, paramRows,
+      hasFoldNav, foldSelOpts, foldSel: String(s.fold),
+      onFoldSel: (ev) => goF(parseInt(ev.target.value, 10) || 1),
+      onPrevFold: () => goF(s.fold - 1), onNextFold: () => goF(s.fold + 1),
+      foldPosNote: "f" + s.fold + " / " + NF7,
+      attempts: s.attempts.map(a => ({ label: a })),
+      onPropose: () => this.setState({ attempts: s.attempts.concat(["att_sibling_0" + (s.attempts.length + 1) + " · new config_hash · re-runs Stage 2 for its own selection_trace"]) }),
+      onVerify: () => { this.setState({ verify: "busy" }); setTimeout(() => this.setState({ verify: "done" }), 700); },
+      verifyLabel: s.verify === "busy" ? "recomputing…" : s.verify === "done" ? "✓ match — integrity only" : "verify digest",
+      verifyBtnStyle: "border:1px solid " + (s.verify === "done" ? "#1e7b4f" : "#0f4c5c") + "; border-radius:6px; background:transparent; color:" + (s.verify === "done" ? "#1e7b4f" : "#0f4c5c") + "; padding:2px 10px; font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.05em; text-transform:uppercase;",
+      bindBadge: s.drift ? "DRIFT" : "BOUND",
+      bindBadgeStyle: "font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; padding:1px 8px; border-radius:3px; border:1px solid " + (s.drift ? "#b43a3a" : "#1e7b4f") + "; color:" + (s.drift ? "#b43a3a" : "#1e7b4f") + ";",
+      bindRows,
+      bindNote: s.drift ? "Any mismatched pair ⇒ drift. Re-seal as a new attempt, or re-run Execute on the sealed digest — those are the only two exits." : "Four values compared: sealed vs replayed, params and bundle. This is the check that catches a bundle rebuilt after freeze or params patched in runtime config."
+    };
+  }
+}
+</script>
+</body>
+</html>

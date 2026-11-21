@@ -1,0 +1,23 @@
+{
+  "schema_version": "research.native-route-result.v1",
+  "execution_route": "reactive",
+  "authority": "PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL",
+  "input_protocol": "DELTA_CLOSE_STATEFUL_CALLBACK_V1",
+  "clock": "KNOWN_CLOSE_NEXT_BAR_CLOSE",
+  "position_unit": "CONTRACT_QUANTITY",
+  "target_notional": "2000",
+  "fees": {
+    "state": "AVAILABLE",
+    "total": "0",
+    "reason_code": null
+  },
+  "funding": {
+    "state": "NOT_PUBLISHED",
+    "total": null,
+    "reason_code": "NATIVE_RESULT_SERIES_NOT_PUBLISHED"
+  },
+  "cost_scope": "FULL_CHILD_TAPE",
+  "fills_count": 0,
+  "orders_count": null,
+  "replay_authority": "RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS"
+}

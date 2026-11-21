@@ -1,0 +1,116 @@
+# RF02-B3 · isolated Research preview stack (Q6, Bobby 2026-09-23).
+#
+# Applied on top of compose.yaml and deploy/compose.research-progress.yaml by
+# scripts/research-preview/preview.sh only. It never runs against dev
+# (`portal`, :8080), stable (`portal-stable-v1-0-1`, :18081) or the Execution
+# probe (`portal-probe`, :8090): the script fixes the compose project name,
+# refuses those ports, and keeps every secret in a host-bound env file outside
+# the checkout. Volumes are namespaced by the project, so the preview has its
+# own PostgreSQL, NATS, MinIO and artifact store.
+#
+# What it turns on (Bobby 2026-09-30: every Research Loop flag, nothing held
+# back): each Research read and producer S00–S14 need, the approved historical
+# market data read-only, and — through the env file — replay, reports, lineage,
+# compare, release candidates + publication, imported execution, artifact byte
+# verify and the what-if lane. Bobby 2026-10-10 also approves the existing
+# Execution product UI and local governance/Command Center reads here. This
+# does NOT activate the inter-cell source, projection writer, SSE or commands.
+services:
+  portal-postgres:
+    command: ["postgres", "-c", "config_file=/etc/postgresql/preview.conf"]
+    mem_limit: 1536m
+    memswap_limit: 1536m
+    cpus: 2
+    pids_limit: 128
+    shm_size: 128m
+    volumes:
+      - ./deploy/postgres/preview.conf:/etc/postgresql/preview.conf:ro
+
+  portal-web:
+    build:
+      args:
+        # Build-time router switch, not a source/command authorization flag.
+        EXECUTION_PREVIEW_ENABLED: "true"
+
+  portal-api:
+    environment:
+      PORTAL_HISTORICAL_DATA_MODE: ${PORTAL_HISTORICAL_DATA_MODE:?preview needs PORTAL_HISTORICAL_DATA_MODE}
+      # P10's intake publishes the durable request; the research-progress
+      # overlay only turns the flag on for the worker that consumes it.
+      PORTAL_FEATURE_RESEARCH_RUN_PRODUCER: ${PORTAL_FEATURE_RESEARCH_RUN_PRODUCER:-false}
+      # P10 intake (POST /api/runs) validates the trial count too: it needs the
+      # same preview-only long-WFO flag and PORTAL_ENV guard as the worker.
+      PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO: ${PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO:-false}
+      PORTAL_ENV: ${PORTAL_ENV:-research}
+      NATS_URL: nats://portal-nats:4222
+    depends_on:
+      portal-nats:
+        condition: service_healthy
+
+  control-api:
+    environment:
+      PORTAL_PUBLIC_ORIGIN: ${PORTAL_PUBLIC_ORIGIN:?preview needs PORTAL_PUBLIC_ORIGIN}
+      FEATURE_RESEARCH_RUN_LIBRARY: ${CONTROL_API_FEATURE_RESEARCH_RUN_LIBRARY:-false}
+      FEATURE_RESEARCH_CURRENT_SOURCE: ${CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE:-false}
+      FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY: ${CONTROL_API_FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY:-false}
+      FEATURE_RESEARCH_WHATIF: ${CONTROL_API_FEATURE_RESEARCH_WHATIF:-false}
+      # Bobby 2026-09-30: the Delta WFO admits 2..400 Optuna trials with 1800 s
+      # CPU / 3600 s wall child limits. Refused outside AUTH_MODE=dev +
+      # PORTAL_ENV=local; must match the worker's flag below.
+      FEATURE_RESEARCH_PREVIEW_LONG_WFO: ${CONTROL_API_FEATURE_RESEARCH_PREVIEW_LONG_WFO:-false}
+      # Quick-look preview: no login screen; the browser is signed in as this
+      # user. The Control API refuses it outside AUTH_MODE=dev + PORTAL_ENV=local.
+      PREVIEW_AUTO_LOGIN_USERNAME: ${PREVIEW_AUTO_LOGIN_USERNAME:-}
+      # Highest-precedence, preview-only offline boundary. A host env copied
+      # from dev must not silently reconnect AWS or activate execution writes.
+      # Research flags and its own run-progress transport are unchanged.
+      FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: "true"
+      FEATURE_EXECUTION_EDGE: "false"
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "false"
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE: "false"
+      FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: "false"
+      FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: "false"
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "false"
+      FEATURE_EXECUTION_DURABLE_MIRROR: "false"
+      FEATURE_EXECUTION_DURABLE_MIRROR_READS: "false"
+      FEATURE_EXECUTION_REALTIME_SSE: "false"
+      FEATURE_EXECUTION_ANALYTICS_QUERY: "false"
+      FEATURE_EXECUTION_SHADOW_QUERY: "false"
+      FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: "false"
+      FEATURE_EXECUTION_MARKET_CONTEXT: "false"
+      FEATURE_EXECUTION_PUBLIC_MARKET_CANDLES: "false"
+      FEATURE_EXECUTION_COMMAND_RELAY: "false"
+      FEATURE_EXECUTION_LOCAL_R0_TASKS: "false"
+
+  # The preview's own bootstrap list: the owner plus one automation account
+  # for the real-API browser receipt. No credential is in this file; the
+  # one-time activation credentials are printed by `preview.sh activate`.
+  control-api-bootstrap:
+    volumes:
+      - ./deploy/research-preview/bootstrap-users.preview.yaml:/opt/control-api/bootstrap-users.yaml:ro
+
+  # P06 runs the Delta child in its own user/net/mount/pid namespaces
+  # (`unshare -Urnmpf --mount-proc`) with a private tmpfs scratch. CG-RF02-01
+  # (Bobby approved 2026-09-25): instead of unconfined, the worker gets
+  #   - seccomp: moby v28.0.0 default + unshare/mount/umount2/setns and the
+  #     fsopen/fsconfig/fsmount/move_mount API util-linux mount uses;
+  #   - AppArmor `portal-research-child`: docker-default with only proc on
+  #     /proc, tmpfs and a private propagation change allowed (no bind, no
+  #     remount). Load on the host first:
+  #       sudo apparmor_parser -r -W deploy/research-preview/apparmor-research-child
+  #   - systempaths=unconfined stays: the kernel refuses --mount-proc while
+  #     Docker's masked /proc paths overmount /proc.
+  # Proven in the worker image: sandbox OK, bind mount refused, a mount
+  # outside the child's own namespace refused.
+  quant-worker-py:
+    environment:
+      # Must match Control API's what-if lane, or the durable diagnostic is
+      # admitted but can never emit its source event.
+      PORTAL_FEATURE_RESEARCH_WHATIF: ${PORTAL_FEATURE_RESEARCH_WHATIF:-false}
+      # Must match Control API's preview long WFO flag: the worker runs the
+      # admitted trial count under the 1800/3600 s child limits. The worker
+      # refuses the flag unless PORTAL_ENV=local.
+      PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO: ${PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO:-false}
+      PORTAL_ENV: ${PORTAL_ENV:-research}
+    # security_opt now lives in deploy/compose.research-progress.yaml (same three
+    # entries); repeating it here made compose reject the duplicate list items.

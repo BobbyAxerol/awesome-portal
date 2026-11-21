@@ -1,0 +1,21 @@
+{
+  "fixture_basis": "SYNTHETIC_CONTRACT_EXAMPLE_NOT_RUNTIME_RECEIPT",
+  "handoff_cursor": {
+    "fold": 2,
+    "trial": 3,
+    "params_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "trial_scope": "STUDY_LOCAL",
+    "source_trial_id": "2",
+    "study_id": "1",
+    "progress_trial_ordinal": 6
+  },
+  "selected_params": {
+    "param_set_id": null,
+    "param_set_id_availability": { "state": "NOT_PUBLISHED", "reason_code": "P21_PARAM_SET_ID_NOT_PUBLISHED" },
+    "selected_trial_number": 3,
+    "selected_trial_number_availability": { "state": "AVAILABLE", "reason_code": null },
+    "selected_trial_number_scope": "STUDY_LOCAL",
+    "selected_trial_source_id": "study_1.trial_2",
+    "selected_trial_study_id": "1"
+  }
+}

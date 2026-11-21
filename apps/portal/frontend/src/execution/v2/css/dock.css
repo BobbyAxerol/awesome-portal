@@ -1,0 +1,181 @@
+/* The one Drawer (hi-fi v2 kit .drawer). Docked: 380px beside the table.
+ * Overlay: fixed to the right edge below 1500px, over a scrim. `data-mode` is
+ * set by the component from the same breakpoint, so role and look agree.
+ *
+ * No uppercase here, so this file needs no entry in the v2 hygiene allowlist.
+ * Text and fill pairs sit in one rule. */
+.exec-dock {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  min-width: 0;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
+}
+.exec-dock:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-dock[data-mode="overlay"] {
+  position: fixed;
+  right: 0;
+  /* Starts under the real top bar: 52px, the Carbon operational --topbar-h. The
+   * kit's 81px is that bar plus the 29px "design preview" strip, which is not
+   * product chrome and left a dead band here. (The token is not read: the bar
+   * sits outside this surface, whose own density may differ.) A shell may still
+   * set --exec-dock-top. */
+  top: var(--exec-dock-top, 52px);
+  bottom: 0;
+  z-index: 30;
+  width: min(420px, 100vw);
+  overflow: auto;
+  box-shadow: var(--shadow-raised);
+}
+.exec-dock-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: var(--scrim);
+}
+
+.exec-dock-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 9px 16px;
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-dock-heading {
+  min-width: 0;
+}
+.exec-dock-title {
+  margin: 0;
+  font: var(--exec-font-section);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-dock-subtitle {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+.exec-dock-close {
+  flex: none;
+  padding: 2px 8px;
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-dock-close:hover {
+  color: var(--ink);
+  background: var(--surface-2);
+}
+.exec-dock-close:focus-visible,
+.exec-dock-btn:focus-visible,
+.exec-dock-access:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.exec-dock-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 16px;
+  font: var(--exec-font-body);
+  overflow: auto;
+}
+/* The `priority` slot: what the reader must see before the facts below it. */
+.exec-dock-priority {
+  margin: 0 0 var(--space-4);
+  padding: 0 0 var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Footer: one row of buttons, then one line per blocked action (kit `.acts` +
+ * `.why`). The reasons are never dropped (each stays the button's
+ * aria-describedby); they are one line each, ellipsised, full text on hover or
+ * focus and in `title`. The footer is capped and scrolls, so four blocked
+ * actions cannot take over the drawer (INC-1: 37-39% of its height before). */
+.exec-dock-actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+  max-height: 25vh;
+  padding: 12px 16px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line-strong);
+}
+.exec-dock-action {
+  display: contents;
+}
+.exec-dock-why {
+  display: flex;
+  flex: 0 0 100%;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  order: 1;
+}
+/* The action's name, drawn from data-l so it is not a second text node for the button's name. */
+.exec-dock-why[data-l]::before {
+  content: attr(data-l);
+  flex: none;
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+}
+/* A reason a sibling action already prints: kept as the button's description for assistive tech, not drawn. */
+.exec-dock-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.exec-dock-btn {
+  padding: 6px 16px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-dock-btn[data-variant="primary"] {
+  color: var(--on-accent);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+.exec-dock-btn:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-dock-reason {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+  /* The reason is read in full, wrapped: an ellipsis that opens on hover cannot be read on touch (RV-06). */
+  overflow-wrap: anywhere;
+}
+.exec-dock-access {
+  flex: none;
+  font: var(--exec-font-caption);
+  color: var(--accent);
+}

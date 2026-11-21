@@ -1,0 +1,135 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "name": "exact_above_safe_integer_and_zero",
+      "value": {
+        "schema_version": "portal.execution.alpha-stage-drift.v2",
+        "alpha_id": "TEST_ONLY-alpha",
+        "qualification": "RETAINED_OBSERVATIONS_NOT_FINANCIAL_CERTIFICATION",
+        "window": {
+          "days": 2,
+          "requested_days": null,
+          "basis": "PORTAL_SGP_HISTORY_MIRROR",
+          "daily_basis": "LAST_CLOSE_PER_DAY_SUMMED_ACROSS_ACCOUNTS_SAME_CURRENCY"
+        },
+        "calendar": [
+          "2026-01-01",
+          "2026-01-02"
+        ],
+        "stages": {
+          "paper": {
+            "deployed": true,
+            "reason_code": null,
+            "currency": "USD",
+            "series": [
+              "9007199254740993.03",
+              "0"
+            ],
+            "series_reason_codes": [
+              null,
+              null
+            ]
+          },
+          "sandbox": {
+            "deployed": false,
+            "reason_code": "NO_DEPLOYMENT_IN_STAGE",
+            "currency": null,
+            "series": [
+              null,
+              null
+            ],
+            "series_reason_codes": [
+              "NO_DEPLOYMENT_IN_STAGE",
+              "NO_DEPLOYMENT_IN_STAGE"
+            ]
+          },
+          "live": {
+            "deployed": false,
+            "reason_code": "EXECUTION_PROFILE_READ_DISABLED",
+            "currency": null,
+            "series": [
+              null,
+              null
+            ],
+            "series_reason_codes": [
+              "EXECUTION_PROFILE_READ_DISABLED",
+              "EXECUTION_PROFILE_READ_DISABLED"
+            ]
+          }
+        },
+        "research_binding": {
+          "state": "UNAVAILABLE",
+          "reason_code": "N28_RESEARCH_EVIDENCE_JOIN_NOT_ACTIVATED",
+          "run_id": null,
+          "artifact_digest": null
+        }
+      }
+    },
+    {
+      "name": "malformed_latest_is_not_earlier_valid_or_zero",
+      "value": {
+        "schema_version": "portal.execution.alpha-stage-drift.v2",
+        "alpha_id": "TEST_ONLY-alpha",
+        "qualification": "RETAINED_OBSERVATIONS_NOT_FINANCIAL_CERTIFICATION",
+        "window": {
+          "days": 2,
+          "requested_days": null,
+          "basis": "PORTAL_SGP_HISTORY_MIRROR",
+          "daily_basis": "LAST_CLOSE_PER_DAY_SUMMED_ACROSS_ACCOUNTS_SAME_CURRENCY"
+        },
+        "calendar": [
+          "2026-01-01",
+          "2026-01-02"
+        ],
+        "stages": {
+          "paper": {
+            "deployed": true,
+            "reason_code": null,
+            "currency": "USD",
+            "series": [
+              "0.3",
+              null
+            ],
+            "series_reason_codes": [
+              null,
+              "EQUITY_DECIMAL_INVALID"
+            ]
+          },
+          "sandbox": {
+            "deployed": false,
+            "reason_code": "NO_DEPLOYMENT_IN_STAGE",
+            "currency": null,
+            "series": [
+              null,
+              null
+            ],
+            "series_reason_codes": [
+              "NO_DEPLOYMENT_IN_STAGE",
+              "NO_DEPLOYMENT_IN_STAGE"
+            ]
+          },
+          "live": {
+            "deployed": false,
+            "reason_code": "EXECUTION_PROFILE_READ_DISABLED",
+            "currency": null,
+            "series": [
+              null,
+              null
+            ],
+            "series_reason_codes": [
+              "EXECUTION_PROFILE_READ_DISABLED",
+              "EXECUTION_PROFILE_READ_DISABLED"
+            ]
+          }
+        },
+        "research_binding": {
+          "state": "UNAVAILABLE",
+          "reason_code": "N28_RESEARCH_EVIDENCE_JOIN_NOT_ACTIVATED",
+          "run_id": null,
+          "artifact_digest": null
+        }
+      }
+    }
+  ]
+}

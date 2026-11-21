@@ -13,7 +13,13 @@ qualifier_preflight="${root_dir}/scripts/execution-d4-qualification-preflight.sh
 
 bash -n "${renderer}" "${preflight}" "${qualifier_preflight}" "$0"
 tmp_dir="$(mktemp -d)"
-cleanup() { rm -rf -- "${tmp_dir}"; }
+image=""
+cleanup() {
+  if [[ -n "${image}" ]]; then
+    "${docker_cli[@]}" image rm "${image}" >/dev/null 2>&1 || true
+  fi
+  rm -rf -- "${tmp_dir}"
+}
 trap cleanup EXIT
 
 cp "${runtime_example}" "${tmp_dir}/runtime.env"
@@ -111,11 +117,18 @@ if grep -Eq 'published: "(5432|8011|8444)"|EDGE_D4_SOURCE_API_KEY|X-Portal-Paper
   printf 'D4 Compose unexpectedly published a source or database port.\n' >&2
   exit 1
 fi
-image="portal-source-proxy-d4-offline:test-${BASHPID}"
-"${docker_cli[@]}" build --tag "${image}" \
+image="portal-source-proxy-d4-offline:${tmp_dir##*/}"
+if "${docker_cli[@]}" image inspect "${image}" >/dev/null 2>&1; then
+  image=""
+  printf 'Refusing occupied D4 test image tag.\n' >&2
+  exit 1
+fi
+"${docker_cli[@]}" buildx build --builder default --load \
+  --resource cpu-period=100000 --resource cpu-quota=300000 \
+  --resource memory=3g --resource memory-swap=3g --label "io.primus.test.owner=${tmp_dir##*/}" --tag "${image}" \
   --file "${root_dir}/deploy/images/source-proxy.Dockerfile" "${root_dir}" >/dev/null
-"${docker_cli[@]}" run --rm \
-  --cpus 1 --memory 128m --memory-swap 128m \
+"${docker_cli[@]}" run --rm --pull never --label "io.primus.test.owner=${tmp_dir##*/}" --network none \
+  --cpus 1 --memory 128m --memory-swap 128m --pids-limit 64 \
   --read-only --cap-drop ALL --security-opt no-new-privileges:true \
   --tmpfs /tmp:rw,noexec,nosuid,nodev,size=8m,mode=1777 \
   --tmpfs /var/cache/nginx:rw,noexec,nosuid,nodev,size=8m,mode=0750,uid=101,gid=101 \

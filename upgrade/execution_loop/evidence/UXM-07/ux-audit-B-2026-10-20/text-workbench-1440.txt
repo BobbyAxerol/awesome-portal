@@ -1,0 +1,193 @@
+URL http://127.0.0.1:8095/deployments/paper/dep_paper_01
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Deployments
+/
+Paper Trading
+/
+dep_paper_01
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+The deployment fixes the environment.
+Not published (FE-025). The deployment read takes no window.
+Window: Published window
+Set by the page
+Alpha Fleet
+alpha_btc_trend
+Paper monitor
+alpha_btc_trend
+Paper
+
+pf_TEST_ONLY_core
+acc_pap_sim
+Alpha Not available
+
+Account
+Operations
+Refresh
+Read 17 Oct 09:14Z
+DISPLAY FRESHNESS
+Fresh
+As of 17 Oct 09:14Z
+NOT AVAILABLE
+Runtime, Reconciliation
+LIFECYCLE
+Observation gate
+◐
+PARTIAL
+R1
+R2
+●
+PAPER
+SANDBOX
+CANARY
+LIVE
+OVERVIEW
+ORDERS
+FILLS
+POSITIONS
+SESSIONS
+EQUITY VS APPROVED BAND
+Simulated · USDT
+Table
+Expand
+Paper equity vs approved band
+Equity
+Simulated
+17 Oct 09:00Z106,857.29 USDT
+Change across the plotted points+6,857.29 USDT 9 Oct 02:00Z to 17 Oct 09:00Z
+98,000.00
+100,000.00
+102,000.00
+104,000.00
+106,000.00
+108,000.00
+110,000.00
+10 Oct 00:00Z
+12 Oct 00:00Z
+14 Oct 00:00Z
+16 Oct 00:00Z
+Simulated
+High 107,388.12 USDT
+106,857.29 USDT
+
+200 points, none reduced · Server: 200 of 1,438 points, bucket_last 
+◐
+PARTIAL DATA:
+PARTIAL · SERVER REDUCTION DOES NOT GUARANTEE EXTREMA
+
+Paper equity vs approved band. 200 published points from 9 Oct 02:00Z to 17 Oct 09:00Z. Latest 106,857.29 USDT. High 107,388.12 USDT at 16 Oct 21:00Z. Low 100,000.00 USDT at 9 Oct 02:00Z.
+
+Key readings, Paper equity vs approved band
+READING	TIME (UTC)	VALUE
+FIRST	9 Oct 02:00Z	100,000.00 USDT
+HIGH	16 Oct 21:00Z	107,388.12 USDT
+LOW	9 Oct 02:00Z	100,000.00 USDT
+LATEST	17 Oct 09:00Z	106,857.29 USDT
+
+Not available: Drawdown, Approved band, Window
+
+EXIT GATE
+Paper → Sandbox
+GATE VERDICT	
+◐
+PARTIAL
+OBSERVATION DAYS	3 of 14 days
+TRADES	30 of 60 trades
+OBSERVATION WINDOW	
+◐
+PARTIAL DATA:
+BOUNDED BY THE SOURCE
+
+Not available: Drift vs approved band, Fills reconcile, Cost drift
+
+Policy PAPER_OBSERVATION · paper.v1
+
+Request review
+
+No workspace is named for this read.
+
+My access
+
+Open exit review
+
+RUNTIME HEALTH
+MODE · VENUE	Paper · binance
+OPEN POSITIONS	2
+LAST SOURCE UPDATE	17 Oct 09:14Z
+FILLS COUNTED	
+30
+Provenance
+ACCOUNTING
+Simulated · USDT
+EQUITY	
+106,857.29
+
+NET PNL	
++6,857.29
+
+FEES	
+82.05
+
+FUNDING	Not available
+CASH FREE · LOCKED	
+96,257.29
+ · 
+10,600.00
+EXECUTION QUALITY
+◐
+PARTIAL
+SESSIONS
+1
+ORDERS
+40
+FILLS
+30
+REJECTED
+5
+Of 40 submitted
+
+Not available: Latency
+
+alpha_btc_trend · Paper monitor
+✓
+OK:
+FRESH
+As of 17 Oct 09:14Z

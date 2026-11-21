@@ -1,0 +1,119 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Operations — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* layout only */
+.lay{display:grid;gap:24px;align-items:start}@media(min-width:1501px){.lay{grid-template-columns:minmax(0,1fr) 380px}}@media(max-width:1500px){.drawer.dock:not(.on){display:none}}
+.tool{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.tool .l{font:500 10.5px/16px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-right:4px}
+td.w{white-space:normal}.sec{margin:14px 0 6px;font:500 11px/16px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+.facts{display:grid;grid-template-columns:100px 1fr;gap:8px;align-items:center}.dt td{height:28px;padding:4px 0;white-space:normal}.dt td.n{padding-right:0}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}.idc{font:500 11px/16px var(--font-mono);border:1px solid var(--line-strong);padding:0 5px;background:var(--paper);white-space:nowrap}
+textarea{width:100%;font:400 13px/18px var(--font-sans);color:var(--ink);background:var(--paper);border:1px solid var(--line-strong);padding:8px 10px;min-height:56px;resize:vertical}[data-d]{display:none}.rowclick{cursor:pointer}
+.ban{padding:8px 12px;border:1px solid var(--f-unknown);background:var(--f-unknown-bg);color:var(--ink);font-size:13px;margin:10px 0}
+</style></head>
+<body data-page="Operations" data-nav="operations" data-crumb="Execution / Operations" data-window-lock="24H Operations">
+<main><div class="stack">
+<div class="panel empty" data-roles="researcher reviewer"><div style="text-align:center"><div style="font:600 15px/22px var(--font-sans);color:var(--ink)">You can't open this page.</div><div style="margin-top:6px"><a href="access.html">See what you can access</a></div></div></div>
+
+<div class="stack" data-roles="manager operator" id="ops">
+<div class="mast"><div><h1>Operations</h1><div class="sub">Commands, exceptions and audit</div></div>
+ <div class="ctrls"><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Command status not qualified</span></span></div></div>
+<div class="banner" data-data="nq">Command receipts are not available yet. Do not resend anything.</div>
+
+<div class="kpis" style="--n:4">
+ <div class="kpi"><div class="l">Unknown outcomes</div><div class="v neg" data-data="ok">1</div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">Check the original request</div><div class="n" data-data="nq">Command status not qualified</div></div>
+ <div class="kpi"><div class="l">Pending receipts</div><div class="v" data-data="ok">2</div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">Partial or draining</div><div class="n" data-data="nq">Command status not qualified</div></div>
+ <div class="kpi"><div class="l">Display catching up</div><div class="v" data-data="ok">2</div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">Applied, not yet shown</div><div class="n" data-data="nq">Command status not qualified</div></div>
+ <div class="kpi"><div class="l">Open exceptions</div><div class="v">3</div><div class="n">From the existing queue</div></div></div>
+
+<div class="panel" style="padding:8px 16px"><details><summary>Source health <span class="mono" style="color:var(--ink-faint)" data-data="ok">· 2 of 3 partial</span><span class="mono" style="color:var(--ink-faint)" data-data="nq">· Not available</span></summary>
+ <div class="tw"><table><thead><tr><th>Profile</th><th>State</th><th>Freshness</th></tr></thead>
+ <tbody data-data="ok"><tr><td>Paper · Binance USD-M</td><td><span class="flag" data-k="ok">Complete</span></td><td class="mono">9 s ago</td></tr><tr><td>Sandbox · Binance USD-M</td><td><span class="flag" data-k="partial">Partial</span></td><td class="mono">14 m ago</td></tr><tr><td>Real-funded · Binance USD-M</td><td><span class="flag" data-k="partial">Partial</span></td><td class="mono">14 m ago</td></tr></tbody>
+ <tbody data-data="nq"><tr><td colspan="3"><span class="na">Not available</span> · Command status not qualified</td></tr></tbody></table></div></details></div>
+
+<div><div class="tabs" id="tabs"><button data-t="cmd" aria-selected="true">Commands</button><button data-t="exc" aria-selected="false">Exceptions <span class="mono" style="color:var(--ink-faint)">3</span></button><button data-t="aud" aria-selected="false">Audit</button></div>
+ <div class="tool" id="tool"><span class="l">Lens</span><span class="seg" id="lens"><button data-v="att" aria-pressed="true">Needs attention</button><button data-v="mine" aria-pressed="false">Mine</button><button data-v="all" aria-pressed="false">All</button></span>
+  <span class="l">Range</span><span class="seg" id="range"><button data-v="24" aria-pressed="true">24H</button><button data-v="168" aria-pressed="false">7D</button><button data-v="720" aria-pressed="false">30D</button><button data-v="2160" aria-pressed="false">90D</button><button data-v="9999" aria-pressed="false">ALL</button></span>
+  <span class="l">Source</span><span class="seg" id="src"><button data-v="all" aria-pressed="true">All</button><button data-v="cmd" aria-pressed="false">Commands</button><button data-v="adm" aria-pressed="false">Admin journal</button></span>
+  <button class="btn" disabled>Operation ▾</button><button class="btn" disabled>Receipt ▾</button><button class="btn" disabled>Display ▾</button></div>
+
+ <div class="lay" id="pane-cmd"><div>
+  <div class="panel" style="padding:0" data-data="ok"><div class="tw"><table class="cards"><thead><tr><th>Time</th><th>Target · operation</th><th>Intent</th><th>Receipt</th><th>Display</th><th>Next</th></tr></thead><tbody id="cmd-body"></tbody></table></div><div class="sub" id="cmd-foot" style="padding:8px 12px"></div></div>
+  <div class="panel empty" data-data="nq"><div style="text-align:center"><div style="font:600 15px/22px var(--font-sans);color:var(--ink)">Command receipts not available</div><div class="na">Command status is not qualified. Nothing is assumed.</div></div></div></div>
+
+  <aside class="drawer dock" id="dr" data-data="ok"><div class="ph"><span id="dr-t">Command</span><button class="btn" id="dr-x">Close</button></div>
+   <div data-d="unk"><div class="facts"><span class="sub">Intent</span><span><span class="flag" data-k="operation">Submitted</span> 14:12Z</span><span class="sub">Receipt</span><span><span class="flag" data-k="unknown">Unknown</span></span><span class="sub">Display</span><span><span class="flag" data-k="display">Reconciling</span></span></div>
+    <div class="ban">Outcome unknown. Check the original request. Do not send it again.</div>
+    <div class="acts"><button class="btn pri">Check original request</button><div><button class="btn" disabled>Send again</button><span class="why">Blocked until the outcome is known</span></div></div>
+    <div class="sec">Effect · USDT · Real-funded</div><table class="dt"><tbody><tr><td>Target requested</td><td class="n">256,000.00 → 300,000.00</td></tr><tr><td>Applied</td><td class="n"><span class="na">Not available</span></td></tr></tbody></table><div class="why">No receipt yet</div>
+    <div class="sec">Acknowledge · resolve</div><div class="acts"><button class="btn">Acknowledge</button></div><textarea placeholder="Resolution note · required" data-note></textarea><div class="acts" style="margin-top:8px"><button class="btn" disabled data-resolve>Resolve</button><span class="why" data-rw>Resolve waits for a known outcome</span></div>
+    <details><summary>Provenance</summary><div class="mono sub">Key idem_4b19…c2 · expected revision r18 · receipt Not available · source event Not available</div></details></div>
+   <div data-d="root"><div class="facts"><span class="sub">Intent</span><span><span class="flag" data-k="operation">Submitted</span> 14:02Z</span><span class="sub">Receipt</span><span><span class="flag" data-k="applied">Applied</span> 14:02Z</span><span class="sub">Display</span><span><span class="flag" data-k="ok">Current</span></span></div>
+    <div class="sec">Target-setting effect · USDT · Real-funded</div><table class="dt"><tbody><tr><td>Root limit</td><td class="n">1,100,000.00 → 1,200,000.00</td></tr><tr><td>Money moved</td><td class="n">None</td></tr><tr><td>Child budgets</td><td class="n">Unchanged</td></tr></tbody></table><div class="why">This command carries no amount, so there is no amount split.</div>
+    <div class="acts" style="margin-top:12px"><button class="btn">Copy references</button><a class="btn" href="portfolios.html" style="text-decoration:none">Open Root fund</a></div>
+    <details><summary>Provenance</summary><div class="mono sub">Receipt rcpt_7c20d1 · source event evt_90a1f4 · revision r18 → r19 · key idem_91d0…7a</div></details></div>
+   <div data-d="rec"><div class="facts"><span class="sub">Intent</span><span><span class="flag" data-k="operation">Submitted</span> 13:55Z</span><span class="sub">Receipt</span><span><span class="flag" data-k="partial">Partial</span></span><span class="sub">Display</span><span><span class="flag" data-k="display">Catching up</span></span></div>
+    <div class="ban" style="border-color:var(--f-partial);background:var(--f-partial-bg)">Applied part is final. Display is still updating.</div>
+    <div class="sec">Amounts · USDT · Real-funded</div><table class="dt"><tbody><tr><td><b>Requested</b></td><td class="n"><b>40,000.00</b></td></tr><tr><td>Applied</td><td class="n">25,000.00</td></tr><tr><td>Pending</td><td class="n">15,000.00</td></tr><tr><td>Cancelled</td><td class="n">0.00</td></tr><tr><td>Rejected</td><td class="n">0.00</td></tr></tbody></table>
+    <div class="sec">Acknowledge · resolve</div><div class="acts"><button class="btn">Acknowledge</button></div><textarea placeholder="Resolution note · required" data-note></textarea><div class="acts" style="margin-top:8px"><button class="btn" disabled data-resolve>Resolve</button><span class="why" data-rw>Add a note of at least 12 characters</span></div>
+    <details><summary>Provenance</summary><div class="mono sub">Receipt rcpt_5e81b9 · source event evt_6b02c7 · revision r18 → r19</div></details></div>
+   <div data-d="unc"><div class="facts"><span class="sub">Intent</span><span><span class="flag" data-k="operation">Submitted</span> 11:30Z</span><span class="sub">Receipt</span><span><span class="flag" data-k="unknown">Uncertain</span></span><span class="sub">Display</span><span><span class="flag" data-k="na">Not applicable</span></span></div>
+    <div class="ban">We could not confirm this. It may have applied. Check the original request before doing anything.</div>
+    <div class="sub">Stopped waiting for confirmation at 11:35Z. Nothing is assumed.</div>
+    <div class="acts" style="margin-top:10px"><button class="btn pri">Check original request</button><div><button class="btn" disabled>Send again</button><span class="why">Blocked until the outcome is known</span></div></div>
+    <div class="sec">Requested · USDT · Real-funded</div><table class="dt"><tbody><tr><td>Return capital</td><td class="n">10,000.00</td></tr><tr><td>Applied</td><td class="n"><span class="na">Not available</span></td></tr></tbody></table></div>
+   <div data-d="dup"><div class="facts"><span class="sub">Intent</span><span><span class="flag" data-k="operation">Submitted</span> 10:05Z</span><span class="sub">Receipt</span><span><span class="flag" data-k="operation">Replayed</span></span><span class="sub">Display</span><span><span class="flag" data-k="ok">Current</span></span></div>
+    <div class="ban" style="border-color:var(--f-operation);background:var(--f-operation-bg)">Already sent. Showing the original result.</div>
+    <div class="sec">Original result</div><table class="dt"><tbody><tr><td>Request</td><td class="n"><a class="idc" href="#">Top up · 09:58Z</a></td></tr><tr><td>Receipt</td><td class="n"><span class="flag" data-k="applied">Applied</span></td></tr><tr><td>Amount · USDT</td><td class="n">50,000.00</td></tr></tbody></table><div class="why">Nothing was applied a second time.</div></div>
+   <div data-d="adm"><div class="facts"><span class="sub">Intent</span><span><span class="flag" data-k="operation">Submitted</span> 09:20Z</span><span class="sub">Receipt</span><span><span class="flag" data-k="applied">Applied</span></span><span class="sub">Display</span><span><span class="flag" data-k="ok">Current</span></span></div>
+    <div class="sec">Admin action</div><table class="dt"><tbody><tr><td>Action</td><td class="n">Rebuild snapshot cache</td></tr><tr><td>Plan → apply → verify</td><td class="n">Verified</td></tr><tr><td>By</td><td class="n">Lan</td></tr></tbody></table><div class="why">Changes nothing in capital or orders.</div></div>
+   <div data-d="exc"><div class="facts"><span class="sub">State</span><span id="exc-st"></span></div><div class="sec" id="exc-t"></div><div class="sub" id="exc-d"></div>
+    <div class="sec">Acknowledge · resolve</div><div class="acts"><button class="btn">Acknowledge</button></div><textarea placeholder="Resolution note · required" data-note></textarea><div class="acts" style="margin-top:8px"><button class="btn" disabled data-resolve>Resolve</button><span class="why" data-rw>Add a note of at least 12 characters</span></div></div>
+  </aside></div>
+
+ <div class="panel" style="padding:0" id="pane-exc" hidden><div class="tw"><table class="cards"><thead><tr><th>Since</th><th>Target</th><th>Exception</th><th>Source</th><th>State</th><th></th></tr></thead><tbody>
+  <tr class="rowclick" data-exc="Account Binance-02|Unreconciled valuation|display|Stale for 14 m. Internal and broker figures disagree; the chart stays hidden until they match."><td data-l="Since" class="mono">14:05Z</td><td data-l="Target"><a href="account.html">Binance-02</a></td><td data-l="Exception">Unreconciled valuation</td><td data-l="Source"><span class="flag" data-k="stale">Stale 14 m</span></td><td data-l="State"><span class="flag" data-k="attention">Open</span></td><td data-l=""><button class="btn">Acknowledge</button> <button class="btn">Resolve</button></td></tr>
+  <tr class="rowclick" data-exc="Portfolio Satellite|Recall not fully released|partial|Part of the recall is waiting on existing obligations. Resolve once it is fully released."><td data-l="Since" class="mono">13:55Z</td><td data-l="Target"><a href="portfolio.html">Satellite</a></td><td data-l="Exception">Recall not fully released</td><td data-l="Source"><span class="flag" data-k="partial">Partial</span></td><td data-l="State"><span class="flag" data-k="attention">Open</span></td><td data-l=""><button class="btn">Acknowledge</button> <button class="btn">Resolve</button></td></tr>
+  <tr><td data-l="Since" class="mono">12:20Z</td><td data-l="Target"><a href="incident.html" class="idc">INC-44</a> <a href="deployment.html">live-0192</a></td><td data-l="Exception">Position mismatch</td><td data-l="Source"><span class="flag" data-k="incident">Incident</span></td><td data-l="State"><span class="flag" data-k="attention">Open</span></td><td data-l=""><a class="btn" href="incident.html" style="text-decoration:none">Open incident</a></td></tr></tbody></table></div></div>
+
+ <div class="panel" style="padding:0" id="pane-aud" hidden><div class="tw"><table class="cards"><thead><tr><th>Time</th><th>Who</th><th>Action</th><th>Target</th><th>Source</th><th>Receipt</th></tr></thead><tbody id="aud-body"></tbody></table></div><div class="panel empty" data-data="nq" style="border:0"><div class="na">Not available · Audit source not qualified</div></div></div>
+</div>
+</div></div>
+</main>
+<script src="kit.js"></script>
+<script>
+var ME={manager:"Bobby",operator:"Lan",reviewer:"Minh",researcher:"Stan"};
+function F(k,t){return KIT.flag(k,t)}
+var CMD=[
+ {h:2,t:"14:12Z",tg:"Portfolio Canary",l:"portfolio.html",op:"Adjust target budget",i:["operation","Submitted"],r:["unknown","Unknown"],d:["display","Reconciling"],nx:'<button class="btn" data-open>Check original request</button>',v:"unk",att:1,by:"Lan",src:"cmd",ti:"Adjust target budget"},
+ {h:3,t:"14:02Z",tg:"Root fund",l:"portfolios.html",op:"Set root limit",i:["operation","Submitted"],r:["applied","Applied"],d:["ok","Current"],nx:'<span class="na">Nothing to do</span>',v:"root",by:"Bobby",src:"cmd",ti:"Set root limit"},
+ {h:3,t:"13:55Z",tg:"Portfolio Satellite",l:"portfolio.html",op:"Recall · partial",i:["operation","Submitted"],r:["partial","Partial"],d:["display","Catching up"],nx:"Display updating",v:"rec",att:1,by:"Bobby",src:"cmd",ti:"Recall · partial"},
+ {h:4,t:"13:41Z",tg:"BTC-Momentum v2",l:"alpha.html",op:"Archive",i:["operation","Submitted"],r:["pending","Pending drain"],d:["ok","Current"],nx:'<a href="alpha.html">Open obligations</a>',v:"root",att:1,by:"Lan",src:"cmd",ti:"Archive"},
+ {h:5,t:"13:20Z",tg:"Portfolio Core",l:"portfolio.html",op:"Adjust target budget",i:["operation","Submitted"],r:["rejected","Rejected"],rs:"Version conflict",d:["ok","Current"],nx:"Review a new preview",v:"root",by:"Lan",src:"cmd",ti:"Adjust target budget"},
+ {h:5,t:"12:48Z",tg:"Portfolio Satellite",l:"portfolio.html",op:"Recall · full",i:["na","Preview only"],r:["na","No receipt"],d:["na","Not applicable"],nx:"Nothing was sent",v:"root",by:"Bobby",src:"cmd",ti:"Recall · full"},
+ {h:6,t:"12:10Z",tg:"Account Binance-02",l:"account.html",op:"Top up",i:["operation","Submitted"],r:["applied","Applied"],d:["display","Catching up"],nx:"Display updating",v:"root",att:1,by:"Bobby",src:"cmd",ti:"Top up"},
+ {h:7,t:"11:30Z",tg:"Portfolio Core",l:"portfolio.html",op:"Return capital",i:["operation","Submitted"],r:["unknown","Uncertain"],d:["na","Not applicable"],nx:'<button class="btn" data-open>Check original request</button>',v:"unc",att:1,by:"Lan",src:"cmd",ti:"Return capital"},
+ {h:8,t:"10:05Z",tg:"Portfolio Satellite",l:"portfolio.html",op:"Top up",i:["operation","Submitted"],r:["operation","Replayed"],d:["ok","Current"],nx:'<a href="#">Open original</a>',v:"dup",by:"Bobby",src:"cmd",ti:"Top up"},
+ {h:9,t:"09:20Z",tg:"Admin action",l:"admin.html",op:"Rebuild snapshot cache",i:["operation","Submitted"],r:["applied","Applied"],d:["ok","Current"],nx:'<span class="na">Nothing to do</span>',v:"adm",by:"Lan",src:"adm",ti:"Rebuild snapshot cache"},
+ {h:72,t:"14 Oct 16:40Z",tg:"Root fund",l:"portfolios.html",op:"Set root limit",i:["operation","Submitted"],r:["applied","Applied"],d:["ok","Current"],nx:'<span class="na">Nothing to do</span>',v:"root",by:"Bobby",src:"cmd",ti:"Set root limit"},
+ {h:288,t:"6 Oct 10:15Z",tg:"Portfolio Core",l:"portfolio.html",op:"Top up",i:["operation","Submitted"],r:["applied","Applied"],d:["ok","Current"],nx:'<span class="na">Nothing to do</span>',v:"root",by:"Lan",src:"cmd",ti:"Top up"},
+ {h:1500,t:"16 Aug 08:02Z",tg:"Admin action",l:"admin.html",op:"Rebuild snapshot cache",i:["operation","Submitted"],r:["applied","Applied"],d:["ok","Current"],nx:'<span class="na">Nothing to do</span>',v:"adm",by:"Lan",src:"adm",ti:"Rebuild snapshot cache"}];
+var AUD=[["14:12Z","Lan","Submitted adjust target budget","Portfolio Canary","cmd",0],["14:02Z","Bobby","Submitted set root limit","Root fund","cmd",1],["13:55Z","Bobby","Submitted recall (partial)","Portfolio Satellite","cmd",1],["12:48Z","Bobby","Opened a preview of recall (full)","Portfolio Satellite","cmd",0],["09:20Z","Lan","Admin action: rebuild snapshot cache","Admin","adm",1],["09:12Z","Minh","Approved R1 gate","RSI v1.7","cmd",1]];
+var S={lens:"att",range:24,src:"all",tab:"cmd",sel:0},vis=[];
+function ok(){return KIT.state.data==="ok"}
+function renderCmd(){var me=ME[KIT.state.role];vis=CMD.filter(function(r){return r.h<=S.range&&(S.src==="all"||r.src===S.src)&&(S.lens==="all"||(S.lens==="att"&&r.att)||(S.lens==="mine"&&r.by===me))});
+ var h="";vis.forEach(function(r,i){h+='<tr class="rowclick'+(i===S.sel?" sel":"")+'" data-i="'+i+'"><td data-l="Time" class="mono">'+r.t+'</td><td data-l="Target"><a href="'+r.l+'"><b>'+r.tg+'</b></a><div class="sub">'+r.op+'</div></td><td data-l="Intent">'+F(r.i[0],r.i[1])+'</td><td data-l="Receipt">'+F(r.r[0],r.r[1])+(r.rs?'<div class="sub">'+r.rs+"</div>":"")+'</td><td data-l="Display">'+F(r.d[0],r.d[1])+'</td><td data-l="Next" class="w">'+r.nx+"</td></tr>"});
+ document.getElementById("cmd-body").innerHTML=h||'<tr><td colspan="6"><span class="na">No commands in this range.</span></td></tr>';
+ document.getElementById("cmd-foot").textContent=vis.length+" shown";showD()}
+function showD(){var r=vis[S.sel],d=document.getElementById("dr");if(!d)return;d.querySelectorAll("[data-d]").forEach(function(e){e.style.display="none"});if(!r)return;var v=d.querySelector('[data-d="'+r.v+'"]');if(v)v.style.display="block";document.getElementById("dr-t").textContent=r.tg+" · "+r.ti}
+function renderAud(){var me=ME[KIT.state.role],h="";AUD.filter(function(a){return S.src==="all"||a[4]===S.src}).forEach(function(a){h+='<tr><td data-l="Time" class="mono">'+a[0]+'</td><td data-l="Who">'+a[1]+'</td><td data-l="Action">'+a[2]+'</td><td data-l="Target">'+a[3]+'</td><td data-l="Source">'+(a[4]==="adm"?"Admin journal":"Commands")+'</td><td data-l="Receipt">'+(a[5]?'<a href="#">Receipt</a>':'<span class="na">Not available · no receipt yet</span>')+"</td></tr>"});document.getElementById("aud-body").innerHTML=h}
+function tabs(){["cmd","exc","aud"].forEach(function(t){var p=document.getElementById("pane-"+t);if(p)p.hidden=S.tab!==t});document.querySelectorAll("#tabs button").forEach(function(b){b.setAttribute("aria-selected",b.getAttribute("data-t")===S.tab)});document.getElementById("tool").style.display=S.tab==="exc"?"none":"flex";
+ var lay=document.getElementById("pane-cmd");lay.style.display=S.tab==="cmd"?"":"none";var d=document.getElementById("dr");if(S.tab==="exc"&&d&&d.classList.contains("on")){}}
+function seg(id,key,num){document.getElementById(id).addEventListener("click",function(e){var b=e.target.closest("button");if(!b||b.disabled)return;[].forEach.call(b.parentNode.children,function(x){x.setAttribute("aria-pressed",x===b)});S[key]=num?+b.getAttribute("data-v"):b.getAttribute("data-v");S.sel=0;renderCmd();renderAud()})}
+seg("lens","lens");seg("range","range",1);seg("src","src");
+document.getElementById("tabs").addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;S.tab=b.getAttribute("data-t");tabs()});
+document.addEventListener("click",function(e){var t=e.target,tr=t.closest("#cmd-body tr[data-i]");
+ if(tr&&!t.closest("a")){S.sel=+tr.getAttribute("data-i");renderCmd();document.getElementById("dr").classList.add("on");return}
+ var ex=t.closest("tr[data-exc]");if(ex&&!t.closest("a")){var p=ex.getAttribute("data-exc").split("|"),d=document.getElementById("dr");S.tab="exc";d.querySelectorAll("[data-d]").forEach(function(e){e.style.display="none"});d.querySelector('[data-d="exc"]').style.display="block";document.getElementById("dr-t").textContent=p[0];document.getElementById("exc-st").innerHTML=F(p[2],p[1]);document.getElementById("exc-t").textContent=p[1];document.getElementById("exc-d").textContent=p[3];d.classList.add("on");d.style.display="";document.getElementById("pane-cmd").style.display="";return}
+ if(t.closest("#dr-x")){document.getElementById("dr").classList.remove("on");return}});
+document.addEventListener("input",function(e){var n=e.target.closest("[data-note]");if(!n)return;var box=n.parentNode,r=box.querySelector("[data-resolve]"),w=box.querySelector("[data-rw]"),okn=n.value.trim().length>=12,wait=box.getAttribute("data-d")==="unk";r.disabled=!okn||wait;if(w)w.textContent=wait?"Resolve waits for a known outcome":okn?"":"Add a note of at least 12 characters"});
+KIT.on(function(){renderCmd();renderAud();tabs()});
+</script></body></html>

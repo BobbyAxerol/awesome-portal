@@ -1,0 +1,776 @@
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Command
+/
+Operations Queue
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Operations has its own Environment filter below.
+Operations has its own Range control below. The server takes no window (FE-025).
+Own filter below · Own range below
+Operations
+Observed 22 Aug 13:00Z
+Source journal unavailable
+IN SCOPE
+120
+MATCHING
+61
+LOADED
+50
+of 61 matching
+READ
+Available
+Counts by status
+
+Not available: Triage, Verification, Source status, Severity counts
+(Not published FE-043, Not published FE-043, Not published FE-043, Not published FE-043)
+
+Source health · 3 of 3 partial
+COMMANDS
+EXCEPTIONS
+AUDIT
+Lens
+Needs attention
+Mine
+All
+Window
+24H
+7D
+30D
+90D
+All time
+Triage
+Any
+Unacknowledged
+Acknowledged
+Resolved
+Severity
+Any
+Info
+Warning
+Error
+Critical
+Verification
+Any
+Not started
+Pending
+Succeeded
+Failed
+Partial
+Uncertain
+Denied
+Expired
+Target type
+Any
+Account
+Portfolio
+Deployment
+Environment
+Any
+Real-funded
+Paper
+Sandbox
+Command key
+ Apply
+
+Mine: Not published
+(FE-030)
+. No assignee or creator is published, so it cannot be filtered to you.
+
+Not available: Intent, Display, Linked incidents
+(Not published FE-020, Not published FE-032, Not published FE-042)
+
+TIME	TARGET AND OPERATION	RECEIPT	NEXT
+22 Aug 12:27Z	
+Account acc_scale_063
+Sync · Real-funded · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+22 Aug 12:00Z	
+Deployment dep_scale_052
+Resume · Real-funded · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+22 Aug 12:00Z	
+Account acc_TEST_ONLY_operational
+Sync · Paper · Warning
+Not published (FE-042)
+	
+⚠
+NEEDS ATTENTION:
+BLOCKED, NOT SENT
+Source blocked · verification not started
+	
+Review
+
+22 Aug 11:58Z	
+Portfolio pf_TEST_ONLY_canary
+Adjust target budget · Real-funded · Critical
+Not published (FE-042)
+	
+?
+OUTCOME UNKNOWN:
+UNKNOWN OUTCOME
+Source uncertain · verification uncertain
+	
+Check original request
+Do not send it again.
+
+22 Aug 11:40Z	
+Portfolio pf_TEST_ONLY_satellite
+Recall · Real-funded · Warning
+Not published (FE-042)
+	
+◐
+PARTIAL
+Source succeeded · verification partial
+	
+Review
+
+22 Aug 11:38Z	
+Account acc_scale_004
+Sync · Real-funded · Warning
+Not published (FE-042)
+	
+◔
+PENDING
+Source pending · verification pending
+	
+Review
+
+22 Aug 10:30Z	
+Portfolio pf_TEST_ONLY_core
+Adjust target budget · Real-funded · Error
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+FAILED
+Source failed · verification failed
+	
+Review
+
+22 Aug 10:05Z	
+Account acc_TEST_ONLY_binance01
+Sync · Sandbox · Info
+Not published (FE-042)
+	
+◔
+PENDING:
+SUCCEEDED, NOT VERIFIED
+Source succeeded · verification not started
+	
+Review
+
+22 Aug 09:40Z	
+Account acc_TEST_ONLY_binance02
+Top up · Paper · Warning
+Not published (FE-042)
+	
+◔
+PENDING:
+RUNNING
+Source running · verification pending
+	
+Review
+
+22 Aug 08:45Z	
+Deployment dep_TEST_ONLY_eth
+Resume · Paper · Info
+Not published (FE-042)
+	
+⚠
+NEEDS ATTENTION:
+BLOCKED, NOT SENT
+Source blocked · verification not started
+	
+Review
+
+22 Aug 08:15Z	
+Account acc_TEST_ONLY_binance01
+Sync · Paper · Warning
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+DENIED
+Source succeeded · verification denied
+	
+Review
+
+22 Aug 08:08Z	
+Deployment dep_scale_014
+Resume · Paper · Warning
+Not published (FE-042)
+	
+◷
+STALE:
+EXPIRED
+Source expired · verification expired
+	
+Review
+
+22 Aug 07:52Z	
+Portfolio pf_scale_008
+Adjust target budget · Real-funded · Warning
+Not published (FE-042)
+	
+◐
+PARTIAL
+Source succeeded · verification partial
+	
+Review
+
+22 Aug 07:41Z	
+Portfolio pf_scale_015
+Return capital · Real-funded · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+22 Aug 06:26Z	
+Account acc_scale_072
+Sync · Real-funded · Info
+Not published (FE-042)
+	
+◐
+PARTIAL
+Source succeeded · verification partial
+	
+Review
+
+22 Aug 06:00Z	
+Portfolio pf_scale_003
+Recall · Real-funded · Error
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+FAILED
+Source failed · verification failed
+	
+Review
+
+22 Aug 05:30Z	
+Account acc_scale_030
+Sync · Sandbox · Info
+Not published (FE-042)
+	
+◐
+PARTIAL
+Source succeeded · verification partial
+	
+Review
+
+22 Aug 05:12Z	
+Portfolio pf_scale_013
+Adjust target budget · Paper · Warning
+Not published (FE-042)
+	
+◔
+PENDING
+Source pending · verification pending
+	
+Review
+
+22 Aug 05:07Z	
+Portfolio pf_scale_001
+Return capital · Paper · Warning
+Not published (FE-042)
+	
+◐
+PARTIAL
+Source succeeded · verification partial
+	
+Review
+
+22 Aug 02:17Z	
+Account acc_scale_062
+Sync · Paper · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+22 Aug 02:14Z	
+Portfolio pf_scale_018
+Adjust target budget · Paper · Critical
+Not published (FE-042)
+	
+?
+OUTCOME UNKNOWN:
+UNKNOWN OUTCOME
+Source uncertain · verification uncertain
+	
+Check original request
+Do not send it again.
+
+22 Aug 00:38Z	
+Account acc_scale_056
+Sync · Sandbox · Warning
+Not published (FE-042)
+	
+◔
+PENDING:
+RUNNING
+Source running · verification pending
+	
+Review
+
+22 Aug 00:37Z	
+Portfolio pf_scale_016
+Return capital · Sandbox · Info
+Not published (FE-042)
+	
+◐
+PARTIAL
+Source succeeded · verification partial
+	
+Review
+
+22 Aug 00:28Z	
+Deployment dep_scale_017
+Resume · Sandbox · Error
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+FAILED
+Source failed · verification failed
+	
+Review
+
+22 Aug 00:25Z	
+Account acc_scale_057
+Sync · Real-funded · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 23:48Z	
+Account acc_scale_041
+Sync · Sandbox · Warning
+Not published (FE-042)
+	
+◔
+PENDING
+Source pending · verification pending
+	
+Review
+
+21 Aug 22:33Z	
+Account acc_scale_039
+Sync · Paper · Warning
+Not published (FE-042)
+	
+◷
+STALE:
+EXPIRED
+Source expired · verification expired
+	
+Review
+
+21 Aug 20:02Z	
+Portfolio pf_scale_011
+Adjust target budget · Real-funded · Warning
+Not published (FE-042)
+	
+◔
+PENDING:
+RUNNING
+Source running · verification pending
+	
+Review
+
+21 Aug 19:13Z	
+Deployment dep_scale_008
+Resume · Real-funded · Warning
+Not published (FE-042)
+	
+⚠
+NEEDS ATTENTION:
+BLOCKED, NOT SENT
+Source blocked · verification not started
+	
+Review
+
+21 Aug 18:16Z	
+Account acc_scale_051
+Top up · Paper · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 17:51Z	
+Portfolio pf_scale_010
+Recall · Paper · Warning
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 17:44Z	
+Deployment dep_scale_057
+Resume · Real-funded · Warning
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 15:50Z	
+Deployment dep_scale_001
+Archive · Sandbox · Error
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+FAILED
+Source failed · verification failed
+	
+Review
+
+21 Aug 13:46Z	
+Account acc_scale_019
+Sync · Paper · Error
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+FAILED
+Source failed · verification failed
+	
+Review
+
+21 Aug 13:30Z	
+Portfolio pf_scale_002
+Adjust target budget · Paper · Error
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+FAILED
+Source failed · verification failed
+	
+Review
+
+21 Aug 13:17Z	
+Portfolio pf_scale_015
+Adjust target budget · Real-funded · Error
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+FAILED
+Source failed · verification failed
+	
+Review
+
+21 Aug 11:26Z	
+Deployment dep_scale_015
+Resume · Real-funded · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 11:12Z	
+Deployment dep_scale_037
+Resume · Real-funded · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 10:49Z	
+Account acc_scale_070
+Top up · Sandbox · Warning
+Not published (FE-042)
+	
+?
+OUTCOME UNKNOWN:
+UNKNOWN OUTCOME
+Source uncertain · verification uncertain
+	
+Check original request
+Do not send it again.
+
+21 Aug 10:21Z	
+Account acc_scale_031
+Sync · Real-funded · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 09:39Z	
+Portfolio pf_scale_018
+Return capital · Paper · Warning
+Not published (FE-042)
+	
+⚠
+NEEDS ATTENTION:
+BLOCKED, NOT SENT
+Source blocked · verification not started
+	
+Review
+
+21 Aug 08:30Z	
+Portfolio pf_scale_012
+Adjust target budget · Paper · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 08:13Z	
+Account acc_scale_043
+Sync · Sandbox · Info
+Not published (FE-042)
+	
+◔
+PENDING:
+SUCCEEDED, NOT VERIFIED
+Source succeeded · verification not started
+	
+Review
+
+21 Aug 08:04Z	
+Account acc_scale_029
+Top up · Sandbox · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 07:16Z	
+Account acc_scale_016
+Sync · Sandbox · Info
+Not published (FE-042)
+	
+◐
+PARTIAL
+Source succeeded · verification partial
+	
+Review
+
+21 Aug 06:12Z	
+Portfolio pf_scale_012
+Recall · Real-funded · Info
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+DENIED
+Source succeeded · verification denied
+	
+Review
+
+21 Aug 05:23Z	
+Deployment dep_scale_055
+Resume · Sandbox · Error
+Not published (FE-042)
+	
+✕
+REJECTED OR FAILED:
+FAILED
+Source failed · verification failed
+	
+Review
+
+21 Aug 05:04Z	
+Portfolio pf_scale_008
+Recall · Real-funded · Warning
+Not published (FE-042)
+	
+◔
+PENDING:
+RUNNING
+Source running · verification pending
+	
+Review
+
+21 Aug 04:27Z	
+Portfolio pf_scale_006
+Recall · Real-funded · Info
+Not published (FE-042)
+	
+✓
+OK:
+VERIFIED
+Source succeeded · verification succeeded
+	
+Review
+
+21 Aug 03:56Z	
+Account acc_scale_067
+Top up · Sandbox · Warning
+Not published (FE-042)
+	
+⚠
+NEEDS ATTENTION:
+BLOCKED, NOT SENT
+Source blocked · verification not started
+	
+Review
+50 of 61 matching · 120 in scope
+Load more
+Refresh
+portfolio/recall
+
+op_TEST_ONLY_s02
+
+Close
+Receipt
+◐
+PARTIAL
+Source status
+Succeeded
+Verification
+Partial
+Triage
+⚠
+NEEDS ATTENTION:
+UNACKNOWLEDGED
+Target
+Portfolio pf_TEST_ONLY_satellite
+Environment
+Real-funded
+Severity
+Warning
+Risk tier
+R3 live protective
+Authority
+Portal
+Created
+22 Aug 11:40Z
+Updated
+22 Aug 11:40Z
+Acknowledged
+Not acknowledged
+Resolved
+Not resolved
+Version
+1
+Open recalls the Portal controlled
+
+Only recalls the Portal itself controlled are listed. Recalls not started through the Portal cannot be discovered here
+Not published: RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED
+
+No open recall that the Portal controlled on this target.
+
+Read 18 Oct 05:07Z (Portal clock).
+
+Not available: Intent axis, Display axis, Amounts, Who acknowledged or resolved it
+(Not published FE-020, Not published FE-032, Not published FE-032, Not published FE-021)
+
+Acknowledge
+
+Not published
+(FE-015)
+. ADMIN-only write, not offered yet.
+
+My access
+Resolve
+
+Not published
+(FE-015)
+. Needs a reason and evidence, not offered yet.
+
+My access

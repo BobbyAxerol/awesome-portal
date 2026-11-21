@@ -1,17 +1,42 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import Ajv2020 from "ajv/dist/2020";
 import { AdminService } from "../src/admin/admin.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
 import { projectionDigest } from "../src/execution/profile-projection.repository";
-import { assertCaptureContract } from "./contract-validator";
+import { assertCaptureContract, assertReviewContextContract } from "./contract-validator";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
 import { GovernanceGrantsRepository } from "../src/repos/governance-grants";
+import { GovernanceReviewCaptureService } from "../src/governance/review-capture.service";
+import { PaperExitRepository } from "../src/governance/paper-exit.repository";
+import { computePaperExitSourceSnapshotHash } from "../src/governance/paper-exit.service";
+import { computeEvidenceManifestHash } from "../src/governance/governance.service";
 
 const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
   "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
 const ARTIFACT_HASH = `sha256:${"a".repeat(64)}`;
+
+// FE-074: compare actual HTTP producer responses and requests with the
+// published definitions. Schema validity never substitutes workspace membership.
+const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+const governanceApi = JSON.parse(readFileSync(resolve(contractsRoot, "openapi/execution-governance.openapi.json"), "utf8"));
+const governanceProductContract = JSON.parse(readFileSync(resolve(contractsRoot, "schemas/execution-governance-product.v1.schema.json"), "utf8"));
+const governanceAjv = new Ajv2020({ strict: false, allErrors: true });
+const validateDuplicateProblem = governanceAjv.compile(governanceApi.components.schemas.DuplicateOpenApprovalProblem);
+const validateApprovalCreate = governanceAjv.compile({
+  $defs: governanceProductContract.$defs,
+  $ref: "#/$defs/ApprovalCreateRequest",
+});
+function assertDuplicateProblem(value: unknown) {
+  expect(validateDuplicateProblem(value), JSON.stringify(validateDuplicateProblem.errors)).toBe(true);
+}
+function assertApprovalCreateContract(value: unknown) {
+  expect(validateApprovalCreate(value), JSON.stringify(validateApprovalCreate.errors)).toBe(true);
+}
 
 interface Actor {
   userId: string;
@@ -227,6 +252,35 @@ describe("N29 governance product closeout", () => {
     };
   }
 
+  it.each([
+    ["role", "ADMIN_ROLE_REQUIRED", 403],
+    ["grant", "GOVERNANCE_CAPABILITY_REQUIRED", 403],
+    ["session", "SESSION_REQUIRED", 401],
+    ["workspace", "WORKSPACE_ACCESS_DENIED", 403],
+  ] as const)("rechecks capture %s inside its transaction even when the HTTP actor was loaded earlier", async (change, code, status) => {
+    const actor = await createActor(`capture-fresh-${change}`, "ADMIN");
+    await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES ($1,$2,'MEMBER')", [workspaceId, actor.userId]);
+    const grants = new GovernanceGrantsRepository(ctx.pool);
+    for (const gate of ["r1", "r2"] as const) await grants.insertGrant({
+      grantId: `grn_capture_fresh_${change}_${gate}`, granteeUserId: actor.userId,
+      capability: `governance.${gate}.read`, workspaceId, issuedBy: bobby.userId,
+    });
+    const stale = (await auth.users.findById(actor.userId))!;
+    if (change === "role") await ctx.pool.query("UPDATE portal_users SET role='USER' WHERE user_id=$1", [actor.userId]);
+    if (change === "grant") await ctx.pool.query("DELETE FROM portal_capability_grants WHERE grantee_user_id=$1", [actor.userId]);
+    if (change === "session") await ctx.pool.query("UPDATE portal_users SET session_version=session_version+1 WHERE user_id=$1", [actor.userId]);
+    if (change === "workspace") await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [workspaceId, actor.userId]);
+    const captures = ctx.app.get(GovernanceReviewCaptureService);
+    await expect(captures.createR2(stale, {
+      workspace_id: workspaceId, request_key: `capture-stale-${change}`,
+      summary: "Technical negative authority regression; no source capture.",
+      r1_approval_id: "apr_not_read", expected_r1_version: 1, portfolio_id: "pf_not_read",
+      currency: "USDT", deployment_id: "dep_not_read", risk_grant_id: "risk_not_read",
+      expected_projection_digest: ARTIFACT_HASH,
+    }, `capture-stale-${change}`)).rejects.toMatchObject({ code, status });
+    expect((await ctx.pool.query("SELECT count(*)::integer AS count FROM governance_review_captures WHERE actor_user_id=$1", [actor.userId])).rows[0].count).toBe(0);
+  });
+
   it("pins server-owned evidence, is idempotent and rejects duplicate open work", async () => {
     const missingCsrf = await request(stan, "/api/v1/execution/governance/approvals", {
       method: "POST",
@@ -234,6 +288,7 @@ describe("N29 governance product closeout", () => {
     });
     expect(missingCsrf.statusCode).toBe(403);
 
+    assertApprovalCreateContract(createPayload());
     const created = await mutation(stan, "/api/v1/execution/governance/approvals", createPayload());
     expect(created.statusCode).toBe(201);
     expect(created.json().replayed).toBe(false);
@@ -261,6 +316,7 @@ describe("N29 governance product closeout", () => {
     );
     expect(duplicate.statusCode).toBe(409);
     expect(duplicate.json().error.code).toBe("DUPLICATE_OPEN_APPROVAL");
+    assertDuplicateProblem(duplicate.json());
     expect(duplicate.json().details.approval_id).toBe(created.json().approval.approval_id);
 
     const stored = await ctx.pool.query(
@@ -281,15 +337,26 @@ describe("N29 governance product closeout", () => {
     ]);
   });
 
-  it("BE-R2-8 creates R2 and Paper Exit through authenticated routes, then rejects safely without fabricating source evidence", async () => {
+  it("creates and independently decides Portal-local R2 before Paper Exit, without fabricating source evidence or executing upstream", async () => {
     const created = await mutation(stan,"/api/v1/execution/governance/approvals",createPayload("ar06-r1"));
     expect(created.statusCode,JSON.stringify(created.json())).toBe(201);
     const r1Id=created.json().approval.approval_id;
-    const planned=await mutation(lan,"/api/v1/execution/commands/plans",{
-      schema_version:"governance.r1-decision-plan-request.v1",workspace_id:workspaceId,request_key:"ar06-r1-plan",
-      command_type:"GOVERNANCE_R1_DECISION",command_version:1,target:{ approval_id:r1Id },expected_approval_version:1,
-      payload:{ decision:"APPROVE",reason:"Independent accepted research evidence review.",evidence_hashes:[ARTIFACT_HASH] },
-    });
+    const initial = await request(lan, `/api/v1/execution/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    expect(initial.statusCode).toBe(200);
+    const decision = initial.json().data.decision_context;
+    assertReviewContextContract(decision, "DecisionContext");
+    expect(decision).toMatchObject({ workspace_id: workspaceId, approval_id: r1Id, expected_approval_version: 1,
+      evidence_hashes: [ARTIFACT_HASH], availability: { state: "AVAILABLE", reason_code: null } });
+    const decisionInput = {
+      schema_version:decision.request_schema_version,workspace_id:decision.workspace_id,request_key:"ar06-r1-plan",
+      command_type:decision.command_type,command_version:1,target:{ approval_id:decision.approval_id },expected_approval_version:decision.expected_approval_version,
+      payload:{ decision:"APPROVE",reason:"Independent accepted research evidence review.",conditions:[],evidence_hashes:decision.evidence_hashes },
+    };
+    const missingHashes = await mutation(lan, decision.plan_path, { ...decisionInput, request_key: "ar06-empty-hashes",
+      payload: { ...decisionInput.payload, evidence_hashes: [] } });
+    expect(missingHashes.statusCode).toBe(201);
+    expect(missingHashes.json().blockers).toContainEqual({ code: "EVIDENCE_HASH_MISMATCH" });
+    const planned=await mutation(lan,decision.plan_path,decisionInput);
     expect(planned.statusCode,JSON.stringify(planned.json())).toBe(201);
     expect(planned.json().blockers).toEqual([]);
     const applied=await mutation(lan,`/api/v1/execution/operations/${planned.json().operation_id}/apply`,{
@@ -315,8 +382,27 @@ describe("N29 governance product closeout", () => {
        completeness,projection_epoch,projection_sequence,payload_digest,payload)
       VALUES ($1,'paper','PAPER_BINANCE_USDM','accepted-test-v1','epoch','cursor',now(),now(),now(),'COMPLETE',
        '00000000-0000-4000-8000-000000000086',1,$2,$3)`,[workspaceId,digest,JSON.stringify(document)]);
-    const r2Input={ workspace_id:workspaceId,request_key:"ar06-r2",summary:"Capture Portal review; no source verdict asserted.",
-      r1_approval_id:r1Id,expected_r1_version:2,portfolio_id:"pf_ar06",currency:"USDT",deployment_id:"dep_ar06",risk_grant_id:"risk_ar06",expected_projection_digest:digest };
+    const accepted = await request(bobby, `/api/v1/execution/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    expect(accepted.statusCode).toBe(200);
+    const captureContext = accepted.json().data.capture_context;
+    assertReviewContextContract(captureContext, "CaptureContext");
+    expect(captureContext).toMatchObject({ action: "R2_CREATE", parent_approval_id: r1Id, expected_parent_version: 2,
+      expected_projection_digest: digest, availability: { state: "AVAILABLE", reason_code: null },
+      candidates: [{ deployment_id: "dep_ar06", portfolio_id: "pf_ar06", risk_grant_id: "risk_ar06", currency: null }] });
+    const candidate = captureContext.candidates[0];
+    const r2Input={ workspace_id:captureContext.workspace_id,request_key:"ar06-r2",summary:"Capture Portal review; no source verdict asserted.",
+      r1_approval_id:captureContext.parent_approval_id,expected_r1_version:captureContext.expected_parent_version,
+      portfolio_id:candidate.portfolio_id,currency:"USDT",deployment_id:candidate.deployment_id,risk_grant_id:candidate.risk_grant_id,
+      expected_projection_digest:captureContext.expected_projection_digest };
+    const ungrantedAdmin = await createActor("ungranted-capture-admin", "ADMIN");
+    await ctx.pool.query("INSERT INTO workspace_members(workspace_id,user_id,role) VALUES ($1,$2,'MEMBER')", [workspaceId, ungrantedAdmin.userId]);
+    expect((await mutation(ungrantedAdmin, "/api/v1/execution/governance/r2/capture", { ...r2Input, request_key: "ar06-ungranted-admin" })).statusCode).toBe(403);
+    await new GovernanceGrantsRepository(ctx.pool).insertGrant({ grantId: "grn_capture_r1_read_only", granteeUserId: ungrantedAdmin.userId,
+      capability: "governance.r1.read", workspaceId, issuedBy: bobby.userId });
+    const readOnlyParent = await request(ungrantedAdmin, `/api/v1/execution/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    expect(readOnlyParent.statusCode).toBe(200);
+    expect(readOnlyParent.json().data.capture_context.availability.reason_code).toBe("GOVERNANCE_CAPABILITY_REQUIRED");
+    expect((await mutation(ungrantedAdmin, "/api/v1/execution/governance/r2/capture", { ...r2Input, request_key: "ar06-parent-read-only" })).statusCode).toBe(403);
     expect((await mutation(stan,"/api/v1/execution/governance/r2/capture",r2Input)).statusCode).toBe(403);
     expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,workspace_id:"no-access" })).statusCode).toBe(404);
     expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,risk_grant_id:"wrong-account" })).statusCode).toBe(422);
@@ -342,13 +428,144 @@ describe("N29 governance product closeout", () => {
     expect(parallel.filter(item=>!item.json().replayed)).toHaveLength(1);
     const r2=parallel[0].json();
     assertCaptureContract(r2);
-    expect((await request(bobby,`${r2.read_path}?workspace_id=${workspaceId}`)).statusCode).toBe(200);
+    const r2Review = await request(bobby,`${r2.read_path}?workspace_id=${workspaceId}`);
+    expect(r2Review.statusCode).toBe(200);
+    const r2Data = r2Review.json().data;
+    assertReviewContextContract(r2Data.decision_context, "DecisionContext");
+    assertReviewContextContract(r2Data.capture_context, "CaptureContext");
+    expect(r2Data.decision_context).toMatchObject({ command_type: "GOVERNANCE_R2_DECISION",
+      request_schema_version: "governance.r2-decision-plan-request.v1",
+      evidence_hashes: [ARTIFACT_HASH], source_side_effect_requested: false });
+    // Bobby captured this review: owner authority does not waive its SoD.
+    expect(r2Data.eligibility).toMatchObject({ can_approve: false, can_approve_with_condition: false,
+      can_deny: true, can_request_changes: false, locks: expect.arrayContaining(["SELF_APPROVAL"]) });
+    expect(r2Data.approval).toMatchObject({ evidence_complete: true, blocker_count: 0, status: "PENDING" });
+    expect(r2Data.capture_context.availability).toEqual({ state: "BLOCKED", reason_code: "R2_APPROVAL_REQUIRED" });
+    expect(r2Data.r1_reference.href).toBe(`/governance/approvals/${r1Id}/r1?workspace_id=${workspaceId}`);
+    expect(r2Data.decision_evidence_manifest.manifest_hash).toBe(r2Data.approval.evidence_set_hash);
+    expect(r2Data.decision_evidence_manifest.manifest_hash).not.toBe(r2Data.r1_reference.digest);
+    const mismatch = await mutation(bobby, "/api/v1/execution/commands/plans", {
+      ...decisionInput, request_key: "ar06-no-r1-alias", target: { approval_id: r2.approval_id }, expected_approval_version: 1,
+    });
+    expect(mismatch.statusCode).toBe(409);
+    expect(mismatch.json().error.code).toBe("GOVERNANCE_DECISION_GATE_MISMATCH");
     expect((await mutation(bobby,"/api/v1/execution/governance/r2/capture",{ ...r2Input,summary:"Changed intent must not replay previous result." })).statusCode).toBe(409);
-    const exitInput={ workspace_id:workspaceId,request_key:"ar06-exit",summary:"Insufficient accepted source evidence; record review, not promotion.",
-      r2_approval_id:r2.approval_id,expected_r2_version:1,deployment_id:"dep_ar06",expected_projection_digest:digest };
+    const premature = await mutation(bobby, "/api/v1/execution/governance/paper-exit/create", {
+      workspace_id: workspaceId, request_key: "ar06-premature-exit", summary: "A pending R2 is not an accepted capital review.",
+      r2_approval_id: r2.approval_id, expected_r2_version: 1,
+      deployment_id: candidate.deployment_id, expected_projection_digest: digest,
+    });
+    expect(premature.statusCode).toBe(422);
+    expect(premature.json().error.code).toBe("R2_APPROVAL_REQUIRED");
+
+    // Use the independent reviewer's same-read command pins, not R1 command
+    // aliases or SQL transitions. This records Portal approval only.
+    const independent = await request(lan, `${r2.read_path}?workspace_id=${workspaceId}`);
+    expect(independent.statusCode).toBe(200);
+    expect(independent.json().data.eligibility).toMatchObject({ can_approve: true, locks: [] });
+    const r2Decision = independent.json().data.decision_context;
+    assertReviewContextContract(r2Decision, "DecisionContext");
+    const r2Plan = await mutation(lan, r2Decision.plan_path, {
+      schema_version: r2Decision.request_schema_version, workspace_id: r2Decision.workspace_id,
+      request_key: "ar06-r2-approve", command_type: r2Decision.command_type, command_version: 1,
+      target: { approval_id: r2Decision.approval_id }, expected_approval_version: r2Decision.expected_approval_version,
+      payload: { decision: "APPROVE", reason: "Independent Portal review accepts the immutable source references.",
+        conditions: [], evidence_hashes: r2Decision.evidence_hashes },
+    });
+    expect(r2Plan.statusCode, JSON.stringify(r2Plan.json())).toBe(201);
+    expect(r2Plan.json()).toMatchObject({ command_type: "GOVERNANCE_R2_DECISION", blockers: [] });
+    const r2Apply = await mutation(lan, `/api/v1/execution/operations/${r2Plan.json().operation_id}/apply`, {
+      schema_version: "governance.r2-decision-apply-request.v1", workspace_id: workspaceId,
+      apply_token: r2Plan.json().apply_token,
+    });
+    expect(r2Apply.statusCode, JSON.stringify(r2Apply.json())).toBe(202);
+    const acceptedR2 = await request(bobby, `${r2.read_path}?workspace_id=${workspaceId}`);
+    expect(acceptedR2.statusCode).toBe(200);
+    expect(acceptedR2.json().data.approval).toMatchObject({ status: "APPROVED", approval_version: 2 });
+    const exitContext = acceptedR2.json().data.capture_context;
+    assertReviewContextContract(exitContext, "CaptureContext");
+    expect(exitContext.availability).toEqual({ state: "AVAILABLE", reason_code: null });
+    const exitInput={ workspace_id:exitContext.workspace_id,request_key:"ar06-exit",summary:"Insufficient accepted source evidence; record review, not promotion.",
+      r2_approval_id:exitContext.parent_approval_id,expected_r2_version:exitContext.expected_parent_version,
+      deployment_id:exitContext.candidates[0].deployment_id,expected_projection_digest:exitContext.expected_projection_digest };
+    // TEST_ONLY late audit failure after the final-at-INSERT hash and exact
+    // children are written. Transaction rollback is not a guarded row DELETE.
+    const captureCounts = async () => (await ctx.pool.query(`SELECT
+      (SELECT count(*)::int FROM governance_approval_requests) AS approvals,
+      (SELECT count(*)::int FROM governance_approval_evidence) AS evidence,
+      (SELECT count(*)::int FROM governance_paper_exit_reviews) AS reviews,
+      (SELECT count(*)::int FROM governance_paper_exit_lineage) AS lineage,
+      (SELECT count(*)::int FROM governance_paper_exit_panels) AS panels,
+      (SELECT count(*)::int FROM governance_paper_exit_findings) AS findings,
+      (SELECT count(*)::int FROM governance_review_captures) AS captures,
+      (SELECT count(*)::int FROM product_audit_events WHERE event_type='governance.review.captured') AS audits`)).rows[0];
+    const beforeExitCapture = await captureCounts();
+    await ctx.pool.query(`CREATE FUNCTION test_exit_capture_audit_failure() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN IF NEW.event_type='governance.review.captured'
+        AND NEW.metadata_json->>'action'='PAPER_EXIT_CREATE'
+        THEN RAISE EXCEPTION 'test Paper Exit audit unavailable'; END IF;
+      RETURN NEW; END; $$;
+      CREATE TRIGGER test_exit_capture_audit_failure BEFORE INSERT ON product_audit_events
+      FOR EACH ROW EXECUTE FUNCTION test_exit_capture_audit_failure()`);
+    try {
+      const failedExit = await mutation(bobby,"/api/v1/execution/governance/paper-exit/create",exitInput);
+      expect(failedExit.statusCode).toBe(500);
+      expect(await captureCounts()).toEqual(beforeExitCapture);
+    } finally {
+      await ctx.pool.query("DROP TRIGGER test_exit_capture_audit_failure ON product_audit_events; DROP FUNCTION test_exit_capture_audit_failure()");
+    }
+    // Retry the SAME failed capture key through the actual API below.
     const exit=await mutation(bobby,"/api/v1/execution/governance/paper-exit/create",exitInput);
     expect(exit.statusCode,JSON.stringify(exit.json())).toBe(201);
     assertCaptureContract(exit.json());
+    const exitId = exit.json().review_id;
+    const exitRepository = new PaperExitRepository(ctx.pool);
+    const captured = (await exitRepository.detail(workspaceId, exitId))!;
+    expect(captured).not.toBeNull();
+    expect(captured.lineage).toHaveLength(5);
+    expect(captured.panels).toHaveLength(4);
+    expect(captured.findings).toHaveLength(4);
+    expect(captured.approval.evidenceSetHash).toBe(computeEvidenceManifestHash(captured.evidence));
+    expect(captured.review.sourceSnapshotHash).toBe(computePaperExitSourceSnapshotHash(captured));
+    const childIds = {
+      lineage: captured.lineage.map((row) => row.lineageId),
+      panels: captured.panels.map((row) => row.panelId),
+      findings: captured.findings.map((row) => row.findingId),
+    };
+    // Replay the genuine capture via HTTP. No SQL insertion of workflow rows,
+    // source mutation, guard bypass, additional children or duplicate audit.
+    const exitReplays = await Promise.all(Array.from({ length: 2 }, () =>
+      mutation(bobby, "/api/v1/execution/governance/paper-exit/create", exitInput)));
+    for (const replay of exitReplays) {
+      expect(replay.statusCode, JSON.stringify(replay.json())).toBe(201);
+      assertCaptureContract(replay.json());
+      expect(replay.json()).toMatchObject({ review_id: exitId, replayed: true });
+    }
+    const changedExit = await mutation(bobby, "/api/v1/execution/governance/paper-exit/create", {
+      ...exitInput, summary: "Changed intent must not reuse the original Paper Exit capture.",
+    });
+    expect(changedExit.statusCode).toBe(409);
+    expect(changedExit.json().error.code).toBe("REQUEST_KEY_CONFLICT");
+    const replayedExit = (await exitRepository.detail(workspaceId, exitId))!;
+    expect(replayedExit.review.sourceSnapshotHash).toBe(captured.review.sourceSnapshotHash);
+    expect(computePaperExitSourceSnapshotHash(replayedExit)).toBe(captured.review.sourceSnapshotHash);
+    expect({
+      lineage: replayedExit.lineage.map((row) => row.lineageId),
+      panels: replayedExit.panels.map((row) => row.panelId),
+      findings: replayedExit.findings.map((row) => row.findingId),
+    }).toEqual(childIds);
+    expect((await ctx.pool.query(
+      "SELECT count(*)::int n FROM governance_paper_exit_reviews WHERE review_id=$1 AND workspace_id=$2",
+      [exitId, workspaceId],
+    )).rows[0].n).toBe(1);
+    expect((await ctx.pool.query(
+      "SELECT count(*)::int n FROM governance_review_captures WHERE aggregate_id=$1 AND workspace_id=$2",
+      [exitId, workspaceId],
+    )).rows[0].n).toBe(1);
+    expect((await ctx.pool.query(
+      "SELECT count(*)::int n FROM product_audit_events WHERE event_type='governance.review.captured' AND aggregate_id=$1 AND workspace_id=$2",
+      [exitId, workspaceId],
+    )).rows[0].n).toBe(1);
     const review=await request(lan,`${exit.json().read_path}?workspace_id=${workspaceId}`);
     expect(review.statusCode,JSON.stringify(review.json())).toBe(200);
     expect(review.json().data.gate_met).toBe(false);
@@ -365,7 +582,11 @@ describe("N29 governance product closeout", () => {
       schema_version:"governance.paper-exit-decision-apply-request.v1",workspace_id:workspaceId,apply_token:reject.json().apply_token,
     });
     expect(rejected.statusCode,JSON.stringify(rejected.json())).toBe(202);
+    const decidedExit = (await exitRepository.detail(workspaceId, exitId))!;
+    expect(decidedExit.review.sourceSnapshotHash).toBe(captured.review.sourceSnapshotHash);
+    expect(computePaperExitSourceSnapshotHash(decidedExit)).toBe(captured.review.sourceSnapshotHash);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM governance_promotion_authority_grants")).rows[0].n).toBe(0);
+    expect((await ctx.pool.query("SELECT count(*)::int AS n FROM governance_approval_decisions WHERE approval_id=$1", [r2.approval_id])).rows[0].n).toBe(1);
     expect((await ctx.pool.query("SELECT count(*)::int AS n FROM product_audit_events WHERE event_type='governance.review.captured'")).rows[0].n).toBe(2);
     await expect(ctx.pool.query("UPDATE governance_paper_exit_lineage SET label='tamper'")).rejects.toMatchObject({ code:"55000" });
     Object.assign(ctx.config,{ FEATURE_EXECUTION_LOCAL_PROJECTION:"false",FEATURE_EXECUTION_CURRENT_SOURCE_PAPER:"false" });
@@ -389,10 +610,12 @@ describe("N29 governance product closeout", () => {
     expect(ineligible.statusCode).toBe(422);
     expect(ineligible.json().error.code).toBe("EVIDENCE_RUN_NOT_ELIGIBLE");
 
-    const crossWorkspace = await mutation(stan, "/api/v1/execution/governance/approvals", {
+    const crossWorkspacePayload = {
       ...createPayload("cross-workspace"),
       workspace_id: "ws_not_visible",
-    });
+    };
+    assertApprovalCreateContract(crossWorkspacePayload);
+    const crossWorkspace = await mutation(stan, "/api/v1/execution/governance/approvals", crossWorkspacePayload);
     expect(crossWorkspace.statusCode).toBe(404);
   });
 
@@ -422,6 +645,30 @@ describe("N29 governance product closeout", () => {
     expect(distinctKeys.map((item) => item.statusCode).sort()).toEqual([201, 409]);
     expect(distinctKeys.find((item) => item.statusCode === 409)?.json().error.code)
       .toBe("DUPLICATE_OPEN_APPROVAL");
+    assertDuplicateProblem(distinctKeys.find((item) => item.statusCode === 409)!.json());
+  });
+
+  it("resolves omitted workspace from the authenticated session, not the evidence run", async () => {
+    const { workspace_id: _explicitWorkspace, ...sessionWorkspacePayload } = createPayload();
+    assertApprovalCreateContract(sessionWorkspacePayload);
+    // The shared fixture is in Bobby's workspace; omission must not infer that
+    // workspace from a run ID even though Stan is also a member there.
+    const wrongSessionScope = await mutation(stan, "/api/v1/execution/governance/approvals", sessionWorkspacePayload);
+    expect(wrongSessionScope.statusCode).toBe(422);
+    expect(wrongSessionScope.json().error.code).toBe("EVIDENCE_RUN_NOT_FOUND");
+    const personal = await ctx.pool.query<{ workspace_id: string }>(
+      "SELECT workspace_id FROM workspaces WHERE owner_user_id = $1",
+      [stan.userId],
+    );
+    expect(personal.rows).toHaveLength(1);
+    await ctx.pool.query("UPDATE run_read_models SET workspace_id = $1 WHERE run_id = 'run_n29'", [personal.rows[0].workspace_id]);
+    const created = await mutation(stan, "/api/v1/execution/governance/approvals", sessionWorkspacePayload);
+    expect(created.statusCode).toBe(201);
+    const stored = await ctx.pool.query<{ workspace_id: string }>(
+      "SELECT workspace_id FROM governance_approval_requests WHERE approval_id = $1",
+      [created.json().approval.approval_id],
+    );
+    expect(stored.rows).toEqual([{ workspace_id: personal.rows[0].workspace_id }]);
   });
 
   it("separates empty request scope, policy block and unavailable external panels", async () => {
@@ -446,15 +693,21 @@ describe("N29 governance product closeout", () => {
     );
     expect(emptyConditions.json().read_truth).toEqual(emptyInbox.json().read_truth);
 
-    const created = await mutation(stan, "/api/v1/execution/governance/approvals", createPayload());
-    expect(created.statusCode).toBe(201);
-    const approvalId = created.json().approval.approval_id as string;
+    // TEST_ONLY captured blocked cohort. Genuine HTTP creation/replay is
+    // exercised above; never mutate its captured evidence completeness later.
+    const approvalId = "AP-N29-BLOCKED-CAPTURE";
     await ctx.pool.query(
-      `UPDATE governance_approval_requests
-          SET evidence_complete = false, blocker_count = 1,
-              blocker_summary = 'Evidence review is incomplete.'
-        WHERE approval_id = $1`,
-      [approvalId],
+      `INSERT INTO governance_approval_requests
+        (approval_id,workspace_id,gate,subject_type,subject_id,subject_label,
+         environment,target_label,requester_user_id,requester_username,
+         artifact_creator_user_id,artifact_creator_username,status,policy_version,
+         quorum_required,evidence_set_hash,evidence_complete,blocker_count,
+         blocker_summary,sla_due_at,expires_at)
+       VALUES ($1,$2,'R1','ALPHA_VERSION','alpha_n29','Delta RSI · blocked capture',
+         'RESEARCH','Paper',$3,$4,$3,$4,'PENDING','n29-test-policy-v1',
+         1,$5,false,1,'Evidence review is incomplete.',
+         now()+interval '6 hours',now()+interval '48 hours')`,
+      [approvalId,workspaceId,stan.userId,stan.username,computeEvidenceManifestHash([])],
     );
     const blockedList = await request(
       lan,
@@ -550,15 +803,37 @@ describe("N29 governance product closeout", () => {
       state: "LAPSED",
       blocking: true,
     }));
-    const commandCenter = await request(
+    // Membership/requester identity is not a Governance read grant. Command
+    // Center must enforce the same condition visibility as the register.
+    const ungrantedConditions = await request(
+      stan,
+      `/api/v1/execution/governance/waivers?workspace_id=${workspaceId}`,
+    );
+    // The existing list contract is a scoped empty page, not the 403 used
+    // by an individual R1 detail read. Counts must hide the records too.
+    expect(ungrantedConditions.statusCode).toBe(200);
+    expect(ungrantedConditions.json().page.rows).toEqual([]);
+    expect(ungrantedConditions.json().page.total_count).toBe(0);
+    expect(ungrantedConditions.json().page.filtered_count).toBe(0);
+    const ungrantedCommandCenter = await request(
       stan,
       `/api/v1/execution/command-center?workspace_id=${workspaceId}`,
     );
-    expect(commandCenter.statusCode).toBe(200);
-    expect(commandCenter.json().panels.today.items).toContainEqual(expect.objectContaining({
-      id: "condition:lim_lapsed",
-      kind: "CONDITION_EXPIRY",
-      href: "/governance/waivers",
-    }));
+    expect(ungrantedCommandCenter.statusCode).toBe(200);
+    expect(ungrantedCommandCenter.json().panels.today.items).not.toContainEqual(
+      expect.objectContaining({ id: "condition:lim_lapsed" }),
+    );
+    for (const reader of [bobby, lan]) {
+      const commandCenter = await request(
+        reader,
+        `/api/v1/execution/command-center?workspace_id=${workspaceId}`,
+      );
+      expect(commandCenter.statusCode).toBe(200);
+      expect(commandCenter.json().panels.today.items).toContainEqual(expect.objectContaining({
+        id: "condition:lim_lapsed",
+        kind: "CONDITION_EXPIRY",
+        href: "/governance/waivers",
+      }));
+    }
   });
 });

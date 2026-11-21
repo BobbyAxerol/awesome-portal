@@ -8,8 +8,10 @@
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import retainedFixture from "../../../../../packages/contracts/fixtures/execution-retained-review.valid.json";
+import { ensureRetainedReview, resetRetainedReviewForTests } from "./retainedReview";
 
 import { COMMAND_CENTER_STREAM, readCommandCenter, streamGate } from "./commandCenter";
 import { CC_FIXTURES } from "./commandCenter.fixtures";
@@ -20,7 +22,8 @@ import type { CompositionName } from "./operationalComposition";
 import { createFixtureApi } from "./api/fixtureApi";
 import { CommandCenterSnapshotContainer } from "./screens/profileContainers";
 
-afterEach(cleanup);
+beforeEach(resetRetainedReviewForTests);
+afterEach(() => { cleanup(); resetRetainedReviewForTests(); vi.unstubAllGlobals(); });
 
 const snap = (name: keyof typeof CC_FIXTURES) => readCommandCenter(CC_FIXTURES[name])!;
 
@@ -195,6 +198,33 @@ describe("the product container opens the stream once it is published (P4-H)", (
     render(<MemoryRouter><CommandCenterSnapshotContainer api={api} sseFactory={factory} /></MemoryRouter>);
     await screen.findAllByText(/Command Center/i);
     expect(opened).toHaveLength(0);
+  });
+});
+
+describe("UDB04 retained authority also closes the separate CC transport", () => {
+  function Published({ factory, bootstrap }: { factory: ReturnType<typeof spyFactory>["factory"]; bootstrap: () => Promise<{ cursor: string; epoch: string; sequence: number }> }) {
+    const snapshot = readCommandCenter({ ...CC_FIXTURES.busy, snapshot: { ...CC_FIXTURES.busy.snapshot, stream_available: true } })!;
+    const state = useCommandCentreStream({ snapshot, factory, fetchSnapshot: bootstrap });
+    return <span data-testid="channel">{state.reason}</span>;
+  }
+  it.each(["retained", "malformed", "503", "401", "403"])("%s context cannot bootstrap even with an old published stream bit", async kind => {
+    let resolve!: (response: Response) => void;
+    vi.stubGlobal("fetch", () => new Promise<Response>(r => { resolve = r; }));
+    act(() => ensureRetainedReview());
+    const { opened, factory } = spyFactory(), bootstrap = vi.fn().mockResolvedValue({ cursor: "c", epoch: "e", sequence: 1 });
+    render(<Published factory={factory} bootstrap={bootstrap} />);
+    expect(bootstrap).not.toHaveBeenCalled();
+    await act(async () => resolve(new Response(JSON.stringify(kind === "retained" ? retainedFixture : {}),
+      { status: /^\d/.test(kind) ? Number(kind) : 200 })));
+    expect(bootstrap).not.toHaveBeenCalled(); expect(opened).toEqual([]);
+  });
+  it("only explicit absent context preserves the independently published live compatibility gate", async () => {
+    vi.stubGlobal("fetch", async () => new Response("{}", { status: 404 }));
+    await act(async () => ensureRetainedReview());
+    const { opened, factory } = spyFactory(), bootstrap = vi.fn().mockResolvedValue({ cursor: "c", epoch: "e", sequence: 1 });
+    render(<Published factory={factory} bootstrap={bootstrap} />);
+    await waitFor(() => expect(bootstrap).toHaveBeenCalledTimes(1));
+    expect(opened).toHaveLength(1);
   });
 });
 

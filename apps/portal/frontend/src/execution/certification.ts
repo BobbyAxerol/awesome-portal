@@ -20,6 +20,35 @@
  *      room in particular must not look like a running canary.
  */
 import type { Authority, FreshnessState, PanelStatus } from "./contracts";
+import { v1Refusal } from "./api/schemaGuard";
+import { unsafeText } from "./unsafeText";
+import {
+  readComplianceRows,
+  readDeploymentIdentity,
+  readEnvelopeVerdict,
+  readPlanAuthor,
+  readPlanEnvelope,
+  readRollbackItems,
+  readSeriesMembers,
+  readSourceFigures,
+  readStageFacts,
+  readTrial,
+  readTypedOrders,
+  readTypedPositions,
+  type DeploymentIdentity,
+  type EnvelopeComplianceRow,
+  type EnvelopeVerdict,
+  type Fact,
+  type PlanEnvelopeRef,
+  type RollbackReadinessItem,
+  type SourceFigure,
+  type StageFacts,
+  type StageSeries,
+  type TrialSchedule,
+  type TypedOrderRow,
+  type TypedPositionRow,
+  type TypedRows,
+} from "./stageFacts";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw)
@@ -38,12 +67,64 @@ function pick<T extends string>(raw: unknown, allowed: readonly T[]): T | null {
 function codes(raw: unknown): readonly string[] {
   return Array.isArray(raw) ? raw.filter((c): c is string => typeof c === "string") : [];
 }
+/** A non-empty string no longer than `max` characters; a longer one is `null`, never cut. */
+function bounded(raw: unknown, max: number): string | null {
+  return typeof raw === "string" && raw.length > 0 && raw.length <= max ? raw : null;
+}
+function bool(raw: unknown): boolean | null {
+  return typeof raw === "boolean" ? raw : null;
+}
+function count(raw: unknown): number | null {
+  return typeof raw === "number" && Number.isSafeInteger(raw) && raw >= 0 ? raw : null;
+}
+/**
+ * An exact decimal as the wire writes it: a STRING, optional minus, no exponent, no leading zero, at
+ * most 57 characters (the published `PositiveDecimal` bound). A JS number is never a decimal here:
+ * `5000.10` would arrive as `5000.1` and the trailing zero is a claim about precision.
+ */
+const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+function decimalString(raw: unknown): string | null {
+  return typeof raw === "string" && raw.length <= 57 && DECIMAL.test(raw) && !/^-0+(?:\.0+)?$/.test(raw) ? raw : null;
+}
 
 const AUTHORITIES = ["PORTAL", "EXECUTION", "BROKER", "DERIVED", "RESEARCH"] as const;
-const PANEL_STATES: readonly PanelStatus[] = [
-  "loading", "ok", "empty", "partial", "stale", "denied", "unavailable", "insufficient_data", "terminal",
-];
-const FRESHNESS: readonly FreshnessState[] = ["OK", "AGING", "STALE", "PAUSED", "UNKNOWN"];
+/**
+ * The published `panel_state` vocabulary of the three promotion screens, mapped to the FE rendering
+ * vocabulary (`PanelStatus`).
+ *
+ *   sandbox  `ready | stale | error | unavailable`            (execution-sandbox-certification.v1)
+ *   canary   `ready | empty | partial | stale | unavailable | suppressed`
+ *   live     the same six as canary
+ *
+ * `ready` is the wire's word for the FE's `ok`; `error` is a source read that failed, which the FE
+ * words "Failed" (`terminal`). `suppressed` is not a rendering state: it is read as the `suppressed`
+ * flag and the panel renders `unavailable`. A word outside this table (including the FE's own `ok`,
+ * `loading`, `denied` or `insufficient_data`, none of which a promotion body publishes) is
+ * `unavailable`: deny by default, never `ok`.
+ */
+const PANEL_STATE_WIRE: Readonly<Record<string, PanelStatus>> = {
+  ready: "ok",
+  empty: "empty",
+  partial: "partial",
+  stale: "stale",
+  unavailable: "unavailable",
+  error: "terminal",
+};
+/**
+ * `freshness_state`: canary and live publish `FRESH | AGING | STALE | UNKNOWN`, sandbox publishes
+ * `OK | STALE | UNKNOWN`. `FRESH` and `OK` are the same claim and read as the FE's `OK`; any other
+ * word is `null` (not stated).
+ */
+const FRESHNESS_WIRE: Readonly<Record<string, FreshnessState>> = {
+  FRESH: "OK",
+  OK: "OK",
+  AGING: "AGING",
+  STALE: "STALE",
+  UNKNOWN: "UNKNOWN",
+};
+function wire<T>(table: Readonly<Record<string, T>>, raw: unknown): T | null {
+  return typeof raw === "string" && Object.hasOwn(table, raw) ? table[raw]! : null;
+}
 
 /**
  * The envelope every degradable panel carries on these two screens.
@@ -81,8 +162,8 @@ export function readPanelEnvelope(raw: unknown, fallbackId = ""): PanelEnvelope 
     authority: pick(o.source_authority, AUTHORITIES),
     // Deny-by-default: a state we cannot read is unavailable, never `ok` and
     // never `empty`.
-    panelState: pick(o.panel_state, PANEL_STATES) ?? "unavailable",
-    freshness: pick(o.freshness_state, FRESHNESS),
+    panelState: wire(PANEL_STATE_WIRE, o.panel_state) ?? "unavailable",
+    freshness: wire(FRESHNESS_WIRE, o.freshness_state),
     deliveryProfile: str(o.delivery_profile),
     sourceVerification: str(o.source_verification_state),
     suppressed: o.panel_state === "suppressed",
@@ -191,20 +272,53 @@ export interface PromotionPlan {
   blockerCodes: readonly string[];
   sourceSideEffectRequested: boolean;
   createdAt: string | null;
+  /**
+   * ADDITIVE (FE-072, BE-P2). `author.user_id` as published; `null` = the key is absent or malformed. The V1 screen never reads it.
+   */
+  author: string | null;
+  /**
+   * ADDITIVE (FE-072). The latest Canary envelope drafted from this plan, as a Fact: AVAILABLE with a `null` value means the
+   * lookup ran and none exists; `null` (not a Fact) = the key is absent or malformed.
+   */
+  envelope: Fact<PlanEnvelopeRef | null> | null;
 }
 
 export interface SandboxFinding {
   findingId: string;
   severity: string | null;
+  /**
+   * `status`, `identity`, `local_value` and `broker_value` are NOT on the published finding row
+   * (`execution-sandbox-certification.v1` FindingCollection). They are read only because the V1
+   * screen has always read them; on a published body they are `null`. Do not build on them.
+   */
   status: string | null;
   identity: string | null;
   localValue: string | null;
   brokerValue: string | null;
+  /** The published finding row: `finding_code` (<= 191 characters). */
+  findingCode: string | null;
+  /** The server's sentence (<= 2000 characters; a longer one is `null`, not cut). */
+  summary: string | null;
+  /** Whether the finding blocks the exit; `null` when the field is absent or not a boolean. */
+  blocking: boolean | null;
+  /** ISO instant as published; `null` = not resolved OR not published (see `resolution`). */
+  resolvedAt: string | null;
+  /**
+   * `OPEN` only when the row carries `resolved_at: null`; `RESOLVED` only when it carries an instant;
+   * `null` when the key is absent or unreadable. An absent key is not an open finding.
+   */
+  resolution: "OPEN" | "RESOLVED" | null;
+  /** ISO instant the finding was recorded (`created_at`). */
+  createdAt: string | null;
+  /** ADDITIVE (FE-072): the published `opened_at` (equal to `created_at` on the producer); `null` = absent or malformed. */
+  openedAt: string | null;
 }
 
 export interface SandboxCertification {
   certificationId: string;
   deploymentId: string | null;
+  /** ADDITIVE: the record's `portfolio_id` (V1 never printed it). */
+  portfolioId: string | null;
   venue: string | null;
   workflowState: string | null;
   workflowVersion: number | null;
@@ -227,9 +341,21 @@ export interface SandboxCertification {
   findings: Collection<SandboxFinding>;
   timeline: Collection<{ eventId: string; action: string | null; actor: string | null; createdAt: string | null }>;
   promotionPlans: readonly PromotionPlan[];
+  /*
+   * Additive fields (BE-P2/P3). The V1 Sandbox screen ignores every one of them; each is `null` when the key is absent or
+   * does not match the published schema exactly (`stageFacts.ts` reads them closed).
+   */
+  /** FE-066: the five identity keys of the `certification` record. */
+  identity: DeploymentIdentity | null;
+  /** FE-067: runtime, reconciliation and sessions. */
+  stageFacts: StageFacts | null;
+  /** FE-072: Internal / Broker / Difference figures. */
+  sourceFigures: readonly SourceFigure[] | null;
 }
 
 export function readSandboxCertification(raw: unknown): SandboxCertification | null {
+  // The V2 following-parent body would read here with all three side-effect flags `true` (api/schemaGuard.ts).
+  if (v1Refusal(raw) !== null) return null;
   const root = obj(raw);
   const cert = obj(root?.certification);
   const certificationId = str(cert?.certification_id);
@@ -241,6 +367,7 @@ export function readSandboxCertification(raw: unknown): SandboxCertification | n
   return {
     certificationId,
     deploymentId: str(cert.deployment_id),
+    portfolioId: str(cert.portfolio_id),
     venue: str(cert.venue),
     workflowState: str(cert.workflow_state),
     workflowVersion: int(cert.workflow_version),
@@ -307,6 +434,19 @@ export function readSandboxCertification(raw: unknown): SandboxCertification | n
         identity: str(o!.identity),
         localValue: str(o!.local_value),
         brokerValue: str(o!.broker_value),
+        findingCode: bounded(o!.finding_code, 191),
+        summary: bounded(o!.summary, 2000),
+        blocking: bool(o!.blocking),
+        resolvedAt: str(o!.resolved_at),
+        resolution: !Object.hasOwn(o!, "resolved_at")
+          ? null
+          : o!.resolved_at === null
+            ? "OPEN"
+            : str(o!.resolved_at) !== null
+              ? "RESOLVED"
+              : null,
+        createdAt: str(o!.created_at),
+        openedAt: str(o!.opened_at),
       };
     }),
     timeline: collection(root.timeline, (r) => {
@@ -332,9 +472,14 @@ export function readSandboxCertification(raw: unknown): SandboxCertification | n
           blockerCodes: codes(o!.blocker_codes),
           sourceSideEffectRequested: o!.source_side_effect_requested !== false,
           createdAt: str(o!.created_at),
+          author: Object.hasOwn(o!, "author") ? readPlanAuthor(o!.author) : null,
+          envelope: Object.hasOwn(o!, "envelope") ? readPlanEnvelope(o!.envelope) : null,
         },
       ];
     }),
+    identity: readDeploymentIdentity(cert),
+    stageFacts: Object.hasOwn(root, "stage_facts") ? readStageFacts(root.stage_facts) : null,
+    sourceFigures: Object.hasOwn(root, "source_figures") ? readSourceFigures(root.source_figures) : null,
   };
 }
 
@@ -438,6 +583,169 @@ export interface CanaryCommandPolicy {
   scaleUp: CanaryActionPolicy | null;
 }
 
+/**
+ * One cell of a free-form row. The published collections declare their rows as `{type: object,
+ * maxProperties: 80}` and nothing more, so a cell can only be what JSON scalars are; this reader keeps
+ * strings (<= 256 characters, so decimals travel as the exact strings the server wrote), booleans and
+ * `null`. A JS number, array or object cell is NOT kept: a number has already lost its trailing zeros,
+ * and a decimal that arrives as one is not a decimal this build may print.
+ */
+export type RowCell = string | boolean | null;
+export type RowRecord = Readonly<Record<string, RowCell>>;
+
+export const MAX_ROW_RECORDS = 200;
+const MAX_ROW_CELLS = 80;
+const MAX_CELL_CHARS = 256;
+const CELL_KEY = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+/**
+ * Why a cell the response carried is not in the row. `number`: a JS number is never kept (it has lost its trailing
+ * zeros; a figure that arrives as one is not a decimal this build may print). `unreadable`: a string that is too long
+ * or carries unsafe characters, or an array or object.
+ */
+export type CellLoss = "number" | "unreadable";
+
+/**
+ * What a kept row lost, so a V2 screen can say "Unreadable" for a cell that was PRESENT, instead of "Not available".
+ * `cells` are the dropped cells whose key is safe to name; `notShown` counts the rest (a key that is not a plain
+ * identifier, or a cell past the per-row bounds). V1 never reads this.
+ */
+export interface RowLoss {
+  cells: Readonly<Record<string, CellLoss>>;
+  notShown: number;
+}
+
+/** A bounded free row and what it dropped, or `null` when the row is not an object or nothing in it is readable. */
+export function readRowRecordWithLoss(raw: unknown): { row: RowRecord; loss: RowLoss } | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const cells: Record<string, RowCell> = {};
+  const lost: Record<string, CellLoss> = {};
+  let kept = 0;
+  let lostCount = 0;
+  let notShown = 0;
+  for (const [key, value] of Object.entries(o)) {
+    if (kept >= MAX_ROW_CELLS) {
+      notShown += 1;
+      continue;
+    }
+    if (!CELL_KEY.test(key)) {
+      notShown += 1;
+      continue;
+    }
+    if (value === null || typeof value === "boolean" || (typeof value === "string" && value.length <= MAX_CELL_CHARS && !unsafeText(value))) {
+      cells[key] = value;
+      kept += 1;
+    } else if (lostCount < MAX_ROW_CELLS) {
+      lost[key] = typeof value === "number" ? "number" : "unreadable";
+      lostCount += 1;
+    } else {
+      notShown += 1;
+    }
+  }
+  return { row: cells, loss: { cells: lost, notShown } };
+}
+
+/** A bounded free row: the readable scalar cells, or `null` when the row is not an object or nothing in it is readable. */
+export function readRowRecord(raw: unknown): RowRecord | null {
+  const read = readRowRecordWithLoss(raw);
+  return read === null || Object.keys(read.row).length === 0 ? null : read.row;
+}
+
+/**
+ * A `UnavailableCollection` (`positions`, `blotter`, live `orders`): the source envelope, the server's
+ * exact total, and the rows it returned. `rows` is empty and says nothing about the source when the
+ * envelope is not `ok`; `rowsDropped` counts rows past the bound or unreadable, so a screen can say
+ * "N more" instead of looking complete.
+ */
+export interface RowCollection {
+  envelope: PanelEnvelope;
+  /** The server's `exact_total`; `null` = not published. */
+  exactTotal: number | null;
+  /** The server's `returned_count`; `null` = not published. */
+  returnedCount: number | null;
+  rows: readonly RowRecord[];
+  /** Rows the response carried that this reader did not keep (past 200, or with no readable cell). */
+  rowsDropped: number;
+  /** ADDITIVE, V2 only: what each kept row lost, aligned with `rows`. A collection built by hand may omit it. */
+  rowLosses?: readonly RowLoss[];
+  /** ADDITIVE, V2 only: of `rowsDropped`, the rows that had cells but none readable (a present row is not "none"). */
+  rowsUnreadable?: number;
+}
+
+export function readRowCollection(raw: unknown, fallbackId = ""): RowCollection | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const source = Array.isArray(o.rows) ? o.rows : [];
+  const rows: RowRecord[] = [];
+  const rowLosses: RowLoss[] = [];
+  let dropped = 0;
+  let unreadable = 0;
+  for (const entry of source) {
+    const read = rows.length < MAX_ROW_RECORDS ? readRowRecordWithLoss(entry) : null;
+    if (read === null || Object.keys(read.row).length === 0) {
+      dropped += 1;
+      if (read !== null && (Object.keys(read.loss.cells).length > 0 || read.loss.notShown > 0)) unreadable += 1;
+    } else {
+      rows.push(read.row);
+      rowLosses.push(read.loss);
+    }
+  }
+  return {
+    envelope: readPanelEnvelope(o.envelope, fallbackId),
+    exactTotal: count(o.exact_total),
+    returnedCount: count(o.returned_count),
+    rows,
+    rowsDropped: dropped,
+    rowLosses,
+    rowsUnreadable: unreadable,
+  };
+}
+
+/** `envelope_compliance.consumed` / `.headroom`: a free object of at most 8 members, kept as exact decimal strings only. */
+export type DecimalMap = Readonly<Record<string, string>>;
+
+function decimalMap(raw: unknown): DecimalMap | null {
+  const o = obj(raw);
+  if (!o) return null;
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(o).slice(0, 8)) {
+    const decimal = decimalString(value);
+    if (CELL_KEY.test(key) && decimal !== null) out[key] = decimal;
+  }
+  return out;
+}
+
+export interface CanaryCompliance {
+  envelope: PanelEnvelope;
+  /** The four caps the response states, as exact decimal strings (and the open-order count as an integer). */
+  limits: {
+    capitalCap: string | null;
+    grossNotionalCap: string | null;
+    dailyLossCap: string | null;
+    maxOpenOrders: number | null;
+  };
+  /** `null` = the response states none (it is `null` on every body published so far). */
+  consumed: DecimalMap | null;
+  headroom: DecimalMap | null;
+  /** The schema pins `false`; a body that says anything else reads `null`. */
+  baseRiskProfileVerified: boolean | null;
+}
+
+export interface CanaryRollback {
+  envelope: PanelEnvelope;
+  /** The schema's boolean, as published; `null` when the key is not a boolean. Never inferred. */
+  ready: boolean | null;
+  blockerCodes: readonly string[];
+  evidenceHash: string | null;
+}
+
+export interface CanarySeries {
+  envelope: PanelEnvelope;
+  /** The schema pins `null` (and `points` to zero items); read, not assumed. */
+  resolution: string | null;
+  points: readonly RowRecord[];
+}
+
 export interface CanaryControlRoom {
   deploymentId: string | null;
   portfolioId: string | null;
@@ -467,6 +775,37 @@ export interface CanaryControlRoom {
   series: PanelEnvelope | null;
   rollbackReadiness: PanelEnvelope | null;
   commandPolicy: CanaryCommandPolicy | null;
+  /*
+   * Additive fields. The V1 Canary screen ignores every one of them (it reads only the envelopes
+   * above); they exist for the V2 screen, which prints them only where the response states them.
+   */
+  compliance: CanaryCompliance | null;
+  positionRows: RowCollection | null;
+  blotterRows: RowCollection | null;
+  seriesDetail: CanarySeries | null;
+  rollbackDetail: CanaryRollback | null;
+  /*
+   * Additive fields (BE-P2/P3). Each is `null` when the key is absent or does not match the published schema exactly
+   * (`stageFacts.ts` reads them closed); the V1 screen ignores all of them.
+   */
+  /** FE-066: the five identity keys of the `deployment` block. */
+  identity: DeploymentIdentity | null;
+  /** FE-067: runtime, reconciliation and sessions. */
+  stageFacts: StageFacts | null;
+  /** FE-072: Internal / Broker / Difference figures. */
+  sourceFigures: readonly SourceFigure[] | null;
+  /** FE-071: `envelope_compliance.rows` (one per cap) and the server's verdict. */
+  complianceRows: readonly EnvelopeComplianceRow[] | null;
+  complianceVerdict: EnvelopeVerdict | null;
+  /** FE-071: `rollback_readiness.items` (the four checks). */
+  rollbackItems: readonly RollbackReadinessItem[] | null;
+  /** FE-071: `lifecycle.trial`. */
+  trial: TrialSchedule | null;
+  /** FE-072: `positions.typed` and `blotter.typed`. */
+  typedPositions: TypedRows<TypedPositionRow> | null;
+  typedOrders: TypedRows<TypedOrderRow> | null;
+  /** FE-072: the series' resolution, methodology, unit and exact points. */
+  seriesMembers: StageSeries | null;
 }
 
 function actionPolicy(raw: unknown): CanaryActionPolicy | null {
@@ -486,6 +825,7 @@ function actionPolicy(raw: unknown): CanaryActionPolicy | null {
 }
 
 export function readCanaryControlRoom(raw: unknown): CanaryControlRoom | null {
+  if (v1Refusal(raw) !== null) return null;
   const root = obj(raw);
   const dep = obj(root?.deployment);
   if (!root || !dep) return null;
@@ -494,6 +834,10 @@ export function readCanaryControlRoom(raw: unknown): CanaryControlRoom | null {
   const limits = obj(env?.limits);
   const policy = obj(root.command_policy);
   const actor = obj(root.actor);
+  const compliance = obj(root.envelope_compliance);
+  const complianceLimits = obj(compliance?.limits);
+  const series = obj(root.series);
+  const rollback = obj(root.rollback_readiness);
   const panel = (key: string) => {
     const o = obj(root[key]);
     return o ? readPanelEnvelope(o.envelope ?? o, key) : null;
@@ -572,6 +916,52 @@ export function readCanaryControlRoom(raw: unknown): CanaryControlRoom | null {
           scaleUp: actionPolicy(policy.scale_up),
         }
       : null,
+    compliance: compliance
+      ? {
+          envelope: readPanelEnvelope(compliance.envelope, "envelope_compliance"),
+          limits: {
+            capitalCap: decimalString(complianceLimits?.capital_cap),
+            grossNotionalCap: decimalString(complianceLimits?.gross_notional_cap),
+            dailyLossCap: decimalString(complianceLimits?.daily_loss_cap),
+            maxOpenOrders: count(complianceLimits?.max_open_orders),
+          },
+          consumed: decimalMap(compliance.consumed),
+          headroom: decimalMap(compliance.headroom),
+          baseRiskProfileVerified: bool(compliance.base_risk_profile_verified),
+        }
+      : null,
+    positionRows: readRowCollection(root.positions, "positions"),
+    blotterRows: readRowCollection(root.blotter, "blotter"),
+    seriesDetail: series
+      ? {
+          envelope: readPanelEnvelope(series.envelope, "series"),
+          resolution: bounded(series.resolution, 32),
+          points: (Array.isArray(series.points) ? series.points : [])
+            .slice(0, MAX_ROW_RECORDS)
+            .flatMap((point) => {
+              const row = readRowRecord(point);
+              return row ? [row] : [];
+            }),
+        }
+      : null,
+    rollbackDetail: rollback
+      ? {
+          envelope: readPanelEnvelope(rollback.envelope, "rollback_readiness"),
+          ready: bool(rollback.ready),
+          blockerCodes: codes(rollback.blocker_codes).slice(0, 16),
+          evidenceHash: bounded(rollback.evidence_hash, 80),
+        }
+      : null,
+    identity: readDeploymentIdentity(dep),
+    stageFacts: Object.hasOwn(root, "stage_facts") ? readStageFacts(root.stage_facts) : null,
+    sourceFigures: Object.hasOwn(root, "source_figures") ? readSourceFigures(root.source_figures) : null,
+    complianceRows: compliance !== null && Object.hasOwn(compliance, "rows") ? readComplianceRows(compliance.rows) : null,
+    complianceVerdict: compliance !== null && Object.hasOwn(compliance, "verdict") ? readEnvelopeVerdict(compliance.verdict) : null,
+    rollbackItems: rollback !== null && Object.hasOwn(rollback, "items") ? readRollbackItems(rollback.items) : null,
+    trial: life !== null && Object.hasOwn(life, "trial") ? readTrial(life.trial) : null,
+    typedPositions: obj(root.positions) !== null && Object.hasOwn(obj(root.positions)!, "typed") ? readTypedPositions(obj(root.positions)!.typed) : null,
+    typedOrders: obj(root.blotter) !== null && Object.hasOwn(obj(root.blotter)!, "typed") ? readTypedOrders(obj(root.blotter)!.typed) : null,
+    seriesMembers: series !== null ? readSeriesMembers(series) : null,
   };
 }
 

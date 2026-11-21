@@ -490,7 +490,9 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
       positions: { exact_total: 1, returned_count: 1 },
       blotter: { exact_total: 1, returned_count: 1 },
       envelope_compliance: {
-        consumed: { capital: "500.000000000000000001", gross_notional: "6123.000000000000000001", open_orders: 1 },
+        // The source has no margin currency and no position currency/mark
+        // lineage; neither amount is a qualified envelope consumption.
+        consumed: { capital: null, gross_notional: null, open_orders: 1 },
       },
     });
 
@@ -524,7 +526,7 @@ describe("EX-BE-05b/F3 Canary Control Room source-dark", () => {
     sourceOnly.data = {
       ...sourceOnly.data,
       deployments: [{ deployment_id: sourceOnlyDeploymentId, account_id: "account_alpha", mode: "live" }],
-      positions: [{ position_id: "pos_source_only", deployment_id: sourceOnlyDeploymentId, account_id: "account_alpha", notional: "17.000000000000000001" }],
+      positions: [{ position_id: "pos_source_only", deployment_id: sourceOnlyDeploymentId, account_id: "account_alpha", notional: "17.000000000000000001", realized_pnl: "0", unrealized_pnl: "0" }],
       orders: [{ order_id: "ord_source_only", deployment_id: sourceOnlyDeploymentId, account_id: "account_alpha", status: "OPEN" }],
     };
     vi.spyOn(profileReads, "snapshot").mockResolvedValueOnce(sourceOnly as never);

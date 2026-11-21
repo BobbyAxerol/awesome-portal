@@ -54,7 +54,7 @@ describe("BR-EX-72 same-origin manager list consumers", () => {
     // A response missing the required authority is not this contract; the
     // reader must refuse it rather than invent the row's provenance.
     expect(readBindingDetail({ ...BINDING_DETAIL, record_authority: undefined })).toBeNull();
-    expect(readLiveReview(LIVE_REVIEW)).toMatchObject({ approvalId: "AP-R2-DETAIL", canaryDeploymentId: "dep_88" });
+    expect(readLiveReview(LIVE_REVIEW)).toMatchObject({ approvalId: "apr_live_gate_fixture", canaryDeploymentId: "dep_88" });
     expect(readBindings({ ...BINDINGS_LIST, page: { ...BINDINGS_LIST.page, rows: [{ credential_secret: "leak" }] } })).toBeNull();
   });
 

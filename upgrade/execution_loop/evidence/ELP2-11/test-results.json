@@ -1,0 +1,19 @@
+{
+  "phase": "ELP2-11",
+  "date_utc": "2026-10-24",
+  "tier": "R1",
+  "claim": "PRESERVATION_PREPARATION_NOT_FINAL_MIGRATION_OR_RECOVERY_AUTHORITY",
+  "entry_commit": "eb7c2cd807fa82bd116d0df5cec8f9c64d402579",
+  "gates": [
+    { "id": "pure-preservation", "status": "PASS", "cases": 33, "kind": "unit", "log_sha256": "410d44c81ec738da2b5b9d2d4d6e1d42395f387ac863cb3981d6c7d9c69cd741" },
+    { "id": "disposable-cli", "status": "PASS", "cases": 3, "kind": "unit", "log_sha256": "26a10011e46a581c11491eda8d6b5b072e84bb479cf9303d0db79fada33b667b" },
+    { "id": "control-api-focused-build-test-restore", "status": "PASS", "cases": 17, "kind": "disposable-postgresql", "log_sha256": "92d9f4bae25cc3812b0efac5f8a5083296cc540e3bdf15e70bc3b05636fe1b17" },
+    { "id": "real-research-backup-roundtrip", "status": "PRESERVED", "kind": "real-backup-disposable-restore", "relations": 30, "rows": 39354, "row_bytes": 22859559, "source_and_restored_fingerprint": "9f45adc07b43e0351d124498abe4262e853a863c03d8abb4d4c03caae38bf92f", "comparison_sha256": "05f02e167f5f3e850ff1d8b409081a116aab54760356499325474dae340c0d0b", "duration_seconds": 207, "changed_relations": [] }
+  ],
+  "runtime_changed": false,
+  "public_contract_changed": false,
+  "full_r2_landing_hook": "NOT_RUN_NOT_CLAIMED",
+  "command_recovery_positive": "NOT_PROVEN_BACKUP_COMMAND_TABLES_EMPTY",
+  "cleanup": "OWNED_CONTAINERS_NETWORKS_VOLUME_ABSENT_ORIGINAL_BACKUPS_RETAINED",
+  "final_phase_exit": "NOT_MET_UPSTREAM_SOURCE_COMMAND_QUALIFICATION_CONSUMER_AND_FINAL_MIGRATION_REMAIN"
+}

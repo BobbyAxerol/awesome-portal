@@ -1,0 +1,259 @@
+/* Live operations (UXM-07 S3, flag key `live`). Tokens and type roles only; no raw colour, no uppercase.
+ *
+ * Measured against design/hifi/v2/live.html and kit.css: page stack gap 24; main column + 360px rail
+ * 24 apart (one column at 1100px); the chart slot is min-height 240, padding 24, a 2px red edge on the
+ * sunken fill (8px padding at 660px); the ladder rung is `10px 0 12px 22px`, a 1px soft rule under it and
+ * an inset bar that grows 4 / 8 / 12px (ink-faint, warn, bad) so the step reads in greyscale; the rail's
+ * blocker list is the shared BlockerList. Every text/background pair sits inside one rule so the contrast
+ * gate reads it; each pair is one fleet.css, account.css or access.css already proved.
+ *
+ * Deviations from the hi-fi: the slot sentence is 14/20 (`--exec-font-subtitle`), the nearest type role
+ * to the kit's 16/24; "Step 1 of 3" is typed in sentence case (no uppercase outside the reviewed
+ * selectors). Names: `.exec-liv-*` only. */
+
+.exec-liv-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+
+/* a plain head, for the states that have no deployment to describe yet */
+.exec-liv-plainhead {
+  min-width: 0;
+}
+.exec-liv-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-liv-sub {
+  margin: 2px 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+/* one-line notices: a warning (unqualified, stale, partial) or a note (Canary, retained, empty) */
+.exec-liv-banner {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-liv-banner[data-kind="unqualified"],
+.exec-liv-banner[data-kind="stale"],
+.exec-liv-banner[data-kind="partial"] {
+  color: var(--ink);
+  background: var(--warn-bg);
+  border-color: var(--warn);
+}
+
+/* layout */
+.exec-liv-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+  align-items: start;
+}
+.exec-liv-main,
+.exec-liv-rail,
+.exec-liv-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .exec-liv-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* the slot that replaces the chart (mismatch, gap) */
+.exec-liv-slot {
+  box-sizing: border-box;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: var(--space-3);
+  min-height: 240px;
+  padding: var(--space-5);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 2px solid var(--bad);
+}
+.exec-liv-slot-text {
+  max-width: 560px;
+  margin: 0;
+  font: var(--exec-font-subtitle);
+  color: var(--ink);
+}
+.exec-liv-slot-meta {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-liv-slot-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+}
+@media (max-width: 660px) {
+  .exec-liv-slot {
+    padding: var(--space-2);
+  }
+}
+
+/* body text of a panel */
+.exec-liv-line {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-liv-meta {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-liv-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.exec-liv-chip {
+  padding: 0 6px;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-liv-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* keyset paging under a table */
+.exec-liv-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+.exec-liv-cap {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-liv-notice {
+  margin: 0 0 var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-liv-fail {
+  margin: var(--space-2) 0 0;
+  font: var(--exec-font-meta);
+  color: var(--bad);
+}
+
+/* the protective ladder (kit .lad / .rung) */
+.exec-liv-ladder {
+  display: grid;
+  gap: 0;
+}
+.exec-liv-rung {
+  padding: 10px 0 12px 22px;
+  border-bottom: 1px solid var(--line-soft);
+  box-shadow: inset 4px 0 0 var(--ink-faint);
+}
+.exec-liv-rung:last-child {
+  border-bottom: 0;
+}
+.exec-liv-rung[data-rung="2"] {
+  padding-left: 24px;
+  box-shadow: inset 8px 0 0 var(--warn);
+}
+.exec-liv-rung[data-rung="3"] {
+  padding-left: 26px;
+  box-shadow: inset 12px 0 0 var(--bad);
+}
+.exec-liv-rung-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.exec-liv-rung-name {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-liv-step {
+  font: var(--exec-font-label);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+.exec-liv-rung-note {
+  margin: 2px 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+/* Closed decisions (see canary.css): native-disabled, muted with a dashed frame, the reason shown in full. */
+.exec-liv-v2 .exec-dock-btn:disabled {
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+}
+.exec-liv-v2 .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+/* A figure and its unit stay on one line in the Internal / Broker / Difference rows; a long label wraps by word instead. */
+.exec-liv-v2 .exec-blk-triad-row {
+  flex-wrap: wrap;
+}
+.exec-liv-v2 .exec-blk-triad-row dd {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* QA1 R5/R4 fixes (WP-F3). The alpha id in the sub-line is the id size, not a larger mono than its neighbours (R5-16). */
+.exec-liv-v2 .exec-stage-sub .exec-blk-num,
+.exec-liv-v2 .exec-wb-sub .exec-blk-num {
+  font: var(--exec-font-id);
+}
+/* Touch targets at phone width (R5-26): a 44px hit area for the small controls without enlarging their drawn size. */
+@media (max-width: 660px) {
+  .exec-liv-v2 :is(.exec-blk-link, .exec-dock-access, .exec-blk-btn, .exec-wb-btn, .exec-dock-btn, .exec-cny-refresh) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .exec-liv-v2 .exec-blk-why-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-block: -13px;
+  }
+}
+/* Internal / Broker / Difference rows (R5-14): EVERY row stacks label over figure in
+ * EVERY column, at every width, so the rows keep one baseline across the three columns. */
+@media all {
+  .exec-liv-v2 .exec-blk-triad-row {
+    display: block;
+    min-height: 0;
+    padding-bottom: var(--space-1);
+  }
+  .exec-liv-v2 .exec-blk-triad-row dd {
+    text-align: right;
+    margin-left: 0;
+  }
+}

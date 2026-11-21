@@ -12,6 +12,9 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { stubExecutionBff } from "./bffDouble";
 import { FROZEN_NOW, freezeClock, settle, stubPortalApi, usePreferences } from "./fixtures";
+import { assertPinnedVisualHost } from "./visualHost";
+
+assertPinnedVisualHost();
 
 async function open(page: Page, route: string) {
   await freezeClock(page);
@@ -445,8 +448,9 @@ test.describe("EL-V2-05 · governance chain", () => {
     await expect(page).toHaveURL(/\/governance\/approvals\/AP-352\/r2/);
     await page.goBack();
     await expect(page).toHaveURL(/\/governance\/approvals$/);
-    await page.getByRole("button", { name: "Exit reviews" }).click();
-    await expect(page.getByRole("button", { name: "Exit reviews" })).toHaveAttribute("aria-pressed", "true");
+    // The gate chip reads "Exit" (its `title` carries the long name "Exit reviews"); the accessible name is the visible text.
+    await page.getByRole("group", { name: "Gate" }).getByRole("button", { name: "Exit", exact: true }).click();
+    await expect(page.getByRole("group", { name: "Gate" }).getByRole("button", { name: "Exit", exact: true })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("button", { name: /EX-771/ }).first().click();
     await expect(page).toHaveURL(/\/governance\/exit-reviews\/EX-771/);
     await expect(page.getByRole("region", { name: /Paper exit decision/ })).toBeVisible();

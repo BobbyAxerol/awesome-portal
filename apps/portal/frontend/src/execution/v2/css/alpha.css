@@ -1,0 +1,647 @@
+/* Alpha 360 and Trade Replay (UXM-07 S2). Tokens and type roles only; no raw
+ * colour, no uppercase outside the reviewed selectors. Measured against
+ * design/hifi/v2/alpha.html and kit.css: page stack gap 24, tab buttons
+ * 8px 16px with a 1px line under the row, segmented buttons 6px 12px, captions
+ * 6px 14px apart over a 1px rule, two-column grids 24 apart. Every rule that
+ * sets both a text and a fill colour uses a pair already proven by fleet.css,
+ * blocks.css or dock.css. */
+.exec-alp2-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+
+/* masthead */
+.exec-alp2-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+.exec-alp2-back {
+  display: inline-block;
+  margin-bottom: var(--space-1);
+  font: var(--exec-font-meta);
+  color: var(--accent);
+}
+.exec-alp2-titlerow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}
+.exec-alp2-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+/* The id beside the name: secondary text, never the heading itself. */
+.exec-alp2-idtext {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-alp2-version {
+  padding: 0 var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+}
+.exec-alp2-scorechip {
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-alp2-scorechip:focus-visible,
+.exec-alp2-tab:focus-visible,
+.exec-alp2-segbtn:focus-visible,
+.exec-alp2-menuitem:focus-visible,
+.exec-alp2-chip:focus-visible,
+.exec-alp2-stack [tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-alp2-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-alp2-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-alp2-meta b {
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.exec-alp2-fresh,
+.exec-alp2-chips {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+/* Request archive / Request gate review: two disabled buttons and their one shared reason (DecisionGroup). */
+.exec-alp2-requests {
+  flex: 1 1 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+/* The My access link sits next to the reason, not at the far edge of the header. */
+.exec-alp2-requests .exec-dock-reason {
+  flex: 0 1 auto;
+}
+/* The button already says what it is: the reason is not prefixed with the action's name, and it wraps instead of ending in an ellipsis (it was cut at phone width). */
+.exec-alp2-requests .exec-dock-why[data-l]::before {
+  content: none;
+}
+.exec-alp2-requests .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+.exec-alp2-chip {
+  padding: 2px var(--space-2);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  text-decoration: none;
+}
+.exec-alp2-state {
+  min-width: 0;
+}
+
+/* body and the docked Score drawer */
+.exec-alp2-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+.exec-alp2-main[data-docked="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-alp2-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* current facts */
+.exec-alp2-kpis {
+  --exec-kpi-n: 2;
+}
+/* A "Not available: ..." line inside a panel sits on the panel's gutter. */
+.exec-alp2-nal {
+  margin: var(--space-2) var(--space-3);
+}
+.exec-alp2-fig {
+  display: block;
+}
+/* The "Open" link sits in a line of text ("Not published (FE-011) Open"). Its accent blue is 2.14:1 against the
+ * surrounding ink, below the 3:1 a colour-only cue needs (WCAG 1.4.1, axe link-in-text-block), so it is underlined.
+ * Scoped to this strip: the shared .exec-blk-link is unchanged for the other screens (UXM-10 F-5). */
+.exec-alp2-kpis .exec-blk-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* tabs */
+.exec-alp2-tabbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-alp2-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.exec-alp2-tab {
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.exec-alp2-tab:hover {
+  color: var(--ink);
+}
+.exec-alp2-tab[aria-selected="true"],
+.exec-alp2-tab[data-active="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.exec-alp2-more-wrap {
+  position: relative;
+}
+.exec-alp2-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 6;
+  min-width: 200px;
+  margin: 0;
+  padding: var(--space-1) 0;
+  list-style: none;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-alp2-menuitem {
+  display: block;
+  width: 100%;
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  text-align: left;
+  background: var(--surface-2);
+  border: 0;
+  cursor: pointer;
+}
+.exec-alp2-menuitem:hover {
+  background: var(--accent-soft);
+}
+.exec-alp2-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
+  margin-bottom: var(--space-1);
+}
+.exec-alp2-seg-label {
+  margin-right: var(--space-2);
+}
+/* A segment never breaks inside its word: the row wraps between buttons. */
+.exec-alp2-segbtn {
+  white-space: nowrap;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-alp2-segbtn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-alp2-filter {
+  display: inline-flex;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.exec-alp2-panel {
+  min-width: 0;
+}
+
+/* stacks and grids */
+.exec-alp2-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.exec-alp2-grid2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+  align-items: start;
+}
+.exec-alp2-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-5);
+}
+.exec-alp2-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-3);
+}
+.exec-alp2-duo-l {
+  display: block;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-alp2-duo-v {
+  display: block;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+@media (max-width: 900px) {
+  .exec-alp2-grid2,
+  .exec-alp2-pair,
+  .exec-alp2-main[data-docked="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.exec-alp2-equity-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.exec-alp2-contrib {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* captions and small text */
+.exec-alp2-cap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+  border-top: 1px solid var(--line);
+}
+.exec-alp2-line {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-alp2-dim {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-alp2-why {
+  display: block;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-alp2-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.exec-alp2-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+.exec-alp2-more .exec-alp2-cap {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* key and value tables */
+.exec-alp2-kv {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-body);
+}
+.exec-alp2-kv th,
+.exec-alp2-kv td {
+  padding: var(--space-2) 0;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+.exec-alp2-kv th {
+  font: var(--exec-font-body);
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.exec-alp2-kv td {
+  text-align: right;
+}
+.exec-alp2-details {
+  margin-top: var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-alp2-drawer-h {
+  margin: var(--space-4) 0 var(--space-2);
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+
+/* lifecycle detail under the spine */
+.exec-alp2-stage-wrap {
+  margin-top: var(--space-4);
+}
+.exec-alp2-stage-wrap > .exec-alp2-line {
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.exec-alp2-stage-deps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-alp2-stage-deps li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font: var(--exec-font-body);
+}
+
+/* stage word with a shape that is not colour alone: hatch, outline, solid */
+.exec-alp2-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink);
+}
+.exec-alp2-stage i {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--ink-faint);
+}
+.exec-alp2-stage[data-stage="paper"] i {
+  background: repeating-linear-gradient(45deg, var(--env-paper) 0 2px, transparent 2px 4px);
+  box-shadow: inset 0 0 0 1px var(--env-paper);
+}
+.exec-alp2-stage[data-stage="sandbox"] i {
+  background: repeating-linear-gradient(45deg, var(--env-sandbox) 0 2px, transparent 2px 4px);
+  box-shadow: inset 0 0 0 1px var(--env-sandbox);
+}
+.exec-alp2-stage[data-stage="canary"] i {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--env-canary);
+}
+.exec-alp2-stage[data-stage="live"] i {
+  background: var(--env-live);
+}
+
+/* replay page */
+.exec-alp2-replay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  /* R-B5: candles in the hi-fi's series voice (up = series blue, down = muted), not green and red. The V1 chart
+   * reads these two custom properties from its host, so no V1 file changes. */
+  --exec-candle-up: var(--series);
+  --exec-candle-down: var(--ink-faint);
+}
+/* The V1 replay panel in its plain-words reading (`plain`): selectors by
+ * element and attribute, because the V1 class names belong to execution.css. */
+.exec-alp2-replay table[data-plain] td:first-child {
+  white-space: nowrap;
+}
+.exec-alp2-replay table[data-plain] small {
+  font: var(--exec-font-caption);
+}
+.exec-alp2-replay table[data-plain] td[data-l="Order"] small {
+  display: block;
+}
+.exec-alp2-replay table[data-plain] td[data-l="Leg"],
+.exec-alp2-replay table[data-plain] td[data-numeric="true"] {
+  white-space: nowrap;
+}
+.exec-alp2-replay table[data-plain] td[data-numeric="true"] {
+  font: var(--exec-font-id);
+}
+.exec-alp2-replay details[data-how] {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+.exec-alp2-replay details[data-how] > summary {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+@media (max-width: 660px) {
+  /* Orders and fills at phone width: the Blotter's card (a two-column grid, label above value) instead of one line per field, so
+   * an order is about half the height. The id cell takes the full width and no label (DEBT-UXM07-031). Nothing sticks. */
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px var(--space-3);
+    padding: 8px 12px;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l] {
+    display: block;
+    padding: 4px 0;
+    min-width: 0;
+    text-align: left;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l]::before {
+    display: block;
+    margin-right: 0;
+    padding-right: 0;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Order"],
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Fill"] {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Order"]::before,
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Fill"]::before {
+    display: none;
+  }
+  /* The trade log becomes cards, the same rule as cards.css: the header row goes, each cell prints its label. */
+  .exec-alp2-replay table[data-plain] {
+    display: block;
+    min-width: 0;
+  }
+  .exec-alp2-replay table[data-plain] thead {
+    display: none;
+  }
+  .exec-alp2-replay table[data-plain] tbody {
+    display: block;
+  }
+  .exec-alp2-replay table[data-plain] tbody tr {
+    display: block;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .exec-alp2-replay table[data-plain] tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: 3px var(--space-3);
+    border: 0;
+    white-space: normal;
+  }
+  .exec-alp2-replay table[data-plain] tbody td > span {
+    text-align: right;
+  }
+  .exec-alp2-replay table[data-plain] td[data-l]::before {
+    content: attr(data-l);
+    flex: none;
+    font: var(--exec-font-caption);
+    color: var(--ink-faint);
+  }
+  .exec-alp2-tabs {
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  /* A label keeps its whole width and the strip scrolls; shrinking is what cut "Research Evidence" to "R". */
+  .exec-alp2-tabs .exec-alp2-tab {
+    flex: none;
+  }
+  .exec-alp2-more-wrap {
+    flex: none;
+  }
+  .exec-alp2-seg {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+}
+
+/* R-3: the scope label's population table has column headings (the other kv tables have none): keep them apart. */
+.exec-alp2-scope thead th {
+  padding-right: 16px;
+  text-align: right;
+}
+.exec-alp2-scope thead th:first-child {
+  text-align: left;
+}
+.exec-alp2-scope tbody td {
+  text-align: right;
+}
+
+/* Cost drag and Forward observation: label left, value right, one row per figure. */
+.exec-alp2-gaptable {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-alp2-gaptable th {
+  padding: 6px 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-alp2-gaptable td {
+  padding: 6px 0;
+  text-align: right;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* WP-C: the replay lanes under the chart and the design-preview row (hi-fi "Design preview"). */
+.exec-alp2-lanes {
+  padding: var(--space-2) var(--space-3) 0;
+}
+.exec-alp2-preview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--line-strong);
+}
+.exec-alp2-preview .exec-alp2-seg {
+  margin: 0;
+}
+
+/* WP-C: partition tags inside the Alpha 360 figure tables follow the table text size (the Fleet draws them smaller; here they sit in a 13px table). */
+.exec-alp2-gaptable .exec-fleet-part-tag {
+  font: inherit;
+}
+
+/* One line per deployment inside a book (never added): left-aligned inside a tile, wrapping between lines not inside a figure. */
+.exec-alp2-lines {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.exec-alp2-apart {
+  margin-top: var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-alp2-apart summary {
+  cursor: pointer;
+}
+
+/* Alpha 360 windowed figures at phone width: a label and its partition values (tag + amount + unit) can be wider than one line, and flex-end
+ * pushes the overflow out of the left edge ("ALLOCATION" read "LLOCATION"). Only this table stacks them; other card tables keep their layout. */
+@media (max-width: 660px) {
+  .exec-cards[aria-label="Windowed figures by portfolio"] tbody td[data-l] {
+    flex-wrap: wrap;
+  }
+}

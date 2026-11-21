@@ -1,0 +1,90 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+Portfolios
+Core
+pf_TEST_ONLY_core · M. Tran · USDT
+✓
+OK:
+ACTIVE
+As of 2026-10-17 12:04:00 UTC
+Compare with
+Actions
+OVERVIEW
+ALLOCATIONS
+ALPHAS
+ACCOUNTS
+RISK AND HEALTH
+PEOPLE AND ACTIVITY
+ALPHAS
+4 alphas · 5 deployments · Open in Alpha Fleet
+ALPHA	DEPLOYMENT	STAGE	ACCOUNT	ALLOCATION	POSITION PNL, NOW	SHARE OF PNL	HEALTH
+BTC-Trend
+v3 · asmith
+	live-0192	Live	Binance-02	120,000.00 USDT	3,300.00 USDT	Not published
+(FE-005, FE-025)
+	
+✓
+OK:
+READY
+BTC-Trend
+v3 · asmith
+	live-0193	Live	OKX-01	80,000.00 USDT	2,120.10 USDT	Not published
+(FE-005, FE-025)
+	
+⚠
+NEEDS ATTENTION
+ETH-Mean
+v2 · bjones
+	live-0210	Live	Binance-02	160,000.00 USDT	3,890.12 USDT	Not published
+(FE-005, FE-025)
+	
+◐
+PARTIAL DATA:
+FINDING OPEN
+Funding-Carry
+v4 · bjones
+	pap-0301	Paper	Paper-Binance	80,000.00 USDT	-410.00 USDT	Not published
+(FE-005, FE-025)
+	
+✓
+OK:
+READY
+SOL-Breakout
+v1 · asmith
+	live-0215	Live	Bybit-01	100,000.00 USDT	410.00 USDT	Not published
+(FE-005, FE-025)
+	
+✓
+OK:
+READY
+CONTRIBUTION
+Position PnL now · not a window
+Position PnL by deployment · USDT
+BTC-Trend · live-0192
++3,300.00 USDT
+BTC-Trend · live-0193
++2,120.10 USDT
+ETH-Mean · live-0210
++3,890.12 USDT
+Funding-Carry · pap-0301
+-410.00 USDT
+SOL-Breakout · live-0215
++410.00 USDT
+Position PnL by deployment · USDT
+NAME	VALUE
+BTC-TREND · LIVE-0192	+3,300.00 USDT
+BTC-TREND · LIVE-0193	+2,120.10 USDT
+ETH-MEAN · LIVE-0210	+3,890.12 USDT
+FUNDING-CARRY · PAP-0301	-410.00 USDT
+SOL-BREAKOUT · LIVE-0215	+410.00 USDT
+Share of PnL over a window is Not published
+(FE-005, FE-025)
+. Each currency is its own chart.

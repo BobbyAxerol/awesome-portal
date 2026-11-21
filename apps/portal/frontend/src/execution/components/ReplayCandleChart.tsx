@@ -403,19 +403,64 @@ export function robustRange(prices: readonly number[]): { lo: number; hi: number
 
 /* ── the primitive ───────────────────────────────────────────────────── */
 
+/** Which side of the pane a level lies beyond when it is pinned to the edge; null = drawn at its true price. */
+export type LevelEdge = "above" | "below" | null;
+
+/**
+ * Pin a pane-pixel y to the pane when it lies outside 0..height. The returned y is a screen position
+ * only, not a price: callers must say so (see `offScaleLabel`). A y already inside the pane is untouched.
+ */
+export function clampLevel(y: number, height: number): { y: number; edge: LevelEdge } {
+  if (y < 0) return { y: 6, edge: "above" };
+  if (y > height) return { y: Math.max(6, height - 6), edge: "below" };
+  return { y, edge: null };
+}
+
+/** How many pane pixels a y lies beyond the pane (0 inside it): the order in which pinned levels are labelled, nearest first. */
+export function levelExcess(y: number, height: number): number {
+  return y < 0 ? -y : y > height ? y - height : 0;
+}
+
+/** Pinned labels drawn per edge; the rest of that edge is counted ("+N off scale"). */
+export const OFF_SCALE_LABELS_PER_EDGE = 3;
+
+/**
+ * Which pinned levels get a label. `items[i]` is null for a level drawn at its true price; for a pinned one it is the edge and how far
+ * beyond the pane its true position lies. Per edge the `perEdge` nearest (ties by order) are labelled and the others are counted, so
+ * hundreds of levels pinned to the same edge cannot pile their labels up. The count is exact.
+ */
+export function capOffScale(items: readonly ({ edge: Exclude<LevelEdge, null>; excess: number } | null)[], perEdge = OFF_SCALE_LABELS_PER_EDGE): { shown: boolean[]; hidden: { above: number; below: number } } {
+  const shown = items.map((item) => item === null);
+  const hidden = { above: 0, below: 0 };
+  for (const edge of ["above", "below"] as const) {
+    const mine = items.flatMap((item, i) => (item !== null && item.edge === edge ? [{ i, excess: item.excess }] : []));
+    mine.sort((a, b) => a.excess - b.excess || a.i - b.i);
+    mine.forEach((m, rank) => { if (rank < perEdge) shown[m.i] = true; else hidden[edge] += 1; });
+  }
+  return { shown, hidden };
+}
+
+/** The text of a pinned level: the exact formatted level as built in the scene, an arrow toward the real price and the words "off scale". */
+export function offScaleLabel(label: string, edge: Exclude<LevelEdge, null>): string {
+  return `${edge === "above" ? "▲" : "▼"} ${label} · off scale`;
+}
+
 interface Drawn {
   markers: { m: SceneMarker; x: number; y: number; off: boolean }[];
-  legs: { l: SceneLeg; x1: number; x2: number; y: number }[];
+  legs: { l: SceneLeg; x1: number; x2: number; y: number; edge: LevelEdge; labelled: boolean }[];
   trips: { tr: SceneTrip; x0: number; y0: number; x1: number; y1: number }[];
   rejects: { r: SceneReject; x: number; y: number; count: number }[];
   brackets: { b: SceneBracket; x0: number; x1: number; yEntry: number; yTp: number | null; ySl: number | null; yTps: number[]; ySls: number[]; open: boolean }[];
-  legEnds: { e: SceneLegEnd; x: number; y: number }[];
+  legEnds: { e: SceneLegEnd; x: number; y: number; edge: LevelEdge; labelled: boolean }[];
   ladder: { l: SceneLadder; x1: number; x2: number; y: number }[];
   ladderHidden: number;
-  contingencies: { c: SceneContingency; x0: number; x1: number; ys: { y: number; waiting: boolean; side: string | null }[] }[];
+  /** `offs` (pinned mode only): the group's levels beyond the scale, pinned to the pane edge and labelled; the brace spans `ys` alone. */
+  contingencies: { c: SceneContingency; x0: number; x1: number; ys: { y: number; waiting: boolean; side: string | null }[]; offs: { level: number; side: string | null; y: number; edge: Exclude<LevelEdge, null>; labelled: boolean }[] }[];
   packages: { p: ScenePackage; x0: number; x1: number }[];
   ledger: { l: SceneLedger; x: number }[];
   planned: { pl: ScenePlannedLevel; x: number; y: number }[];
+  /** Pinned mode only: pinned levels per edge that went without a label (the per-edge cap), for the "+N off scale" count. */
+  hiddenOff: { above: number; below: number };
   barSpacing: number;
   width: number;
   height: number;
@@ -443,7 +488,17 @@ class TradesRenderer implements IPrimitivePaneRenderer {
         ctx.fillText(`${p.atomic ? "ATOMIC" : p.policy ?? "package"} ×${p.legCount ?? "?"} · ${p.state ?? ""}`, x0 + 3, 10);
       }
       // conditional groups: a brace at the group's creation across its legs' levels, label = contingency
-      for (const { c, x0, ys } of d.contingencies) {
+      for (const { c, x0, ys, offs } of d.contingencies) {
+        // pinned mode: a level beyond the scale is a dotted tick on the pane edge with its words, outside the brace
+        for (const o of offs) {
+          ctx.strokeStyle = o.side === "SELL" ? pal.short : o.side === "BUY" ? pal.long : pal.accent;
+          ctx.lineWidth = 1; ctx.setLineDash([1.5, 3]);
+          ctx.beginPath(); ctx.moveTo(x0, o.y); ctx.lineTo(x0 + 14, o.y); ctx.stroke(); ctx.setLineDash([]);
+          if (!o.labelled) continue;
+          ctx.fillStyle = pal.mute; ctx.textAlign = "left";
+          const text = offScaleLabel(`${c.kind} ${money(String(o.level))}`, o.edge);
+          ctx.fillText(text, Math.max(4, Math.min(x0 + 18, d.width - 4 - ctx.measureText(text).width)), o.edge === "above" ? o.y + 12 : o.y - 6);
+        }
         if (ys.length === 0) continue;
         const top = Math.min(...ys.map((v) => v.y)), bottom = Math.max(...ys.map((v) => v.y));
         ctx.strokeStyle = c.attention ? pal.bad : pal.accent; ctx.lineWidth = hi === c.id ? 2 : 1; ctx.setLineDash([]);
@@ -524,12 +579,22 @@ class TradesRenderer implements IPrimitivePaneRenderer {
       }
       ctx.globalAlpha = 1;
       // legs: dashed level while the order was working, label when there is room
-      for (const { l, x1, x2, y } of d.legs) {
+      for (const { l, x1, x2, y, edge, labelled } of d.legs) {
         ctx.strokeStyle = l.role === "TP" ? pal.good : pal.bad;
         ctx.lineWidth = 1;
-        ctx.setLineDash([6, 4]);
+        // a pinned level is dotted so it is not mistaken for a pane border or a price
+        ctx.setLineDash(edge === null ? [6, 4] : [1.5, 3]);
         ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
-        if (x2 - x1 >= 70) {
+        if (edge !== null) {
+          // labelled (the nearest few per edge; the rest are counted): the line position is not the price, the words carry the exact level
+          if (!labelled) continue;
+          ctx.setLineDash([]);
+          ctx.fillStyle = l.role === "TP" ? pal.good : pal.bad;
+          const text = offScaleLabel(l.label, edge);
+          const w = ctx.measureText(text).width;
+          ctx.textAlign = "left";
+          ctx.fillText(text, Math.max(4, Math.min(x1 + 4, d.width - 4 - w)), edge === "above" ? y + 12 : y - 6);
+        } else if (x2 - x1 >= 70) {
           ctx.setLineDash([]);
           ctx.fillStyle = l.role === "TP" ? pal.good : pal.bad;
           ctx.textAlign = "left";
@@ -538,12 +603,17 @@ class TradesRenderer implements IPrimitivePaneRenderer {
       }
       ctx.setLineDash([]);
       // how a leg ended: ◇ triggered, ⊣ cancelled
-      for (const { e, x, y } of d.legEnds) {
+      for (const { e, x, y, edge, labelled } of d.legEnds) {
         const colour = e.kind === "TRIGGER" ? (this.owner.legRole(e.legId) === "TP" ? pal.good : pal.bad) : pal.mute;
         ctx.strokeStyle = colour; ctx.fillStyle = pal.bg; ctx.lineWidth = hi === e.id || hi === e.legId ? 2 : 1.2;
         ctx.beginPath();
         if (e.kind === "TRIGGER") { ctx.moveTo(x, y - 5); ctx.lineTo(x + 5, y); ctx.lineTo(x, y + 5); ctx.lineTo(x - 5, y); ctx.closePath(); ctx.fill(); ctx.stroke(); }
         else { ctx.moveTo(x, y - 5); ctx.lineTo(x, y + 5); ctx.moveTo(x - 4, y); ctx.lineTo(x, y); ctx.stroke(); }
+        if (edge !== null && labelled) {
+          ctx.fillStyle = pal.mute; ctx.textAlign = "left";
+          const text = offScaleLabel(money(String(e.level)), edge);
+          ctx.fillText(text, Math.max(4, Math.min(x + 8, d.width - 4 - ctx.measureText(text).width)), edge === "above" ? y + 14 : y - 8);
+        }
       }
       // rejects: × — one per bar, with the count when several share it
       for (const { r, x, y, count } of d.rejects) {
@@ -582,6 +652,12 @@ class TradesRenderer implements IPrimitivePaneRenderer {
           ctx.fillText(text, right ? x - 10 : x + 10, ly);
         }
       }
+      // pinned levels past the per-edge cap: counted, never silently dropped
+      if (d.hiddenOff.above > 0 || d.hiddenOff.below > 0) {
+        ctx.fillStyle = pal.mute; ctx.textAlign = "right";
+        if (d.hiddenOff.above > 0) ctx.fillText(`▲ +${d.hiddenOff.above} off scale`, d.width - 4, 22);
+        if (d.hiddenOff.below > 0) ctx.fillText(`▼ +${d.hiddenOff.below} off scale`, d.width - 4, d.height - 22);
+      }
       ctx.restore();
     });
   }
@@ -600,6 +676,11 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
   scene: ReplayScene = { markers: [], legs: [], trips: [], rejects: [], brackets: [], legEnds: [], ladder: [], contingencies: [], packages: [], ledger: [], planned: [], lastT: null, bracketSource: "none" };
   times: readonly number[] = [];
   intervalMs: number | null = null;
+  /**
+   * Default true: every in-view TP / SL level joins the price autoscale (V1). When false and candles
+   * exist the candles alone set the scale and a level beyond it is pinned to the pane edge, labelled.
+   */
+  levelsInAutoscale = true;
   palette: ChartPalette | null = null;
   drawn: Drawn | null = null;
   /** the marker / leg / bracket the reader is on (hover or selection) */
@@ -659,9 +740,11 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
   /** Prices of the trades inside the visible logical range join the autoscale; far-off prints do not. */
   autoscaleInfo(start: Logical, end: Logical): AutoscaleInfo | null {
     const inView = (t: number) => { const l = this.logical(t); return l >= start - 1 && l <= end + 1; };
+    // with candles and the flag off, levels do not stretch the axis; with no candles the legs are all there is to scale by
+    const withLevels = this.levelsInAutoscale || this.intervalMs === null;
     const prices = [
       ...this.scene.markers.filter((m) => inView(m.t)).map((m) => m.price),
-      ...this.scene.legs.filter((l) => this.logical(l.from) <= end + 1 && this.logical(l.to ?? this.scene.lastT ?? l.from) >= start - 1).map((l) => l.level),
+      ...(!withLevels ? [] : this.scene.legs.filter((l) => this.logical(l.from) <= end + 1 && this.logical(l.to ?? this.scene.lastT ?? l.from) >= start - 1).map((l) => l.level)),
     ];
     const range = robustRange(prices);
     if (!range) return null;
@@ -686,7 +769,8 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
     };
     const y = (price: number) => p.series.priceToCoordinate(price);
     const clampY = (v: number) => Math.max(6, Math.min(height - 6, v));
-    const range = robustRange([...this.scene.markers.map((m) => m.price), ...this.scene.legs.map((l) => l.level)]);
+    const pin = !this.levelsInAutoscale && this.intervalMs !== null;
+    const range = robustRange([...this.scene.markers.map((m) => m.price), ...(pin ? [] : this.scene.legs.map((l) => l.level))]);
     const markers: Drawn["markers"] = [];
     for (const m of this.scene.markers) {
       const mx = x(m.t);
@@ -695,18 +779,29 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
       const off = range ? !range.keep(m.price) : false;
       markers.push({ m, x: mx, y: off ? clampY(my) : my, off });
     }
+    // pinned mode: how far beyond the pane each pinned level truly lies, to label the nearest per edge and count the rest
+    const excess = new Map<object, number>();
     const legs: Drawn["legs"] = [];
     for (const l of this.scene.legs) {
       const x1 = x(l.from);
       const x2 = x(l.to ?? this.scene.lastT ?? l.from);
       const ly = y(l.level);
-      if (x1 === null || x2 === null || ly === null || x2 < 0 || x1 > width || ly < 0 || ly > height) continue;
-      legs.push({ l, x1: Math.max(0, x1), x2: Math.min(width, x2), y: ly });
+      if (x1 === null || x2 === null || ly === null || x2 < 0 || x1 > width) continue;
+      if (!pin) {
+        if (ly < 0 || ly > height) continue;
+        legs.push({ l, x1: Math.max(0, x1), x2: Math.min(width, x2), y: ly, edge: null, labelled: true });
+        continue;
+      }
+      const c = clampLevel(ly, height);
+      legs.push({ l, x1: Math.max(0, x1), x2: Math.min(width, x2), y: c.y, edge: c.edge, labelled: true });
+      excess.set(legs[legs.length - 1]!, levelExcess(ly, height));
     }
     const trips: Drawn["trips"] = [];
     for (const tr of this.scene.trips) {
       const x0 = x(tr.t0), x1 = x(tr.t1), y0 = y(tr.p0), y1 = y(tr.p1);
       if (x0 === null || x1 === null || y0 === null || y1 === null || x1 < 0 || x0 > width) continue;
+      // pinned mode: a thread to a point beyond the scale would end on the pane edge and read like a price; the marker there is labelled instead
+      if (pin && (levelExcess(y0, height) > 0 || levelExcess(y1, height) > 0)) continue;
       trips.push({ tr, x0, y0: clampY(y0), x1, y1: clampY(y1) });
     }
     // rejects clustered per bar (a grid alpha books hundreds of risk rejects): the first of a bar is drawn, the rest counted
@@ -727,16 +822,25 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
       const end = b.t1 ?? this.scene.lastT ?? b.t0;
       const x0 = x(b.t0), x1 = x(end), yEntry = y(b.entry);
       if (x0 === null || x1 === null || yEntry === null || x1 < 0 || x0 > width) continue;
-      const yTp = b.tp === null ? null : y(b.tp);
-      const ySl = b.sl === null ? null : y(b.sl);
-      const ys = (levels: number[]): number[] => { const out: number[] = []; for (const l of levels) { const v = y(l); if (v !== null) out.push(clampY(v)); } return out; };
+      // pinned mode: a level beyond the scale draws no zone to the pane edge (that edge is not its price); its leg line carries the "off scale" words
+      const onScale = (v: number | null): number | null => (v === null || (pin && levelExcess(v, height) > 0) ? null : v);
+      const yTp = b.tp === null ? null : onScale(y(b.tp));
+      const ySl = b.sl === null ? null : onScale(y(b.sl));
+      const ys = (levels: number[]): number[] => { const out: number[] = []; for (const l of levels) { const v = onScale(y(l)); if (v !== null) out.push(clampY(v)); } return out; };
       brackets.push({ b, x0: Math.max(0, x0), x1: Math.min(width, Math.max(x1, x0 + 2)), yEntry: clampY(yEntry), yTp: yTp === null ? null : clampY(yTp), ySl: ySl === null ? null : clampY(ySl), yTps: ys(b.tps), ySls: ys(b.sls), open: b.t1 === null });
     }
     const legEnds: Drawn["legEnds"] = [];
     for (const e of this.scene.legEnds) {
       const ex = x(e.t), ey = y(e.level);
-      if (ex === null || ey === null || ex < 0 || ex > width || ey < 0 || ey > height) continue;
-      legEnds.push({ e, x: ex, y: ey });
+      if (ex === null || ey === null || ex < 0 || ex > width) continue;
+      if (!pin) {
+        if (ey < 0 || ey > height) continue;
+        legEnds.push({ e, x: ex, y: ey, edge: null, labelled: true });
+        continue;
+      }
+      const c = clampLevel(ey, height);
+      legEnds.push({ e, x: ex, y: c.y, edge: c.edge, labelled: true });
+      excess.set(legEnds[legEnds.length - 1]!, levelExcess(ey, height));
     }
     const ladderAll: Drawn["ladder"] = [];
     for (const l of this.scene.ladder) {
@@ -749,8 +853,18 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
     for (const c of this.scene.contingencies) {
       const x0 = x(c.t0), x1 = x(c.t1 ?? this.scene.lastT ?? c.t0);
       if (x0 === null || x1 === null || x0 > width || x1 < 0) continue;
-      const ys = c.levels.flatMap((v) => { const yy = y(v.level); return yy === null ? [] : [{ y: clampY(yy), waiting: v.waiting, side: v.side }]; });
-      contingencies.push({ c, x0, x1, ys });
+      const ys = c.levels.flatMap((v) => { const yy = y(v.level); return yy === null || (pin && levelExcess(yy, height) > 0) ? [] : [{ y: clampY(yy), waiting: v.waiting, side: v.side }]; });
+      const offs: Drawn["contingencies"][number]["offs"] = [];
+      if (pin) {
+        for (const v of c.levels) {
+          const yy = y(v.level);
+          if (yy === null || levelExcess(yy, height) === 0) continue;
+          const pinned = clampLevel(yy, height);
+          offs.push({ level: v.level, side: v.side, y: pinned.y, edge: pinned.edge as Exclude<LevelEdge, null>, labelled: true });
+          excess.set(offs[offs.length - 1]!, levelExcess(yy, height));
+        }
+      }
+      contingencies.push({ c, x0, x1, ys, offs });
     }
     const packages: Drawn["packages"] = [];
     for (const p of this.scene.packages) {
@@ -770,7 +884,11 @@ export class TradesPrimitive implements ISeriesPrimitive<Time> {
       if (px === null || py === null || px > width || px < -30 || py < 0 || py > height) continue;
       planned.push({ pl, x: Math.max(0, px), y: py });
     }
-    this.drawn = { markers, legs, trips, rejects, brackets, legEnds, ladder, ladderHidden: ladderAll.length - ladder.length, contingencies, packages, ledger, planned, barSpacing: spacing, width, height };
+    // pinned levels: label the nearest few per edge across legs, leg ends and group levels, and count the rest
+    const pinnedItems: { edge: LevelEdge; labelled: boolean }[] = [...legs, ...legEnds, ...contingencies.flatMap((c) => c.offs)].filter((item) => item.edge !== null);
+    const capped = capOffScale(pinnedItems.map((item) => ({ edge: item.edge as Exclude<LevelEdge, null>, excess: excess.get(item) ?? 0 })));
+    pinnedItems.forEach((item, i) => { item.labelled = capped.shown[i]!; });
+    this.drawn = { markers, legs, trips, rejects, brackets, legEnds, ladder, ladderHidden: ladderAll.length - ladder.length, contingencies, packages, ledger, planned, hiddenOff: capped.hidden, barSpacing: spacing, width, height };
   }
 
   hitTest(x: number, y: number): PrimitiveHoveredItem | null {
@@ -862,6 +980,17 @@ export interface ReplayCandleChartProps {
   focusId?: string | null;
   /** the source's order groups / packages / ledgers when it publishes them (read ahead; EMPTY_GROUPS today) */
   groups?: ReplayGroups;
+  /**
+   * Default true (V1): TP / SL levels stretch the price axis. False: with candles the candles set the
+   * scale and a level beyond it is pinned to the edge, dotted and labelled "off scale" with its exact value.
+   */
+  levelsInAutoscale?: boolean;
+  /**
+   * Default "img" (V1, unchanged). The library draws its attribution link inside the host, and a link may not sit
+   * inside role="img" (axe nested-interactive, WCAG 4.1.2): the V2 reading passes "group", which keeps the accessible
+   * name and lets the link stay where the library puts it (the attribution is kept, UXM-10 F-5).
+   */
+  hostRole?: "img" | "group";
 }
 const EDGE_BARS = 40;
 export type ChartStatus = "loading" | "ready" | "unavailable";
@@ -877,7 +1006,7 @@ const reducedMotion = () => (typeof window !== "undefined" && (window.matchMedia
 type Runtime = { lib: Lib; chart: IChartApi; series: ISeriesApi<"Candlestick">; prim: TradesPrimitive; mark: IPriceLine | null };
 
 export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChartProps>(function ReplayCandleChart(
-  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus, onRangeEdge, focusId = null, groups = EMPTY_GROUPS },
+  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus, onRangeEdge, focusId = null, groups = EMPTY_GROUPS, levelsInAutoscale = true, hostRole = "img" },
   ref,
 ) {
   const edgeRef = useRef(onRangeEdge);
@@ -1028,6 +1157,7 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
     edgeArmed.current = false;
     const arm = setTimeout(() => { edgeArmed.current = true; }, 700);
     r.series.setData(data);
+    r.prim.levelsInAutoscale = levelsInAutoscale;
     r.prim.set(scene, times, withBars ? intervalMs : null, r.prim.palette ?? readPalette(host.current!)!);
     const mark = num(markPrice);
     if (mark !== null) {
@@ -1049,7 +1179,7 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
     }
     return () => { clearTimeout(arm); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, focusId, groups]);
+  }, [status, bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, focusId, groups, levelsInAutoscale]);
 
   useEffect(() => {
     const r = rt.current;
@@ -1092,7 +1222,7 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
       className="exec-rp-chart-stage" data-replay-chart={status} data-replay-bars={bars.length} data-replay-events={fills.length}
       tabIndex={0} onKeyDown={onKeyDown ? (e) => onKeyDown(e.nativeEvent) : undefined} aria-label={`${ariaLabel}. Arrow keys step between fills.`}
     >
-      <div ref={host} className="exec-rp-chart-host" role="img" aria-label={ariaLabel} />
+      <div ref={host} className="exec-rp-chart-host" role={hostRole} aria-label={ariaLabel} />
       <div ref={hud} className="exec-rp-hud" data-kind="none" aria-live="off" />
       {card && cardData ? (
         <div className="exec-rp-card" style={{ left: cardLeft, top: Math.max(4, card.y - 12) }} data-card-for={card.id} role="tooltip">

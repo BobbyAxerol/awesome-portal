@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "COMMAND_STATUS_UNVERIFIED",
+    "message": "The command status could not be verified."
+  },
+  "request_id": "req_TEST_ONLY_problem",
+  "public_copy_key": "COMMAND_STATUS_UNVERIFIED",
+  "safe_next_action": "QUERY_SAME_INTENT"
+}

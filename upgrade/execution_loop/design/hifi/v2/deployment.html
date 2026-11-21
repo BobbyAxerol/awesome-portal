@@ -1,0 +1,65 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Deployment — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+[hidden]{display:none!important}.stack>*{min-width:0}
+.path{font-size:12px;line-height:16px;color:var(--ink-faint);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}.path b{font-weight:500;color:var(--ink-soft)}
+.mast .sub{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.w2{display:block;font-size:11px;line-height:14px;color:var(--ink-faint)}.sub2{font-size:12px;line-height:16px;color:var(--ink-faint);white-space:normal}
+.kpi .v .dot{vertical-align:middle;margin-right:8px}.kpi .v .flag{vertical-align:middle}.tabs{overflow-x:auto}.row2{display:flex;gap:24px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.gate{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}.drawer table td,.stack table td{white-space:normal}td.n{white-space:nowrap}.tw table{min-width:0}
+.mini{display:flex;gap:16px;align-items:center;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line-strong);padding:8px 16px;font-size:13px}
+</style></head>
+<body data-page="Deployment" data-nav="fleet" data-crumb="Execution / Alpha Fleet / BTC-Trend v3 / Paper monitor">
+<main><div class="stack">
+<div class="mast"><div>
+ <div class="path"><a href="alpha.html">← Alpha</a><span>·</span><a href="fleet.html">Alpha Fleet</a><span>/</span><a href="alpha.html">BTC-Trend v3</a><span>/</span><b>Paper monitor</b></div>
+ <h1 style="margin-top:8px">BTC-Trend v3 <span class="stage paper" style="margin-left:8px"><i></i>Paper</span></h1>
+ <div class="sub"><span>Tracking approved evidence? Ready to leave Paper?</span></div>
+ <div class="sub"><a href="portfolio.html">Core</a><span data-hide-roles="researcher"> · <a href="account.html">Paper-sim-01</a></span><span data-roles="researcher"> · Account not available</span><span>Simulated · SIM</span></div></div>
+ <div class="ctrls"><a href="alpha.html" data-hide-roles="researcher">Alpha</a><a href="account.html" data-hide-roles="researcher">Account</a></div></div>
+<div class="banner" data-data="nq">Source not qualified. Figures below are not available.</div>
+
+<div class="kpis" style="--n:3">
+ <div class="kpi"><div class="l">Runtime</div><div class="v" data-data="ok"><span class="flag" data-k="ok">Running</span></div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">Since 12 Oct 08:00Z</div><div class="n" data-data="nq">Runtime source not ready</div></div>
+ <div class="kpi"><div class="l">Display freshness</div><div class="v" data-data="ok"><span class="dot warn"></span>Stale 14m</div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">Last event 17 Oct 09:14Z</div><div class="n" data-data="nq">No as-of published</div></div>
+ <div class="kpi"><div class="l">Reconciliation</div><div class="v" data-data="ok"><span class="flag" data-k="pending">Reconciling</span></div><div class="v na" data-data="nq">Not available</div><div class="n" data-data="ok">1 unknown order · <a href="operations.html">Operations</a></div><div class="n" data-data="nq">Source not ready</div></div></div>
+
+<div class="panel"><div class="ph">Lifecycle <span class="r">Paper · 3 of 7 criteria</span></div><div class="row2"><div id="sp" style="min-width:0;flex:1"></div><div class="gate"><span id="gx"></span></div></div></div>
+
+<div><div class="tabs" role="tablist" id="tabs"><button role="tab" data-t="ov" aria-selected="true">Overview</button><button role="tab" data-t="ord" aria-selected="false">Orders</button><button role="tab" data-t="fil" aria-selected="false">Fills</button><button role="tab" data-t="pos" aria-selected="false">Positions</button><button role="tab" data-t="ses" aria-selected="false">Sessions</button></div>
+
+<div class="stack" data-p="ov">
+ <div class="grid2"><div class="panel"><div class="ph">Equity vs approved band <span class="r">Simulated · SIM</span></div><div class="chart" id="eq" data-data="ok"></div><div class="empty" data-data="nq">Not available<span class="w2" style="text-align:center">Approved-evidence join not activated</span></div></div>
+  <div class="panel"><div class="ph">Exit gate <span class="r">Paper → Sandbox</span></div><table><tbody>
+   <tr><td>Observation days</td><td class="n"><span data-data="ok"><span class="flag" data-k="na">Not met</span></span><span class="na" data-data="nq">Not available</span></td></tr>
+   <tr><td>Drift vs approved band</td><td class="n"><span class="flag" data-k="pending">Insufficient data</span></td></tr>
+   <tr><td>Fills reconcile</td><td class="n"><span data-data="ok"><span class="flag" data-k="pending">Reconciling</span></span><span class="na" data-data="nq">Not available</span></td></tr>
+   <tr><td>Cost drift</td><td class="n"><span data-data="ok"><span class="flag" data-k="ok">Met</span></span><span class="na" data-data="nq">Not available</span></td></tr></tbody></table>
+   <div style="margin-top:12px"><a href="approvals.html">Open exit review</a></div></div></div>
+ <div class="grid2"><div class="panel"><div class="ph">Runtime health</div><table><tbody>
+   <tr><td>Mode · venue</td><td class="n">Paper · simulated</td></tr><tr><td>Open positions</td><td class="n"><span data-data="ok">1</span><span class="na" data-data="nq">Not available</span></td></tr><tr><td>Last source update</td><td class="n"><span data-data="ok">17 Oct 09:14Z</span><span class="na" data-data="nq">Not available</span></td></tr><tr><td>Fills counted</td><td class="n"><span data-data="ok">2</span><span class="na" data-data="nq">Not available</span></td></tr></tbody></table>
+   <details><summary>Provenance</summary><div class="mono sub2">paper-0044 · digest 9c1e04b7a2f1</div></details></div>
+  <div class="panel"><div class="ph">Accounting <span class="r">SIM</span></div><table><tbody>
+   <tr><td>Equity</td><td class="n"><span data-data="ok">101,800.00</span><span class="na" data-data="nq">Not available</span></td></tr><tr><td>Net PnL</td><td class="n"><span class="pos" data-data="ok">+1,800.00</span><span class="na" data-data="nq">Not available</span></td></tr><tr><td>Fees</td><td class="n"><span data-data="ok">12.40</span><span class="na" data-data="nq">Not available</span></td></tr><tr><td>Funding</td><td class="n"><span class="na">Not available</span><span class="w2">Counted separately</span></td></tr><tr><td>Cash free · locked</td><td class="n"><span data-data="ok">91,200.00 · 10,600.00</span><span class="na" data-data="nq">Not available</span></td></tr></tbody></table></div></div>
+ <div class="panel"><div class="ph">Execution quality <span class="flag" data-k="partial">Partial</span></div><div class="kpis" style="--n:5;border:0" data-data="ok">
+   <div class="kpi"><div class="l">Sessions</div><div class="v">1</div></div><div class="kpi"><div class="l">Orders</div><div class="v">2</div></div><div class="kpi"><div class="l">Fills</div><div class="v">1</div></div><div class="kpi"><div class="l">Rejected</div><div class="v">0</div><div class="n">Of 2 submitted</div></div><div class="kpi"><div class="l">Latency</div><div class="v na">Not available</div><div class="n">Broker timestamps not published</div></div></div>
+  <div class="na" data-data="nq">Not available</div></div>
+</div>
+<div class="panel" data-p="ord" hidden style="padding:0"><div class="tw"><table class="cards"><thead><tr><th>Client order</th><th>Side</th><th class="n">Quantity</th><th class="n">Price</th><th>State</th><th></th></tr></thead><tbody>
+ <tr><td class="mono" data-l="Client order">c-0044-0011</td><td data-l="Side">Buy</td><td class="n" data-l="Quantity"><span data-data="ok">0.12</span><span class="na" data-data="nq">Not available</span></td><td class="n" data-l="Price"><span data-data="ok">67,420.50</span><span class="na" data-data="nq">Not available</span></td><td data-l="State"><span class="flag" data-k="applied">Filled</span></td><td data-l=""><a href="blotter.html">Blotter ↗</a></td></tr>
+ <tr><td class="mono" data-l="Client order">c-0044-0012</td><td data-l="Side">Sell</td><td class="n" data-l="Quantity"><span data-data="ok">0.12</span><span class="na" data-data="nq">Not available</span></td><td class="n" data-l="Price"><span data-data="ok">67,980.00</span><span class="na" data-data="nq">Not available</span></td><td data-l="State"><span class="flag" data-k="unknown">Unknown</span></td><td data-l=""><a href="blotter.html">Blotter ↗</a></td></tr></tbody></table></div></div>
+<div class="panel" data-p="fil" hidden style="padding:0"><div class="tw"><table class="cards"><thead><tr><th>When (UTC)</th><th>Client order</th><th class="n">Quantity</th><th class="n">Price</th><th class="n">Fee SIM</th></tr></thead><tbody><tr><td class="mono" data-l="When">16 Oct 14:02Z</td><td class="mono" data-l="Order">c-0044-0011</td><td class="n" data-l="Quantity"><span data-data="ok">0.12</span><span class="na" data-data="nq">Not available</span></td><td class="n" data-l="Price"><span data-data="ok">67,420.50</span><span class="na" data-data="nq">Not available</span></td><td class="n" data-l="Fee"><span data-data="ok">12.40</span><span class="na" data-data="nq">Not available</span></td></tr></tbody></table></div></div>
+<div class="panel" data-p="pos" hidden style="padding:0"><div class="tw"><table class="cards"><thead><tr><th>Symbol</th><th class="n">Long</th><th class="n">Short</th><th class="n">Gross</th></tr></thead><tbody><tr><td data-l="Symbol">BTCUSDT</td><td class="n" data-l="Long"><span data-data="ok">8,090.46</span><span class="na" data-data="nq">Not available</span></td><td class="n" data-l="Short"><span data-data="ok">0.00</span><span class="na" data-data="nq">Not available</span></td><td class="n" data-l="Gross"><span data-data="ok">8,090.46</span><span class="na" data-data="nq">Not available</span></td></tr></tbody></table></div></div>
+<div class="panel" data-p="ses" hidden style="padding:0"><div class="tw"><table class="cards"><thead><tr><th>Started (UTC)</th><th>Ended</th><th>State</th></tr></thead><tbody><tr><td class="mono" data-l="Started">12 Oct 08:00Z</td><td data-l="Ended"><span class="na">Running</span></td><td data-l="State"><span class="flag" data-k="ok">Healthy</span></td></tr></tbody></table></div></div>
+</div>
+
+<div class="mini"><span class="cap" style="margin:0;border:0;padding:0">On scroll</span><b>BTC-Trend v3 · Paper monitor</b><span data-data="ok"><span class="flag" data-k="ok">Running</span> <span class="dot warn" style="margin-left:6px"></span>Stale 14m <span class="flag" data-k="pending" style="margin-left:6px">Reconciling</span></span><span class="na" data-data="nq">State not available</span><a href="alpha.html">← Alpha</a></div>
+</div></main>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/spine.js"></script>
+<script>
+var S=KIT.state;function $(s){return document.querySelector(s)}function $$(s){return[].slice.call(document.querySelectorAll(s))}
+function nq(){return S.data==="nq"}
+function draw(){var st=Spine.fromStage("paper",{met:3,cd:28,who:"Manager"});if(nq())st[2].days=null;Spine.render($("#sp"),{variant:"compact",stages:st});
+ $("#gx").innerHTML=KIT.disabled("Request exit review","Blocked: 1 criterion unmet");
+ var h=$("#eq");if(h&&h.offsetParent){var n=Math.min({"7":8,"30":31,"90":91,all:241}[S.win],28);equityChart(h,{mode:"eq",n:n,seed:33,drift:70,vol:900,end:1800,base:100000,sim:n-1,band:{lo:99400,hi:101950},label:"Paper equity vs approved band",h:240,drawdown:true})}}
+KIT.on(function(){setTimeout(draw,0)});window.addEventListener("resize",draw);
+document.addEventListener("click",function(e){var t=e.target.closest("#tabs [data-t]");if(!t)return;$$("#tabs [data-t]").forEach(function(b){b.setAttribute("aria-selected",b===t)});$$("[data-p]").forEach(function(p){p.hidden=p.getAttribute("data-p")!==t.getAttribute("data-t")});setTimeout(draw,0)});
+</script></body></html>

@@ -1,15 +1,38 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import Ajv2020 from "ajv/dist/2020";
+import addFormats from "ajv-formats";
 import { loadConfig } from "../src/config";
 import { AuthSession, PortalUser } from "../src/domain";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ExecutionAnalyticsProxy } from "../src/execution/analytics.proxy";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
 import { PaperBlotterQuerySchema } from "../src/paper-read/contracts";
+import { HistoryByteBudgetError, type PaperHistoryBytePolicy } from "../src/execution/history-byte-budget";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../src/execution-v2/read-scope";
+import { paperHistoryTestScopes } from "./paper-history-authority.fixture";
+import { createPaperVenueCalendarSource, type PaperVenueCalendarSource, type VenueCalendarSourceSnapshot } from "../src/execution/venue-calendar-source";
+
+// FE-073: validate the producer's actual envelope, not only a synthetic JSON
+// fixture. These service tests use fake source relations and are not runtime receipts.
+const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+const paperContract = JSON.parse(readFileSync(resolve(contractsRoot, "schemas/execution-paper-read.v1.schema.json"), "utf8"));
+const paperAjv = new Ajv2020({ strict: false, allErrors: true });
+addFormats(paperAjv);
+const validatePaperContract = paperAjv.compile(paperContract);
+function assertPaperContract(value: unknown) {
+  expect(validatePaperContract(value), JSON.stringify(validatePaperContract.errors)).toBe(true);
+}
+function assertDataObject(value: unknown): asserts value is Record<string, unknown> {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected response data object");
+}
 
 const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-08-30T00:00:00Z"), updatedAt: new Date("2026-08-30T00:00:00Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_bobby", userId: user.userId, state: "ACTIVE", sessionVersion: 1,
@@ -105,7 +128,7 @@ class FakeLocalProjectionSource extends FakeCurrentSource {
     relation: string,
     query: Record<string, unknown>,
   ) {
-    const response = await super.relation(principal, environment, screenId, sourceId, relation, query) as Record<string, any>;
+    const response = await super.relation(principal, environment, screenId, sourceId, relation, query);
     if (relation === "orders") {
       response.source.completeness = this.partialOrders ? "PARTIAL" : "COMPLETE";
       response.projection = {
@@ -179,13 +202,16 @@ function service(
   source: FakeCurrentSource,
   analytics?: Pick<ExecutionAnalyticsProxy, "managerQueryAnalytics">,
   projection?: { timeSeriesHistoryDownsampled: (...args: unknown[]) => Promise<unknown> },
+  historyBytePolicy?: PaperHistoryBytePolicy,
+  historyScopes?: ExecutionReadScopes | null,
+  venueCalendar?: PaperVenueCalendarSource,
 ): PaperReadService {
   const config = loadConfig({
     DATABASE_URL: "postgres://portal:portal@localhost/portal",
     PORTAL_ENV: "local",
     AUTH_MODE: "dev",
-    ...(projection ? {
-      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+    ...(projection || venueCalendar ? {
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_primary",
       EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
     } : {}),
   });
@@ -194,7 +220,10 @@ function service(
     config,
     analytics as ExecutionAnalyticsProxy | undefined,
     undefined,
-    projection as never,
+    projection ? { snapshotMetadata: async () => null, ...projection } as never : undefined,
+    historyBytePolicy,
+    historyScopes === null ? undefined : historyScopes ?? paperHistoryTestScopes(config),
+    venueCalendar,
   );
 }
 
@@ -271,11 +300,33 @@ function tagged(value: string | number | boolean | null) {
 }
 
 describe("N22 full Paper read product BFF", () => {
+  it.each([
+    ["overview", "EXECUTION_READ_ACCESS_CHANGED", 409],
+    ["overview", "EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503],
+    ["workbench", "EXECUTION_READ_ACCESS_CHANGED", 409],
+    ["workbench", "EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503],
+    ["blotter", "EXECUTION_READ_ACCESS_CHANGED", 409],
+    ["blotter", "EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503],
+  ] as const)("withholds %s sibling rows when %s occurs", async (screen, code, status) => {
+    const source = new FakeCurrentSource();
+    const original = source.relation.bind(source);
+    vi.spyOn(source, "relation").mockImplementation(async (...args) => {
+      if (args[4] === (screen === "blotter" ? "orders" : "performance_snapshots"))
+        throw new ExecutionReadScopeError(code, status);
+      return original(...args);
+    });
+    const reader = service(source);
+    const result = screen === "overview" ? reader.overview(principal()) : screen === "workbench"
+      ? reader.workbench(principal(), "dep_default", false) : reader.blotter(principal(), { limit: 25 });
+    await expect(result).rejects.toMatchObject({ code, status });
+    expect(source.calls.length).toBeGreaterThan(0);
+  });
   it("composes the Paper overview with bounded fan-out and strips source internals", async () => {
     const source = new FakeCurrentSource();
     source.rows.set("strategy_deployments", [{ deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", portfolio_id: "pf_default", mode: "paper", venue: "BINANCE" }]);
     source.rows.set("positions_v2", [{ position_id: "pos_1", strategy_id: "str_default", account_id: "acc_default", mode: "paper", venue: "BINANCE", quantity: "1.25" }]);
     const result = await service(source).overview(principal()) as Record<string, any>;
+    assertPaperContract(result);
     expect(result).toMatchObject({
       schema_version: "execution.paper-overview.v1",
       record_authority: "PORTAL_CONTROL",
@@ -286,6 +337,9 @@ describe("N22 full Paper read product BFF", () => {
     });
     expect(source.calls).toHaveLength(6);
     expect(result.data.deployments[0]).toEqual(expect.objectContaining({ deployment_id: "dep_default" }));
+    expect(result.read_at_ms).toBe(Date.parse(result.read_at));
+    expect(result.as_of_ms).toBe(Date.parse(result.as_of));
+    expect(result.panels.positions).toBeDefined();
     expect(JSON.stringify(result)).not.toContain("record_key");
     expect(JSON.stringify(result)).not.toContain("raw_response");
     expect(JSON.stringify(result)).not.toContain("opaque-strategy");
@@ -336,6 +390,7 @@ describe("N22 full Paper read product BFF", () => {
       emptySource.rows.set(relation, []);
     }
     const empty = await service(emptySource).overview(principal()) as Record<string, any>;
+    assertPaperContract(empty);
     expect(empty.state).toBe("empty");
     // P4-G: `derived_insights` is a derived block, null on an empty source.
     expect(empty.data.derived_insights).toBeNull();
@@ -345,15 +400,32 @@ describe("N22 full Paper read product BFF", () => {
     const staleSource = new FakeCurrentSource();
     staleSource.stale.add("positions_v2");
     const stale = await service(staleSource).overview(principal()) as Record<string, any>;
+    assertPaperContract(stale);
     expect(stale).toMatchObject({ state: "stale", freshness: "STALE" });
 
     const failedSource = new FakeCurrentSource();
     failedSource.failures.add("positions_v2");
     const partial = await service(failedSource).overview(principal()) as Record<string, any>;
+    assertPaperContract(partial);
     expect(partial).toMatchObject({ state: "partial", completeness: "PARTIAL" });
     expect(partial.capabilities).toContainEqual(expect.objectContaining({
       capability_id: "source.positions", state: "UNAVAILABLE", reason_code: "N22_SOURCE_UNAVAILABLE",
     }));
+  });
+
+  it("publishes null source clocks when every overview relation is unavailable (FE-073)", async () => {
+    const source = new FakeCurrentSource();
+    for (const relation of ["strategy_deployments", "positions_v2", "execution_sessions", "performance_snapshots", "account_equity_snapshots", "portfolio_equity_snapshots"]) {
+      source.failures.add(relation);
+    }
+    const result = await service(source).overview(principal()) as Record<string, any>;
+    assertPaperContract(result);
+    expect(result.state).toBe("unavailable");
+    expect(result.as_of).toBeNull();
+    expect(result.as_of_ms).toBeNull();
+    expect(result.read_at_ms).toBe(Date.parse(result.read_at));
+    expect(result.panels.positions).toMatchObject({ state: "UNAVAILABLE", data: null });
+    expect(JSON.stringify(result)).not.toContain("source detail must not escape");
   });
 
   it("derives overview insights from fetched relations without extra fan-out (P4-G / F15)", async () => {
@@ -440,6 +512,7 @@ describe("N22 full Paper read product BFF", () => {
       },
     };
     const result = await service(source, undefined, projection).workbench(principal(), "dep_1", false) as Record<string, any>;
+    assertPaperContract(result);
     // Full 30-day depth from the local mirror, declared as such.
     expect(result.data.account_equity).toHaveLength(720);
     expect(result.data.history_windows.account_equity).toMatchObject({
@@ -455,8 +528,94 @@ describe("N22 full Paper read product BFF", () => {
 
     // Without a mirror at all, the envelope is exactly the pre-depth shape.
     const bare = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    assertPaperContract(bare);
     expect(bare.data.history_windows).toBeUndefined();
     expect(bare.data.account_equity).toHaveLength(1);
+  });
+
+  it("refuses oversized whole-history representations rather than silently falling back to snapshot rows", async () => {
+    const source = new FakeCurrentSource();
+    for (const code of ["N33_HISTORY_ROW_TOO_LARGE", "N33_HISTORY_RESPONSE_TOO_LARGE"] as const) {
+      const projection = { timeSeriesHistoryDownsampled: async () => { throw new HistoryByteBudgetError(code); } };
+      await expect(service(source, undefined, projection).workbench(principal(), "dep_default", false))
+        .rejects.toMatchObject({ code, status: 413 });
+    }
+  });
+
+  it("checks the final composite response bytes even when a source double bypasses the history query guard", async () => {
+    const source = new FakeCurrentSource();
+    await expect(service(source, undefined, undefined, {
+      maximum_history_bytes: 1, maximum_row_bytes: 1, maximum_response_bytes: 1,
+    }).workbench(principal(), "dep_default", false)).rejects.toMatchObject({
+      code: "N33_HISTORY_RESPONSE_TOO_LARGE", status: 413,
+    });
+  });
+
+  it("never reads historical depth for an unresolved deployment", async () => {
+    const source = new FakeCurrentSource(); let reads = 0;
+    const projection = { timeSeriesHistoryDownsampled: async () => { reads++; return { rows: [], sourceRows: 0, downsample: null }; } };
+    const response = await service(source, undefined, projection).workbench(principal(), "TEST_ONLY-not-found", false);
+    expect(reads).toBe(0);
+    assertDataObject(response.data);
+    expect(response.data.deployment).toBeNull();
+    expect(response.data.history_windows).toBeUndefined();
+  });
+
+  it.each(["sticky-current-only", "authority-missing", "wrong-workspace"] as const)(
+    "does not broaden an authorized CURRENT page into raw HISTORY: %s", async scenario => {
+      const source = new FakeCurrentSource();
+      source.rows.set("account_equity_snapshots", [{ ...defaultRecord("account_equity_snapshots"), equity: "105" }]);
+      let reads = 0;
+      const projection = { timeSeriesHistoryDownsampled: async () => { reads++; throw new Error("MUST_NOT_READ_RAW_HISTORY"); } };
+      const config = loadConfig({ DATABASE_URL: "postgres://unused:unused@localhost/unused", PORTAL_ENV: "local", AUTH_MODE: "dev" });
+      const scopes = scenario === "authority-missing" ? null : paperHistoryTestScopes(config,
+        () => ({ policy_seen: scenario === "sticky-current-only" }));
+      const response = await service(source, undefined, projection, undefined, scopes)
+        .workbench(principal(scenario === "wrong-workspace" ? "ws_peer" : "ws_primary"), "dep_default", false);
+      expect(reads).toBe(0);
+      assertDataObject(response.data);
+      expect(response.data.account_equity).toMatchObject([{ id: 1, equity: "105" }]);
+      expect(response.data.history_windows).toBeUndefined();
+      expect(response.capabilities).toContainEqual(expect.objectContaining({
+        capability_id: "workbench.account-equity-history", state: "UNAVAILABLE",
+        reason_code: scenario === "authority-missing" ? "EXECUTION_READ_AUTHORITY_UNAVAILABLE"
+          : scenario === "wrong-workspace" ? "EXECUTION_READ_NOT_AVAILABLE" : "EXECUTION_READ_CURRENT_ONLY",
+      }));
+      assertPaperContract(response);
+    });
+
+  it.each([2, 4])("discards history when sticky policy activates at identity check %i", async activationCall => {
+    const source = new FakeCurrentSource();
+    source.rows.set("account_equity_snapshots", [{ ...defaultRecord("account_equity_snapshots"), equity: "105" }]);
+    let reads = 0;
+    const projection = { timeSeriesHistoryDownsampled: async () => { reads++; return {
+      sourceRows: 1, downsample: null, rows: [{ rowId: "TEST_ONLY-history", ts: "2026-10-01T00:00:00Z",
+        fields: { ...defaultRecord("account_equity_snapshots"), id: 999, equity: "999", ts: "2026-10-01T00:00:00Z" } }],
+    }; } };
+    const config = loadConfig({ DATABASE_URL: "postgres://unused:unused@localhost/unused", PORTAL_ENV: "local", AUTH_MODE: "dev" });
+    const scopes = paperHistoryTestScopes(config, call => ({ policy_seen: call >= activationCall }));
+    const response = await service(source, undefined, projection, undefined, scopes).workbench(principal(), "dep_default", false);
+    expect(reads).toBe(activationCall === 2 ? 0 : 1);
+    assertDataObject(response.data);
+    expect(response.data.account_equity).toMatchObject([{ id: 1, equity: "105" }]);
+    expect(response.data.history_windows).toBeUndefined();
+    expect(response.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "workbench.account-equity-history", state: "UNAVAILABLE", reason_code: "EXECUTION_READ_POLICY_PENDING",
+    }));
+    assertPaperContract(response);
+  });
+
+  it("final authority refusal outranks a byte-limit error derived from historical rows", async () => {
+    const source = new FakeCurrentSource();
+    const projection = { timeSeriesHistoryDownsampled: async () => { throw new HistoryByteBudgetError("N33_HISTORY_RESPONSE_TOO_LARGE"); } };
+    const config = loadConfig({ DATABASE_URL: "postgres://unused:unused@localhost/unused", PORTAL_ENV: "local", AUTH_MODE: "dev" });
+    const scopes = paperHistoryTestScopes(config, call => ({ policy_seen: call >= 4 }));
+    const response = await service(source, undefined, projection, undefined, scopes).workbench(principal(), "dep_default", false);
+    assertDataObject(response.data);
+    expect(response.data.history_windows).toBeUndefined();
+    expect(response.capabilities).toContainEqual(expect.objectContaining({
+      capability_id: "workbench.account-equity-history", reason_code: "EXECUTION_READ_POLICY_PENDING",
+    }));
   });
 
   it("counts lineage rejects by missing-parent class on the capability (P4-D)", async () => {
@@ -485,6 +644,7 @@ describe("N22 full Paper read product BFF", () => {
       lineage_scoped_out: { account: 2, strategy: 1 },
     });
     expect(positions.lineage_rejects).toBeUndefined();
+    assertPaperContract(result);
   });
 
   it("publishes the versioned observation policy and an honest gate verdict (P4-I / F16)", async () => {
@@ -842,7 +1002,112 @@ describe("N22 full Paper read product BFF", () => {
 
     const responses = await Promise.all(Array.from({ length: 20 }, () => service(source).overview(principal())));
     expect(source.calls).toHaveLength(120);
-    expect(source.calls.every((call) => (call.query.limit ?? 0) > 0 && (call.query.limit ?? 0) <= 200)).toBe(true);
+    expect(source.calls.every((call) => typeof call.query.limit === "number" && call.query.limit > 0 && call.query.limit <= 200)).toBe(true);
     expect(responses.every((response) => Buffer.byteLength(JSON.stringify(response)) < 1_048_576)).toBe(true);
+  });
+
+  it("FE-067 publishes typed stage_facts on the workbench without a single extra source call", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE", active: true },
+    ]);
+    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    const facts = result.data.stage_facts;
+    expect(facts.schema_version).toBe("execution.stage-facts.v1");
+    // `active` is a source flag, not a runtime: it is never turned into RUNNING.
+    expect(facts.runtime.runtime_state).toEqual({
+      availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_RUNTIME_STATE_FIELD_NOT_PUBLISHED",
+    });
+    // The workbench screen is not bound to the sessions / reconciliation relations: typed absence, not an empty list.
+    expect(facts.sessions).toMatchObject({
+      availability: "NOT_PUBLISHED", reason_code: "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN", rows: [], returned_count: 0,
+    });
+    expect(facts.reconciliation.verdict).toEqual({
+      availability: "NOT_PUBLISHED", value: null, reason_code: "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN",
+    });
+    expect(source.calls.map((call) => call.relation)).not.toContain("execution_sessions");
+    expect(source.calls.map((call) => call.relation)).not.toContain("reconciliation_findings");
+    expect(source.calls).toHaveLength(7);
+    // The V1 `sessions` / `reconciliation` Records branches are not invented either.
+    expect(result.data.sessions).toBeUndefined();
+    expect(result.data.reconciliation).toBeUndefined();
+  });
+
+  it("FE-067 keeps stage_facts on the VN market variant too", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    const result = await service(source).workbench(principal(), "dep_1", true) as Record<string, any>;
+    expect(result.schema_version).toBe("execution.paper-workbench-vnm.v1");
+    expect(result.data.stage_facts.sessions.availability).toBe("NOT_PUBLISHED");
+  });
+
+  it("FE-070 carries the VN market calendar only on the VN variant, every member typed NOT_PUBLISHED", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    const vnm = await service(source).workbench(principal(), "dep_1", true) as Record<string, any>;
+    const calendar = vnm.data.venue_calendar;
+    expect(calendar).toMatchObject({ schema_version: "execution.venue-calendar.v1", market: "VN_EQUITY" });
+    for (const member of ["timezone", "windows", "breaks", "holidays", "is_open", "as_of"]) {
+      expect(calendar[member]).toEqual({ availability: "NOT_PUBLISHED", value: null, reason_code: "N28_VENUE_CALENDAR_NOT_ACTIVE" });
+    }
+    const plain = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    expect(plain.data.venue_calendar).toBeUndefined();
+  });
+
+  function calendarFixture() {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_calendar", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "SYNTHETIC_VN" },
+    ]);
+    const snapshot = JSON.parse(readFileSync(resolve(__dirname, "fixtures/paper-venue-calendar.synthetic.json"), "utf8")) as VenueCalendarSourceSnapshot;
+    snapshot.workspace_id = "ws_primary"; snapshot.profile_id = "PAPER_BINANCE_USDM";
+    let calls = 0, revoked = false;
+    const calendar = createPaperVenueCalendarSource({ ...snapshot, async withVerifiedSnapshot(actor, context, use) {
+      calls++; expect(actor).toEqual(principal());
+      expect(context).toEqual({ environment: "paper", profile_id: "PAPER_BINANCE_USDM", deployment_id: "dep_calendar", venue: "SYNTHETIC_VN" });
+      return use({ snapshot, async assertCurrent() { if (revoked) throw new Error("secret upstream details"); } });
+    } }, () => snapshot.observed_at_ms + 1000);
+    return { source, snapshot, calendar, calls: () => calls, revoke: () => { revoked = true; },
+      service: () => service(source, undefined, undefined, undefined, undefined, calendar) };
+  }
+
+  it("FE-070 wires an exact-resource verified source into the actual VN workbench and capability", async () => {
+    const f = calendarFixture();
+    const result = await f.service().workbench(principal(), "dep_calendar", true) as any;
+    expect(result.data.venue_calendar.windows.value).toHaveLength(4);
+    expect(result.data.venue_calendar.is_open.value).toBe(false);
+    expect(result.capabilities).toContainEqual({ capability_id: "venue.calendar", state: "AVAILABLE",
+      relations: ["session_shading"], reason_code: null, retryable: false });
+    expect(f.calls()).toBe(1);
+    assertPaperContract(result);
+  });
+  it("FE-070 publishes partial/invalid source facts without falsely advertising full calendar coverage", async () => {
+    const f = calendarFixture(); delete (f.snapshot.payload as any).holidays;
+    const partial = await f.service().workbench(principal(), "dep_calendar", true) as any;
+    expect(partial.capabilities).toContainEqual(expect.objectContaining({ capability_id: "venue.calendar", state: "PARTIAL",
+      reason_code: "SOURCE_HOLIDAY_LIST_NOT_PUBLISHED" }));
+    f.snapshot.payload = null;
+    const absent = await f.service().workbench(principal(), "dep_calendar", true) as any;
+    expect(absent.capabilities).toContainEqual(expect.objectContaining({ capability_id: "venue.calendar", state: "UNAVAILABLE",
+      reason_code: "SOURCE_CALENDAR_PAYLOAD_INVALID" }));
+    expect(absent.data.venue_calendar.is_open.value).toBeNull();
+  });
+  it.each(["plain", "not-found", "wrong-venue"])("FE-070 does not read calendar for %s scope", async problem => {
+    const f = calendarFixture();
+    if (problem === "wrong-venue") f.source.rows.get("strategy_deployments")![0]!.venue = "OTHER_VENUE";
+    const result = await f.service().workbench(principal(), problem === "not-found" ? "missing" : "dep_calendar", problem !== "plain") as any;
+    expect(f.calls()).toBe(0);
+    if (problem === "plain") expect(result.data.venue_calendar).toBeUndefined();
+    else expect(result.data.venue_calendar.windows.value).toBeNull();
+  });
+  it("FE-070 stops a source revoked while the workbench builds and sanitizes the typed refusal", async () => {
+    const f = calendarFixture(), relation = f.source.relation.bind(f.source);
+    f.source.relation = async (...args: Parameters<typeof relation>) => { const result = await relation(...args); f.revoke(); return result; };
+    await expect(f.service().workbench(principal(), "dep_calendar", true)).rejects.toMatchObject({
+      code: "SOURCE_CALENDAR_ACCESS_CHANGED", status: 503, message: "The venue calendar could not be verified for this read." });
   });
 });

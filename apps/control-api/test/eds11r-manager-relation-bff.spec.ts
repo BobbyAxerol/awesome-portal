@@ -21,6 +21,7 @@ const user: PortalUser = {
   userId: "usr_eds11r", username: "eds11r", displayName: "EDS-11R", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-09-06T00:00:00.000Z"), updatedAt: new Date("2026-09-06T00:00:00.000Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 
 const session: AuthSession = {
@@ -166,7 +167,10 @@ describe("EDS-11R1 generated named Manager relation authority", () => {
       screen_bound_relation_count: 54,
       non_browser_classification_counts: { projectionInput: 16, auditOnly: 13, internalOnly: 13 },
     });
-    const serialized = JSON.stringify(manifest);
+    // Preserve the legacy no-transport oracle on the original operation DTO.
+    // The additive static catalogue has a logical family named
+    // sync_health_cursor_retention, not a source cursor or selector.
+    const serialized = JSON.stringify({ ...manifest, publication_catalogue: undefined });
     for (const forbidden of ["public.", "source_id", "manager.current.", "relation\"", "cursor", "mtls", "jwt", "account_balances"]) {
       expect(serialized.toLowerCase()).not.toContain(forbidden.toLowerCase());
     }
@@ -262,7 +266,7 @@ describe("EDS-11R1 generated named Manager relation authority", () => {
   it("keeps the HTTP boundary named: generic source/relation parameters are rejected before a BFF call", async () => {
     const controller = new MaximumDataOperationController(
       { relationPage: async () => ({ accepted: true }) } as unknown as MaximumDataOperationService,
-      { isMember: async () => true } as never,
+      { canReadExecution: async () => true } as never,
     );
     const request = {
       portalUser: user,

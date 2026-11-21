@@ -1,0 +1,395 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-alpha-stage-drift.v2.schema.json",
+  "title": "Opt-in exact retained alpha daily closes, not certified stage drift",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "alpha_id",
+    "qualification",
+    "window",
+    "calendar",
+    "stages",
+    "research_binding"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.alpha-stage-drift.v2"
+    },
+    "alpha_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 192,
+      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+    },
+    "qualification": {
+      "const": "RETAINED_OBSERVATIONS_NOT_FINANCIAL_CERTIFICATION"
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "days",
+        "requested_days",
+        "basis",
+        "daily_basis"
+      ],
+      "properties": {
+        "days": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "requested_days": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 365
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "basis": {
+          "const": "PORTAL_SGP_HISTORY_MIRROR"
+        },
+        "daily_basis": {
+          "const": "LAST_CLOSE_PER_DAY_SUMMED_ACROSS_ACCOUNTS_SAME_CURRENCY"
+        }
+      }
+    },
+    "calendar": {
+      "type": "array",
+      "maxItems": 20000,
+      "items": {
+        "type": "string",
+        "format": "date"
+      },
+      "uniqueItems": true
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "properties": {
+        "paper": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deployed",
+            "reason_code",
+            "currency",
+            "series",
+            "series_reason_codes"
+          ],
+          "properties": {
+            "deployed": {
+              "type": "boolean"
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EXECUTION_PROFILE_READ_DISABLED",
+                    "PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED",
+                    "PHASE2_PROJECTION_NOT_READY",
+                    "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED",
+                    "PROFILE_UNAVAILABLE",
+                    "NO_DEPLOYMENT_IN_STAGE",
+                    "HISTORY_MIRROR_NOT_AVAILABLE",
+                    "NO_EQUITY_IN_WINDOW",
+                    "NO_EQUITY_FOR_DAY",
+                    "EQUITY_DECIMAL_INVALID",
+                    "EQUITY_CURRENCY_NOT_PUBLISHED",
+                    "MIXED_CURRENCIES_NOT_AGGREGATED"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "currency": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "series": {
+              "type": "array",
+              "maxItems": 20000,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "series_reason_codes": {
+              "type": "array",
+              "maxItems": 20000,
+              "items": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "EXECUTION_PROFILE_READ_DISABLED",
+                      "PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED",
+                      "PHASE2_PROJECTION_NOT_READY",
+                      "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED",
+                      "PROFILE_UNAVAILABLE",
+                      "NO_DEPLOYMENT_IN_STAGE",
+                      "HISTORY_MIRROR_NOT_AVAILABLE",
+                      "NO_EQUITY_IN_WINDOW",
+                      "NO_EQUITY_FOR_DAY",
+                      "EQUITY_DECIMAL_INVALID",
+                      "EQUITY_CURRENCY_NOT_PUBLISHED",
+                      "MIXED_CURRENCIES_NOT_AGGREGATED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "sandbox": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deployed",
+            "reason_code",
+            "currency",
+            "series",
+            "series_reason_codes"
+          ],
+          "properties": {
+            "deployed": {
+              "type": "boolean"
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EXECUTION_PROFILE_READ_DISABLED",
+                    "PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED",
+                    "PHASE2_PROJECTION_NOT_READY",
+                    "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED",
+                    "PROFILE_UNAVAILABLE",
+                    "NO_DEPLOYMENT_IN_STAGE",
+                    "HISTORY_MIRROR_NOT_AVAILABLE",
+                    "NO_EQUITY_IN_WINDOW",
+                    "NO_EQUITY_FOR_DAY",
+                    "EQUITY_DECIMAL_INVALID",
+                    "EQUITY_CURRENCY_NOT_PUBLISHED",
+                    "MIXED_CURRENCIES_NOT_AGGREGATED"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "currency": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "series": {
+              "type": "array",
+              "maxItems": 20000,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "series_reason_codes": {
+              "type": "array",
+              "maxItems": 20000,
+              "items": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "EXECUTION_PROFILE_READ_DISABLED",
+                      "PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED",
+                      "PHASE2_PROJECTION_NOT_READY",
+                      "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED",
+                      "PROFILE_UNAVAILABLE",
+                      "NO_DEPLOYMENT_IN_STAGE",
+                      "HISTORY_MIRROR_NOT_AVAILABLE",
+                      "NO_EQUITY_IN_WINDOW",
+                      "NO_EQUITY_FOR_DAY",
+                      "EQUITY_DECIMAL_INVALID",
+                      "EQUITY_CURRENCY_NOT_PUBLISHED",
+                      "MIXED_CURRENCIES_NOT_AGGREGATED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "live": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deployed",
+            "reason_code",
+            "currency",
+            "series",
+            "series_reason_codes"
+          ],
+          "properties": {
+            "deployed": {
+              "type": "boolean"
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "EXECUTION_PROFILE_READ_DISABLED",
+                    "PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED",
+                    "PHASE2_PROJECTION_NOT_READY",
+                    "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED",
+                    "PROFILE_UNAVAILABLE",
+                    "NO_DEPLOYMENT_IN_STAGE",
+                    "HISTORY_MIRROR_NOT_AVAILABLE",
+                    "NO_EQUITY_IN_WINDOW",
+                    "NO_EQUITY_FOR_DAY",
+                    "EQUITY_DECIMAL_INVALID",
+                    "EQUITY_CURRENCY_NOT_PUBLISHED",
+                    "MIXED_CURRENCIES_NOT_AGGREGATED"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "currency": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "series": {
+              "type": "array",
+              "maxItems": 20000,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "series_reason_codes": {
+              "type": "array",
+              "maxItems": 20000,
+              "items": {
+                "anyOf": [
+                  {
+                    "enum": [
+                      "EXECUTION_PROFILE_READ_DISABLED",
+                      "PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED",
+                      "PHASE2_PROJECTION_NOT_READY",
+                      "PHASE2_PROJECTION_STALE_CEILING_EXCEEDED",
+                      "PROFILE_UNAVAILABLE",
+                      "NO_DEPLOYMENT_IN_STAGE",
+                      "HISTORY_MIRROR_NOT_AVAILABLE",
+                      "NO_EQUITY_IN_WINDOW",
+                      "NO_EQUITY_FOR_DAY",
+                      "EQUITY_DECIMAL_INVALID",
+                      "EQUITY_CURRENCY_NOT_PUBLISHED",
+                      "MIXED_CURRENCIES_NOT_AGGREGATED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "research_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_code",
+        "run_id",
+        "artifact_digest"
+      ],
+      "properties": {
+        "state": {
+          "const": "UNAVAILABLE"
+        },
+        "reason_code": {
+          "const": "N28_RESEARCH_EVIDENCE_JOIN_NOT_ACTIVATED"
+        },
+        "run_id": {
+          "type": "null"
+        },
+        "artifact_digest": {
+          "type": "null"
+        }
+      }
+    }
+  },
+  "description": "Calendar strictly increasing; all stage series/reason arrays have calendar length. Non-null point iff point reason null; requires deployed, non-null currency, null stage reason. Null point always has typed reason. No forward fill, FX conversion or totals across environments. These array-position/length constraints are enforced by producer Zod and consumer contract tests, not standard JSON Schema. A valid string is not financial certification. Bound: 20000 source account/day rows per stage, 20000 calendar days and 1MiB serialized response. Overflow refuses whole read with 503, never truncates."
+}

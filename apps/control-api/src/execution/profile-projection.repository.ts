@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
-import { CONTROL_API_POOL, CONTROL_API_CONFIG, EXECUTION_DURABLE_MIRROR_WRITER } from "../tokens";
+import type { QueryResult, QueryResultRow } from "pg";
+import { RetainedDataFlights } from "./retained-data-flights";
+import { EXECUTION_DATA_POOL, CONTROL_API_CONFIG, EXECUTION_DURABLE_MIRROR_WRITER } from "../tokens";
 import type { ControlApiConfig } from "../config";
 import type {
   DurableMirrorRelationCursor,
@@ -14,11 +16,29 @@ import {
   profileObservationRevalidation,
 } from "./profile-projection.catalog";
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
+import { retainedReview, RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES } from "./retained-read-profile";
+import { retainedSnapshot, retainedRevision } from "./retained-snapshot";
+import { withTransaction } from "../db/pool";
+import { projectionScopeSql } from "../execution-v2/read-projection";
+import { assertExecutionReadScope, ExecutionReadScopeError, scopeReadPopulation, scopeAllowsQueryField,
+  type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
+import { assertHistorySelectionBytes, validateHistoryByteBudget, type HistoryByteBudget } from "./history-byte-budget";
 
 export type ProjectionEnvironment = "paper" | "sandbox" | "live";
 export type ProjectionCompleteness = "COMPLETE" | "PARTIAL" | "UNKNOWN";
 export type ProjectionFreshness = "FRESH" | "AGING" | "STALE" | "UNKNOWN";
 export type ProjectionScalar = string | number | boolean | null | readonly (string | number | boolean | null)[];
+
+export interface ProjectionHistoryQuery {
+  from?: string | null;
+  to?: string | null;
+  after?: { ts: string; rowId: string } | null;
+  entity?: { field: string; value: string } | null;
+  limit: number;
+  order?: "ASC" | "DESC";
+  /** Internal capability only; never deserialized from browser input. */
+  scope?: AuthorizedExecutionReadScope;
+}
 
 export interface ProjectionRow {
   lineage: {
@@ -119,6 +139,9 @@ export interface ProfileProjectionJournalEntry {
   payload: Record<string, unknown>;
 }
 
+/** Scalar-only observation continuity; never fetches or decodes source JSONB. */
+export type ProfileProjectionJournalMetadata = Omit<ProfileProjectionJournalEntry, "payload">;
+
 export interface ProjectionCommitReceipt {
   outcome: "COMMITTED" | "QUARANTINED";
   changed: boolean;
@@ -141,19 +164,21 @@ export interface ProjectionCommitInput {
   relationCursors?: readonly DurableMirrorRelationCursor[];
   /** Raw accepted range rows stay out of the bounded compatibility JSONB snapshot. */
   retainedRangeRows?: DurableMirrorRetainedRangeRows;
+  /** Optional qualified new-family projection, applied with the same checkpoint transaction. No runtime producer installs it yet. */
+  managerModel?: import("../execution-v2/manager-model.store").PreparedManagerProjection;
 }
 
 @Injectable()
 export class ExecutionProfileProjectionRepository {
   constructor(
-    @Inject(CONTROL_API_POOL) readonly pool: Pool,
+    @Inject(EXECUTION_DATA_POOL) readonly pool: Pool,
     @Optional() @Inject(EXECUTION_DURABLE_MIRROR_WRITER)
     private readonly durableMirror?: DurableMirrorWriter,
     @Optional() @Inject(CONTROL_API_CONFIG)
     private readonly config?: Pick<
       ControlApiConfig,
       "FEATURE_EXECUTION_DURABLE_MIRROR" | "FEATURE_EXECUTION_DURABLE_MIRROR_READS"
-    >,
+    > & { EXECUTION_READ_PROFILE?: string },
   ) {}
 
   /**
@@ -225,6 +250,16 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
   ): Promise<ProfileProjectionRefreshHealth> {
+    return await this.refreshHealthObservation(workspaceId, environment, profileId) ?? healthyRefreshHealth();
+  }
+
+  /** Scalar persisted observation. Unlike the legacy scheduler convenience
+   * reader above, absence is never converted into an observed HEALTHY fact. */
+  async refreshHealthObservation(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+  ): Promise<ProfileProjectionRefreshHealth | null> {
     const result = await this.pool.query<{
       state: ProjectionRefreshState;
       consecutive_failures: number;
@@ -240,7 +275,7 @@ export class ExecutionProfileProjectionRepository {
       [workspaceId, environment, profileId],
     );
     const row = result.rows[0];
-    if (!row) return healthyRefreshHealth();
+    if (!row) return null;
     return {
       state: row.state,
       consecutiveFailures: row.consecutive_failures,
@@ -374,24 +409,18 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
     relationKey: string,
-    query: {
-      from?: string | null;
-      to?: string | null;
-      after?: { ts: string; rowId: string } | null;
-      entity?: { field: string; value: string } | null;
-      limit: number;
-      /**
-       * Existing history callers keep ascending order.  Subject activity
-       * readers use descending order to give a live operator the newest
-       * retained records first; the cursor remains a Portal-local keyset.
-       */
-      order?: "ASC" | "DESC";
-    },
+    query: ProjectionHistoryQuery,
+    reader?: PoolClient,
   ): Promise<{ rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>; hasMore: boolean }> {
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     const values: unknown[] = [workspaceId, environment, profileId, relationKey];
+    if (query.scope) {
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relationKey, query);
+      const predicate = projectionScopeSql(query.scope, "fields", values.length + 1);
+      conditions.push(predicate.sql); values.push(...predicate.values);
+    }
     if (query.from) { values.push(query.from); conditions.push(`ts >= $${values.length}::timestamptz`); }
-    if (query.to) { values.push(query.to); conditions.push(`ts <= $${values.length}::timestamptz`); }
+    if (query.to) { values.push(query.to); conditions.push(`ts ${query.scope?.mode === "SCOPED_V2" ? "<" : "<="} $${values.length}::timestamptz`); }
     const order = query.order ?? "ASC";
     if (query.after) {
       values.push(query.after.ts, query.after.rowId);
@@ -402,19 +431,54 @@ export class ExecutionProfileProjectionRepository {
       conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
     }
     values.push(query.limit + 1);
-    const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
-      `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields
+    const text = `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.${query.scope?.mode === "SCOPED_V2" ? "US" : "MS"}"Z"') AS ts, fields
          FROM ${this.historyTable()}
         WHERE ${conditions.join(" AND ")}
         ORDER BY ts ${order}, row_id ${order}
-        LIMIT $${values.length}`,
-      values,
-    );
+        LIMIT $${values.length}`;
+    const result = reader
+      ? await reader.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(text, values)
+      : await this.retainedDataQuery<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(text, values);
     const hasMore = result.rows.length > query.limit;
     return {
       rows: result.rows.slice(0, query.limit).map((row) => ({ rowId: row.row_id, ts: row.ts, fields: row.fields })),
       hasMore,
     };
+  }
+
+  /** One SQL snapshot for authorized rows AND exact authorized count/bounds.
+   * No cross-scope completed-response cache or independent pooled-query race. */
+  async scopedTimeSeriesHistory(workspaceId: string, environment: ProjectionEnvironment, profileId: string,
+    relationKey: string, query: ProjectionHistoryQuery & { scope: AuthorizedExecutionReadScope }) {
+    return withTransaction(this.pool, async reader => {
+      await reader.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await reader.query("SET LOCAL statement_timeout='5000ms'");
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relationKey, query);
+      if (query.scope.mode === "SCOPED_V2") {
+        const metadata = await this.snapshotMetadata(workspaceId, environment, profileId, reader);
+        const binding = scopeReadPopulation(query.scope).binding;
+        if (!metadata || !binding?.projection_generation || metadata.payloadDigest !== binding.source_revision ||
+            metadata.projectionEpoch !== binding.projection_generation || metadata.sourceCatalogueSha256 !== binding.catalogue_revision)
+          throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+      }
+      const page = await this.timeSeriesHistory(workspaceId, environment, profileId, relationKey, query, reader);
+      const coverage = await this.timeSeriesHistoryCoverage(workspaceId, environment, profileId, relationKey,
+        query.entity, query, reader);
+      return { page, coverage };
+    });
+  }
+
+  private assertHistoryScope(scope: AuthorizedExecutionReadScope, workspace: string, environment: ProjectionEnvironment,
+    profile: string, relation: string, range: { from?: string | null; to?: string | null }) {
+    assertExecutionReadScope(scope);
+    if (scope.workspaceId !== workspace || scope.environment !== environment || scope.profileId !== profile)
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+    if (scope.mode === "LEGACY_COMPATIBILITY") return;
+    const binding = scopeReadPopulation(scope).binding;
+    const window = range.from && range.to ? { from_ms: Date.parse(range.from), to_ms: Date.parse(range.to) } : null;
+    if (!binding || binding.dataset_id !== `history:${relation}` ||
+      JSON.stringify(binding.window) !== JSON.stringify(window))
+      throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
   }
 
   /**
@@ -436,7 +500,12 @@ export class ExecutionProfileProjectionRepository {
       seriesField: string;
       valueField: string;
       targetPoints: number;
+      scope?: AuthorizedExecutionReadScope;
+      /** Internal representation safety budget. Never a row-count/history
+       * ceiling and never accepted from browser input. */
+      byteBudget?: HistoryByteBudget;
     },
+    reader?: PoolClient,
   ): Promise<{
     rows: Array<{ rowId: string; ts: string; fields: Record<string, ProjectionScalar> }>;
     sourceRows: number;
@@ -448,9 +517,23 @@ export class ExecutionProfileProjectionRepository {
       output_rows: number;
     } | null;
   }> {
+    if (query.byteBudget) validateHistoryByteBudget(query.byteBudget);
+    if ((query.scope || query.byteBudget) && !reader) return withTransaction(this.pool, async client => {
+      await client.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await client.query("SET LOCAL statement_timeout = '5s'");
+      return this.timeSeriesHistoryDownsampled(workspaceId, environment, profileId, relationKey, query, client);
+    });
     const base = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4", "ts >= $5::timestamptz"];
     const values: unknown[] = [workspaceId, environment, profileId, relationKey, query.from];
-    if (query.to) { values.push(query.to); base.push(`ts <= $${values.length}::timestamptz`); }
+    if (query.scope) {
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relationKey, query);
+      for (const field of [query.valueField, query.seriesField, ...(query.entity ? [query.entity.field] : [])])
+        if (query.scope.mode === "SCOPED_V2" && !scopeAllowsQueryField(query.scope, field))
+          throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+      const predicate = projectionScopeSql(query.scope, "fields", values.length + 1);
+      base.push(predicate.sql); values.push(...predicate.values);
+    }
+    if (query.to) { values.push(query.to); base.push(`ts ${query.scope?.mode === "SCOPED_V2" ? "<" : "<="} $${values.length}::timestamptz`); }
     if (query.entity) {
       values.push(query.entity.field, query.entity.value);
       base.push(`fields->>($${values.length - 1}) = $${values.length}`);
@@ -460,7 +543,7 @@ export class ExecutionProfileProjectionRepository {
     const valueParam = values.length;
     values.push(query.seriesField);
     const seriesParam = values.length;
-    const meta = await this.pool.query<{ n: string; k: string; t0: string | null; t1: string | null }>(
+    const meta = await (reader ?? this.pool).query<{ n: string; k: string; t0: string | null; t1: string | null }>(
       `SELECT count(*)::text AS n,
               count(DISTINCT fields->>($${seriesParam}))::text AS k,
               to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS t0,
@@ -472,10 +555,30 @@ export class ExecutionProfileProjectionRepository {
     const seriesCount = Math.max(1, Number(meta.rows[0]?.k ?? 0));
     if (inputRows === 0) return { rows: [], sourceRows: 0, downsample: null };
     if (inputRows <= query.targetPoints) {
-      const exact = await this.timeSeriesHistory(workspaceId, environment, profileId, relationKey, {
-        from: query.from, to: query.to ?? null, entity: query.entity ?? null, limit: query.targetPoints,
-      });
-      return { rows: exact.rows, sourceRows: inputRows, downsample: null };
+      // The ordinary history reader also returns null/non-numeric values.
+      // Reusing it here made a numeric-eligible count describe a different
+      // population and its target-sized LIMIT could hide valid later rows.
+      // Keep exactly the same eligibility/scope/range predicates as the count
+      // and dense branch. The target is not a history ceiling: a legacy
+      // non-transactional append between queries must not silently lose rows.
+      const exactSql = `SELECT row_id, ts, fields FROM ${this.historyTable()}
+          WHERE ${base.join(" AND ")}`;
+      if (query.byteBudget) await this.historySelectionBudget(reader ?? this.pool, exactSql,
+        values.slice(0, valueParam), query.byteBudget);
+      const exact = await (reader ?? this.pool).query<{
+        row_id: string; ts: string; fields: Record<string, ProjectionScalar>;
+      }>(
+        `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.${query.scope?.mode === "SCOPED_V2" ? "US" : "MS"}"Z"') AS ts, fields
+           FROM ${this.historyTable()}
+          WHERE ${base.join(" AND ")}
+          ORDER BY ts ASC, row_id ASC`,
+        values.slice(0, valueParam),
+      );
+      return {
+        rows: exact.rows.map(row => ({ rowId: row.row_id, ts: row.ts, fields: row.fields })),
+        sourceRows: exact.rows.length,
+        downsample: null,
+      };
     }
     const spanSeconds = Math.max(1,
       (Date.parse(meta.rows[0]!.t1!) - Date.parse(meta.rows[0]!.t0!)) / 1000);
@@ -483,7 +586,18 @@ export class ExecutionProfileProjectionRepository {
     const bucketSeconds = Math.max(1, Math.ceil(spanSeconds / bucketsPerSeries));
     values.push(bucketSeconds);
     const bucketParam = values.length;
-    const result = await this.pool.query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
+    const denseSelection = `SELECT row_id, ts, fields FROM (
+         SELECT row_id, ts, fields,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY (fields->>($${valueParam}))::numeric ASC, ts, row_id) AS rn_min,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY (fields->>($${valueParam}))::numeric DESC, ts, row_id) AS rn_max,
+                row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
+                                   ORDER BY ts DESC, row_id DESC) AS rn_last
+           FROM ${this.historyTable()} WHERE ${base.join(" AND ")}
+       ) ranked WHERE rn_min = 1 OR rn_max = 1 OR rn_last = 1`;
+    if (query.byteBudget) await this.historySelectionBudget(reader ?? this.pool, denseSelection, values, query.byteBudget);
+    const result = await (reader ?? this.pool).query<{ row_id: string; ts: string; fields: Record<string, ProjectionScalar> }>(
       `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS ts, fields FROM (
          SELECT row_id, ts, fields,
                 row_number() OVER (PARTITION BY fields->>($${seriesParam}), floor(extract(epoch FROM ts) / $${bucketParam})
@@ -511,19 +625,74 @@ export class ExecutionProfileProjectionRepository {
     };
   }
 
+  private async historySelectionBudget(reader: Pool | PoolClient, selectedSql: string, values: readonly unknown[],
+    budget: HistoryByteBudget): Promise<void> {
+    // Stats and delivery run on the caller's same repeatable-read transaction;
+    // reject before fetching oversized JSON into the Node process. No LIMIT
+    // hides series and no source row is deleted or compacted by this guard.
+    const stats = await reader.query<{ total_bytes: string; largest_row_bytes: string }>(
+      `SELECT coalesce(sum(octet_length(fields::text)),0)::text AS total_bytes,
+              coalesce(max(octet_length(fields::text)),0)::text AS largest_row_bytes
+         FROM (${selectedSql}) history_selected`, [...values]);
+    assertHistorySelectionBytes(stats.rows[0]?.total_bytes, stats.rows[0]?.largest_row_bytes, budget);
+  }
+
+  /** Exact successor: inspect the latest row even when its value is malformed;
+   * never silently replace a bad close with an earlier apparently valid row.
+   * The extra row is a refusal witness, not a partial/truncated response. */
+  async stageEquityDailyCloses(
+    workspaceId: string, environment: ProjectionEnvironment, profileId: string,
+    query: { from: string; strategyId: string; maximumRows: number; scope?: AuthorizedExecutionReadScope },
+  ): Promise<Array<{ strategyId: string; accountId: string; day: string; value: string | null; currency: string | null }>> {
+    const relation = "manager.performance:account_equity_snapshots";
+    if (!Number.isInteger(query.maximumRows) || query.maximumRows < 1 || query.maximumRows > 20_000)
+      throw new Error("STAGE_EQUITY_ROW_BOUND_INVALID");
+    if (query.scope) {
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relation, { from: query.from });
+      for (const field of ["equity", "currency", "strategy_id", "account_id"])
+        if (query.scope.mode === "SCOPED_V2" && !scopeAllowsQueryField(query.scope, field))
+          throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    const predicate = query.scope ? projectionScopeSql(query.scope, "fields", 8) : { sql: "TRUE", values: [] };
+    const result = await this.retainedDataQuery<{
+      strategy_id: string; account_id: string; day: string; value: string | null; currency: string | null;
+    }>(
+      `SELECT DISTINCT ON (fields->>'account_id', (ts AT TIME ZONE 'UTC')::date)
+              fields->>'strategy_id' AS strategy_id, left(fields->>'account_id', 193) AS account_id,
+              to_char((ts AT TIME ZONE 'UTC')::date, 'YYYY-MM-DD') AS day,
+              CASE WHEN jsonb_typeof(fields->'equity')='string' THEN left(fields->>'equity', 129) ELSE NULL END AS value,
+              CASE WHEN jsonb_typeof(fields->'currency')='string' THEN left(fields->>'currency', 33) ELSE NULL END AS currency
+         FROM ${this.historyTable()}
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
+          AND ts >= $5::timestamptz AND fields->>'strategy_id'=$6
+          AND fields->>'account_id' IS NOT NULL AND ${predicate.sql}
+        ORDER BY fields->>'account_id', (ts AT TIME ZONE 'UTC')::date, ts DESC, row_id DESC
+        LIMIT $7`,
+      [workspaceId, environment, profileId, relation, query.from, query.strategyId, query.maximumRows + 1, ...predicate.values],
+    );
+    return result.rows.map(row => ({ strategyId: row.strategy_id, accountId: row.account_id,
+      day: row.day, value: row.value, currency: row.currency }));
+  }
+
   /**
-   * §14 E1: per-(strategy, account) daily closes from the mirror — the
-   * bounded statistical feed for cross-alpha correlation and drawdown
-   * analytics. One real row per account per day (the last of the day).
+   * §14 E1 legacy statistical feed, deliberately unchanged for V1 consumers.
+   * The exact-stage successor above must not inherit its value filtering.
    */
   async timeSeriesDailyCloses(
     workspaceId: string,
     environment: ProjectionEnvironment,
     profileId: string,
     relationKey: string,
-    query: { from: string; valueField: string; strategyIds?: readonly string[] },
+    query: { from: string; valueField: string; strategyIds?: readonly string[]; scope?: AuthorizedExecutionReadScope },
   ): Promise<Array<{ strategyId: string; accountId: string; day: string; value: string }>> {
-    const result = await this.pool.query<{ strategy_id: string; account_id: string; day: string; value: string }>(
+    if (query.scope) {
+      this.assertHistoryScope(query.scope, workspaceId, environment, profileId, relationKey, query);
+      for (const field of [query.valueField, "strategy_id", "account_id"])
+        if (query.scope.mode === "SCOPED_V2" && !scopeAllowsQueryField(query.scope, field))
+          throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    const predicate = query.scope ? projectionScopeSql(query.scope, "fields", 8) : { sql: "TRUE", values: [] };
+    const result = await this.retainedDataQuery<{ strategy_id: string; account_id: string; day: string; value: string }>(
       `SELECT DISTINCT ON (fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts))
               fields->>'strategy_id' AS strategy_id,
               fields->>'account_id' AS account_id,
@@ -532,11 +701,12 @@ export class ExecutionProfileProjectionRepository {
          FROM ${this.historyTable()}
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
           AND ts >= $5::timestamptz
+          AND ${predicate.sql}
           AND fields->>'strategy_id' IS NOT NULL AND fields->>'account_id' IS NOT NULL
           AND ($7::text[] IS NULL OR fields->>'strategy_id' = ANY($7::text[]))
           AND fields->>($6) ~ '^-?[0-9]+(\\.[0-9]+)?$'
         ORDER BY fields->>'strategy_id', fields->>'account_id', date_trunc('day', ts), ts DESC, row_id DESC`,
-      [workspaceId, environment, profileId, relationKey, query.from, query.valueField, query.strategyIds ?? null],
+      [workspaceId, environment, profileId, relationKey, query.from, query.valueField, query.strategyIds ?? null, ...predicate.values],
     );
     return result.rows.map((row) => ({
       strategyId: row.strategy_id, accountId: row.account_id, day: row.day, value: row.value,
@@ -565,12 +735,20 @@ export class ExecutionProfileProjectionRepository {
     environment: ProjectionEnvironment,
     profileId: string,
     relationKey: string,
+    scope?: AuthorizedExecutionReadScope,
   ): Promise<Array<{
     portfolioId: string; currency: string | null;
     firstEquity: string; lastEquity: string; netPnl: string | null;
     points: number; firstTs: string; lastTs: string;
   }>> {
-    const result = await this.pool.query<{
+    if (scope) {
+      this.assertHistoryScope(scope, workspaceId, environment, profileId, relationKey, {});
+      for (const field of ["portfolio_id", "currency", "equity", "net_pnl"])
+        if (scope.mode === "SCOPED_V2" && !scopeAllowsQueryField(scope, field))
+          throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
+    }
+    const predicate = scope ? projectionScopeSql(scope, "fields", 5) : { sql: "TRUE", values: [] };
+    const result = await this.retainedDataQuery<{
       portfolio_id: string; currency: string | null;
       first_equity: string; last_equity: string; net_pnl: string | null;
       points: string; first_ts: Date; last_ts: Date;
@@ -583,6 +761,7 @@ export class ExecutionProfileProjectionRepository {
                 ts, row_id
            FROM ${this.historyTable()}
           WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND relation_key=$4
+            AND ${predicate.sql}
             AND fields->>'portfolio_id' IS NOT NULL
             AND fields->>'equity' ~ '^-?[0-9]+(\\.[0-9]+)?$'
        ),
@@ -606,7 +785,7 @@ export class ExecutionProfileProjectionRepository {
          JOIN newest ON newest.portfolio_id = counted.portfolio_id
                     AND newest.currency IS NOT DISTINCT FROM counted.currency
         ORDER BY counted.points DESC, counted.portfolio_id ASC, counted.currency ASC`,
-      [workspaceId, environment, profileId, relationKey],
+      [workspaceId, environment, profileId, relationKey, ...predicate.values],
     );
     return result.rows.map((row) => ({
       portfolioId: row.portfolio_id,
@@ -626,24 +805,30 @@ export class ExecutionProfileProjectionRepository {
     profileId: string,
     relationKey: string,
     entity: { field: string; value: string } | null = null,
-    range: { from?: string | null; to?: string | null } = {},
+    range: { from?: string | null; to?: string | null; scope?: AuthorizedExecutionReadScope } = {},
+    reader?: PoolClient,
   ): Promise<{ rowCount: number; oldestTs: string | null; newestTs: string | null }> {
     const conditions = ["workspace_id=$1", "environment=$2", "profile_id=$3", "relation_key=$4"];
     const values: unknown[] = [workspaceId, environment, profileId, relationKey];
+    if (range.scope) {
+      this.assertHistoryScope(range.scope, workspaceId, environment, profileId, relationKey, range);
+      const predicate = projectionScopeSql(range.scope, "fields", values.length + 1);
+      conditions.push(predicate.sql); values.push(...predicate.values);
+    }
     if (range.from) { values.push(range.from); conditions.push(`ts >= $${values.length}::timestamptz`); }
-    if (range.to) { values.push(range.to); conditions.push(`ts <= $${values.length}::timestamptz`); }
+    if (range.to) { values.push(range.to); conditions.push(`ts ${range.scope?.mode === "SCOPED_V2" ? "<" : "<="} $${values.length}::timestamptz`); }
     if (entity) {
       values.push(entity.field, entity.value);
       conditions.push(`fields->>($${values.length - 1}) = $${values.length}`);
     }
-    const result = await this.pool.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(
-      `SELECT count(*)::text AS row_count,
+    const text = `SELECT count(*)::text AS row_count,
               to_char(min(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS oldest_ts,
               to_char(max(ts) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS newest_ts
          FROM ${this.historyTable()}
-        WHERE ${conditions.join(" AND ")}`,
-      values,
-    );
+        WHERE ${conditions.join(" AND ")}`;
+    const result = reader
+      ? await reader.query<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(text, values)
+      : await this.retainedDataQuery<{ row_count: string; oldest_ts: string | null; newest_ts: string | null }>(text, values);
     const row = result.rows[0];
     return { rowCount: Number(row?.row_count ?? 0), oldestTs: row?.oldest_ts ?? null, newestTs: row?.newest_ts ?? null };
   }
@@ -704,6 +889,7 @@ export class ExecutionProfileProjectionRepository {
         };
       }
       if (!changed) {
+        if (input.managerModel) await this.persistManagerModel(client, document, input.sourceEpoch, input.managerModel);
         await client.query(
           `UPDATE execution_profile_projection_snapshots SET
              source_catalogue_sha256=$4, source_epoch=$5, source_cursor=$6, source_as_of=$7, received_at=$8,
@@ -791,6 +977,7 @@ export class ExecutionProfileProjectionRepository {
         [document.workspace_id, document.environment, document.profile_id,
           projectionEpoch, projectionSequence, input.maximumJournalEntries],
       );
+      if (input.managerModel) await this.persistManagerModel(client, document, input.sourceEpoch, input.managerModel);
       await client.query("SELECT pg_notify('execution_profile_projection', $1)", [JSON.stringify({
         workspace_id: document.workspace_id,
         environment: document.environment,
@@ -809,6 +996,20 @@ export class ExecutionProfileProjectionRepository {
     });
   }
 
+  private async persistManagerModel(client: PoolClient, document: ProfileProjectionDocument, sourceEpoch: string,
+    model: import("../execution-v2/manager-model.store").PreparedManagerProjection) {
+    const value = model.document;
+    if (value.workspace_id !== document.workspace_id || value.environment !== document.environment || value.profile_id !== document.profile_id)
+      throw new Error("MANAGER_PARENT_PROFILE_MISMATCH");
+    // A private adapter may only couple snapshots from the same accepted
+    // source epoch/catalogue. The legacy projection UUID and Manager's source
+    // generation are different namespaces, never silently compared as cursors.
+    if (value.source_epoch !== sourceEpoch || value.catalogue_digest !== document.source_catalogue_sha256)
+      throw new Error("MANAGER_PARENT_SOURCE_MISMATCH");
+    const { persistManagerProjection } = await import("../execution-v2/manager-model.store");
+    await persistManagerProjection(client, model);
+  }
+
   async snapshot(
     workspaceId: string, environment: ProjectionEnvironment, profileId: string,
     reader: Pick<PoolClient, "query"> = this.pool,
@@ -816,15 +1017,124 @@ export class ExecutionProfileProjectionRepository {
     // Transactional review capture must read its own transaction, never a shared read.
     if (reader !== this.pool) return this.readSnapshot(workspaceId, environment, profileId, reader);
     const key = JSON.stringify([workspaceId,environment,profileId]);
+    // Preview source writers are off. Share immutable data (NOT authority)
+    // briefly across the many panels of one rich-screen mount. No cache/job
+    // table writes; every HTTP request still rechecks Core access/session.
+    if (retainedReview(this.config)) {
+      const cached=this.retainedViews.get(key);if(cached&&cached.expiresAt>Date.now())return cached.snapshot;
+    }
     const pending = this.snapshotFlights.get(key);
     if (pending) return pending;
     if (this.snapshotFlights.size >= 16) throw new Error("N31_LOCAL_READ_CAPACITY");
-    const read = this.readSnapshot(workspaceId,environment,profileId,reader);
+    const read = (async()=>{
+      if(!retainedReview(this.config))return this.readSnapshot(workspaceId,environment,profileId,reader);
+      const revision=await retainedRevision(this.pool,workspaceId,environment,profileId);
+      const cached=this.retainedViews.get(key);
+      if(revision && cached?.revision===revision){
+        // A successful database validation renews DATA TTL only. A DB failure
+        // never renews this entry or its original clocks; auth is not cached.
+        cached.expiresAt=Date.now()+2000;return cached.snapshot;
+      }
+      this.retainedViews.delete(key);
+      const raw=await this.readSnapshot(workspaceId,environment,profileId,reader);
+      const snapshot=raw?await retainedSnapshot(this.pool,raw,workspaceId,environment,profileId):null;
+      if(!snapshot)return null;
+      // Mixed inputs observed across a concurrent writer must not be retained
+      // as a validated view. The next request reads again, not a stale token.
+      const stableRevision=revision===await retainedRevision(this.pool,workspaceId,environment,profileId)?revision:null;
+      if(!stableRevision)return snapshot;
+      const bytes=Buffer.byteLength(JSON.stringify(snapshot));
+      // Shared with the published context and strict consumer. The budget
+      // bounds ALL retained views together, not each of the three entries.
+      // HTTP data remains bounded independently by each named BFF.
+      const cacheBudgetBytes=RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES;
+      if(bytes<=cacheBudgetBytes){
+        this.expireRetainedResources();
+        while(this.retainedResources.size && this.retainedCachedBytes()+bytes>cacheBudgetBytes)
+          this.retainedResources.delete(this.retainedResources.keys().next().value!);
+        const total=()=>[...this.retainedViews.values()].reduce((n,entry)=>n+entry.bytes,0);
+        while(this.retainedViews.size && (this.retainedViews.size>=3 || total()+bytes>cacheBudgetBytes)) this.retainedViews.delete(this.retainedViews.keys().next().value!);
+        this.retainedViews.set(key,{snapshot,bytes,revision:stableRevision,expiresAt:Date.now()+2000});
+      }
+      return snapshot;
+    })();
     this.snapshotFlights.set(key,read);
-    try { return await read; } finally { if (this.snapshotFlights.get(key) === read) this.snapshotFlights.delete(key); }
+    try {
+      return await read;
+    } finally { if (this.snapshotFlights.get(key) === read) this.snapshotFlights.delete(key); }
   }
 
   private readonly snapshotFlights = new Map<string, Promise<ProfileProjectionSnapshot | null>>();
+  private readonly retainedDataFlights = new RetainedDataFlights();
+  private retainedDataQuery<T extends QueryResultRow>(text: string, values: unknown[]): Promise<QueryResult<T>> {
+    return retainedReview(this.config) ? this.retainedDataFlights.query<T>(this.pool, text, values) : this.pool.query<T>(text, values);
+  }
+  private readonly retainedViews = new Map<string,{snapshot:ProfileProjectionSnapshot;bytes:number;revision:string;expiresAt:number}>();
+  private readonly retainedResources = new Map<string,{data:Record<string,unknown>;bytes:number;expiresAt:number;
+    sources:readonly WeakRef<ProfileProjectionSnapshot>[]}>();
+
+  /** Internal DATA-only representation of an already-loaded exact document.
+   * Callers must load/validate the snapshots first and bind their identities
+   * and metadata in the key. Authority/actor/current read clocks are excluded.
+   * Documents + at most4 prepared DTOs share ONE published16MiB budget.
+   */
+  retainedResourceTemplate(key: string): Record<string,unknown> | undefined {
+    if (!retainedReview(this.config)) return undefined;
+    const entry=this.retainedResources.get(key);
+    if(entry&&entry.expiresAt<=Date.now()){
+      // Lookup follows loading CURRENT snapshots. Only their successful DB
+      // revision validation may renew DATA, as in snapshot() above. Ordinary
+      // hits, evicted/changed documents and authority/DB failures never renew.
+      const validatedUntil=this.resourceSourceDeadline(entry.sources);
+      if(validatedUntil>entry.expiresAt&&validatedUntil>Date.now())entry.expiresAt=validatedUntil;
+    }
+    this.expireRetainedResources();
+    return this.retainedResources.get(key)?.data;
+  }
+  retainResourceTemplate(key: string, data: Record<string,unknown>, snapshots:readonly ProfileProjectionSnapshot[]=[]): void {
+    if (!retainedReview(this.config)) return;
+    if ('actor' in data || data.read_at_ms !== 0) throw new Error('RETAINED_RESOURCE_DATA_ONLY_REQUIRED');
+    this.expireRetainedResources(); this.retainedResources.delete(key);
+    const bytes=Buffer.byteLength(key)+Buffer.byteLength(JSON.stringify(data));
+    if(bytes>1024*1024)return;
+    while(this.retainedResources.size && (this.retainedResources.size>=4
+      || this.retainedCachedBytes()+bytes>RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES))
+      this.retainedResources.delete(this.retainedResources.keys().next().value!);
+    if(this.retainedCachedBytes()+bytes>RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES)return;
+    const seen=new WeakSet<object>();
+    const freeze=(value:unknown):void=>{if(!value||typeof value!=='object'||seen.has(value))return;
+      seen.add(value);for(const child of Object.values(value))freeze(child);Object.freeze(value);};
+    freeze(data);
+    const sources=snapshots.map(snapshot=>new WeakRef(snapshot));
+    const validatedUntil=this.resourceSourceDeadline(sources);
+    this.retainedResources.set(key,{data,bytes,sources,
+      expiresAt:Math.min(Date.now()+2000,validatedUntil||Date.now()+2000)});
+  }
+  private resourceSourceDeadline(sources:readonly WeakRef<ProfileProjectionSnapshot>[]): number {
+    if(!sources.length)return 0;
+    const entries=[...this.retainedViews.values()];let until=Number.MAX_SAFE_INTEGER;
+    for(const weak of sources){const snapshot=weak.deref(),entry=snapshot&&entries.find(e=>e.snapshot===snapshot);
+      if(!entry)return 0;until=Math.min(until,entry.expiresAt);}
+    return until;
+  }
+  private expireRetainedResources(): void {
+    const now=Date.now();for(const [key,entry] of this.retainedResources)
+      if(entry.expiresAt<=now)this.retainedResources.delete(key);
+  }
+  private retainedCachedBytes(): number {
+    return [...this.retainedViews.values(),...this.retainedResources.values()].reduce((n,entry)=>n+entry.bytes,0);
+  }
+
+  /** Persisted DATA only. V2 adapters bind this exact revision to a qualified
+   * publication; retained compatibility augmentation has a different identity
+   * and must not be substituted underneath that authority proof. */
+  async rawSnapshot(workspaceId:string,environment:ProjectionEnvironment,profileId:string):Promise<ProfileProjectionSnapshot|null> {
+    return withTransaction(this.pool,async reader=>{
+      await reader.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await reader.query("SET LOCAL statement_timeout='5000ms'");
+      return this.readSnapshot(workspaceId,environment,profileId,reader);
+    });
+  }
 
   private async readSnapshot(
     workspaceId: string,
@@ -857,23 +1167,73 @@ export class ExecutionProfileProjectionRepository {
   }
 
   /** Hot tail: scalar columns only. Never de-TOAST/decode the profile JSONB. */
-  async snapshotMetadata(workspaceId: string, environment: ProjectionEnvironment, profileId: string) {
+  async snapshotMetadata(workspaceId: string, environment: ProjectionEnvironment, profileId: string, reader?: PoolClient) {
     const query = {
       text: `SELECT source_as_of,received_at,last_successful_refresh_at,completeness,
-        projection_epoch::text,projection_sequence::text,payload_digest,source_catalogue_sha256
+        projection_epoch::text,projection_sequence::text,payload_digest,source_catalogue_sha256,source_epoch,source_contract_revision
         FROM execution_profile_projection_snapshots
         WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`,
       values: [workspaceId,environment,profileId], query_timeout: 2_000,
     };
-    const result = await this.pool.query(query);
+    const result = await (reader ?? this.pool).query(query);
     const row = result.rows[0];
     return row ? {
+      sourceEpoch: row.source_epoch as string,
+      sourceContractRevision: row.source_contract_revision as string,
       sourceAsOf: row.source_as_of as Date | null, receivedAt: row.received_at as Date,
       lastSuccessfulRefreshAt: row.last_successful_refresh_at as Date,
       completeness: row.completeness as ProjectionCompleteness,
       projectionEpoch: row.projection_epoch as string, projectionSequence: Number(row.projection_sequence),
       payloadDigest: row.payload_digest as string, sourceCatalogueSha256: row.source_catalogue_sha256 as string | null,
     } : null;
+  }
+
+  /** Bounded scalar journal tail for native notices. Legacy payload readers
+   * keep their existing API; this method must not select/decode payload. */
+  async journalMetadataAfter(
+    workspaceId: string,
+    environment: ProjectionEnvironment,
+    profileId: string,
+    projectionEpoch: string,
+    sequence: number,
+    limit: number,
+  ): Promise<ProfileProjectionJournalMetadata[]> {
+    if (!Number.isSafeInteger(sequence) || sequence < 0 ||
+        !Number.isSafeInteger(limit) || limit < 1 || limit > 200) {
+      throw new Error("EDS09B_OBSERVATION_JOURNAL_BOUND_INVALID");
+    }
+    return withTransaction(this.pool, async reader => {
+      await reader.query("SET TRANSACTION READ ONLY");
+      // Server-side cancellation, not a client timeout that leaves SQL running.
+      await reader.query("SET LOCAL statement_timeout='2000ms'");
+      const result = await reader.query<{
+        workspace_id: string; environment: ProjectionEnvironment; profile_id: string;
+        projection_epoch: string; projection_sequence: string; source_as_of: Date | null;
+        received_at: Date; completeness: ProjectionCompleteness; payload_digest: string;
+        observation_authority: "PORTAL_OBSERVATION"; observation_semantics: "BOUNDED_CURRENT_PAGE";
+        source_contract_revision: string | null; source_catalogue_sha256: string | null;
+      }>(
+        `SELECT workspace_id,environment,profile_id,projection_epoch::text,
+                projection_sequence::text,source_as_of,received_at,completeness,
+                payload_digest,observation_authority,observation_semantics,
+                source_contract_revision,source_catalogue_sha256
+           FROM execution_profile_projection_journal
+          WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3
+            AND projection_epoch=$4 AND projection_sequence>$5
+          ORDER BY projection_sequence ASC LIMIT $6`,
+        [workspaceId, environment, profileId, projectionEpoch, sequence, limit],
+      );
+      return result.rows.map(row => ({
+        workspaceId: row.workspace_id, environment: row.environment, profileId: row.profile_id,
+        projectionEpoch: row.projection_epoch, projectionSequence: Number(row.projection_sequence),
+        sourceAsOf: row.source_as_of, receivedAt: row.received_at,
+        completeness: row.completeness, payloadDigest: row.payload_digest,
+        observationAuthority: row.observation_authority,
+        observationSemantics: row.observation_semantics,
+        sourceContractRevision: row.source_contract_revision,
+        sourceCatalogueSha256: row.source_catalogue_sha256,
+      }));
+    });
   }
 
   async journalAfter(

@@ -1,0 +1,77 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>New approval request — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* layout + form controls (kit has no form fields yet) */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}@media(max-width:1100px){.cols{grid-template-columns:1fr}}
+.vgrid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:24px;align-items:start}@media(max-width:1100px){.vgrid{grid-template-columns:1fr}}
+.fld{display:grid;gap:6px;margin-bottom:16px}.fld>label,.lb{font:500 11px/16px var(--font-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);display:flex;justify-content:space-between;gap:8px}
+select,input.tx,textarea{width:100%;font:400 13px/18px var(--font-sans);color:var(--ink);background:var(--paper);border:1px solid var(--line-strong);padding:8px 10px}select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}select:disabled,input:disabled,textarea:disabled{opacity:.5;cursor:not-allowed}textarea{min-height:84px;resize:vertical}
+.step{display:flex;flex-wrap:wrap}.step div{padding:6px 14px;border:1px solid var(--line-strong);font:500 12px/18px var(--font-mono);letter-spacing:.06em;color:var(--ink-faint);margin-right:-1px}.step div.on{color:var(--accent);background:var(--accent-soft);border-color:var(--accent);position:relative;z-index:1}
+.bar2{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;border:1px solid var(--line-strong);background:var(--panel);padding:12px 16px}.bar2 .st{display:grid;gap:6px;min-width:0;flex:1}
+.res{border:1px solid var(--line-strong);border-left:4px solid var(--c,var(--accent));background:var(--panel);padding:12px 16px;display:grid;gap:8px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}.idc{font:500 11px/16px var(--font-mono);border:1px solid var(--line-strong);padding:0 5px;background:var(--paper);white-space:nowrap}.m{font-size:12px;line-height:16px;color:var(--ink-faint)}
+.rowq{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+</style></head>
+<body data-page="New approval request" data-nav="approvals" data-crumb="Execution / Approvals / New request">
+<main><div class="stack">
+<div class="panel empty" data-roles="operator"><div style="text-align:center"><div style="font:600 15px/22px var(--font-sans);color:var(--ink)">You can't open this page.</div><div style="margin-top:6px"><a href="access.html">See what you can access</a></div></div></div>
+<div class="stack" data-hide-roles="operator" id="na">
+ <div class="mast"><div><h1>New approval request</h1><div class="sub">Research → R1 gate · when it did not start in Research</div></div>
+  <div class="ctrls"><span class="seg" id="vsw"><button data-v="page" aria-pressed="true">Route page</button><button data-v="drawer" aria-pressed="false">Drawer from the queue</button></span><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Run registry not qualified</span></span></div></div>
+ <div class="banner" data-data="nq">Run registry is not qualified. Runs and claims stay unavailable.</div>
+ <div class="panel" style="padding:10px 16px"><div class="step"><div class="on">1 · Declare · you, now</div><div>2 · R1 · a quant reviewer, not you</div><div>3 · R2 · capital, only after R1</div></div></div>
+
+ <div id="v-page" class="cols"><div id="m-page"></div>
+  <div class="panel"><div class="ph">What happens next</div><div class="item"><div class="t"><b>1 · Digest</b></div><div class="m">Pinned on the server from the run registry.</div></div><div class="item"><div class="t"><b>2 · Reviewer</b></div><div class="m">A quant reviewer decides, never you. The SLA clock starts at submit.</div></div><div class="item"><div class="t"><b>3 · Duplicates</b></div><div class="m">Open work for the same alpha and run is refused with its request.</div></div></div></div>
+
+ <div id="v-drawer" class="vgrid" hidden>
+  <div class="panel" style="padding:0"><div class="ph" style="margin:0">Queue <span class="r">By SLA</span></div><div style="padding:0 16px"><div class="rowq"><span><span class="flag" data-k="rejected">Overdue</span> Carry v3.2 → PF-MAIN</span><span class="m">R2 gate</span></div><div class="rowq"><span><span class="flag" data-k="approval">Needs you</span> BTC-Trend v3</span><span class="m">Archive request</span></div><div class="rowq"><span><span class="flag" data-k="pending">Pending 0/2</span> RSI v1.7 · RC-41</span><span class="m">R1 gate</span></div></div>
+   <div style="padding:12px 16px"><span class="m">New request opens here, over the queue. The queue stays in place.</span></div></div>
+  <aside class="drawer" id="m-drawer"></aside></div>
+
+ <details class="panel" style="padding:8px 16px"><summary>Preview the result states</summary><div class="acts" style="margin:8px 0"><button class="btn" data-pv="created">Created</button><button class="btn" data-pv="duplicate">Duplicate</button><button class="btn" data-pv="refused">Refused</button><button class="btn" data-pv="offline">Offline</button><button class="btn" data-pv="">Back to the form</button></div></details>
+</div>
+</div></main>
+<script src="kit.js"></script>
+<script>
+function F(k,t){return KIT.flag(k,t)}
+var ALPHAS={researcher:["BTC-Trend v3","SOL-Break v1"],manager:["BTC-Trend v3","SOL-Break v1","ETH-Mean v2","AVAX-Rev v1","RSI v1.7"]};
+var RUNS={"BTC-Trend v3":[["run_5512","Run 5512 · 12 Oct · frozen audit",[["claim_main_01","Main claim · out-of-sample Sharpe"]]],["run_5498","Run 5498 · 28 Sep",[["claim_a","Main claim"],["claim_b","Robustness claim"]]]],"SOL-Break v1":[["run_5301","Run 5301 · 3 Sep · frozen audit",[["claim_s1","Main claim"]]]],"ETH-Mean v2":[["run_5420","Run 5420 · 20 Sep",[["claim_e1","Main claim"]]]],"AVAX-Rev v1":[["run_5388","Run 5388 · 15 Sep",[["claim_v1","Main claim"]]]],"RSI v1.7":[["run_5470","Run 5470 · 9 Oct · frozen audit",[["claim_r1","Main claim"],["claim_r2","Robustness claim"]]]]};
+var S={alpha:"",run:"",claim:"",sum:"",ids:0,v:"page",res:"",key:1};
+function role(){return KIT.state.role}function nq(){return KIT.state.data==="nq"}
+function runs(){return RUNS[S.alpha]||[]}function claims(){var r=runs().filter(function(x){return x[0]===S.run})[0];return r?r[2]:[]}
+function missing(){var m=[];if(!S.alpha)m.push("an alpha");if(!S.run)m.push("an evidence run");if(!S.claim)m.push("a methodology claim");if(S.sum.trim().length<24)m.push("a summary of 24+ characters ("+S.sum.trim().length+" so far)");return m}
+function canEdit(){return role()!=="reviewer"&&!nq()}
+function opt(l,v,sel){return'<option value="'+v+'"'+(sel?" selected":"")+">"+l+"</option>"}
+function form(p){var dis=canEdit()?"":" disabled",c=claims(),al=ALPHAS[role()==="manager"?"manager":"researcher"],h="";
+ h+='<div class="fld"><label for="'+p+'al">Alpha <span>'+(role()==="researcher"?"Your alphas":"All authorized")+'</span></label><select id="'+p+'al"'+dis+">"+opt("Pick an alpha","",!S.alpha)+al.map(function(a){return opt(a,a,S.alpha===a)}).join("")+"</select></div>";
+ h+='<div class="fld"><label for="'+p+'ru">Evidence run <a href="#">Run Library</a></label>'+(nq()?'<div class="na">Not available · Run registry not qualified</div>':'<select id="'+p+'ru"'+(dis||(S.alpha?"":" disabled"))+">"+opt(S.alpha?"Pick a completed run":"Pick an alpha first","",!S.run)+runs().map(function(r){return opt(r[1],r[0],S.run===r[0])}).join("")+"</select>")+"</div>";
+ h+='<div class="fld"><label for="'+p+'cl">Methodology claim</label>'+(!S.run?'<div class="na">Pick a run first</div>':c.length===1?'<div>'+c[0][1]+'</div>':'<select id="'+p+'cl"'+dis+">"+opt("Pick a claim","",!S.claim)+c.map(function(x){return opt(x[1],x[0],S.claim===x[0])}).join("")+"</select>")+'<details><summary>Ids · edit by hand</summary><div class="fld" style="margin-top:8px"><label for="'+p+'i1">Evidence run id</label><input class="tx mono" id="'+p+'i1" value="'+S.run+'"'+dis+'><label for="'+p+'i2">Claim id</label><input class="tx mono" id="'+p+'i2" value="'+S.claim+'"'+dis+'><span class="m">An id the server does not know is refused, never guessed.</span></div></details></div>';
+ h+='<div class="fld"><label for="'+p+'su">Summary <span class="mono" id="'+p+'cnt">'+S.sum.trim().length+' · min 24</span></label><textarea id="'+p+'su" placeholder="What this alpha does, and why the evidence supports opening the loop for it."'+dis+'>'+S.sum.replace(/</g,"&lt;")+"</textarea></div>";
+ return h}
+function bar(p){var m=missing(),ok=!m.length,r=role(),btn,why="";
+ if(r==="reviewer")btn=KIT.disabled("Submit for R1 review","Reviewers decide requests; they don't open them","pri");
+ else if(nq())btn=KIT.disabled("Submit for R1 review","Run registry is not qualified","pri");
+ else if(!ok)btn='<button class="btn pri" disabled>Submit for R1 review</button>'+KIT.why("Fill the missing fields first",false);
+ else btn='<button class="btn pri" id="'+p+'go">Submit for R1 review</button><span class="why">Submitting twice creates one request.</span>';
+ var rv=r==="reviewer";return'<div class="bar2"><div class="st"><div>'+(rv?F("na","Read only"):ok&&canEdit()?F("ok","Ready"):F("na","Incomplete"))+"</div><div id=\""+p+'need">'+(rv?"Reviewers decide requests; they don't open them.":ok?"Everything needed is filled.":"Still needed: "+m.join(", ")+".")+'</div></div><div>'+btn+"</div></div>"}
+function result(p){var r=S.res;if(!r)return"";
+ if(r==="created")return'<div class="res" style="--c:var(--f-applied)"><div>'+F("applied","Created")+' <a class="idc" href="approvals.html">AP-203</a> opened for R1 review</div><table><tbody><tr><td>Gate</td><td>R1 · a quant reviewer, not you</td></tr><tr><td>Quorum</td><td class="mono">0 of 2</td></tr><tr><td>Clock</td><td class="mono">Starts now · 24 h</td></tr></tbody></table><div class="acts"><a class="btn" href="approvals.html" style="text-decoration:none">Open request</a><button class="btn" data-pv="">New request</button></div><details><summary>Provenance</summary><div class="mono m">Receipt rcpt_ap203_a1 · digest sha256:9f3c1a…e2 · key idem_7e41…0b</div></details></div>';
+ if(r==="duplicate")return'<div class="res" style="--c:var(--f-operation)"><div>'+F("operation","Duplicate")+" Open work for this alpha and run already exists as "+'<a class="idc" href="approvals.html">AP-201</a>.</div><div class="m">Nothing was created.</div><div class="acts"><a class="btn" href="approvals.html" style="text-decoration:none">Open AP-201</a></div></div>';
+ if(r==="refused")return `<div class="res" style="--c:var(--f-rejected)"><div>${F("rejected","Refused")} The methodology claim is not eligible for this run.</div><div class="acts"><button class="btn" data-pv="">Change the claim</button></div><details><summary>Provenance</summary><div class="mono m">Reason CLAIM_NOT_ELIGIBLE · run run_5498 · claim claim_b</div></details></div>`;
+ if(r==="offline")return `<div class="res" style="--c:var(--f-unknown)"><div>${F("unknown","Uncertain")} We could not confirm this. It may have been created. Check the original request before doing anything.</div><div class="acts"><button class="btn pri">Check original request</button><div><button class="btn" disabled>Submit again</button><span class="why">Blocked until the outcome is known</span></div></div><div class="m">A retry reuses the same key, so it never creates two.</div></div>`}
+function mount(id,p){var h=form(p);var r=result(p);document.getElementById(id).innerHTML=(id==="m-page"?'<div class="panel">'+h+"</div>":'<div class="ph">New approval request <button class="btn" id="dx">Close</button></div>'+h)+'<div style="margin-top:16px">'+(r||bar(p))+"</div>"+(id==="m-drawer"?'<details style="margin-top:12px"><summary>What happens next</summary><div class="m">Digest pinned on the server · a quant reviewer decides, never you · duplicates are refused with the existing request.</div></details>':"")}
+function render(){var drawer=S.v==="drawer";document.getElementById("v-page").hidden=drawer;document.getElementById("v-drawer").hidden=!drawer;document.querySelectorAll("#vsw button").forEach(function(b){b.setAttribute("aria-pressed",b.getAttribute("data-v")===S.v)});
+ mount(drawer?"m-drawer":"m-page",drawer?"d":"p")}
+function wire(p){}
+document.addEventListener("change",function(e){var t=e.target,k=t.id.slice(1);
+ if(k==="al"){S.alpha=t.value;S.run="";S.claim="";render()}else if(k==="ru"){S.run=t.value;var c=claims();S.claim=c.length===1?c[0][0]:"";render()}else if(k==="cl"){S.claim=t.value;render()}
+ else if(k==="i1"||k==="i2"){if(k==="i1")S.run=t.value;else S.claim=t.value;render()}});
+document.addEventListener("input",function(e){var t=e.target,p=t.id.slice(0,1);if(t.id.slice(1)==="su"){S.sum=t.value;var m=missing();document.getElementById(p+"cnt").textContent=S.sum.trim().length+" · min 24";document.getElementById(p+"need").textContent=m.length?"Still needed: "+m.join(", ")+".":"Everything needed is filled.";
+ var bt=t.closest(".stack,main").querySelector('[id$="go"],.bar2 .btn.pri');if(!m.length!==!!(document.getElementById(p+"go"))){var pos=t.selectionStart;render();var n=document.getElementById(p+"su");n.focus();n.setSelectionRange(pos,pos)}}});
+document.addEventListener("click",function(e){var t=e.target,b;
+ if(b=t.closest("#vsw button")){S.v=b.getAttribute("data-v");render();return}
+ if(b=t.closest("[data-pv]")){S.res=b.getAttribute("data-pv");render();return}
+ if(t.closest("#pgo,#dgo")){S.res=S.alpha==="RSI v1.7"?"duplicate":S.claim==="claim_b"?"refused":"created";render();return}
+ if(t.closest("#dx")){S.v="page";render()}});
+KIT.on(render);
+</script></body></html>

@@ -1,0 +1,552 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "source_commissioned": false,
+  "cases": {
+    "available": {
+      "schema_version": "execution.analytics.equity-projection.source.v2",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "dep_88",
+      "environment": "paper",
+      "observed_at": "2026-08-27T00:00:30Z",
+      "source_side_effect_requested": false,
+      "request": {
+        "window": "1d",
+        "intent": "overview",
+        "limit": 5000,
+        "cursor": null
+      },
+      "series": {
+        "availability": "AVAILABLE",
+        "currency": "USDT",
+        "timestamp_semantics": {
+          "bucket_basis": "bucket_start_utc_inclusive",
+          "time_basis": "event_time_source_clock",
+          "interpolation": "NONE"
+        },
+        "interval": "1h",
+        "interval_seconds": 3600,
+        "window_from": "2026-08-26T00:00:00Z",
+        "window_to": "2026-08-27T00:00:00Z",
+        "expected_buckets": 24,
+        "returned_buckets": 24,
+        "source_rows": 23,
+        "coverage": "0.958333333333333333333333",
+        "points": [
+          {
+            "bucket_start": "2026-08-26T00:00:00Z",
+            "equity": "100.000000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T01:00:00Z",
+            "equity": "100.125000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T02:00:00Z",
+            "equity": "100.250000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T03:00:00Z",
+            "equity": "100.375000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T04:00:00Z",
+            "equity": "100.500000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T05:00:00Z",
+            "equity": null,
+            "drawdown": null
+          },
+          {
+            "bucket_start": "2026-08-26T06:00:00Z",
+            "equity": "100.750000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T07:00:00Z",
+            "equity": "100.875000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T08:00:00Z",
+            "equity": "101.000000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T09:00:00Z",
+            "equity": "101.125000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T10:00:00Z",
+            "equity": "101.250000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T11:00:00Z",
+            "equity": "101.375000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T12:00:00Z",
+            "equity": "101.500000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T13:00:00Z",
+            "equity": "101.625000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T14:00:00Z",
+            "equity": "101.750000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T15:00:00Z",
+            "equity": "101.875000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T16:00:00Z",
+            "equity": "102.000000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T17:00:00Z",
+            "equity": "102.125000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T18:00:00Z",
+            "equity": "102.250000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T19:00:00Z",
+            "equity": "102.375000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T20:00:00Z",
+            "equity": "102.500000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T21:00:00Z",
+            "equity": "102.625000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T22:00:00Z",
+            "equity": "102.750000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T23:00:00Z",
+            "equity": "102.875000",
+            "drawdown": "0"
+          }
+        ],
+        "gaps": [
+          {
+            "from": "2026-08-26T05:00:00Z",
+            "to": "2026-08-26T06:00:00Z",
+            "reason": "SOURCE_GAP"
+          }
+        ],
+        "next_cursor": null,
+        "retention": {
+          "availability": "HOT",
+          "policy_version": "TEST_ONLY:retention-v1",
+          "oldest_retained_at": "2026-06-01T00:00:00Z"
+        },
+        "lineage": {
+          "source_contract": "TEST_ONLY:edge-equity-series-contract-v1",
+          "source_revision": "TEST_ONLY:rev-0001",
+          "source_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_as_of": "2026-08-27T00:00:00Z",
+          "account_scope": "DEPLOYMENT"
+        },
+        "drawdown": {
+          "formula_version": "drawdown.running_peak.v1",
+          "formula": "value / running_max - 1",
+          "population": "RETURNED_WINDOW_BUCKETS",
+          "peak_resets_on_gap": false,
+          "authority": "PORTAL_DERIVED",
+          "confirmed_by_source": false
+        }
+      },
+      "band": {
+        "availability": "AVAILABLE",
+        "currency": "USDT",
+        "run_id": "run_TEST_ONLY_44",
+        "lineage": {
+          "band_revision": "TEST_ONLY:band-rev-1",
+          "artifact_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "approval_reference": "apr_TEST_ONLY_band",
+          "approved_at": "2026-08-20T00:00:00Z",
+          "approval_authority": "RESEARCH",
+          "immutable": true
+        },
+        "points": [
+          {
+            "bucket_start": "2026-08-26T00:00:00Z",
+            "lower": "98.500000",
+            "upper": "101.500000"
+          },
+          {
+            "bucket_start": "2026-08-26T01:00:00Z",
+            "lower": "98.623125",
+            "upper": "101.626875"
+          },
+          {
+            "bucket_start": "2026-08-26T02:00:00Z",
+            "lower": "98.746250",
+            "upper": "101.753750"
+          },
+          {
+            "bucket_start": "2026-08-26T03:00:00Z",
+            "lower": "98.869375",
+            "upper": "101.880625"
+          },
+          {
+            "bucket_start": "2026-08-26T04:00:00Z",
+            "lower": "98.992500",
+            "upper": "102.007500"
+          },
+          {
+            "bucket_start": "2026-08-26T05:00:00Z",
+            "lower": "99.115625",
+            "upper": "102.134375"
+          },
+          {
+            "bucket_start": "2026-08-26T06:00:00Z",
+            "lower": "99.238750",
+            "upper": "102.261250"
+          },
+          {
+            "bucket_start": "2026-08-26T07:00:00Z",
+            "lower": "99.361875",
+            "upper": "102.388125"
+          },
+          {
+            "bucket_start": "2026-08-26T08:00:00Z",
+            "lower": "99.485000",
+            "upper": "102.515000"
+          },
+          {
+            "bucket_start": "2026-08-26T09:00:00Z",
+            "lower": "99.608125",
+            "upper": "102.641875"
+          },
+          {
+            "bucket_start": "2026-08-26T10:00:00Z",
+            "lower": "99.731250",
+            "upper": "102.768750"
+          },
+          {
+            "bucket_start": "2026-08-26T11:00:00Z",
+            "lower": "99.854375",
+            "upper": "102.895625"
+          },
+          {
+            "bucket_start": "2026-08-26T12:00:00Z",
+            "lower": "99.977500",
+            "upper": "103.022500"
+          },
+          {
+            "bucket_start": "2026-08-26T13:00:00Z",
+            "lower": "100.100625",
+            "upper": "103.149375"
+          },
+          {
+            "bucket_start": "2026-08-26T14:00:00Z",
+            "lower": "100.223750",
+            "upper": "103.276250"
+          },
+          {
+            "bucket_start": "2026-08-26T15:00:00Z",
+            "lower": "100.346875",
+            "upper": "103.403125"
+          },
+          {
+            "bucket_start": "2026-08-26T16:00:00Z",
+            "lower": "100.470000",
+            "upper": "103.530000"
+          },
+          {
+            "bucket_start": "2026-08-26T17:00:00Z",
+            "lower": "100.593125",
+            "upper": "103.656875"
+          },
+          {
+            "bucket_start": "2026-08-26T18:00:00Z",
+            "lower": "100.716250",
+            "upper": "103.783750"
+          },
+          {
+            "bucket_start": "2026-08-26T19:00:00Z",
+            "lower": "100.839375",
+            "upper": "103.910625"
+          },
+          {
+            "bucket_start": "2026-08-26T20:00:00Z",
+            "lower": "100.962500",
+            "upper": "104.037500"
+          },
+          {
+            "bucket_start": "2026-08-26T21:00:00Z",
+            "lower": "101.085625",
+            "upper": "104.164375"
+          },
+          {
+            "bucket_start": "2026-08-26T22:00:00Z",
+            "lower": "101.208750",
+            "upper": "104.291250"
+          },
+          {
+            "bucket_start": "2026-08-26T23:00:00Z",
+            "lower": "101.331875",
+            "upper": "104.418125"
+          }
+        ]
+      }
+    },
+    "series_only": {
+      "schema_version": "execution.analytics.equity-projection.source.v2",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "dep_88",
+      "environment": "paper",
+      "observed_at": "2026-08-27T00:00:30Z",
+      "source_side_effect_requested": false,
+      "request": {
+        "window": "1d",
+        "intent": "overview",
+        "limit": 5000,
+        "cursor": null
+      },
+      "series": {
+        "availability": "AVAILABLE",
+        "currency": "USDT",
+        "timestamp_semantics": {
+          "bucket_basis": "bucket_start_utc_inclusive",
+          "time_basis": "event_time_source_clock",
+          "interpolation": "NONE"
+        },
+        "interval": "1h",
+        "interval_seconds": 3600,
+        "window_from": "2026-08-26T00:00:00Z",
+        "window_to": "2026-08-27T00:00:00Z",
+        "expected_buckets": 24,
+        "returned_buckets": 24,
+        "source_rows": 23,
+        "coverage": "0.958333333333333333333333",
+        "points": [
+          {
+            "bucket_start": "2026-08-26T00:00:00Z",
+            "equity": "100.000000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T01:00:00Z",
+            "equity": "100.125000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T02:00:00Z",
+            "equity": "100.250000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T03:00:00Z",
+            "equity": "100.375000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T04:00:00Z",
+            "equity": "100.500000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T05:00:00Z",
+            "equity": null,
+            "drawdown": null
+          },
+          {
+            "bucket_start": "2026-08-26T06:00:00Z",
+            "equity": "100.750000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T07:00:00Z",
+            "equity": "100.875000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T08:00:00Z",
+            "equity": "101.000000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T09:00:00Z",
+            "equity": "101.125000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T10:00:00Z",
+            "equity": "101.250000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T11:00:00Z",
+            "equity": "101.375000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T12:00:00Z",
+            "equity": "101.500000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T13:00:00Z",
+            "equity": "101.625000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T14:00:00Z",
+            "equity": "101.750000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T15:00:00Z",
+            "equity": "101.875000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T16:00:00Z",
+            "equity": "102.000000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T17:00:00Z",
+            "equity": "102.125000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T18:00:00Z",
+            "equity": "102.250000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T19:00:00Z",
+            "equity": "102.375000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T20:00:00Z",
+            "equity": "102.500000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T21:00:00Z",
+            "equity": "102.625000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T22:00:00Z",
+            "equity": "102.750000",
+            "drawdown": "0"
+          },
+          {
+            "bucket_start": "2026-08-26T23:00:00Z",
+            "equity": "102.875000",
+            "drawdown": "0"
+          }
+        ],
+        "gaps": [
+          {
+            "from": "2026-08-26T05:00:00Z",
+            "to": "2026-08-26T06:00:00Z",
+            "reason": "SOURCE_GAP"
+          }
+        ],
+        "next_cursor": null,
+        "retention": {
+          "availability": "HOT",
+          "policy_version": "TEST_ONLY:retention-v1",
+          "oldest_retained_at": "2026-06-01T00:00:00Z"
+        },
+        "lineage": {
+          "source_contract": "TEST_ONLY:edge-equity-series-contract-v1",
+          "source_revision": "TEST_ONLY:rev-0001",
+          "source_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_as_of": "2026-08-27T00:00:00Z",
+          "account_scope": "DEPLOYMENT"
+        },
+        "drawdown": {
+          "formula_version": "drawdown.running_peak.v1",
+          "formula": "value / running_max - 1",
+          "population": "RETURNED_WINDOW_BUCKETS",
+          "peak_resets_on_gap": false,
+          "authority": "PORTAL_DERIVED",
+          "confirmed_by_source": false
+        }
+      },
+      "band": {
+        "availability": "ABSENT",
+        "reason_code": "BAND_NOT_APPROVED"
+      }
+    },
+    "series_absent": {
+      "schema_version": "execution.analytics.equity-projection.source.v2",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "dep_88",
+      "environment": "paper",
+      "observed_at": "2026-08-27T00:00:30Z",
+      "source_side_effect_requested": false,
+      "request": {
+        "window": "1d",
+        "intent": "overview",
+        "limit": 5000,
+        "cursor": null
+      },
+      "series": {
+        "availability": "ABSENT",
+        "reason_code": "SOURCE_NOT_COMMISSIONED"
+      },
+      "band": {
+        "availability": "ABSENT",
+        "reason_code": "SOURCE_NOT_COMMISSIONED"
+      }
+    },
+    "not_authorized": {
+      "schema_version": "execution.analytics.equity-projection.source.v2",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "dep_88",
+      "environment": "paper",
+      "observed_at": "2026-08-27T00:00:30Z",
+      "source_side_effect_requested": false,
+      "request": {
+        "window": "1d",
+        "intent": "overview",
+        "limit": 5000,
+        "cursor": null
+      },
+      "series": {
+        "availability": "ABSENT",
+        "reason_code": "NOT_AUTHORIZED"
+      },
+      "band": {
+        "availability": "ABSENT",
+        "reason_code": "NOT_AUTHORIZED"
+      }
+    }
+  }
+}

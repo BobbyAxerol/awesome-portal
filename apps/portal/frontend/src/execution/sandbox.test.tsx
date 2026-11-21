@@ -57,11 +57,11 @@ describe("Sandbox Overview — entry screen for WF 1d (smoke until BR-EX-60)", (
     expect(within(table()).getByText(/Carry v3.2/)).toBeTruthy();
   });
 
-  it("the venue filter is disabled rather than absent — it needs BR-EX-60, and the screen says so", () => {
+  it("offers no venue control it cannot honour: the testnet venues in use are stated, never a dead button", () => {
     overview();
-    const okx = screen.getByRole("button", { name: "OKX TESTNET" });
-    expect(okx).toHaveProperty("disabled", true);
-    expect(okx.getAttribute("title")).toMatch(/BR-EX-60/);
+    expect(screen.queryByRole("button", { name: "OKX TESTNET" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "All venues" })).toBeNull();
+    expect(screen.getByText(/BINANCE TESTNET — no deployment in certification/)).toBeTruthy();
   });
 
   it("a row opens its certification workbench, by click and by keyboard", () => {

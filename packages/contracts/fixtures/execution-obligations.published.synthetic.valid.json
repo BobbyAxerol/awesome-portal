@@ -1,0 +1,34 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.obligations.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "subject": {
+      "type": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio-a"
+    },
+    "items": [
+      {
+        "obligation_id": "TEST_ONLY:ob-1",
+        "kind": "OPEN_POSITION",
+        "state": "OPEN",
+        "recovery_id": null,
+        "order_id": null,
+        "operation_id": null,
+        "opened_at_ms": 1799913600000
+      },
+      {
+        "obligation_id": "TEST_ONLY:ob-2",
+        "kind": "UNKNOWN_OUTCOME",
+        "state": "RECOVERING",
+        "recovery_id": "TEST_ONLY:rec-1",
+        "order_id": "TEST_ONLY:ord-9",
+        "operation_id": "TEST_ONLY:op-3",
+        "opened_at_ms": 1799996400000
+      }
+    ],
+    "next_cursor": "TEST_ONLY_CURSOR"
+  }
+}

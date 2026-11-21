@@ -1,0 +1,2759 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "producer_run": true,
+  "cases": [
+    {
+      "name": "ready",
+      "value": {
+        "schema_version": "execution.alpha-resource.v1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "delivery_profile": "LIVE_BINANCE_USDM",
+        "workspace_id": "workspace_execution_manager",
+        "requested_environment": "live",
+        "selected_environment": "live",
+        "resource": {
+          "kind": "ALPHA",
+          "id": "alpha_btc_trend",
+          "label": "Unnamed alpha"
+        },
+        "read_at_ms": 1792238641000,
+        "as_of_ms": 1792238640000,
+        "read_at": "2026-10-17T12:04:01.000Z",
+        "as_of": "2026-10-17T12:04:00.000Z",
+        "state": "partial",
+        "freshness": "FRESH",
+        "completeness": "COMPLETE",
+        "projection": [
+          {
+            "environment": "live",
+            "epoch": "alpha-live",
+            "sequence": 7,
+            "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "last_successful_refresh_at": "2026-10-17T12:04:00.500Z"
+          }
+        ],
+        "capabilities": [
+          {
+            "capability_id": "resource.alpha.identity",
+            "state": "AVAILABLE",
+            "relations": [],
+            "reason_code": null,
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.strategies",
+            "state": "AVAILABLE",
+            "relations": [],
+            "reason_code": null,
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.deployments",
+            "state": "AVAILABLE",
+            "relations": [],
+            "reason_code": null,
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.accounts",
+            "state": "AVAILABLE",
+            "relations": [],
+            "reason_code": null,
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_balances",
+            "state": "AVAILABLE",
+            "relations": [],
+            "reason_code": null,
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.margin_balances",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_MARGIN_BALANCES_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_sync",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_ACCOUNT_SYNC_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.broker_sync",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_BROKER_SYNC_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.venue_accounts",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_VENUE_ACCOUNTS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolios",
+            "state": "AVAILABLE",
+            "relations": [],
+            "reason_code": null,
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolio_allocations",
+            "state": "AVAILABLE",
+            "relations": [],
+            "reason_code": null,
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.positions",
+            "state": "AVAILABLE",
+            "relations": [],
+            "reason_code": null,
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.sessions",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_SESSIONS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.orders",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_ORDERS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.fills",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_FILLS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.performance",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_PERFORMANCE_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_equity",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_ACCOUNT_EQUITY_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.reconciliation",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_TRANSACTIONAL_SCOPE_AMBIGUOUS",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.journal",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "EDS04_JOURNAL_RELATION_NOT_PROJECTED",
+            "retryable": false
+          }
+        ],
+        "panels": {
+          "strategies": {
+            "state": "READY",
+            "data": {
+              "rows": [
+                {
+                  "strategy_id": "alpha_btc_trend",
+                  "trader_id": "asmith",
+                  "active": true,
+                  "profile_environment": "live"
+                }
+              ]
+            },
+            "clocks": {
+              "event_time_ms": 1792238640000,
+              "source_published_at_ms": 1792238640000,
+              "received_at_ms": 1792238640000,
+              "ingested_at_ms": 1792238640000,
+              "processed_at_ms": 1792238640000,
+              "as_of_ms": 1792238640000,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": 1792238640000,
+              "source_total": "1",
+              "filtered_total": "1",
+              "returned_count": 1,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": null,
+            "retryable": false
+          },
+          "deployments": {
+            "state": "READY",
+            "data": {
+              "rows": [
+                {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "mode": "live",
+                  "venue": "BINANCE",
+                  "currency": "USDT",
+                  "portfolio_id": "pf_core",
+                  "state": "ACTIVE",
+                  "active": true,
+                  "updated_at": "2026-10-17T12:02:00.000Z",
+                  "updated_at_ms": 1792238520000,
+                  "profile_environment": "live"
+                }
+              ]
+            },
+            "clocks": {
+              "event_time_ms": 1792238640000,
+              "source_published_at_ms": 1792238640000,
+              "received_at_ms": 1792238640000,
+              "ingested_at_ms": 1792238640000,
+              "processed_at_ms": 1792238640000,
+              "as_of_ms": 1792238640000,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": 1792238640000,
+              "source_total": "1",
+              "filtered_total": "1",
+              "returned_count": 1,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": null,
+            "retryable": false
+          },
+          "accounts": {
+            "state": "READY",
+            "data": {
+              "rows": [
+                {
+                  "account_id": "acct_binance_02",
+                  "strategy_id": "alpha_btc_trend",
+                  "mode": "live",
+                  "venue": "BINANCE",
+                  "base_currency": "USDT",
+                  "account_type": "FUTURES",
+                  "profile_environment": "live"
+                }
+              ]
+            },
+            "clocks": {
+              "event_time_ms": 1792238640000,
+              "source_published_at_ms": 1792238640000,
+              "received_at_ms": 1792238640000,
+              "ingested_at_ms": 1792238640000,
+              "processed_at_ms": 1792238640000,
+              "as_of_ms": 1792238640000,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": 1792238640000,
+              "source_total": "1",
+              "filtered_total": "1",
+              "returned_count": 1,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": null,
+            "retryable": false
+          },
+          "account_balances": {
+            "state": "READY",
+            "data": {
+              "rows": [
+                {
+                  "account_id": "acct_binance_02",
+                  "currency": "USDT",
+                  "total": "41230.55",
+                  "free": "38900.10",
+                  "locked": "2330.45",
+                  "profile_environment": "live"
+                }
+              ]
+            },
+            "clocks": {
+              "event_time_ms": 1792238640000,
+              "source_published_at_ms": 1792238640000,
+              "received_at_ms": 1792238640000,
+              "ingested_at_ms": 1792238640000,
+              "processed_at_ms": 1792238640000,
+              "as_of_ms": 1792238640000,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": 1792238640000,
+              "source_total": "1",
+              "filtered_total": "1",
+              "returned_count": 1,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": null,
+            "retryable": false
+          },
+          "margin_balances": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_MARGIN_BALANCES_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "account_sync": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ACCOUNT_SYNC_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "broker_sync": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_BROKER_SYNC_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "venue_accounts": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_VENUE_ACCOUNTS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "portfolios": {
+            "state": "READY",
+            "data": {
+              "rows": [
+                {
+                  "portfolio_id": "pf_core",
+                  "name": "Core",
+                  "base_currency": "USDT",
+                  "owner": "asmith",
+                  "profile_environment": "live"
+                }
+              ]
+            },
+            "clocks": {
+              "event_time_ms": 1792238640000,
+              "source_published_at_ms": 1792238640000,
+              "received_at_ms": 1792238640000,
+              "ingested_at_ms": 1792238640000,
+              "processed_at_ms": 1792238640000,
+              "as_of_ms": 1792238640000,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": 1792238640000,
+              "source_total": "1",
+              "filtered_total": "1",
+              "returned_count": 1,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": null,
+            "retryable": false
+          },
+          "portfolio_allocations": {
+            "state": "READY",
+            "data": {
+              "rows": [
+                {
+                  "portfolio_id": "pf_core",
+                  "strategy_id": "alpha_btc_trend",
+                  "deployment_id": "dep_live_01",
+                  "account_id": "acct_binance_02",
+                  "allocated_capital": "40000.00",
+                  "currency": "USDT",
+                  "profile_environment": "live"
+                }
+              ]
+            },
+            "clocks": {
+              "event_time_ms": 1792238640000,
+              "source_published_at_ms": 1792238640000,
+              "received_at_ms": 1792238640000,
+              "ingested_at_ms": 1792238640000,
+              "processed_at_ms": 1792238640000,
+              "as_of_ms": 1792238640000,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": 1792238640000,
+              "source_total": "1",
+              "filtered_total": "1",
+              "returned_count": 1,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": null,
+            "retryable": false
+          },
+          "positions": {
+            "state": "READY",
+            "data": {
+              "rows": [
+                {
+                  "position_id": "pos_btc_long",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "mode": "live",
+                  "venue": "BINANCE",
+                  "instrument_id": "BTCUSDT",
+                  "side": "LONG",
+                  "quantity": "0.91",
+                  "notional": "61343.10",
+                  "realized_pnl": "980.40",
+                  "unrealized_pnl": "41.67",
+                  "updated_at": "2026-10-17T12:04:00.000Z",
+                  "updated_at_ms": 1792238640000,
+                  "deployment_id": "dep_live_01",
+                  "profile_environment": "live"
+                }
+              ]
+            },
+            "clocks": {
+              "event_time_ms": 1792238640000,
+              "source_published_at_ms": 1792238640000,
+              "received_at_ms": 1792238640000,
+              "ingested_at_ms": 1792238640000,
+              "processed_at_ms": 1792238640000,
+              "as_of_ms": 1792238640000,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": 1792238640000,
+              "source_total": "1",
+              "filtered_total": "1",
+              "returned_count": 1,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": null,
+            "retryable": false
+          },
+          "sessions": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_SESSIONS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "orders": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ORDERS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "fills": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_FILLS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "performance": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+            "formula": null,
+            "reason_code": "EDS04_PERFORMANCE_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "account_equity": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+            "formula": null,
+            "reason_code": "EDS04_ACCOUNT_EQUITY_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          "reconciliation": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": 1792238640000,
+              "source_published_at_ms": 1792238640000,
+              "received_at_ms": 1792238640000,
+              "ingested_at_ms": 1792238640000,
+              "processed_at_ms": 1792238640000,
+              "as_of_ms": 1792238640000,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": 1792238640000,
+              "source_total": "0",
+              "filtered_total": "0",
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": [
+                {
+                  "from_ms": 1792238640000,
+                  "to_ms": 1792238640000,
+                  "reason_code": "EDS04_TRANSACTIONAL_SCOPE_AMBIGUOUS"
+                }
+              ]
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_TRANSACTIONAL_SCOPE_AMBIGUOUS",
+            "retryable": false
+          },
+          "journal": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_JOURNAL_RELATION_NOT_PROJECTED",
+            "retryable": false
+          }
+        },
+        "data": {
+          "strategies": [
+            {
+              "strategy_id": "alpha_btc_trend",
+              "trader_id": "asmith",
+              "active": true,
+              "profile_environment": "live"
+            }
+          ],
+          "deployments": [
+            {
+              "deployment_id": "dep_live_01",
+              "strategy_id": "alpha_btc_trend",
+              "account_id": "acct_binance_02",
+              "mode": "live",
+              "venue": "BINANCE",
+              "currency": "USDT",
+              "portfolio_id": "pf_core",
+              "state": "ACTIVE",
+              "active": true,
+              "updated_at": "2026-10-17T12:02:00.000Z",
+              "updated_at_ms": 1792238520000,
+              "profile_environment": "live"
+            }
+          ],
+          "accounts": [
+            {
+              "account_id": "acct_binance_02",
+              "strategy_id": "alpha_btc_trend",
+              "mode": "live",
+              "venue": "BINANCE",
+              "base_currency": "USDT",
+              "account_type": "FUTURES",
+              "profile_environment": "live"
+            }
+          ],
+          "account_balances": [
+            {
+              "account_id": "acct_binance_02",
+              "currency": "USDT",
+              "total": "41230.55",
+              "free": "38900.10",
+              "locked": "2330.45",
+              "profile_environment": "live"
+            }
+          ],
+          "margin_balances": [],
+          "account_sync": [],
+          "broker_sync": [],
+          "venue_accounts": [],
+          "portfolios": [
+            {
+              "portfolio_id": "pf_core",
+              "name": "Core",
+              "base_currency": "USDT",
+              "owner": "asmith",
+              "profile_environment": "live"
+            }
+          ],
+          "portfolio_allocations": [
+            {
+              "portfolio_id": "pf_core",
+              "strategy_id": "alpha_btc_trend",
+              "deployment_id": "dep_live_01",
+              "account_id": "acct_binance_02",
+              "allocated_capital": "40000.00",
+              "currency": "USDT",
+              "profile_environment": "live"
+            }
+          ],
+          "positions": [
+            {
+              "position_id": "pos_btc_long",
+              "strategy_id": "alpha_btc_trend",
+              "account_id": "acct_binance_02",
+              "mode": "live",
+              "venue": "BINANCE",
+              "instrument_id": "BTCUSDT",
+              "side": "LONG",
+              "quantity": "0.91",
+              "notional": "61343.10",
+              "realized_pnl": "980.40",
+              "unrealized_pnl": "41.67",
+              "updated_at": "2026-10-17T12:04:00.000Z",
+              "updated_at_ms": 1792238640000,
+              "deployment_id": "dep_live_01",
+              "profile_environment": "live"
+            }
+          ],
+          "sessions": [],
+          "orders": [],
+          "fills": [],
+          "performance": [],
+          "account_equity": [],
+          "reconciliation": [],
+          "journal": [],
+          "alpha": {
+            "alpha_id": "alpha_btc_trend",
+            "alpha_label": "Unnamed alpha",
+            "version": "UNVERSIONED",
+            "owner": "asmith",
+            "stage": "LIVE",
+            "stages": [
+              "LIVE"
+            ],
+            "portfolios": [
+              {
+                "portfolio_id": "pf_core",
+                "name": "Core",
+                "base_currency": "USDT"
+              }
+            ],
+            "deployments": [
+              {
+                "deployment_id": "dep_live_01",
+                "strategy_id": "alpha_btc_trend",
+                "stage": "LIVE",
+                "venue": "BINANCE",
+                "account_id": "acct_binance_02",
+                "portfolio_id": "pf_core",
+                "portfolio_name": null,
+                "currency": "USDT",
+                "allocation": "40000.00",
+                "balance_total": "41230.55",
+                "balance_free": "38900.10",
+                "balance_locked": "2330.45",
+                "position_fact_count": 1,
+                "position_count_availability": "AVAILABLE",
+                "position_count_reason_code": null,
+                "realized_pnl": null,
+                "unrealized_pnl": null,
+                "net_pnl": null,
+                "exposure": null,
+                "position_metrics_availability": "UNAVAILABLE",
+                "position_metrics_reason_code": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED",
+                "state": "ACTIVE",
+                "active": true,
+                "health": "UNKNOWN",
+                "updated_at": "2026-10-17T12:02:00.000Z",
+                "updated_at_ms": 1792238520000
+              }
+            ],
+            "allocations": [
+              {
+                "currency": "USDT",
+                "value": "40000.00",
+                "state": "AVAILABLE",
+                "reason_code": null
+              }
+            ],
+            "balances": [
+              {
+                "currency": "USDT",
+                "total": "41230.55",
+                "free": "38900.10",
+                "locked": "2330.45",
+                "state": "AVAILABLE",
+                "reason_code": null
+              }
+            ],
+            "position_pnl": [
+              {
+                "currency": "USDT",
+                "realized": null,
+                "unrealized": null,
+                "net": null,
+                "state": "UNAVAILABLE",
+                "reason_code": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
+              }
+            ],
+            "exposure": [
+              {
+                "currency": "USDT",
+                "value": null,
+                "state": "UNAVAILABLE",
+                "reason_code": "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED"
+              }
+            ],
+            "health": "UNKNOWN",
+            "attention_reasons": [
+              "DEPLOYMENT_UNKNOWN"
+            ],
+            "metrics_availability": {
+              "account_balance": {
+                "state": "AVAILABLE",
+                "reason_code": null
+              },
+              "current_position_pnl": {
+                "state": "UNAVAILABLE",
+                "reason_code": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
+              },
+              "equity_series_30d": {
+                "state": "UNAVAILABLE",
+                "reason_code": "EDS04_ACCOUNT_EQUITY_RELATION_NOT_PROJECTED"
+              },
+              "max_drawdown_30d": {
+                "state": "UNAVAILABLE",
+                "reason_code": "EDS04_ACCOUNT_EQUITY_RELATION_NOT_PROJECTED"
+              }
+            },
+            "updated_at": "2026-10-17T12:02:00.000Z",
+            "updated_at_ms": 1792238520000,
+            "valuation_warning": "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED"
+          },
+          "profile_coverage": {
+            "live": {
+              "profile_id": "LIVE_BINANCE_USDM",
+              "state": "FOUND",
+              "reason_code": null,
+              "projection_epoch": "alpha-live",
+              "projection_sequence": 7,
+              "source_as_of": "2026-10-17T12:04:00.000Z"
+            }
+          }
+        },
+        "unavailable_branches": [
+          {
+            "capability_id": "resource.alpha.margin_balances",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_MARGIN_BALANCES_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_sync",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_ACCOUNT_SYNC_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.broker_sync",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_BROKER_SYNC_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.venue_accounts",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_VENUE_ACCOUNTS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.sessions",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_SESSIONS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.orders",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_ORDERS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.fills",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_FILLS_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.performance",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_PERFORMANCE_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_equity",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_ACCOUNT_EQUITY_RELATION_NOT_PROJECTED",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.reconciliation",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_TRANSACTIONAL_SCOPE_AMBIGUOUS",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.journal",
+            "state": "PARTIAL",
+            "reason_code": "EDS04_JOURNAL_RELATION_NOT_PROJECTED",
+            "retryable": false
+          }
+        ],
+        "actor": {
+          "user_id": "usr_asmith",
+          "username": "asmith",
+          "roles": [
+            "USER"
+          ]
+        }
+      }
+    },
+    {
+      "name": "alpha_not_in_projection",
+      "value": {
+        "schema_version": "execution.alpha-resource.v1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "delivery_profile": "LIVE_BINANCE_USDM",
+        "workspace_id": "workspace_execution_manager",
+        "requested_environment": "live",
+        "selected_environment": null,
+        "resource": {
+          "kind": "ALPHA",
+          "id": "alpha_unknown"
+        },
+        "read_at_ms": 1792238641000,
+        "as_of_ms": null,
+        "read_at": "2026-10-17T12:04:01.000Z",
+        "as_of": null,
+        "state": "empty",
+        "freshness": "FRESH",
+        "completeness": "COMPLETE",
+        "projection": [],
+        "capabilities": [
+          {
+            "capability_id": "resource.alpha.identity",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.strategies",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.deployments",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.accounts",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_balances",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.margin_balances",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_sync",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.broker_sync",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.venue_accounts",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolios",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolio_allocations",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.positions",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.sessions",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.orders",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.fills",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.performance",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_equity",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.reconciliation",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.journal",
+            "state": "EMPTY",
+            "relations": [],
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          }
+        ],
+        "panels": {
+          "strategies": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "deployments": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "accounts": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "account_balances": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "margin_balances": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "account_sync": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "broker_sync": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "venue_accounts": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "portfolios": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "portfolio_allocations": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "positions": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "sessions": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "orders": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "fills": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "performance": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "account_equity": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "reconciliation": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          "journal": {
+            "state": "EMPTY",
+            "data": null,
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          }
+        },
+        "data": {},
+        "unavailable_branches": [
+          {
+            "capability_id": "resource.identity",
+            "environment": "live",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.strategies",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.deployments",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.accounts",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_balances",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.margin_balances",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_sync",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.broker_sync",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.venue_accounts",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolios",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolio_allocations",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.positions",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.sessions",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.orders",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.fills",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.performance",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_equity",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.reconciliation",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.journal",
+            "state": "EMPTY",
+            "reason_code": "EDS04_ALPHA_NOT_FOUND",
+            "retryable": false
+          }
+        ],
+        "actor": {
+          "user_id": "usr_asmith",
+          "username": "asmith",
+          "roles": [
+            "USER"
+          ]
+        }
+      }
+    },
+    {
+      "name": "projection_not_ready",
+      "value": {
+        "schema_version": "execution.alpha-resource.v1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "delivery_profile": "LIVE_BINANCE_USDM",
+        "workspace_id": "workspace_execution_manager",
+        "requested_environment": "live",
+        "selected_environment": null,
+        "resource": {
+          "kind": "ALPHA",
+          "id": "alpha_btc_trend"
+        },
+        "read_at_ms": 1792238641000,
+        "as_of_ms": null,
+        "read_at": "2026-10-17T12:04:01.000Z",
+        "as_of": null,
+        "state": "unavailable",
+        "freshness": "FRESH",
+        "completeness": "COMPLETE",
+        "projection": [],
+        "capabilities": [
+          {
+            "capability_id": "resource.alpha.identity",
+            "state": "UNAVAILABLE",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": true
+          },
+          {
+            "capability_id": "resource.alpha.strategies",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.deployments",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.accounts",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_balances",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.margin_balances",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_sync",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.broker_sync",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.venue_accounts",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolios",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolio_allocations",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.positions",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.sessions",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.orders",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.fills",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.performance",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_equity",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.reconciliation",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.journal",
+            "state": "PARTIAL",
+            "relations": [],
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          }
+        ],
+        "panels": {
+          "strategies": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "deployments": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "accounts": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "account_balances": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "margin_balances": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "account_sync": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "broker_sync": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "venue_accounts": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "portfolios": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "portfolio_allocations": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "positions": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "sessions": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "orders": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "fills": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "performance": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "account_equity": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "reconciliation": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          "journal": {
+            "state": "PARTIAL",
+            "data": {
+              "rows": []
+            },
+            "clocks": {
+              "event_time_ms": null,
+              "source_published_at_ms": null,
+              "received_at_ms": null,
+              "ingested_at_ms": null,
+              "processed_at_ms": null,
+              "as_of_ms": null,
+              "read_at_ms": 1792238641000
+            },
+            "coverage": {
+              "from_ms": null,
+              "to_ms": null,
+              "source_total": null,
+              "filtered_total": null,
+              "returned_count": 0,
+              "truncated": false,
+              "downsampled": false,
+              "has_more": false,
+              "next_cursor": null,
+              "gaps": []
+            },
+            "source_history_semantics": "CURRENT_STATE_ONLY",
+            "formula": null,
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          }
+        },
+        "data": {},
+        "unavailable_branches": [
+          {
+            "capability_id": "resource.identity",
+            "environment": "live",
+            "state": "UNAVAILABLE",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": true
+          },
+          {
+            "capability_id": "resource.alpha.strategies",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.deployments",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.accounts",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_balances",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.margin_balances",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_sync",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.broker_sync",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.venue_accounts",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolios",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.portfolio_allocations",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.positions",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.sessions",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.orders",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.fills",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.performance",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.account_equity",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.reconciliation",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          },
+          {
+            "capability_id": "resource.alpha.journal",
+            "state": "PARTIAL",
+            "reason_code": "N31_PROJECTION_NOT_READY",
+            "retryable": false
+          }
+        ],
+        "actor": {
+          "user_id": "usr_asmith",
+          "username": "asmith",
+          "roles": [
+            "USER"
+          ]
+        }
+      }
+    }
+  ]
+}

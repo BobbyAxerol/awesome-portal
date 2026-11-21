@@ -1,0 +1,8 @@
+{
+  "schema_version": "portal.execution.f0-apply-attempt.v1",
+  "operation_id": "op_01K3COMMANDPLAN000000000000",
+  "request_key": "ui:apply:0001",
+  "state": "NONE",
+  "relay_decision": null,
+  "first_recorded_at": null
+}

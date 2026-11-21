@@ -203,9 +203,6 @@ export function LiveOverview({ envelope = null, status = "ok", reason, demo, dem
           </div>
           <div className="exec-af-filters" role="group" aria-label="Live filter">
             {LIVE_FILTERS.map((f) => <button key={f} type="button" className="exec-af-chip" data-active={filter === f ? "true" : undefined} aria-pressed={filter === f} onClick={() => setFilter(f)}>{LABEL[f]} ({smoke.counts[f]})</button>)}
-            <span className="exec-af-filternote">venue:</span>
-            <button type="button" className="exec-af-chip" data-active="true" aria-pressed="true" disabled title="Venue filter needs live-overview.v1 (BR-EX-56); one venue is live today">All</button>
-            <button type="button" className="exec-af-chip" disabled title="Venue filter needs live-overview.v1 (BR-EX-56)">BINANCE</button>
             <span className="exec-af-chip exec-lv-dashed">OKX · DERIBIT · VNM — none live yet, rows appear from registry</span>
           </div>
           <div className="exec-af-panel">

@@ -18,7 +18,9 @@ import {
   blockingConcernsFor,
   breadcrumbsFor,
   commandPaletteEntries,
+  featureByRoutePrefix,
   featureForPath,
+  featureForScreenRoute,
   filterPalette,
   legacyRouteOwners,
   lifecycleStages,
@@ -196,6 +198,18 @@ describe("route resolution", () => {
 
   it("does not match a route that merely shares a prefix", () => {
     expect(featureForPath(registry, "/research/quantbt-other")).toBeNull();
+  });
+
+  it("a path only a registry screen claims belongs to that screen's feature (Compare, registry rev 9)", () => {
+    // No feature route is a prefix of /deployments/compare; the screen row is what places it under Portfolios.
+    expect(featureByRoutePrefix(registry, "/deployments/compare")).toBeNull();
+    expect(featureForScreenRoute(registry, "/deployments/compare")?.id).toBe("EXECUTION_PORTFOLIOS");
+    expect(featureForPath(registry, "/deployments/compare")?.id).toBe("EXECUTION_PORTFOLIOS");
+    expect(breadcrumbsFor(registry, "/deployments/compare").map((c) => c.label)).toEqual(["Deployments", "Portfolios"]);
+    // Paths a feature already claims, and paths nothing claims, resolve as before.
+    expect(featureForPath(registry, "/deployments/portfolios/pf_1")?.id).toBe("EXECUTION_PORTFOLIOS");
+    expect(featureForPath(registry, "/deployments/compare/extra")).toBeNull();
+    expect(featureForPath(registry, "/deployments/nothing")).toBeNull();
   });
 
   it("builds a group -> feature breadcrumb trail", () => {

@@ -1,0 +1,42 @@
+{
+  "phase": "P06",
+  "status": "PASS_BACKEND",
+  "receipts": [
+    {
+      "gate": "P06 PostgreSQL fresh/upgrade/repeat durable scheduler authority",
+      "command": "scripts/research-loop-v11/test-p06-postgres.sh",
+      "result": "1 file passed; 10 tests passed",
+      "coverage": ["P06-T01", "P06-T02", "P06-T03", "P06-T04", "P06-T07", "P06-T09", "P06-T11", "P06-T12", "P06-T13", "V11-P06-DR"],
+      "notes": "Uses exact self-removing tmpfs research-p06-postgres-* test container; includes canonical-digest admission, legacy compatibility-row refusal, cross-user logical-work reuse, mismatch refusal, outbox redelivery and claimed-lease-to-real-child terminal chain."
+    },
+    {
+      "gate": "P06 actual isolated QuantBT child and cap verification",
+      "command": "apps/portal/.venv/bin/python -m pytest -q apps/portal/backend/tests/test_research_supervisor.py",
+      "result": "2 passed",
+      "coverage": ["P06-T05", "P06-T06", "P06-T08"],
+      "notes": "Real P04 Delta child has a distinct network namespace/PID, exact AS/CPU/file/FD/NPROC caps and 64 MiB per-receipt tmpfs scratch; malformed receipt/path/limit is refused."
+    },
+    {
+      "gate": "P05/P06 Python compatibility regression",
+      "command": "apps/portal/.venv/bin/python -m pytest -q apps/portal/backend/tests/test_research_artifacts.py apps/portal/backend/tests/test_research_supervisor.py",
+      "result": "14 passed",
+      "notes": "P06 child remains below P05 artifact authority."
+    },
+    {
+      "gate": "Control API production build/type authority",
+      "command": "cd apps/control-api && npm run build",
+      "result": "PASS",
+      "notes": "No emit-only test suite or runtime deployment claim."
+    },
+    {
+      "gate": "Whitespace and accidental patch check",
+      "command": "git diff --check",
+      "result": "PASS"
+    }
+  ],
+  "not_run_by_design": [
+    "P06-T10 browser action proof and V11-P06-BR: P06 creates no browser route or consumer; the guide expressly prohibits calling early-phase discovery/harness a full UI acceptance. P09/P10/P11 own that work.",
+    "NATS socket/credential deployment, Compose/runtime activation and direct-submit cutover: P10 owns named producer/transport activation to prevent a dual scheduler.",
+    "Generic/malicious user strategy execution: P06 admits only fixed P04 Delta; P07 owns import sandboxing and its hostile-source suite."
+  ]
+}

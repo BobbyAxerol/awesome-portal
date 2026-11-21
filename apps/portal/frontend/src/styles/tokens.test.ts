@@ -13,6 +13,7 @@ import { join, relative } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { FLAG_KINDS } from "../execution/v2/flagKinds";
 import { CANVAS_TOKENS, withAlpha, type ThemeName } from "./tokens";
 
 const ROOT = process.cwd();
@@ -116,6 +117,23 @@ describe("U02 token gate", () => {
     const config = readFileSync(join(ROOT, "tailwind.config.js"), "utf8");
     const colorBlock = config.slice(config.indexOf("colors:"), config.indexOf("fontFamily:"));
     expect(colorBlock.match(/#[0-9a-fA-F]{3,8}\b/g)).toBeNull();
+  });
+
+  it("keeps embedded Planning within an explicit Portal primitive safelist", () => {
+    const config = readFileSync(join(ROOT, "tailwind.config.js"), "utf8");
+    // Do not scan a sibling feature tree: Tailwind discovery order is global
+    // output, so that seemingly local change invalidates unrelated Portal
+    // visual baselines. The confirmed Planning primitives are retained by
+    // name instead.
+    expect(config).not.toContain("../../../features/roadmap-task-board/frontend/src/**/*.{ts,tsx}");
+    for (const primitive of [
+      "modal-backdrop", "modal-panel", "modal-head", "modal-body",
+      "toast-stack", "toast", "chart-figure", "definition-list",
+      "state-loading", "state-empty", "state-failed",
+      "feature-loading",
+    ]) {
+      expect(config).toContain(`\"${primitive}\"`);
+    }
   });
 
   it("mirrors tokens.css values in the canvas token module, per theme", () => {
@@ -444,4 +462,204 @@ describe("contrast of pairs the stylesheet itself declares", () => {
       expect(failures, failures.join("\n")).toEqual([]);
     });
   }
+});
+
+/* -------------------------------------------------------------------------
+ * W5 §1.2 (D-B1) — the shared grey ramp on the two Research themes
+ *
+ * `--ink-faint` is the shell's micro-label ink (nav group labels, kbd, the
+ * workspace line). It was 2.4–2.7:1 on light and 3.6–4.2:1 on dark. The floor
+ * is 4.5:1 on every surface the shell and the Research screens put it on, and
+ * the ramp stays ordered (ink > soft > mute > faint in contrast on paper).
+ * Dark `--ink-mute` is declared only inside `.research-screen`, so the dark
+ * ramp reads it from there.
+ * ---------------------------------------------------------------------- */
+
+describe("W5 shared grey ramp (research + operations)", () => {
+  const ch = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const lum = (hex: string) => {
+    const h = hex.replace("#", "");
+    const [r, g, b] = [0, 2, 4].map((i) => Number.parseInt(h.slice(i, i + 2), 16));
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+  };
+  const ratio = (a: string, b: string) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+  const css = readFileSync(join(SRC, "styles/tokens.css"), "utf8");
+  const surfaces: Record<ThemeName, string[]> = {
+    research: ["--paper", "--paper-raised", "--paper-sunken", "--accent-soft", "--line-soft"],
+    operations: ["--paper", "--paper-raised", "--paper-sunken", "--surface-2", "--accent-soft"],
+  };
+
+  for (const theme of ["research", "operations"] as const) {
+    const shell = resolveTheme(css, theme);
+    const screen = new Map(shell);
+    if (theme === "operations") {
+      for (const [k, v] of declarationsIn(css, ':root[data-theme="operations"] .research-screen {')) screen.set(k, v);
+    }
+
+    it(`${theme}: --ink-faint (shell) is >= 4.5:1 on every surface it meets`, () => {
+      const failures: string[] = [];
+      for (const surface of surfaces[theme]) {
+        const bg = shell.get(surface);
+        const fg = shell.get("--ink-faint");
+        if (!bg || !fg) {
+          failures.push(`${surface} or --ink-faint is not declared`);
+          continue;
+        }
+        const r = ratio(fg, bg);
+        if (r < 4.5) failures.push(`--ink-faint ${fg} on ${surface} ${bg} is ${r.toFixed(2)}:1`);
+      }
+      expect(failures, failures.join("; ")).toEqual([]);
+    });
+
+    it(`${theme}: ink > soft > mute > faint on paper`, () => {
+      const paper = shell.get("--paper")!;
+      const ramp = [shell.get("--ink")!, shell.get("--ink-soft")!, screen.get("--ink-mute")!, shell.get("--ink-faint")!].map((c) => ratio(c, paper));
+      expect(ramp, `${theme} grey ramp is out of order`).toEqual([...ramp].sort((a, b) => b - a));
+      expect(ramp[2], "--ink-mute floor").toBeGreaterThanOrEqual(4.5);
+    });
+  }
+
+  it("pins the approved values", () => {
+    const light = resolveTheme(css, "research");
+    const dark = resolveTheme(css, "operations");
+    expect(light.get("--ink-faint")).toBe("#5f6b80");
+    expect(light.get("--ink-mute")).toBe("#566278");
+    expect(dark.get("--ink-faint")).toBe("#8a98ac");
+    /* The operations dark root defines its own --ink-mute (it used to inherit the light #566278), and the
+       PROTOTYPE maturity text reads at >= 4.5:1 on paper (#9a6a1f was 4.47). */
+    expect(dark.get("--ink-mute")).toBe("#98a6ba");
+    expect(light.get("--maturity-prototype")).toBe("#8a5f1a");
+    expect(ratio(light.get("--maturity-prototype")!, light.get("--paper")!)).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+/* -------------------------------------------------------------------------
+ * Execution Loop V2 series and flag tokens (S0 U1)
+ *
+ * Added inside the Carbon block only, so Research, Planning and the 46
+ * `operations` baselines cannot see them. The hue/tint pairs are what the
+ * `.exec-flag` rules in v2/css/flag.css put together, so the 4.5:1 floor is
+ * checked here against the token values themselves.
+ * ---------------------------------------------------------------------- */
+
+describe("Execution V2 series and flag tokens", () => {
+  const ch = (v: number) => {
+    const c = v / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  const lum = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
+    return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+  };
+  const ratio = (a: string, b: string) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  const css = readFileSync(join(SRC, "styles/tokens.css"), "utf8");
+  const start = css.indexOf('[data-theme="operations-carbon"],');
+  const block = css.slice(start, css.indexOf("\n}", start));
+  const declared = declarationsIn(css, '[data-theme="operations-carbon"],');
+
+  it("pins the series palette", () => {
+    expect(Object.fromEntries([...declared].filter(([k]) => k.startsWith("--series")))).toEqual({
+      "--series": "#78a9ff",
+      "--series-2": "#08bdba",
+      "--series-3": "#d4a75e",
+      "--series-4": "#ee5396",
+      "--series-dd": "#ff832b",
+      "--series-sim": "#be95ff",
+    });
+  });
+
+  it("pins every flag ink and tint to the hi-fi kit", () => {
+    const pinned: Record<string, [string, string]> = {
+      ok: ["#42be65", "#0e2a17"],
+      pending: ["#f1c21b", "#2c2506"],
+      recall: ["#ff832b", "#2e1b08"],
+      partial: ["#d4a75e", "#2a2214"],
+      unknown: ["#ee5396", "#2e1220"],
+      applied: ["#08bdba", "#082a2a"],
+      rejected: ["#fa4d56", "#2d0f11"],
+      display: ["#33b1ff", "#0b2233"],
+      stale: ["#f1c21b", "#2c2506"],
+      paused: ["#8d8d8d", "#232323"],
+      approval: ["#a56eff", "#1f1630"],
+      incident: ["#fa4d56", "#3a1013"],
+      operation: ["#78a9ff", "#0d1d3a"],
+      na: ["#8d8d8d", "#1d1d1d"],
+      neutral: ["#c6c6c6", "#262626"],
+      attention: ["#ffa51f", "#301e05"],
+    };
+    expect(Object.keys(pinned).sort()).toEqual([...FLAG_KINDS].sort());
+    for (const [kind, [ink, tint]] of Object.entries(pinned)) {
+      expect(declared.get(`--f-${kind}`), `--f-${kind}`).toBe(ink);
+      expect(declared.get(`--f-${kind}-bg`), `--f-${kind}-bg`).toBe(tint);
+    }
+    expect(declared.get("--f-pending-hatch")).toBe("rgba(241, 194, 27, 0.12)");
+  });
+
+  it("keeps every flag ink at 4.5:1 or better on its own tint", () => {
+    const failures: string[] = [];
+    for (const kind of FLAG_KINDS) {
+      const ink = declared.get(`--f-${kind}`);
+      const tint = declared.get(`--f-${kind}-bg`);
+      if (!ink || !tint) {
+        failures.push(`${kind} is not declared`);
+        continue;
+      }
+      const r = ratio(ink, tint);
+      if (r < 4.5) failures.push(`--f-${kind} on --f-${kind}-bg is ${r.toFixed(2)}:1`);
+    }
+    expect(failures, failures.join("; ")).toEqual([]);
+  });
+
+  it("keeps the series colours legible on the canvas", () => {
+    const paper = declared.get("--paper")!;
+    for (const name of ["--series", "--series-2", "--series-3", "--series-4", "--series-dd", "--series-sim"]) {
+      expect(ratio(declared.get(name)!, paper), `${name} on --paper`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("gives attention a hue of its own, apart from failure and from pending", () => {
+    const hueOf = (hex: string) => {
+      const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) / 255);
+      const max = Math.max(r, g, b);
+      const d = max - Math.min(r, g, b);
+      const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+      return (h * 60 + 360) % 360;
+    };
+    const attention = declared.get("--f-attention")!;
+    expect(attention).not.toBe(declared.get("--f-rejected"));
+    expect(attention).not.toBe(declared.get("--f-pending"));
+    const apart = (other: string) => {
+      const gap = Math.abs(hueOf(attention) - hueOf(declared.get(other)!));
+      return Math.min(gap, 360 - gap);
+    };
+    expect(apart("--f-rejected")).toBeGreaterThan(30);
+    expect(apart("--f-pending")).toBeGreaterThanOrEqual(10);
+  });
+
+  it("declares a -bg for every flag ink, and an ink for every -bg", () => {
+    const inks = [...declared.keys()].filter((k) => /^--f-[a-z]+$/.test(k) && k !== "--f-pending-hatch");
+    const tints = [...declared.keys()].filter((k) => /^--f-[a-z]+-bg$/.test(k));
+    expect(tints.sort()).toEqual(inks.map((k) => `${k}-bg`).sort());
+  });
+
+  it("matches the flag kinds the component exports, one for one", () => {
+    const kinds = [...declared.keys()]
+      .filter((k) => /^--f-[a-z]+-bg$/.test(k))
+      .map((k) => k.slice("--f-".length, -"-bg".length));
+    expect(kinds.sort()).toEqual([...FLAG_KINDS].sort());
+  });
+
+  it("derives nothing in the Carbon block with color-mix", () => {
+    expect(block).not.toContain("color-mix(");
+  });
 });

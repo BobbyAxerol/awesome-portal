@@ -1,0 +1,2339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-alpha-resource.v1.schema.json",
+  "title": "Alpha 360 resource, LEGACY_COMPATIBILITY body (execution.alpha-resource.v1)",
+  "description": "The body GET /resources/alphas/{id} returns while the workspace is NOT in SCOPED_V2. In SCOPED_V2 the same route answers execution.alpha-resource.v2 (execution-resource-scoped.v2.schema.json): raw authorized facts only, no alpha_label/version/health summary. The server, not the browser, selects the variant; a reader must dispatch on schema_version. Names: alpha_label is \"Unnamed alpha\" and deployments[].portfolio_name is null because no execution source publishes an alpha or allocation-level portfolio name (portfolios[].name is the portfolio relation's own name, join it on portfolio_id). Money is an exact decimal string. Synthetic fixtures are produced by the real service and do not certify production.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "record_authority",
+    "source_authority",
+    "delivery_profile",
+    "workspace_id",
+    "requested_environment",
+    "selected_environment",
+    "resource",
+    "read_at_ms",
+    "as_of_ms",
+    "read_at",
+    "as_of",
+    "state",
+    "freshness",
+    "completeness",
+    "projection",
+    "capabilities",
+    "panels",
+    "data",
+    "unavailable_branches",
+    "actor"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "execution.alpha-resource.v1"
+    },
+    "record_authority": {
+      "const": "PORTAL_CONTROL"
+    },
+    "source_authority": {
+      "const": "TRADING_SYSTEM"
+    },
+    "delivery_profile": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "requested_environment": {
+      "enum": [
+        "all",
+        "paper",
+        "sandbox",
+        "live"
+      ]
+    },
+    "selected_environment": {
+      "anyOf": [
+        {
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "const": "ALPHA"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "read_at_ms": {
+      "type": "integer",
+      "minimum": -8640000000000000,
+      "maximum": 8640000000000000
+    },
+    "as_of_ms": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": -8640000000000000,
+          "maximum": 8640000000000000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "read_at": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "as_of": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "state": {
+      "enum": [
+        "ready",
+        "empty",
+        "partial",
+        "stale",
+        "unavailable"
+      ]
+    },
+    "freshness": {
+      "enum": [
+        "FRESH",
+        "AGING",
+        "STALE",
+        "UNKNOWN"
+      ]
+    },
+    "completeness": {
+      "enum": [
+        "COMPLETE",
+        "PARTIAL"
+      ]
+    },
+    "projection": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/Projection"
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "$ref": "#/$defs/Capability"
+      }
+    },
+    "panels": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/RowsPanel"
+      }
+    },
+    "data": {
+      "$ref": "#/$defs/Data"
+    },
+    "unavailable_branches": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "$ref": "#/$defs/UnavailableBranch"
+      }
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "user_id",
+        "username",
+        "roles"
+      ],
+      "properties": {
+        "user_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "username": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "UtcEpochMs": {
+      "type": "integer",
+      "minimum": -8640000000000000,
+      "maximum": 8640000000000000
+    },
+    "Identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    },
+    "Decimal": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+    },
+    "Row": {
+      "type": "object",
+      "maxProperties": 64,
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "oneOf": [
+              {
+                "type": "string",
+                "maxLength": 8192
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "PanelClocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_time_ms",
+        "source_published_at_ms",
+        "received_at_ms",
+        "ingested_at_ms",
+        "processed_at_ms",
+        "as_of_ms",
+        "read_at_ms"
+      ],
+      "properties": {
+        "event_time_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_published_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ingested_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "processed_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "as_of_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "read_at_ms": {
+          "$ref": "#/$defs/UtcEpochMs"
+        }
+      }
+    },
+    "PanelCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from_ms",
+        "to_ms",
+        "source_total",
+        "filtered_total",
+        "returned_count",
+        "truncated",
+        "downsampled",
+        "has_more",
+        "next_cursor",
+        "gaps"
+      ],
+      "properties": {
+        "from_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_total": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "filtered_total": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "downsampled": {
+          "type": "boolean"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 4096
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gaps": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from_ms",
+              "to_ms",
+              "reason_code"
+            ],
+            "properties": {
+              "from_ms": {
+                "$ref": "#/$defs/UtcEpochMs"
+              },
+              "to_ms": {
+                "$ref": "#/$defs/UtcEpochMs"
+              },
+              "reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          }
+        }
+      }
+    },
+    "Metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "reason_code"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "AVAILABLE",
+            "EMPTY",
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "deployment_id",
+        "strategy_id",
+        "stage",
+        "venue",
+        "account_id",
+        "portfolio_id",
+        "portfolio_name",
+        "currency",
+        "allocation",
+        "balance_total",
+        "balance_free",
+        "balance_locked",
+        "position_fact_count",
+        "realized_pnl",
+        "unrealized_pnl",
+        "net_pnl",
+        "exposure",
+        "state",
+        "active",
+        "health",
+        "updated_at"
+      ],
+      "properties": {
+        "deployment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "strategy_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "venue": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "account_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "portfolio_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "portfolio_name": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "allocation": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "balance_total": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "balance_free": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "balance_locked": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position_fact_count": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position_count_availability": {
+          "enum": [
+            "AVAILABLE",
+            "UNAVAILABLE"
+          ]
+        },
+        "position_count_reason_code": {
+          "anyOf": [
+            {
+              "const": "POSITION_POPULATION_NOT_QUALIFIED"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "realized_pnl": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "unrealized_pnl": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "net_pnl": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exposure": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "position_metrics_availability": {
+          "const": "UNAVAILABLE"
+        },
+        "position_metrics_reason_code": {
+          "const": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "health": {
+          "enum": [
+            "READY",
+            "ATTENTION",
+            "FINDING",
+            "UNKNOWN"
+          ]
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updated_at_ms": {
+          "type": "integer",
+          "minimum": -8640000000000000,
+          "maximum": 8640000000000000
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "position_count_availability"
+            ],
+            "properties": {
+              "position_count_availability": {
+                "const": "AVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "position_count_reason_code"
+            ],
+            "properties": {
+              "position_fact_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "position_count_reason_code": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "position_count_availability"
+            ],
+            "properties": {
+              "position_count_availability": {
+                "const": "UNAVAILABLE"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "position_count_reason_code"
+            ],
+            "properties": {
+              "position_fact_count": {
+                "type": "null"
+              },
+              "position_count_reason_code": {
+                "const": "POSITION_POPULATION_NOT_QUALIFIED"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": {
+                "position_count_availability": {}
+              },
+              "required": [
+                "position_count_availability"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "position_fact_count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "position_metrics_availability": {}
+            },
+            "required": [
+              "position_metrics_availability"
+            ]
+          },
+          "then": {
+            "required": [
+              "position_metrics_reason_code"
+            ],
+            "properties": {
+              "position_metrics_reason_code": {},
+              "realized_pnl": {
+                "type": "null"
+              },
+              "unrealized_pnl": {
+                "type": "null"
+              },
+              "net_pnl": {
+                "type": "null"
+              },
+              "exposure": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "not": {
+              "properties": {
+                "position_metrics_availability": {}
+              },
+              "required": [
+                "position_metrics_availability"
+              ]
+            }
+          },
+          "then": {
+            "properties": {
+              "realized_pnl": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              "unrealized_pnl": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              "net_pnl": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              "exposure": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AlphaSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "alpha_id",
+        "alpha_label",
+        "version",
+        "owner",
+        "stage",
+        "stages",
+        "portfolios",
+        "deployments",
+        "allocations",
+        "balances",
+        "position_pnl",
+        "exposure",
+        "health",
+        "attention_reasons",
+        "metrics_availability",
+        "updated_at",
+        "valuation_warning"
+      ],
+      "properties": {
+        "alpha_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "alpha_label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "stage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "stages": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "portfolios": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "portfolio_id",
+              "name",
+              "base_currency"
+            ],
+            "properties": {
+              "portfolio_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "base_currency": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          }
+        },
+        "deployments": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Deployment"
+          }
+        },
+        "allocations": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "value"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "UNAVAILABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "AVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "type": "null"
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "UNAVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "const": "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "state": {}
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "balances": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "total",
+              "free",
+              "locked"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              "total": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "free": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "locked": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "UNAVAILABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "AVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "type": "null"
+                    },
+                    "total": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "free": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "locked": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "UNAVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "const": "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "state": {}
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "total": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "free": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "locked": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "position_pnl": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "realized",
+              "unrealized",
+              "net"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              "realized": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "unrealized": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "net": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "const": "UNAVAILABLE"
+              },
+              "reason_code": {
+                "const": "POSITION_FINANCIAL_SOURCE_NOT_QUALIFIED"
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {}
+                  },
+                  "required": [
+                    "state"
+                  ]
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {},
+                    "realized": {
+                      "type": "null"
+                    },
+                    "unrealized": {
+                      "type": "null"
+                    },
+                    "net": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "state": {}
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "realized": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "unrealized": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    },
+                    "net": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "exposure": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "currency",
+              "value"
+            ],
+            "properties": {
+              "currency": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 128,
+                    "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "state": {
+                "enum": [
+                  "AVAILABLE",
+                  "UNAVAILABLE"
+                ]
+              },
+              "reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "allOf": [
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "AVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "type": "null"
+                    },
+                    "value": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "required": [
+                    "state"
+                  ],
+                  "properties": {
+                    "state": {
+                      "const": "UNAVAILABLE"
+                    }
+                  }
+                },
+                "then": {
+                  "required": [
+                    "reason_code"
+                  ],
+                  "properties": {
+                    "reason_code": {
+                      "const": "FINANCIAL_AGGREGATE_SOURCE_NOT_QUALIFIED"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "not": {
+                    "properties": {
+                      "state": {}
+                    },
+                    "required": [
+                      "state"
+                    ]
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "maxLength": 128,
+                      "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "health": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "attention_reasons": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          }
+        },
+        "metrics_availability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "account_balance",
+            "current_position_pnl",
+            "equity_series_30d",
+            "max_drawdown_30d"
+          ],
+          "properties": {
+            "account_balance": {
+              "$ref": "#/$defs/Metric"
+            },
+            "current_position_pnl": {
+              "$ref": "#/$defs/Metric"
+            },
+            "equity_series_30d": {
+              "$ref": "#/$defs/Metric"
+            },
+            "max_drawdown_30d": {
+              "$ref": "#/$defs/Metric"
+            }
+          }
+        },
+        "updated_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "updated_at_ms": {
+          "type": "integer",
+          "minimum": -8640000000000000,
+          "maximum": 8640000000000000
+        },
+        "valuation_warning": {
+          "const": "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED"
+        }
+      }
+    },
+    "AlphaBoundedShell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "state",
+        "reason_code"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "state": {
+          "const": "PARTIAL"
+        },
+        "reason_code": {
+          "const": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND"
+        }
+      }
+    },
+    "Coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "paper": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile_id",
+            "state",
+            "reason_code",
+            "projection_epoch",
+            "projection_sequence",
+            "source_as_of"
+          ],
+          "properties": {
+            "profile_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "state": {
+              "enum": [
+                "FOUND",
+                "EMPTY",
+                "PARTIAL",
+                "UNAVAILABLE"
+              ]
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "projection_epoch": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "projection_sequence": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_as_of": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "sandbox": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile_id",
+            "state",
+            "reason_code",
+            "projection_epoch",
+            "projection_sequence",
+            "source_as_of"
+          ],
+          "properties": {
+            "profile_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "state": {
+              "enum": [
+                "FOUND",
+                "EMPTY",
+                "PARTIAL",
+                "UNAVAILABLE"
+              ]
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "projection_epoch": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "projection_sequence": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_as_of": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "live": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "profile_id",
+            "state",
+            "reason_code",
+            "projection_epoch",
+            "projection_sequence",
+            "source_as_of"
+          ],
+          "properties": {
+            "profile_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "state": {
+              "enum": [
+                "FOUND",
+                "EMPTY",
+                "PARTIAL",
+                "UNAVAILABLE"
+              ]
+            },
+            "reason_code": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 256
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "projection_epoch": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "projection_sequence": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_as_of": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "Capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_id",
+        "state",
+        "relations",
+        "reason_code",
+        "retryable"
+      ],
+      "properties": {
+        "capability_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "state": {
+          "enum": [
+            "AVAILABLE",
+            "EMPTY",
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "relations": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "UnavailableBranch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capability_id",
+        "state",
+        "reason_code",
+        "retryable"
+      ],
+      "properties": {
+        "capability_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "environment": {
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "state": {
+          "enum": [
+            "EMPTY",
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "environment",
+        "epoch",
+        "sequence",
+        "payload_digest",
+        "last_successful_refresh_at"
+      ],
+      "properties": {
+        "environment": {
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "epoch": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "sequence": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "payload_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$(?![\\s\\S])"
+        },
+        "last_successful_refresh_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "RowsPanel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "data",
+        "clocks",
+        "coverage",
+        "source_history_semantics",
+        "formula",
+        "reason_code",
+        "retryable"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "PARTIAL",
+            "STALE",
+            "UNAVAILABLE"
+          ]
+        },
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "rows"
+              ],
+              "properties": {
+                "rows": {
+                  "type": "array",
+                  "maxItems": 200,
+                  "items": {
+                    "$ref": "#/$defs/Row"
+                  }
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clocks": {
+          "$ref": "#/$defs/PanelClocks"
+        },
+        "coverage": {
+          "$ref": "#/$defs/PanelCoverage"
+        },
+        "source_history_semantics": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "formula_id",
+                "formula_version",
+                "input_revision",
+                "input_digest",
+                "composite_read_revision"
+              ],
+              "properties": {
+                "formula_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "formula_version": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "input_revision": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "input_digest": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "composite_read_revision": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "READY",
+                  "PARTIAL",
+                  "STALE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "EMPTY",
+                  "UNAVAILABLE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Data": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strategies": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "deployments": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "accounts": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "account_balances": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "margin_balances": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "account_sync": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "broker_sync": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "venue_accounts": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "portfolios": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "portfolio_allocations": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "positions": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "sessions": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "orders": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "fills": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "performance": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "account_equity": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "reconciliation": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "journal": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Row"
+          }
+        },
+        "alpha": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/AlphaSummary"
+            },
+            {
+              "$ref": "#/$defs/AlphaBoundedShell"
+            }
+          ]
+        },
+        "profile_coverage": {
+          "$ref": "#/$defs/Coverage"
+        }
+      }
+    }
+  }
+}

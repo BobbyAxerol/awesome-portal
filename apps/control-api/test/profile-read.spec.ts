@@ -1,14 +1,22 @@
 import { describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import Ajv2020 from "ajv/dist/2020";
+import addFormats from "ajv-formats";
 import { AuthSession, PortalUser } from "../src/domain";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
+import { ExecutionReadScopeError } from "../src/execution-v2/read-scope";
 import { ProfileReadController } from "../src/profile-read/profile-read.controller";
 import { ProfileReadService } from "../src/profile-read/profile-read.service";
 import { WorkspacesRepository } from "../src/repos/workspaces";
+
+const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 
 const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-08-30T00:00:00Z"), updatedAt: new Date("2026-08-30T00:00:00Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_bobby", userId: user.userId, state: "ACTIVE", sessionVersion: 1,
@@ -22,8 +30,14 @@ class FakeCurrentSource {
   readonly calls: Array<{ environment: string; screenId: string; relation: string; query: Record<string, unknown> }> = [];
   readonly rows = new Map<string, RecordInput[]>();
   readonly failures = new Set<string>();
+  readonly editResponse = new Map<string, (response: ReturnType<typeof managerResponse>) => void>();
 
   constructor(readonly profile: "sandbox" | "live") {}
+
+  async composeProfile<T>(_principal: unknown, _screen: string, _environments: unknown,
+    read: (composition: undefined) => Promise<T>): Promise<T> {
+    return read(undefined);
+  }
 
   async relation(
     _principal: unknown,
@@ -39,7 +53,9 @@ class FakeCurrentSource {
     const items = scope
       ? scopedFixtureRows(relation, this.rows.get(relation) ?? [defaultRecord(this.profile, relation)], scope)
       : this.rows.get(relation) ?? [defaultRecord(this.profile, relation)];
-    return managerResponse(this.profile, relation, items, scope ? { state: "EXACT", reasonCode: null } : undefined);
+    const response = managerResponse(this.profile, relation, items, scope ? { state: "EXACT", reasonCode: null } : undefined);
+    this.editResponse.get(relation)?.(response);
+    return response;
   }
 
   async resolveDeploymentScope(
@@ -123,6 +139,13 @@ function service(source: FakeCurrentSource): ProfileReadService {
 
 function principal(workspaceId = "ws_primary") { return { user, session, workspaceId }; }
 
+function expectProfileContract(value: unknown) {
+  const ajv = new Ajv2020({ strict: true, allErrors: true }); addFormats(ajv);
+  const schema = JSON.parse(readFileSync(resolve(contractsRoot, "schemas/execution-profile-read.v1.schema.json"), "utf8"));
+  const validate = ajv.compile(schema);
+  expect(validate(value), JSON.stringify(validate.errors)).toBe(true);
+}
+
 function defaultRecord(profile: "sandbox" | "live", relation: string): RecordInput {
   const values: Record<string, RecordInput> = {
     strategy_deployments: { deployment_id: `dep_${profile}`, strategy_id: "str_1", account_id: "acc_1", mode: profile, venue: "BINANCE" },
@@ -167,7 +190,7 @@ function managerResponse(
           relation: { schema: "public", relation }, record_key: "must-not-leak",
           fields: Object.fromEntries(Object.entries({ ...fields, raw: "must-not-leak" }).map(([key, value]) => [key, tagged(value)])),
         })),
-        next_cursor: null,
+        next_cursor: null as string | null,
         ...(scope ? { scope: { state: scope.state, reason_code: scope.reasonCode } } : {}),
       },
     },
@@ -182,6 +205,23 @@ function tagged(value: string | number | boolean | null) {
 }
 
 describe("N23 Sandbox and Live profile reads", () => {
+  it.each([
+    ["EXECUTION_READ_ACCESS_CHANGED", 409],
+    ["EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503],
+    ["EXECUTION_READ_SCOPE_REQUIRED", 403],
+    ["EXECUTION_READ_SCOPE_LIMIT", 503],
+  ] as const)("fails the whole composed account read on %s", async (code, status) => {
+    const source = new FakeCurrentSource("live");
+    const original = source.relation.bind(source);
+    vi.spyOn(source, "relation").mockImplementation(async (...args) => {
+      if (args[4] === "account_balances") throw new ExecutionReadScopeError(code, status);
+      return original(...args);
+    });
+    await expect(service(source).accountBroker(principal(), "acc_1", "live"))
+      .rejects.toMatchObject({ code, status });
+    expect(source.calls.some((call) => call.relation === "accounts")).toBe(true);
+  });
+
   it("composes Account/Broker 360 for one exact account without cross-account rows", async () => {
     const source = new FakeCurrentSource("live");
     source.rows.set("accounts", [
@@ -213,9 +253,303 @@ describe("N23 Sandbox and Live profile reads", () => {
     });
     expect(result.data.accounts).toHaveLength(1);
     expect(result.data.venue_accounts).toHaveLength(1);
-    expect(result.data.differences).toEqual([expect.objectContaining({ delta: "0.2", in_sync: false })]);
+    expect(result.data.differences).toEqual([expect.objectContaining({ delta: "0.2", in_sync: false,
+      portal_free: "800.10", broker_buying_power: "799.90", internal_value: "800.10", broker_value: "799.90" })]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "derived.differences", state: "AVAILABLE", reason_code: null }));
     expect(result.data.exposure_headroom).toEqual([expect.objectContaining({ headroom: "750.05", verdict: "AVAILABLE" })]);
     expect(JSON.stringify(result)).not.toContain("acc_other");
+    expectProfileContract(result);
+  });
+
+  it("does not turn missing or invalid balance and maintenance into available zero headroom", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("account_balances", [
+      { account_id: "acc_1", currency: "USDT", free: "80" },
+      { account_id: "acc_1", currency: "USDC", free: "40" },
+      { account_id: "acc_1", currency: "EUR" },
+    ]);
+    source.rows.set("margin_balances", [
+      { account_id: "acc_1", currency: "USDT", maintenance: "10" },
+      { account_id: "acc_1", currency: "USDT", maintenance: null },
+      { account_id: "acc_1", currency: "EUR", maintenance: "0" },
+    ]);
+    const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.exposure_headroom).toEqual(expect.arrayContaining([
+      expect.objectContaining({ currency: "USDT", free: "80", maintenance: null, headroom: null, verdict: "UNAVAILABLE" }),
+      expect.objectContaining({ currency: "USDC", free: "40", maintenance: null, headroom: null, verdict: "UNAVAILABLE" }),
+      expect.objectContaining({ currency: "EUR", free: null, maintenance: "0", headroom: null, verdict: "UNAVAILABLE" }),
+    ]));
+  });
+
+  it("compares each broker currency only on a complete shared snapshot and rejects ambiguous latest rows", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("account_balances", [
+      { account_id: "acc_1", currency: "USDT", free: "80" },
+      { account_id: "acc_1", currency: "USDC", free: "50" },
+    ]);
+    source.rows.set("broker_account_sync_effective", [
+      { external_account_ref: "external_1", mode: "live", venue: "BINANCE", currency: "USDT", buying_power: "79", synced_at: "2026-08-29T12:00:00Z" },
+      { external_account_ref: "external_1", mode: "live", venue: "BINANCE", currency: "USDC", buying_power: "48", synced_at: "2026-08-30T12:00:00Z" },
+    ]);
+    let result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.differences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ currency: "USDT", delta: "1" }), expect.objectContaining({ currency: "USDC", delta: "2" }),
+    ]));
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "derived.differences", state: "AVAILABLE" }));
+    source.rows.get("broker_account_sync_effective")!.push(
+      { external_account_ref: "external_1", mode: "live", venue: "BINANCE", currency: "USDT", buying_power: "10", synced_at: "2026-08-29T12:00:00Z" });
+    result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.differences).toEqual([expect.objectContaining({ currency: "USDC", delta: "2" })]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "derived.differences", state: "PARTIAL", reason_code: "ACCOUNT_COMPARISON_INCOMPLETE" }));
+    source.editResponse.set("broker_account_sync_effective", r => { r.projection.sequence++; });
+    result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.differences).toEqual([]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "derived.differences", state: "UNAVAILABLE", reason_code: "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED" }));
+  });
+
+  it.each([0.1, 9007199254740992])("does not call an inexact numeric financial input %s an exact comparison", async amount => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: amount }]);
+    source.rows.set("broker_account_sync_effective", [{ external_account_ref: "external_1", mode: "live", venue: "BINANCE", currency: "USDT",
+      buying_power: "0.1", synced_at: "2026-08-30T12:00:00Z" }]);
+    const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.differences).toEqual([]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "derived.differences",
+      state: "UNAVAILABLE", reason_code: "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED" }));
+  });
+
+  it("preserves exact decimal text and exact integer zero in financial comparison", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: "0.100000000000000001" },
+      { account_id: "acc_1", currency: "USDC", free: 0 }]);
+    source.rows.set("broker_account_sync_effective", [
+      { external_account_ref: "external_1", mode: "live", venue: "BINANCE", currency: "USDT", buying_power: "0.1", synced_at: "2026-08-30T12:00:00Z" },
+      { external_account_ref: "external_1", mode: "live", venue: "BINANCE", currency: "USDC", buying_power: 0, synced_at: "2026-08-30T12:00:00Z" },
+    ]);
+    const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.differences).toEqual(expect.arrayContaining([
+      expect.objectContaining({ currency: "USDT", delta: "0.000000000000000001", in_sync: false }),
+      expect.objectContaining({ currency: "USDC", delta: "0", in_sync: true }),
+    ]));
+  });
+
+  it("withholds Profile comparison and headroom when exact arithmetic exceeds the published 128-character bound", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: "9".repeat(128) }]);
+    source.rows.set("broker_account_sync_effective", [{ external_account_ref: "external_1", mode: "live", venue: "BINANCE", currency: "USDT",
+      buying_power: "0", synced_at: "2026-08-30T12:00:00Z" }]);
+    let result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.differences).toEqual([expect.objectContaining({ currency: "USDT", delta: "9".repeat(128) })]);
+    source.rows.set("broker_account_sync_effective", [{ external_account_ref: "external_1", mode: "live", venue: "BINANCE", currency: "USDT",
+      buying_power: "-1", synced_at: "2026-08-30T12:00:00Z" }]);
+    result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.differences).toEqual([]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "derived.differences", state: "UNAVAILABLE" }));
+    source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: `-${"9".repeat(127)}` }]);
+    source.rows.set("margin_balances", [{ account_id: "acc_1", currency: "USDT", maintenance: "1" }]);
+    result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.exposure_headroom).toEqual([expect.objectContaining({ currency: "USDT", maintenance: "1",
+      headroom: null, verdict: "UNAVAILABLE" })]);
+  });
+
+  it("does not publish derived balances when auto-selection finds the same account in multiple environments", async () => {
+    const live = new FakeCurrentSource("live"), sandbox = new FakeCurrentSource("sandbox");
+    for (const source of [live, sandbox]) {
+      source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: "80" }]);
+      source.rows.set("margin_balances", [{ account_id: "acc_1", currency: "USDT", maintenance: "10" }]);
+      source.rows.set("broker_account_sync_effective", [{ external_account_ref: "external_1", mode: source.profile, venue: "BINANCE", currency: "USDT", buying_power: "79", synced_at: "2026-08-30T12:00:00Z" }]);
+    }
+    const source = { composeProfile: live.composeProfile.bind(live), relation: async (...args: Parameters<FakeCurrentSource["relation"]>) => {
+      if (args[1] === "live") return live.relation(...args);
+      if (args[1] === "sandbox") return sandbox.relation(...args);
+      throw new Error("paper not mounted");
+    } };
+    const reader = new ProfileReadService(source as unknown as ExecutionProductReadSource);
+    const result = await reader.accountBroker(principal(), "acc_1") as Record<string, any>;
+    expect(result.state).toBe("partial");
+    expect(result.candidate_environments).toEqual(expect.arrayContaining(["live", "sandbox"]));
+    expect(result.selected_environment).toBeNull();
+    expect(result.delivery_profile).toBeNull();
+    expect(result.as_of).toBeNull();
+    expect(result.data.accounts).toEqual([]);
+    expect(result.data.account_balances).toEqual([]);
+    expect(result.data.margin_balances).toEqual([]);
+    expect(result.data.differences).toEqual([]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "derived.differences", state: "UNAVAILABLE", reason_code: "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED" }));
+    expect(result.data.exposure_headroom).toEqual([]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "source.account_balances", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_ENVIRONMENT_AMBIGUOUS" }));
+    expectProfileContract(result);
+    const explicit = await reader.accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(explicit.selected_environment).toBe("live");
+    expect(explicit.data.account_balances).toContainEqual(expect.objectContaining({ currency: "USDT", free: "80" }));
+    expectProfileContract(explicit);
+  });
+
+  it("does not join a broker reference from duplicate source identities", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("accounts", [
+      { account_id: "acc_1", mode: "live", external_account_ref: "external_1" },
+      { account_id: "acc_1", mode: "live", external_account_ref: "external_2" },
+    ]);
+    source.rows.set("broker_account_sync_effective", [
+      { external_account_ref: "external_1", mode: "live", currency: "USDT", buying_power: "100", synced_at: "2026-08-30T12:00:00Z" },
+      { external_account_ref: "external_2", mode: "live", currency: "USDT", buying_power: "999", synced_at: "2026-08-30T12:00:00Z" },
+    ]);
+    const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.state).toBe("partial");
+    expect(result.completeness).toBe("PARTIAL");
+    expect(result.unavailable_branches).toContainEqual(expect.objectContaining({
+      capability_id: "account.identity", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_IDENTITY_DUPLICATE",
+    }));
+    expect(result.data.broker_sync).toEqual([]);
+    expect(result.data.differences).toEqual([]);
+    expect(result.data.accounts).toEqual([]);
+    expect(result.data.account_balances).toEqual([]);
+    expect(result.capabilities).toContainEqual(expect.objectContaining({ capability_id: "source.accounts", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_IDENTITY_DUPLICATE" }));
+    expectProfileContract(result);
+  });
+
+  it.each(["null", "blank", "shared"] as const)("does not infer an account/broker join from a %s reference", async variant => {
+    const source = new FakeCurrentSource("live");
+    const ref = variant === "null" ? null : variant === "blank" ? " " : "TEST_ONLY-shared-broker";
+    source.rows.set("accounts", [
+      { account_id: "acc_1", mode: "live", venue: "BINANCE", external_account_ref: ref },
+      ...(variant === "shared" ? [{ account_id: "acc_other", mode: "live", venue: "BINANCE", external_account_ref: ref }] : []),
+    ]);
+    source.rows.set("broker_account_sync_effective", [
+      { external_account_ref: ref, mode: "live", currency: "USDT", buying_power: "999", synced_at: "2026-08-30T12:00:00Z" },
+    ]);
+    const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.broker_sync).toEqual([]);
+    expect(result.data.differences).toEqual([]);
+    expect(result.state).toBe("partial");
+    expect(result.completeness).toBe("PARTIAL");
+    expect(result.unavailable_branches).toContainEqual(expect.objectContaining({
+      capability_id: "account.broker_identity", state: variant === "shared" ? "PARTIAL" : "UNAVAILABLE",
+      reason_code: variant === "shared" ? "PHASE2_BROKER_REFERENCE_AMBIGUOUS" : "PHASE2_BROKER_REFERENCE_UNAVAILABLE",
+    }));
+    expectProfileContract(result);
+  });
+
+  it.each(["unknown other reference", "unknown other venue", "unknown other mode", "missing target venue", "missing target mode"] as const)(
+    "withholds the older Account/Broker join for %s", async variant => {
+      const source = new FakeCurrentSource("live");
+      source.rows.set("accounts", [
+        { account_id: "acc_1", mode: variant === "missing target mode" ? null : "live", venue: variant === "missing target venue" ? null : "BINANCE", external_account_ref: "TEST_ONLY-ref" },
+        ...variant.startsWith("unknown other") ? [{ account_id: "acc_other", mode: variant === "unknown other mode" ? null : "live",
+          venue: variant === "unknown other venue" ? null : "BINANCE", external_account_ref: variant === "unknown other reference" ? null : "TEST_ONLY-ref" }] : [],
+      ]);
+      source.rows.set("broker_account_sync_effective", [{ sync_id: "foreign_observation", mode: "live", venue: "BINANCE", external_account_ref: "TEST_ONLY-ref", currency: "USDT", buying_power: "999", synced_at: "2026-08-30T12:00:00Z" }]);
+      const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+      expect(result.data.broker_sync).toEqual([]);
+      expect(result.data.differences).toEqual([]);
+      expect(result.state).toBe("partial");
+      expect(result.unavailable_branches).toContainEqual(expect.objectContaining({ capability_id: "account.broker_identity",
+        reason_code: variant.startsWith("unknown other") ? "PHASE2_BROKER_REFERENCE_AMBIGUOUS" : "PHASE2_BROKER_REFERENCE_UNAVAILABLE" }));
+      expectProfileContract(result);
+    },
+  );
+
+  it.each(["venue", "mode", "external_account_ref"] as const)("does not attach an observation with unknown %s to the older broker view", async missing => {
+    const source = new FakeCurrentSource("live");
+    const safe: RecordInput = { sync_id: "safe", mode: "live", venue: "BINANCE", external_account_ref: "external_1", currency: "USDT", buying_power: "79", synced_at: "2026-08-30T12:00:00Z" };
+    source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: "80" }]);
+    source.rows.set("broker_account_sync_effective", [safe, { ...safe, sync_id: "unknown_grain", [missing]: null },
+      { ...safe, sync_id: "other_venue", venue: "KRAKEN" }]);
+    const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.broker_sync).toEqual([expect.objectContaining({ sync_id: "safe" })]);
+    expect(result.data.differences).toEqual([]);
+    expect(result.unavailable_branches).toContainEqual(expect.objectContaining({ capability_id: "account.broker_identity",
+      reason_code: "PHASE2_BROKER_REFERENCE_AMBIGUOUS" }));
+    expect(JSON.stringify(result)).not.toContain("unknown_grain");
+    expect(JSON.stringify(result)).not.toContain("other_venue");
+    expectProfileContract(result);
+  });
+
+  it("does not claim a unique automatic environment when another account census is unavailable", async () => {
+    const live = new FakeCurrentSource("live"), sandbox = new FakeCurrentSource("sandbox");
+    sandbox.failures.add("accounts");
+    const source = { composeProfile: live.composeProfile.bind(live), relation: async (...args: Parameters<FakeCurrentSource["relation"]>) => {
+      if (args[1] === "live") return live.relation(...args);
+      if (args[1] === "sandbox") return sandbox.relation(...args);
+      throw new Error("paper not mounted");
+    } };
+    const reader = new ProfileReadService(source as unknown as ExecutionProductReadSource);
+    const result = await reader.accountBroker(principal(), "acc_1") as Record<string, any>;
+    expect(result.state).toBe("partial");
+    expect(result.unavailable_branches).toContainEqual(expect.objectContaining({
+      capability_id: "account.identity", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_ENVIRONMENT_UNRESOLVED",
+    }));
+    expect(result.data.broker_sync).toEqual([]);
+    expect(result.data.differences).toEqual([]);
+    expect(result.selected_environment).toBeNull();
+    expect(result.data.accounts).toEqual([]);
+    expect(result.data.account_balances).toEqual([]);
+    expectProfileContract(result);
+  });
+
+  it.each(["complete", "partial"] as const)("does not attribute orphaned account rows when the account census is %s", async completeness => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("accounts", []);
+    source.rows.set("strategy_deployments", [{ deployment_id: "dep_orphan", account_id: "acc_missing", strategy_id: "str_orphan", mode: "live", venue: "BINANCE" }]);
+    source.rows.set("account_balances", [{ account_id: "acc_missing", currency: "USDT", free: "12345" }]);
+    source.rows.set("margin_balances", [{ account_id: "acc_missing", currency: "USDT", maintenance: "7" }]);
+    if (completeness === "partial") source.editResponse.set("accounts", response => { response.source.completeness = "PARTIAL"; });
+    const result = await service(source).accountBroker(principal(), "acc_missing", "live") as Record<string, any>;
+    expect(result.selected_environment).toBeNull();
+    expect(result.unavailable_branches).toContainEqual(expect.objectContaining({ capability_id: "account.identity",
+      reason_code: completeness === "complete" ? "PHASE2_ACCOUNT_NOT_FOUND" : "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED" }));
+    expect(result.data.account_balances).toEqual([]);
+    expect(result.data.margin_balances).toEqual([]);
+    expect(result.data.exposure_headroom).toEqual([]);
+    expect(JSON.stringify(result)).not.toContain("12345");
+    expectProfileContract(result);
+  });
+
+  it("does not report the first profile as selected when auto-selection finds no identity", async () => {
+    const live = new FakeCurrentSource("live"), sandbox = new FakeCurrentSource("sandbox");
+    live.rows.set("accounts", []); sandbox.rows.set("accounts", []);
+    const source = { composeProfile: live.composeProfile.bind(live), relation: async (...args: Parameters<FakeCurrentSource["relation"]>) => {
+      if (args[1] === "live") return live.relation(...args);
+      if (args[1] === "sandbox") return sandbox.relation(...args);
+      throw new Error("paper not mounted");
+    } };
+    const result = await new ProfileReadService(source as unknown as ExecutionProductReadSource)
+      .accountBroker(principal(), "acc_missing") as Record<string, any>;
+    expect(result.selected_environment).toBeNull();
+    expect(result.delivery_profile).toBeNull();
+    expect(result.as_of).toBeNull();
+    expect(result.freshness).toBe("UNKNOWN");
+    expect(result.unavailable_branches).toContainEqual(expect.objectContaining({ capability_id: "account.identity", reason_code: "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED" }));
+    expectProfileContract(result);
+  });
+
+  it.each(["missing source", "partial page", "continuation", "other snapshot", "missing snapshot", "unattributed margin", "duplicate balance", "duplicate margin"])(
+    "does not publish headroom with %s", async scenario => {
+      const source = new FakeCurrentSource("live");
+      source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: "80" }]);
+      source.rows.set("margin_balances", [{ account_id: "acc_1", currency: "USDT", maintenance: "10" },
+        ...(scenario === "unattributed margin" ? [{ account_id: "acc_1", maintenance: "4" }] : [])]);
+      if (scenario === "duplicate balance") source.rows.set("account_balances", [
+        { account_id: "acc_1", currency: "USDT", free: "80" }, { account_id: "acc_1", currency: "USDT", free: "90" }]);
+      if (scenario === "duplicate margin") source.rows.set("margin_balances", [
+        { account_id: "acc_1", currency: "USDT", maintenance: "10" }, { account_id: "acc_1", currency: "USDT", maintenance: "11" }]);
+      if (scenario === "missing source") source.failures.add("margin_balances");
+      if (scenario === "partial page") source.editResponse.set("margin_balances", r => { r.source.completeness = "PARTIAL"; });
+      if (scenario === "continuation") source.editResponse.set("margin_balances", r => { (r.source.data as { next_cursor: string | null }).next_cursor = "next-page"; });
+      if (scenario === "other snapshot") source.editResponse.set("margin_balances", r => { r.projection.sequence++; });
+      if (scenario === "missing snapshot") source.editResponse.set("margin_balances", r => { delete (r as any).projection; });
+      const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+      expect(result.data.exposure_headroom).toContainEqual(expect.objectContaining({ free: "80", maintenance: null, headroom: null, verdict: "UNAVAILABLE" }));
+      expect(result.data.exposure_headroom.every((row: any) => row.verdict === "UNAVAILABLE")).toBe(true);
+    });
+
+  it("keeps a reported exact zero as zero when the same-snapshot inputs are complete", async () => {
+    const source = new FakeCurrentSource("live");
+    source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: "0" }]);
+    source.rows.set("margin_balances", [{ account_id: "acc_1", currency: "USDT", maintenance: "0" }]);
+    const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+    expect(result.data.exposure_headroom).toEqual([expect.objectContaining({ free: "0", maintenance: "0", headroom: "0", verdict: "AVAILABLE" })]);
   });
 
   it("returns a typed empty Account 360 rather than borrowing another account", async () => {
@@ -227,6 +561,65 @@ describe("N23 Sandbox and Live profile reads", () => {
       reason_code: "PHASE2_ACCOUNT_NOT_FOUND",
     }));
   });
+
+  it.each(["continuation", "previous page", "unknown", "partial", "unavailable"] as const)(
+    "does not call an unseen Account 360 identity not found when accounts are %s", async variant => {
+      const source = new FakeCurrentSource("sandbox");
+      source.rows.set("accounts", []);
+      if (variant === "unavailable") source.failures.add("accounts");
+      if (variant === "continuation") source.editResponse.set("accounts", response => {
+        response.source.data.next_cursor = "next-page";
+      });
+      if (variant === "previous page") source.editResponse.set("accounts", response => {
+        (response.source.data as { previous_cursor?: string | null }).previous_cursor = "previous-page";
+      });
+      if (variant === "unknown") source.editResponse.set("accounts", response => {
+        response.source.completeness = "UNKNOWN";
+      });
+      if (variant === "partial") source.editResponse.set("accounts", response => {
+        response.source.completeness = "PARTIAL";
+      });
+      const result = await service(source).accountBroker(principal(), "acc_unseen", "sandbox") as Record<string, any>;
+      expect(["partial", "unavailable"]).toContain(result.state);
+      expect(result.completeness).toBe("PARTIAL");
+      expect(result.unavailable_branches).toContainEqual(expect.objectContaining({
+        capability_id: "account.identity", reason_code: "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED",
+        state: variant === "unavailable" ? "UNAVAILABLE" : "PARTIAL",
+      }));
+      expect(result.unavailable_branches).not.toContainEqual(expect.objectContaining({ reason_code: "PHASE2_ACCOUNT_NOT_FOUND" }));
+      expect(result.data.accounts).toEqual([]);
+      expectProfileContract(result);
+    },
+  );
+
+  it.each(["continuation", "previous page", "unknown", "partial", "partial scope"] as const)(
+    "withholds a first-page Account 360 match when the identity census is %s", async variant => {
+      const source = new FakeCurrentSource("live");
+      source.rows.set("account_balances", [{ account_id: "acc_1", currency: "USDT", free: "12345" }]);
+      source.rows.set("positions_v2", [{ position_id: "pos_target", account_id: "acc_1", strategy_id: "str_1", mode: "live", venue: "BINANCE" }]);
+      source.editResponse.set("accounts", response => {
+        if (variant === "continuation") response.source.data.next_cursor = "next-page";
+        if (variant === "previous page") (response.source.data as { previous_cursor?: string | null }).previous_cursor = "previous-page";
+        if (variant === "unknown") response.source.completeness = "UNKNOWN";
+        if (variant === "partial") response.source.completeness = "PARTIAL";
+        if (variant === "partial scope") (response.source.data as { scope?: { state: string; reason_code: string } }).scope =
+          { state: "PARTIAL", reason_code: "EDS03_RESOURCE_SCOPE_PARTIAL" };
+      });
+      const result = await service(source).accountBroker(principal(), "acc_1", "live") as Record<string, any>;
+      expect(result.state).toBe("partial");
+      expect(result.completeness).toBe("PARTIAL");
+      expect(result.selected_environment).toBeNull();
+      expect(result.unavailable_branches).toContainEqual(expect.objectContaining({
+        capability_id: "account.identity", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED",
+      }));
+      for (const rows of Object.values(result.data)) expect(rows).toEqual([]);
+      expect(JSON.stringify(result)).not.toContain("12345");
+      expect(result.capabilities).toContainEqual(expect.objectContaining({
+        capability_id: "source.accounts", state: "PARTIAL", reason_code: "PHASE2_ACCOUNT_IDENTITY_UNRESOLVED",
+      }));
+      expectProfileContract(result);
+    },
+  );
 
   it("serves bounded Sandbox source facts through the exact Sandbox profile", async () => {
     const source = new FakeCurrentSource("sandbox");
@@ -424,7 +817,7 @@ describe("N23 Sandbox and Live profile reads", () => {
 
   it("rejects unknown query fields and foreign workspaces before source access", async () => {
     const reads = { overview: vi.fn(), accountBroker: vi.fn() };
-    const memberships = { isMember: vi.fn().mockResolvedValue(false) };
+    const memberships = { canReadExecution: vi.fn().mockResolvedValue(false) };
     const controller = new ProfileReadController(
       reads as unknown as ProfileReadService,
       memberships as unknown as WorkspacesRepository,
@@ -442,5 +835,36 @@ describe("N23 Sandbox and Live profile reads", () => {
       .rejects.toMatchObject({ code: "PHASE2_ACCOUNT_QUERY_INVALID", status: 400 });
     expect(reads.overview).not.toHaveBeenCalled();
     expect(reads.accountBroker).not.toHaveBeenCalled();
+  });
+
+  it("keeps Account 360 OpenAPI identifier and workspace bounds aligned with the route", async () => {
+    const document = JSON.parse(readFileSync(resolve(contractsRoot, "openapi/execution-profile-read.openapi.json"), "utf8"));
+    const parameters = document.paths["/api/v1/execution/screens/accounts/{account_id}"].get.parameters as Array<Record<string, any>>;
+    const id = parameters.find(item => item.name === "account_id");
+    const workspace = parameters.find(item => item.name === "workspace_id");
+    expect(id).toMatchObject({ in: "path", required: true,
+      schema: { type: "string", minLength: 1, maxLength: 128, pattern: "^[A-Za-z0-9._:-]{1,128}$" } });
+    expect(workspace).toMatchObject({ in: "query", required: false,
+      schema: { type: "string", minLength: 1, maxLength: 96 } });
+    const validateId = new Ajv2020({ strict: true }).compile(id!.schema);
+    const reads = { accountBroker: vi.fn().mockResolvedValue({}) };
+    const memberships = { canReadExecution: vi.fn().mockResolvedValue(true) };
+    const controller = new ProfileReadController(reads as unknown as ProfileReadService, memberships as unknown as WorkspacesRepository);
+    const request = { portalUser: user, portalSession: session, portalWorkspaceId: "ws_primary" } as any;
+    for (const accountId of ["a", "valid-._:01", "A".repeat(128)]) {
+      expect(validateId(accountId)).toBe(true);
+      await expect(controller.account(request, accountId, { workspace_id: "workspace_1", environment: "paper" })).resolves.toEqual({});
+    }
+    for (const accountId of ["", "A".repeat(129), "bad/account", "bad@venue", "é"]) {
+      expect(validateId(accountId)).toBe(false);
+      await expect(controller.account(request, accountId, {})).rejects.toMatchObject({ code: "PHASE2_ACCOUNT_QUERY_INVALID", status: 400 });
+    }
+    await expect(controller.account(request, "a", { workspace_id: " ".repeat(3) }))
+      .rejects.toMatchObject({ code: "PHASE2_ACCOUNT_QUERY_INVALID", status: 400 });
+    await expect(controller.account(request, "a", { workspace_id: "w".repeat(97) }))
+      .rejects.toMatchObject({ code: "PHASE2_ACCOUNT_QUERY_INVALID", status: 400 });
+    await expect(controller.account(request, "a", { workspace_id: "  workspace_1  " })).resolves.toEqual({});
+    expect(reads.accountBroker).toHaveBeenLastCalledWith(expect.objectContaining({ workspaceId: "workspace_1" }), "a", undefined);
+    expect(reads.accountBroker).toHaveBeenCalledTimes(4);
   });
 });

@@ -17,6 +17,15 @@ records.
 - `VACUUM FULL`, `TRUNCATE`, reindex, volume/database deletion and any table
   other than `execution_shared_read_cache` are out of scope.
 
+**UDB-01 / hotfix2026-10-09 extension (preview only activation):** the reviewed
+physical guard may TRUNCATE **only this recomputable cache**, with no live
+entry and a1s lock timeout. Existing expiry-only deletes remain unchanged.
+Admission now backpressures physical pressure before source I/O without
+evicting fresh hits. Auth/history/other tables stay outside cleanup. See
+[profile, migration repair, soak and rollback](../postgres/README.md). The
+original BE-R2-1 receipt below is historical, not proof of this new config or
+production activation.
+
 ## Configuration and kill switch
 
 The `compose.execution-current-source.yaml` overlay accepts the following

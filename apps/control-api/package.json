@@ -5,21 +5,23 @@
   "description": "Portal Control API: thin identity BFF (U07), future Control API facade (U10)",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.cross-loop.json",
     "test": "vitest run --maxWorkers=1 --no-file-parallelism",
     "migrate:up": "node dist/cli/migrate.js",
     "start": "node dist/main.js",
     "bootstrap": "node dist/cli/bootstrap.js",
     "probe:d3-assertions": "node dist/cli/execution-d3-assertions.js",
     "sweep:shared-read-cache": "node dist/cli/execution-shared-read-cache-sweep.js",
-    "reseed:durable-mirror": "node dist/cli/execution-durable-mirror-reseed.js"
+    "reseed:durable-mirror": "node dist/cli/execution-durable-mirror-reseed.js",
+    "worker:research-report-export": "node dist/cli/research-report-export-worker.js",
+    "backfill:research-analytics-v2": "node dist/cli/research-analytics-sidecar-v2.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.0",
     "@fastify/rate-limit": "^10.0.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
-    "@nestjs/platform-fastify": "^11.0.0",
+    "@nestjs/platform-fastify": "11.2.4",
     "argon2": "^0.41.0",
     "jose": "^5.9.0",
     "node-pg-migrate": "^9.0.0",
@@ -28,11 +30,20 @@
     "rxjs": "^7.8.1",
     "zod": "^3.24.0"
   },
+  "overrides": {
+    "@nestjs/platform-fastify": {
+      "fastify": "5.12.5"
+    },
+    "fast-uri@^3": "3.1.8",
+    "fast-uri@^4": "4.1.5",
+    "brace-expansion@^5": "5.0.12"
+  },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.0",
     "typescript": "^5.7.0",
-    "undici": "^7.0.0",
+    "undici": "7.29.1",
+    "undici-types": "6.21.0",
     "vitest": "^4.1.11"
   }
 }

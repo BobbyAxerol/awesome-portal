@@ -1,0 +1,617 @@
+{
+  "schema_version": "portal.execution.current-view-test-vectors.v1",
+  "provenance": "TEST_ONLY",
+  "authority": "NONE",
+  "runtime_enabled": false,
+  "canonicalization": "Recursively sort object keys; retain array order; JSON UTF-8 without ASCII escaping; no whitespace; sha256-prefixed lowercase digest. No signatures.",
+  "vectors": [
+    {
+      "id": "CURRENT-CurrentViewResolve",
+      "component": "CurrentViewResolve",
+      "value": {
+        "schema_version": "portal.execution.current-view-resolve.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "CURRENT"
+      },
+      "canonical_utf8": "{\"operation\":\"CURRENT\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-resolve.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:a1de4a59cfa02a106172ff5cc0b757bb9d727261f4ad01d3fc2829363a880ea1"
+    },
+    {
+      "id": "CURRENT-CurrentViewRecheck",
+      "component": "CurrentViewRecheck",
+      "value": {
+        "schema_version": "portal.execution.current-view-recheck.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "CURRENT",
+        "decision_digest": "sha256:bf9e09795de5fffe91785ec7c1b0a0df092638e8e0bf07a638f91c3c1fd6858b"
+      },
+      "canonical_utf8": "{\"decision_digest\":\"sha256:bf9e09795de5fffe91785ec7c1b0a0df092638e8e0bf07a638f91c3c1fd6858b\",\"operation\":\"CURRENT\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-recheck.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:7c85d63efe12fcc113abb7aa5b3b4da251607e5ac4aa15e9c047e7e00d7c691c"
+    },
+    {
+      "id": "CURRENT-CurrentViewDecision",
+      "component": "CurrentViewDecision",
+      "value": {
+        "schema_version": "portal.execution.current-view-decision.v1",
+        "context_digest": "sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1",
+        "workload_digest": "sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0",
+        "principal_digest": "sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a",
+        "session_digest": "sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd",
+        "operation": "CURRENT",
+        "workspace_id": "TEST_ONLY-workspace",
+        "environment": "paper",
+        "profile_id": "TEST_ONLY-paper-profile",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "resource": {
+          "kind": "PORTFOLIO",
+          "id": "TEST_ONLY-portfolio-λ"
+        },
+        "policy_revision": "TEST_ONLY-policy-revision",
+        "field_policy_ref": null,
+        "dataset_binding": {
+          "dataset_id": "TEST_ONLY-account-series",
+          "source_revision": "TEST_ONLY-source-revision",
+          "projection_generation": "TEST_ONLY-generation",
+          "catalogue_revision": "TEST_ONLY-catalogue",
+          "window": {
+            "from_ms": 1700000000000,
+            "to_ms": 1700000060000
+          }
+        },
+        "whole_population": false,
+        "allowed_tuples": [
+          {
+            "alpha_id": "TEST_ONLY-alpha",
+            "alpha_version_id": "TEST_ONLY-av",
+            "portfolio_id": "TEST_ONLY-portfolio-λ",
+            "deployment_id": "TEST_ONLY-deployment",
+            "account_id": "TEST_ONLY-account"
+          }
+        ],
+        "resources": [
+          {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY-portfolio-λ"
+          }
+        ],
+        "fields": [
+          "equity"
+        ],
+        "detail_fields": [],
+        "expires_at_ms": 1700000030000,
+        "decision_digest": "sha256:bf9e09795de5fffe91785ec7c1b0a0df092638e8e0bf07a638f91c3c1fd6858b"
+      },
+      "canonical_utf8": "{\"allowed_tuples\":[{\"account_id\":\"TEST_ONLY-account\",\"alpha_id\":\"TEST_ONLY-alpha\",\"alpha_version_id\":\"TEST_ONLY-av\",\"deployment_id\":\"TEST_ONLY-deployment\",\"portfolio_id\":\"TEST_ONLY-portfolio-λ\"}],\"context_digest\":\"sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1\",\"dataset_binding\":{\"catalogue_revision\":\"TEST_ONLY-catalogue\",\"dataset_id\":\"TEST_ONLY-account-series\",\"projection_generation\":\"TEST_ONLY-generation\",\"source_revision\":\"TEST_ONLY-source-revision\",\"window\":{\"from_ms\":1700000000000,\"to_ms\":1700000060000}},\"decision_digest\":\"sha256:bf9e09795de5fffe91785ec7c1b0a0df092638e8e0bf07a638f91c3c1fd6858b\",\"detail_fields\":[],\"environment\":\"paper\",\"expires_at_ms\":1700000030000,\"field_policy_ref\":null,\"fields\":[\"equity\"],\"operation\":\"CURRENT\",\"policy_revision\":\"TEST_ONLY-policy-revision\",\"principal_digest\":\"sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a\",\"profile_id\":\"TEST_ONLY-paper-profile\",\"resource\":{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"},\"resource_ref\":\"TEST_ONLY-paper-financial\",\"resources\":[{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"}],\"schema_version\":\"portal.execution.current-view-decision.v1\",\"session_digest\":\"sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd\",\"whole_population\":false,\"workload_digest\":\"sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0\",\"workspace_id\":\"TEST_ONLY-workspace\"}",
+      "sha256": "sha256:d735aa71a66d536cd21589abbce914a860894fe04f0f6d67f246d16c9b564e91"
+    },
+    {
+      "id": "HISTORY-CurrentViewResolve",
+      "component": "CurrentViewResolve",
+      "value": {
+        "schema_version": "portal.execution.current-view-resolve.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "HISTORY"
+      },
+      "canonical_utf8": "{\"operation\":\"HISTORY\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-resolve.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:5418f120a2419f0edc331469e533772180a39d82809e91ed2797b6d281a65adb"
+    },
+    {
+      "id": "HISTORY-CurrentViewRecheck",
+      "component": "CurrentViewRecheck",
+      "value": {
+        "schema_version": "portal.execution.current-view-recheck.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "HISTORY",
+        "decision_digest": "sha256:1e7cb9a54dfdaee4a504217fab08fc7f984f927523764ab435db81cfb10dd2e4"
+      },
+      "canonical_utf8": "{\"decision_digest\":\"sha256:1e7cb9a54dfdaee4a504217fab08fc7f984f927523764ab435db81cfb10dd2e4\",\"operation\":\"HISTORY\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-recheck.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:8738a88514535b202ca9244f90a1eaa18dae15a6018ebde6e779f4254971e544"
+    },
+    {
+      "id": "HISTORY-CurrentViewDecision",
+      "component": "CurrentViewDecision",
+      "value": {
+        "schema_version": "portal.execution.current-view-decision.v1",
+        "context_digest": "sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1",
+        "workload_digest": "sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0",
+        "principal_digest": "sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a",
+        "session_digest": "sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd",
+        "operation": "HISTORY",
+        "workspace_id": "TEST_ONLY-workspace",
+        "environment": "paper",
+        "profile_id": "TEST_ONLY-paper-profile",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "resource": {
+          "kind": "PORTFOLIO",
+          "id": "TEST_ONLY-portfolio-λ"
+        },
+        "policy_revision": "TEST_ONLY-policy-revision",
+        "field_policy_ref": null,
+        "dataset_binding": {
+          "dataset_id": "TEST_ONLY-account-series",
+          "source_revision": "TEST_ONLY-source-revision",
+          "projection_generation": "TEST_ONLY-generation",
+          "catalogue_revision": "TEST_ONLY-catalogue",
+          "window": {
+            "from_ms": 1700000000000,
+            "to_ms": 1700000060000
+          }
+        },
+        "whole_population": false,
+        "allowed_tuples": [
+          {
+            "alpha_id": "TEST_ONLY-alpha",
+            "alpha_version_id": "TEST_ONLY-av",
+            "portfolio_id": "TEST_ONLY-portfolio-λ",
+            "deployment_id": "TEST_ONLY-deployment",
+            "account_id": "TEST_ONLY-account"
+          }
+        ],
+        "resources": [
+          {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY-portfolio-λ"
+          }
+        ],
+        "fields": [
+          "equity"
+        ],
+        "detail_fields": [],
+        "expires_at_ms": 1700000030000,
+        "decision_digest": "sha256:1e7cb9a54dfdaee4a504217fab08fc7f984f927523764ab435db81cfb10dd2e4"
+      },
+      "canonical_utf8": "{\"allowed_tuples\":[{\"account_id\":\"TEST_ONLY-account\",\"alpha_id\":\"TEST_ONLY-alpha\",\"alpha_version_id\":\"TEST_ONLY-av\",\"deployment_id\":\"TEST_ONLY-deployment\",\"portfolio_id\":\"TEST_ONLY-portfolio-λ\"}],\"context_digest\":\"sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1\",\"dataset_binding\":{\"catalogue_revision\":\"TEST_ONLY-catalogue\",\"dataset_id\":\"TEST_ONLY-account-series\",\"projection_generation\":\"TEST_ONLY-generation\",\"source_revision\":\"TEST_ONLY-source-revision\",\"window\":{\"from_ms\":1700000000000,\"to_ms\":1700000060000}},\"decision_digest\":\"sha256:1e7cb9a54dfdaee4a504217fab08fc7f984f927523764ab435db81cfb10dd2e4\",\"detail_fields\":[],\"environment\":\"paper\",\"expires_at_ms\":1700000030000,\"field_policy_ref\":null,\"fields\":[\"equity\"],\"operation\":\"HISTORY\",\"policy_revision\":\"TEST_ONLY-policy-revision\",\"principal_digest\":\"sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a\",\"profile_id\":\"TEST_ONLY-paper-profile\",\"resource\":{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"},\"resource_ref\":\"TEST_ONLY-paper-financial\",\"resources\":[{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"}],\"schema_version\":\"portal.execution.current-view-decision.v1\",\"session_digest\":\"sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd\",\"whole_population\":false,\"workload_digest\":\"sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0\",\"workspace_id\":\"TEST_ONLY-workspace\"}",
+      "sha256": "sha256:04b9ae38275aba4a3327fa141c86002b699809f2fd772b7e60aa702565f6b9a4"
+    },
+    {
+      "id": "EXPORT-CurrentViewResolve",
+      "component": "CurrentViewResolve",
+      "value": {
+        "schema_version": "portal.execution.current-view-resolve.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "EXPORT"
+      },
+      "canonical_utf8": "{\"operation\":\"EXPORT\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-resolve.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:1f5ae7a03d648c855e48785da46dc8490c38370e95567d761d49edd19765b946"
+    },
+    {
+      "id": "EXPORT-CurrentViewRecheck",
+      "component": "CurrentViewRecheck",
+      "value": {
+        "schema_version": "portal.execution.current-view-recheck.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "EXPORT",
+        "decision_digest": "sha256:8fd9f311fda45bb31c686fc11d0e99c88e474f0953f735d81fcd59884bf0c9f8"
+      },
+      "canonical_utf8": "{\"decision_digest\":\"sha256:8fd9f311fda45bb31c686fc11d0e99c88e474f0953f735d81fcd59884bf0c9f8\",\"operation\":\"EXPORT\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-recheck.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:703913b9b37fcad3dbd5c5278ea90f6545fbb8da8e7638947f5123b8f2baa49d"
+    },
+    {
+      "id": "EXPORT-CurrentViewDecision",
+      "component": "CurrentViewDecision",
+      "value": {
+        "schema_version": "portal.execution.current-view-decision.v1",
+        "context_digest": "sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1",
+        "workload_digest": "sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0",
+        "principal_digest": "sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a",
+        "session_digest": "sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd",
+        "operation": "EXPORT",
+        "workspace_id": "TEST_ONLY-workspace",
+        "environment": "paper",
+        "profile_id": "TEST_ONLY-paper-profile",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "resource": {
+          "kind": "PORTFOLIO",
+          "id": "TEST_ONLY-portfolio-λ"
+        },
+        "policy_revision": "TEST_ONLY-policy-revision",
+        "field_policy_ref": null,
+        "dataset_binding": {
+          "dataset_id": "TEST_ONLY-account-series",
+          "source_revision": "TEST_ONLY-source-revision",
+          "projection_generation": "TEST_ONLY-generation",
+          "catalogue_revision": "TEST_ONLY-catalogue",
+          "window": {
+            "from_ms": 1700000000000,
+            "to_ms": 1700000060000
+          }
+        },
+        "whole_population": false,
+        "allowed_tuples": [
+          {
+            "alpha_id": "TEST_ONLY-alpha",
+            "alpha_version_id": "TEST_ONLY-av",
+            "portfolio_id": "TEST_ONLY-portfolio-λ",
+            "deployment_id": "TEST_ONLY-deployment",
+            "account_id": "TEST_ONLY-account"
+          }
+        ],
+        "resources": [
+          {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY-portfolio-λ"
+          }
+        ],
+        "fields": [
+          "equity"
+        ],
+        "detail_fields": [],
+        "expires_at_ms": 1700000030000,
+        "decision_digest": "sha256:8fd9f311fda45bb31c686fc11d0e99c88e474f0953f735d81fcd59884bf0c9f8"
+      },
+      "canonical_utf8": "{\"allowed_tuples\":[{\"account_id\":\"TEST_ONLY-account\",\"alpha_id\":\"TEST_ONLY-alpha\",\"alpha_version_id\":\"TEST_ONLY-av\",\"deployment_id\":\"TEST_ONLY-deployment\",\"portfolio_id\":\"TEST_ONLY-portfolio-λ\"}],\"context_digest\":\"sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1\",\"dataset_binding\":{\"catalogue_revision\":\"TEST_ONLY-catalogue\",\"dataset_id\":\"TEST_ONLY-account-series\",\"projection_generation\":\"TEST_ONLY-generation\",\"source_revision\":\"TEST_ONLY-source-revision\",\"window\":{\"from_ms\":1700000000000,\"to_ms\":1700000060000}},\"decision_digest\":\"sha256:8fd9f311fda45bb31c686fc11d0e99c88e474f0953f735d81fcd59884bf0c9f8\",\"detail_fields\":[],\"environment\":\"paper\",\"expires_at_ms\":1700000030000,\"field_policy_ref\":null,\"fields\":[\"equity\"],\"operation\":\"EXPORT\",\"policy_revision\":\"TEST_ONLY-policy-revision\",\"principal_digest\":\"sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a\",\"profile_id\":\"TEST_ONLY-paper-profile\",\"resource\":{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"},\"resource_ref\":\"TEST_ONLY-paper-financial\",\"resources\":[{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"}],\"schema_version\":\"portal.execution.current-view-decision.v1\",\"session_digest\":\"sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd\",\"whole_population\":false,\"workload_digest\":\"sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0\",\"workspace_id\":\"TEST_ONLY-workspace\"}",
+      "sha256": "sha256:4b7b0e6c2628cb445fef9d965a68945035347309cd127dcc235facbe8d78bf90"
+    },
+    {
+      "id": "STREAM-CurrentViewResolve",
+      "component": "CurrentViewResolve",
+      "value": {
+        "schema_version": "portal.execution.current-view-resolve.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "STREAM"
+      },
+      "canonical_utf8": "{\"operation\":\"STREAM\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-resolve.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:1c232f2baa0a1773f9436cb744e006fb6e7c1904063e3f9467bd9c83de7bd61d"
+    },
+    {
+      "id": "STREAM-CurrentViewRecheck",
+      "component": "CurrentViewRecheck",
+      "value": {
+        "schema_version": "portal.execution.current-view-recheck.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "STREAM",
+        "decision_digest": "sha256:cfe0a457225ad847a42bd02639650eb38dfe2fc08449c8a70b8bf31fbe13d8a1"
+      },
+      "canonical_utf8": "{\"decision_digest\":\"sha256:cfe0a457225ad847a42bd02639650eb38dfe2fc08449c8a70b8bf31fbe13d8a1\",\"operation\":\"STREAM\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-recheck.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:f60bc53aaf0398c9340c06aa3d57d40fb4b7cca25023628288addda65524e6c3"
+    },
+    {
+      "id": "STREAM-CurrentViewDecision",
+      "component": "CurrentViewDecision",
+      "value": {
+        "schema_version": "portal.execution.current-view-decision.v1",
+        "context_digest": "sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1",
+        "workload_digest": "sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0",
+        "principal_digest": "sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a",
+        "session_digest": "sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd",
+        "operation": "STREAM",
+        "workspace_id": "TEST_ONLY-workspace",
+        "environment": "paper",
+        "profile_id": "TEST_ONLY-paper-profile",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "resource": {
+          "kind": "PORTFOLIO",
+          "id": "TEST_ONLY-portfolio-λ"
+        },
+        "policy_revision": "TEST_ONLY-policy-revision",
+        "field_policy_ref": null,
+        "dataset_binding": {
+          "dataset_id": "TEST_ONLY-account-series",
+          "source_revision": "TEST_ONLY-source-revision",
+          "projection_generation": "TEST_ONLY-generation",
+          "catalogue_revision": "TEST_ONLY-catalogue",
+          "window": {
+            "from_ms": 1700000000000,
+            "to_ms": 1700000060000
+          }
+        },
+        "whole_population": false,
+        "allowed_tuples": [
+          {
+            "alpha_id": "TEST_ONLY-alpha",
+            "alpha_version_id": "TEST_ONLY-av",
+            "portfolio_id": "TEST_ONLY-portfolio-λ",
+            "deployment_id": "TEST_ONLY-deployment",
+            "account_id": "TEST_ONLY-account"
+          }
+        ],
+        "resources": [
+          {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY-portfolio-λ"
+          }
+        ],
+        "fields": [
+          "equity"
+        ],
+        "detail_fields": [],
+        "expires_at_ms": 1700000030000,
+        "decision_digest": "sha256:cfe0a457225ad847a42bd02639650eb38dfe2fc08449c8a70b8bf31fbe13d8a1"
+      },
+      "canonical_utf8": "{\"allowed_tuples\":[{\"account_id\":\"TEST_ONLY-account\",\"alpha_id\":\"TEST_ONLY-alpha\",\"alpha_version_id\":\"TEST_ONLY-av\",\"deployment_id\":\"TEST_ONLY-deployment\",\"portfolio_id\":\"TEST_ONLY-portfolio-λ\"}],\"context_digest\":\"sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1\",\"dataset_binding\":{\"catalogue_revision\":\"TEST_ONLY-catalogue\",\"dataset_id\":\"TEST_ONLY-account-series\",\"projection_generation\":\"TEST_ONLY-generation\",\"source_revision\":\"TEST_ONLY-source-revision\",\"window\":{\"from_ms\":1700000000000,\"to_ms\":1700000060000}},\"decision_digest\":\"sha256:cfe0a457225ad847a42bd02639650eb38dfe2fc08449c8a70b8bf31fbe13d8a1\",\"detail_fields\":[],\"environment\":\"paper\",\"expires_at_ms\":1700000030000,\"field_policy_ref\":null,\"fields\":[\"equity\"],\"operation\":\"STREAM\",\"policy_revision\":\"TEST_ONLY-policy-revision\",\"principal_digest\":\"sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a\",\"profile_id\":\"TEST_ONLY-paper-profile\",\"resource\":{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"},\"resource_ref\":\"TEST_ONLY-paper-financial\",\"resources\":[{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"}],\"schema_version\":\"portal.execution.current-view-decision.v1\",\"session_digest\":\"sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd\",\"whole_population\":false,\"workload_digest\":\"sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0\",\"workspace_id\":\"TEST_ONLY-workspace\"}",
+      "sha256": "sha256:8833c6c38a0af2623d5742cab0438940ddb4a0743da4104e1312ca003385d0d1"
+    },
+    {
+      "id": "REPLAY-CurrentViewResolve",
+      "component": "CurrentViewResolve",
+      "value": {
+        "schema_version": "portal.execution.current-view-resolve.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "REPLAY"
+      },
+      "canonical_utf8": "{\"operation\":\"REPLAY\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-resolve.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:dcafd7e073e656ed6d33443802fc2e959e4a26e2401690838333284191dcb2c7"
+    },
+    {
+      "id": "REPLAY-CurrentViewRecheck",
+      "component": "CurrentViewRecheck",
+      "value": {
+        "schema_version": "portal.execution.current-view-recheck.v1",
+        "original_context": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "workload_id": "TEST_ONLY-edge-worker",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "operation": "REPLAY",
+        "decision_digest": "sha256:a316985617c8df89af8f6442946cea3595ca779edb44add964ded89c427713c3"
+      },
+      "canonical_utf8": "{\"decision_digest\":\"sha256:a316985617c8df89af8f6442946cea3595ca779edb44add964ded89c427713c3\",\"operation\":\"REPLAY\",\"original_context\":\"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"resource_ref\":\"TEST_ONLY-paper-financial\",\"schema_version\":\"portal.execution.current-view-recheck.v1\",\"workload_id\":\"TEST_ONLY-edge-worker\"}",
+      "sha256": "sha256:76ec2c02ab532337da91da7554ba8b3529e327b483eb3b34bec5c7609c98f333"
+    },
+    {
+      "id": "REPLAY-CurrentViewDecision",
+      "component": "CurrentViewDecision",
+      "value": {
+        "schema_version": "portal.execution.current-view-decision.v1",
+        "context_digest": "sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1",
+        "workload_digest": "sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0",
+        "principal_digest": "sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a",
+        "session_digest": "sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd",
+        "operation": "REPLAY",
+        "workspace_id": "TEST_ONLY-workspace",
+        "environment": "paper",
+        "profile_id": "TEST_ONLY-paper-profile",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "resource": {
+          "kind": "PORTFOLIO",
+          "id": "TEST_ONLY-portfolio-λ"
+        },
+        "policy_revision": "TEST_ONLY-policy-revision",
+        "field_policy_ref": null,
+        "dataset_binding": {
+          "dataset_id": "TEST_ONLY-account-series",
+          "source_revision": "TEST_ONLY-source-revision",
+          "projection_generation": "TEST_ONLY-generation",
+          "catalogue_revision": "TEST_ONLY-catalogue",
+          "window": {
+            "from_ms": 1700000000000,
+            "to_ms": 1700000060000
+          }
+        },
+        "whole_population": false,
+        "allowed_tuples": [
+          {
+            "alpha_id": "TEST_ONLY-alpha",
+            "alpha_version_id": "TEST_ONLY-av",
+            "portfolio_id": "TEST_ONLY-portfolio-λ",
+            "deployment_id": "TEST_ONLY-deployment",
+            "account_id": "TEST_ONLY-account"
+          }
+        ],
+        "resources": [
+          {
+            "kind": "PORTFOLIO",
+            "id": "TEST_ONLY-portfolio-λ"
+          }
+        ],
+        "fields": [
+          "equity"
+        ],
+        "detail_fields": [],
+        "expires_at_ms": 1700000030000,
+        "decision_digest": "sha256:a316985617c8df89af8f6442946cea3595ca779edb44add964ded89c427713c3"
+      },
+      "canonical_utf8": "{\"allowed_tuples\":[{\"account_id\":\"TEST_ONLY-account\",\"alpha_id\":\"TEST_ONLY-alpha\",\"alpha_version_id\":\"TEST_ONLY-av\",\"deployment_id\":\"TEST_ONLY-deployment\",\"portfolio_id\":\"TEST_ONLY-portfolio-λ\"}],\"context_digest\":\"sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1\",\"dataset_binding\":{\"catalogue_revision\":\"TEST_ONLY-catalogue\",\"dataset_id\":\"TEST_ONLY-account-series\",\"projection_generation\":\"TEST_ONLY-generation\",\"source_revision\":\"TEST_ONLY-source-revision\",\"window\":{\"from_ms\":1700000000000,\"to_ms\":1700000060000}},\"decision_digest\":\"sha256:a316985617c8df89af8f6442946cea3595ca779edb44add964ded89c427713c3\",\"detail_fields\":[],\"environment\":\"paper\",\"expires_at_ms\":1700000030000,\"field_policy_ref\":null,\"fields\":[\"equity\"],\"operation\":\"REPLAY\",\"policy_revision\":\"TEST_ONLY-policy-revision\",\"principal_digest\":\"sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a\",\"profile_id\":\"TEST_ONLY-paper-profile\",\"resource\":{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"},\"resource_ref\":\"TEST_ONLY-paper-financial\",\"resources\":[{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"}],\"schema_version\":\"portal.execution.current-view-decision.v1\",\"session_digest\":\"sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd\",\"whole_population\":false,\"workload_digest\":\"sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0\",\"workspace_id\":\"TEST_ONLY-workspace\"}",
+      "sha256": "sha256:ac0a5b4dd25e22fbd6fa09d74574ac97e91895ab992d128f3ec85faf10a3b056"
+    },
+    {
+      "id": "CURRENT-whole-population",
+      "component": "CurrentViewDecision",
+      "value": {
+        "schema_version": "portal.execution.current-view-decision.v1",
+        "context_digest": "sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1",
+        "workload_digest": "sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0",
+        "principal_digest": "sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a",
+        "session_digest": "sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd",
+        "operation": "CURRENT",
+        "workspace_id": "TEST_ONLY-workspace",
+        "environment": "paper",
+        "profile_id": "TEST_ONLY-paper-profile",
+        "resource_ref": "TEST_ONLY-paper-financial",
+        "resource": {
+          "kind": "PORTFOLIO",
+          "id": "TEST_ONLY-portfolio-λ"
+        },
+        "policy_revision": "TEST_ONLY-policy-revision",
+        "field_policy_ref": null,
+        "dataset_binding": {
+          "dataset_id": "TEST_ONLY-account-series",
+          "source_revision": "TEST_ONLY-source-revision",
+          "projection_generation": "TEST_ONLY-generation",
+          "catalogue_revision": "TEST_ONLY-catalogue",
+          "window": {
+            "from_ms": 1700000000000,
+            "to_ms": 1700000060000
+          }
+        },
+        "whole_population": true,
+        "allowed_tuples": [],
+        "resources": [],
+        "fields": [
+          "equity"
+        ],
+        "detail_fields": [],
+        "expires_at_ms": 1700000030000,
+        "decision_digest": "sha256:bf9e09795de5fffe91785ec7c1b0a0df092638e8e0bf07a638f91c3c1fd6858b"
+      },
+      "canonical_utf8": "{\"allowed_tuples\":[],\"context_digest\":\"sha256:cb072e0901f715b35ce555f89123bbbf180a523800a88a91b64ed48427e789d1\",\"dataset_binding\":{\"catalogue_revision\":\"TEST_ONLY-catalogue\",\"dataset_id\":\"TEST_ONLY-account-series\",\"projection_generation\":\"TEST_ONLY-generation\",\"source_revision\":\"TEST_ONLY-source-revision\",\"window\":{\"from_ms\":1700000000000,\"to_ms\":1700000060000}},\"decision_digest\":\"sha256:bf9e09795de5fffe91785ec7c1b0a0df092638e8e0bf07a638f91c3c1fd6858b\",\"detail_fields\":[],\"environment\":\"paper\",\"expires_at_ms\":1700000030000,\"field_policy_ref\":null,\"fields\":[\"equity\"],\"operation\":\"CURRENT\",\"policy_revision\":\"TEST_ONLY-policy-revision\",\"principal_digest\":\"sha256:a5f398f4b2a08b4965b67b1938edb7e8bea85c3805c25f30391ef686d24f544a\",\"profile_id\":\"TEST_ONLY-paper-profile\",\"resource\":{\"id\":\"TEST_ONLY-portfolio-λ\",\"kind\":\"PORTFOLIO\"},\"resource_ref\":\"TEST_ONLY-paper-financial\",\"resources\":[],\"schema_version\":\"portal.execution.current-view-decision.v1\",\"session_digest\":\"sha256:607a93687419a986ca3ba46ff4873d0b3ad126e54765575137011e49f5f5e5bd\",\"whole_population\":true,\"workload_digest\":\"sha256:e6e1817131b6df0c201a8afb41dfb085d105fffe14b729bd8b700d5d346eefc0\",\"workspace_id\":\"TEST_ONLY-workspace\"}",
+      "sha256": "sha256:a555e04105831033b458d5f3a8c85d7eaf9c04bd4963b1f6aeb754c8e0a8775d"
+    },
+    {
+      "id": "CURRENT_VIEW_CONTEXT_REQUIRED",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_CONTEXT_REQUIRED"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_CONTEXT_REQUIRED\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:cdc4c82ebcb6e6ff4ae631e0c95bcf2b74f4f1e9d9c9a7c6394db57fad75f0e2"
+    },
+    {
+      "id": "CURRENT_VIEW_CONTEXT_EXPIRED",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_CONTEXT_EXPIRED"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_CONTEXT_EXPIRED\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:faf049ac8df5b86fdd2d3a80bac6decf24bf6ee063a8dfc9c2039edfa9f8174b"
+    },
+    {
+      "id": "CURRENT_VIEW_BINDING_MISMATCH",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_BINDING_MISMATCH"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_BINDING_MISMATCH\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:946027f967ec41a98bb1e6f63ee716805686921833ea2dc73743dd87f14fc546"
+    },
+    {
+      "id": "CURRENT_VIEW_AUTHORITY_CHANGED",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_AUTHORITY_CHANGED"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_AUTHORITY_CHANGED\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:756e0b2b1d9e619de507118bca5f6ffd96121a9763a1911e1d703b48b4f12546"
+    },
+    {
+      "id": "CURRENT_VIEW_IDENTITY_REQUIRED",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_IDENTITY_REQUIRED"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_IDENTITY_REQUIRED\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:dc543ffb6fa212cfdd9063ceb3c61b88b744eeb2d505d465fe2b6c6ed537ccaa"
+    },
+    {
+      "id": "CURRENT_VIEW_AUTHORITY_UNAVAILABLE",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_AUTHORITY_UNAVAILABLE"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_AUTHORITY_UNAVAILABLE\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:d627e4cc9738f6f245f625b41eac842179790eec38636049c70f3d6906cef728"
+    },
+    {
+      "id": "CURRENT_VIEW_OPERATION_NOT_COMMISSIONED",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_OPERATION_NOT_COMMISSIONED"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_OPERATION_NOT_COMMISSIONED\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:da792ccad013bc30ab35834c271fb45c78596be9b626dbb2ec9608e160563eeb"
+    },
+    {
+      "id": "CURRENT_VIEW_CAPACITY",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_CAPACITY"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_CAPACITY\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:ea7e1edfbcf059e9f93d797b85ebd855cd10a3245f3b425f6964e45759377354"
+    },
+    {
+      "id": "CURRENT_VIEW_WORKLOAD_NOT_AUTHENTICATED",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_WORKLOAD_NOT_AUTHENTICATED"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_WORKLOAD_NOT_AUTHENTICATED\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:5d19c5ec752818deec1b7db4ab9639a2b5b806253cc63168c4074762d6b4e496"
+    },
+    {
+      "id": "CURRENT_VIEW_ROUTE_NOT_FOUND",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_ROUTE_NOT_FOUND"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_ROUTE_NOT_FOUND\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:a551921f996e0a490db35158447ad934350a5d4e312f6fb5af3a058ab80f206c"
+    },
+    {
+      "id": "CURRENT_VIEW_TRANSPORT_BUSY",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_TRANSPORT_BUSY"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_TRANSPORT_BUSY\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:c7ba5736034bb1b9a4c281c266279fe3a8697748345240b56c969a3f30ae32ee"
+    },
+    {
+      "id": "CURRENT_VIEW_REQUEST_INVALID",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_REQUEST_INVALID"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_REQUEST_INVALID\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:011d87c8912d9d072727c7cf0fa08384e63cf026c3c0973132320ddb7d952e40"
+    },
+    {
+      "id": "CURRENT_VIEW_REQUEST_BYTE_LIMIT",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_REQUEST_BYTE_LIMIT"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_REQUEST_BYTE_LIMIT\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:3ef1dc46311167e98676d4643d8cac9921bc1a1a7cc53d82a51336a266d41e22"
+    },
+    {
+      "id": "CURRENT_VIEW_TRANSPORT_DEADLINE",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_TRANSPORT_DEADLINE"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_TRANSPORT_DEADLINE\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:889c2f26ec494d2aaab8392e04987d0783dbed6341361218d93ef309313dbd4d"
+    },
+    {
+      "id": "CURRENT_VIEW_RESPONSE_INVALID",
+      "component": "CurrentViewError",
+      "value": {
+        "schema_version": "portal.execution.current-view-error.v1",
+        "code": "CURRENT_VIEW_RESPONSE_INVALID"
+      },
+      "canonical_utf8": "{\"code\":\"CURRENT_VIEW_RESPONSE_INVALID\",\"schema_version\":\"portal.execution.current-view-error.v1\"}",
+      "sha256": "sha256:8a98367cd5c84318aa3a90cb639a80b803f27bd64581e99691473d8b8117a470"
+    }
+  ]
+}

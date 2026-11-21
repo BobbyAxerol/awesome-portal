@@ -190,6 +190,14 @@ export interface components {
             items: components["schemas"]["TodayItem"][];
         };
         CommandCenterSnapshot: {
+            read_scope?: {
+                /** @constant */
+                visibility: "SCOPED";
+                /** @constant */
+                coverage: "AUTHORIZED_ONLY";
+                /** @constant */
+                totals_scope: "VISIBLE_DEPLOYMENTS_ONLY";
+            };
             /** @constant */
             schema_version: "execution.command-center-snapshot.v1";
             /** @constant */

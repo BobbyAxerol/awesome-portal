@@ -100,7 +100,58 @@ export interface FilterDefinition {
 export interface SortDefinition {
   column: string;
   kind: QueryScalarKind;
+  /**
+   * Server-only opt-in for PostgreSQL timestamptz keys finer than a JS Date.
+   * Preserve the native indexed predicate/order; use a private exact UTC text
+   * projection solely for signed cursor boundaries. Not a request option.
+   * Version the resource ID when opting an existing resource in.
+   */
+  timestampPrecision?: "microseconds";
 }
+
+/**
+ * Trusted-server, exact tuple visibility, not a browser filter or grant.
+ * The authority fingerprint must include the caller's current policy context;
+ * the query service additionally binds the exact columns and tuples to cursors.
+ * An empty tuple set means no rows, never an unconstrained query. Columns need
+ * not be selected: applying a predicate must not expose its private identifiers.
+ */
+export interface PostgresRowScope {
+  columns: readonly string[];
+  allowedTuples: readonly (readonly QueryScalar[])[];
+  fingerprint: string;
+}
+
+/**
+ * One closed-domain COUNT(*) ... GROUP BY over the SAME workspace, visibility,
+ * minted row scope and normalized filters as the page, in the page's own
+ * transaction. `excludeFilterFields` names resource filter FIELDS (not columns)
+ * that are left out of this count only (faceting over a dimension's own filter);
+ * every other applied filter, and the row scope, still apply.
+ */
+export interface GroupedCountSpec {
+  /** Must be the column of a declared resource filter, so it is a supported predicate. */
+  column: string;
+  excludeFilterFields: readonly string[];
+  /** Hard bound on distinct groups; one more is a fail-closed error, never a silent cut. */
+  maxGroups: number;
+}
+
+/**
+ * The page transaction, lent for read-only work against the identical snapshot
+ * (REPEATABLE READ, READ ONLY, same statement timeout). `rows` are the raw,
+ * canonically ordered page rows BEFORE `mapRow`. The reader runs before COMMIT
+ * and must not retain the handle; it is invalid after it returns.
+ */
+export interface PostgresSnapshotReader<TRow extends Record<string, unknown>> {
+  readonly rows: readonly TRow[];
+  /** Server-authored SQL with bound values only; never request-derived text. */
+  query<R extends Record<string, unknown> = Record<string, unknown>>(
+    sql: string, values: readonly unknown[]): Promise<readonly R[]>;
+  groupedCounts(spec: GroupedCountSpec): Promise<ReadonlyMap<string, number>>;
+}
+export type PostgresSnapshotRead<TRow extends Record<string, unknown>, TExtra> =
+  (snapshot: PostgresSnapshotReader<TRow>) => Promise<TExtra>;
 
 export interface PostgresListResource<TRow extends Record<string, unknown>, TItem> {
   resourceId: string;
@@ -123,7 +174,27 @@ export interface PostgresListResource<TRow extends Record<string, unknown>, TIte
     column: string;
     allowedValues: readonly QueryScalar[];
   };
+  /** Optional only for compatibility; Execution adapters must supply a minted scope. */
+  rowScope?: PostgresRowScope;
+  /**
+   * Planner steering for BROAD scopes (all-text scopes only). A scope with more tuples than this selects most of its
+   * workspace, where one scan + hash semi-join is cheaper than thousands of per-tuple btree probes, but the planner
+   * multiplies per-column selectivities of the composite key and under-estimates the match count, so it picks the
+   * probes (measured 2x-4x slower by the BE-P18 B1 EXPLAIN gate). Above the threshold the scope columns are compared
+   * as `(col || '')`, which no btree index matches: same rows, same semantics, no probe path. Absent = never.
+   */
+  rowScopeIndexMaxTuples?: number;
   statementTimeoutMs?: number;
+  /**
+   * Optional deadline for the WHOLE read transaction (every count, page, edge
+   * and snapshot-reader statement together). `statementTimeoutMs` only bounds
+   * each statement, so a request of N statements could otherwise run N times
+   * longer. Before each statement the engine tightens `statement_timeout` to
+   * the remaining budget and refuses to start one once it is spent; either way
+   * the caller sees the same fail-closed `QUERY_TIMEOUT` 503. Absent = previous
+   * behavior (per-statement only).
+   */
+  totalDeadlineMs?: number;
   maxFilters?: number;
   mapRow: (row: TRow) => TItem;
 }

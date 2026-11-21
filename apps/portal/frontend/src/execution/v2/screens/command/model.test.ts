@@ -1,0 +1,517 @@
+/**
+ * Command confirmation (UXM-09, fixture lane): the pure model. Lane: FIXTURE_LAB (unit). Nothing here proves a real server's answers; it proves
+ * how the screen's rules classify each answer a port can give.
+ */
+import { describe, expect, it } from "vitest";
+
+import { catalogueOf } from "../../readers/commandCatalogue";
+import { readCommandStatusV1 } from "../../readers/commandCurrency";
+import { readCommandPlanV1, readCommandPreviewV1 } from "../../readers/commandOperation";
+import { loadCanonical } from "../../testkit/loadCanonical";
+import {
+  CAPITAL_OPERATION_ROWS,
+  CERTIFICATION_FLOWS,
+  CERTIFICATION_PHRASE,
+  EMPTY_CONFIRM,
+  EXCLUDED_FAMILY_ROWS,
+  REASON_COPY,
+  catalogueRows,
+  classifyKeyCheck,
+  classifyPlan,
+  classifyStatus,
+  classifySubmit,
+  enablingCapability,
+  isDismissible,
+  isSettled,
+  isUncertain,
+  operationHref,
+  payloadIdentity,
+  planExpired,
+  planViewFromCapital,
+  planViewFromF0,
+  receiptCommandId,
+  routeLookup,
+  statusFacets,
+  submitGate,
+  validateConfirm,
+  type PlanView,
+  type Receipt,
+} from "./model";
+import { classifyAttemptLookup } from "./lookup";
+import { SEND_DISABLED_REASON, type PortResponse } from "./port";
+import {
+  CAPITAL_INTENT,
+  COMMAND_ID_APPLIED,
+  COMMAND_ID_LANDED,
+  F0_ATTEMPT_CONFLICT_BODY,
+  F0_ATTEMPT_FOUND_BODY,
+  F0_ATTEMPT_NONE_BODY,
+  F0_APPLY_CONFLICT_BODY,
+  F0_APPLY_DENIED_BODY,
+  F0_APPLY_REPLAYED_BODY,
+  F0_DENIED_BODY,
+  F0_PLAN_BODY,
+  STORY_NOW_MS,
+  ackOnlyStatus,
+  appliedLaggingStatus,
+  capitalPreviewBody,
+  deliveryUnknownStatus,
+  f0ApplyAnswer,
+  problemBody,
+  rejectedBusinessStatus,
+  submitResultBody,
+} from "./storyData";
+
+const respond = (status: number, body: unknown): PortResponse => ({ kind: "response", status, body });
+/** A capital submit's 200: the status plus the server's `replayed` bit. */
+const submitted = (status: Record<string, unknown>, replayed = false) => respond(200, submitResultBody(status, replayed));
+const f0Plan = (): PlanView => {
+  const read = readCommandPlanV1(structuredClone(F0_PLAN_BODY));
+  if (read === null || read.kind !== "command_plan") throw new Error("the published plan does not read");
+  return planViewFromF0(read.plan);
+};
+const capitalPlan = (options: { allowed?: boolean } = {}): PlanView => {
+  const read = readCommandPreviewV1(capitalPreviewBody({ now: STORY_NOW_MS, ...options }));
+  if (read === null || read.kind !== "command_preview") throw new Error("the preview does not read");
+  return planViewFromCapital(CAPITAL_INTENT, read.preview);
+};
+const filled = { reason: "Month-end top-up agreed with treasury.", confirmWord: "account/sync", impactAck: true };
+
+describe("the plan view is the plan, and cost and impact are never computed", () => {
+  it("F0: exact facts from the published plan; the payload is a hash only; cost and impact are Not published: command preview (the Preview only intent axis)", () => {
+    const view = f0Plan();
+    expect(view.impact).toEqual({ kind: "not_published", request: "FE-020" });
+    expect(view.facts.find((f) => f.label === "Command")?.value).toBe("account/sync");
+    expect(view.facts.find((f) => f.label === "Plan digest")?.value).toBe(F0_PLAN_BODY.plan_digest);
+    expect(view.blockers).toEqual(["COMMAND_RELAY_DISABLED"]);
+    expect(view.facts.some((f) => /payload/i.test(f.label) && f.mono !== true && !/hash/i.test(f.label) && !/Payload$/.test(f.label))).toBe(false);
+    expect(view.confirmable.ok).toBe(true);
+  });
+
+  it("current_primitive is read from the plan's own field: null is None, the N16B object is described as not active, a capital preview carries none", () => {
+    expect(f0Plan().primitive).toEqual({ state: "NONE" });
+    const read = readCommandPlanV1(loadCanonical("execution-command-plan.emergency-close"));
+    if (read === null || read.kind !== "command_plan") throw new Error("the emergency-close plan does not read");
+    const dark = planViewFromF0(read.plan).primitive;
+    expect(dark.state).toBe("DARK");
+    if (dark.state !== "DARK") return;
+    expect(dark.label).toBe("Emergency close");
+    expect(dark.rows.find((r) => r.label === "Active")?.value).toBe("No");
+    expect(dark.rows.find((r) => r.label === "Request to the source")?.value).toBe("No");
+    expect(capitalPlan().primitive).toEqual({ state: "NOT_CARRIED" });
+  });
+
+  it("capital: the amount, the int64 versions and the policy come back byte for byte, with the unit", () => {
+    const view = capitalPlan();
+    expect(view.facts.find((f) => f.label === "Amount")?.value).toBe("100.000000000000000001 USDT");
+    expect(view.facts.find((f) => f.label === "Expected budget version")?.value).toBe("9007199254740993");
+    expect(view.facts.find((f) => f.label === "Policy revision")?.value).toBe("TEST_ONLY:policy1");
+    expect(view.facts.find((f) => f.label === "Required gate")?.value).toBe("CAPITAL");
+    expect(view.impact.kind).toBe("not_published");
+  });
+
+  it("a preview that does not allow the command cannot be confirmed, and says the typed reason in words", () => {
+    const view = capitalPlan({ allowed: false });
+    expect(view.confirmable).toEqual({ ok: false, reason: REASON_COPY.COMMAND_RELAY_NOT_QUALIFIED });
+    expect(view.digest).toBeNull();
+  });
+
+  it("an allowed preview with no digest cannot be confirmed: there is nothing to bind the submit to", () => {
+    const body = capitalPreviewBody({ now: STORY_NOW_MS });
+    body.preview_digest = null;
+    const read = readCommandPreviewV1(body);
+    if (read === null || read.kind !== "command_preview") throw new Error("preview did not read");
+    expect(planViewFromCapital(CAPITAL_INTENT, read.preview).confirmable.ok).toBe(false);
+  });
+
+  it("expiry is judged against the clock it is given, and a plan with no expiry never expires on its own", () => {
+    const view = f0Plan();
+    expect(planExpired(view, STORY_NOW_MS)).toBe(false);
+    expect(planExpired(view, view.expiresAtMs! + 1)).toBe(true);
+    expect(planExpired(view, view.expiresAtMs!)).toBe(true);
+    expect(planExpired({ ...view, expiresAtMs: null }, Number.MAX_SAFE_INTEGER)).toBe(false);
+  });
+
+  it("classifyPlan: a readable plan, and every way it can fail", () => {
+    expect(classifyPlan("F0", respond(201, structuredClone(F0_PLAN_BODY)), CAPITAL_INTENT).kind).toBe("ready");
+    expect(classifyPlan("CAPITAL", respond(200, capitalPreviewBody({ now: STORY_NOW_MS })), CAPITAL_INTENT).kind).toBe("ready");
+    expect(classifyPlan("F0", respond(403, {}), CAPITAL_INTENT)).toMatchObject({ kind: "failed", tone: "denied" });
+    expect(classifyPlan("F0", respond(503, {}), CAPITAL_INTENT)).toMatchObject({ kind: "failed", tone: "unavailable" });
+    expect(classifyPlan("F0", respond(409, {}), CAPITAL_INTENT)).toMatchObject({ kind: "failed", tone: "refused" });
+    expect(classifyPlan("F0", respond(201, { schema_version: "execution.command-plan.v1" }), CAPITAL_INTENT)).toMatchObject({ kind: "failed", tone: "unreadable" });
+    expect(classifyPlan("F0", respond(200, capitalPreviewBody({ now: STORY_NOW_MS })), CAPITAL_INTENT)).toMatchObject({ kind: "failed", tone: "unreadable" });
+    expect(classifyPlan("F0", { kind: "no_response", why: "timeout" }, CAPITAL_INTENT)).toMatchObject({ kind: "failed", tone: "unavailable" });
+  });
+});
+
+describe("the typed confirmation", () => {
+  const plan = f0Plan();
+
+  it("is not ready until a reason, the exact word and the impact acknowledgement are all there; the sentence names what is missing", () => {
+    const empty = validateConfirm(EMPTY_CONFIRM, plan);
+    expect(empty.payload).toBeNull();
+    expect(empty.needs.map((n) => n.field)).toEqual(["reason", "word", "ack"]);
+    expect(validateConfirm({ ...filled, reason: "short" }, plan).needs.map((n) => n.field)).toEqual(["reason"]);
+    expect(validateConfirm({ ...filled, confirmWord: "Account/Sync" }, plan).needs.map((n) => n.field)).toEqual(["word"]);
+    expect(validateConfirm({ ...filled, confirmWord: "account/sync " }, plan).needs.map((n) => n.field)).toEqual(["word"]);
+    expect(validateConfirm({ ...filled, impactAck: false }, plan).needs.map((n) => n.field)).toEqual(["ack"]);
+    expect(validateConfirm(filled, plan).needs).toEqual([]);
+  });
+
+  it("the payload carries the trimmed reason and the plan identity, never anything else", () => {
+    const ready = validateConfirm({ ...filled, reason: `  ${filled.reason}\n` }, plan);
+    expect(ready.payload).toEqual({ lane: "F0", identity: plan.identity, operationId: "op_01K3COMMANDPLAN000000000000", digest: F0_PLAN_BODY.plan_digest, reason: filled.reason });
+  });
+
+  it("hidden and direction-changing characters in the reason are refused and named", () => {
+    const hostile = validateConfirm({ ...filled, reason: `Top up ${String.fromCodePoint(0x202e)}now please` }, plan);
+    expect(hostile.reason.state).toBe("hostile");
+    expect(hostile.reason.hostile).toContain("U+202E");
+    expect(hostile.payload).toBeNull();
+  });
+
+  it("invisible fillers do not count toward the minimum", () => {
+    const padded = validateConfirm({ ...filled, reason: `abc${String.fromCodePoint(0x3164).repeat(10)}` }, plan);
+    expect(padded.reason.state).toBe("short");
+  });
+
+  it("two different reasons are two different intents; the same reason on the same plan is the same intent", () => {
+    const a = validateConfirm(filled, plan).payload!;
+    const b = validateConfirm({ ...filled, reason: `${filled.reason} Again.` }, plan).payload!;
+    expect(payloadIdentity(a)).toBe(payloadIdentity(validateConfirm(filled, plan).payload!));
+    expect(payloadIdentity(a)).not.toBe(payloadIdentity(b));
+  });
+
+  it("the capital word is the operation, not the command key", () => {
+    expect(capitalPlan().confirmWord).toBe("TOP_UP");
+    expect(validateConfirm({ ...filled, confirmWord: "TOP_UP" }, capitalPlan()).payload).not.toBeNull();
+  });
+});
+
+describe("the Submit gate and the sentence beside it are one answer", () => {
+  const plan = f0Plan();
+  const ready = validateConfirm(filled, plan);
+  const base = { validation: ready, plan, expired: false, submitting: false, settled: false, uncertain: false, blockedReason: null };
+
+  it("open only when everything holds", () => {
+    expect(submitGate(base)).toEqual({ open: true });
+  });
+
+  it("the disabled-port reason wins over everything, and is the exact sentence", () => {
+    expect(submitGate({ ...base, blockedReason: SEND_DISABLED_REASON })).toEqual({ open: false, kind: "policy", reason: "Command sends are not connected to a source: fixture" });
+    expect(submitGate({ ...base, plan: null, blockedReason: SEND_DISABLED_REASON })).toMatchObject({ kind: "policy" });
+  });
+
+  it.each([
+    ["no plan yet", { plan: null }, "plan"],
+    ["an answered command", { settled: true }, "settled"],
+    ["a send in flight", { submitting: true }, "sending"],
+    ["an unknown outcome", { uncertain: true }, "uncertain"],
+    ["a hold from the host", { held: "Answer the question above first." }, "held"],
+    ["an expired plan", { expired: true }, "expired"],
+    ["a missing confirmation", { validation: validateConfirm(EMPTY_CONFIRM, plan) }, "incomplete"],
+  ] as const)("closed for %s", (_label, patch, kind) => {
+    const gate = submitGate({ ...base, ...patch } as never);
+    expect(gate).toMatchObject({ open: false, kind });
+    expect((gate as { reason: string }).reason.length).toBeGreaterThan(0);
+  });
+
+  it("a plan that cannot be confirmed keeps Submit closed with the plan's own reason", () => {
+    const refused = capitalPlan({ allowed: false });
+    const gate = submitGate({ ...base, plan: refused, validation: validateConfirm({ ...filled, confirmWord: "TOP_UP" }, refused) });
+    expect(gate).toEqual({ open: false, kind: "plan", reason: REASON_COPY.COMMAND_RELAY_NOT_QUALIFIED });
+  });
+});
+
+describe("an answer becomes a receipt, doubt first", () => {
+  const ctx = { operationId: "op_01K3COMMANDPLAN000000000000" };
+  const kind = (answer: PortResponse, operationId: string | null = ctx.operationId): Receipt["kind"] => classifySubmit(answer, { operationId }).kind;
+
+  it("ACCEPTED when the server says it created the command, REPLAYED when it says a known key answered: the bit decides, not what the screen has shown", () => {
+    expect(kind(submitted(ackOnlyStatus(), false), null)).toBe("ACCEPTED");
+    expect(kind(submitted(ackOnlyStatus(), true), null)).toBe("REPLAYED");
+    expect(kind(submitted(appliedLaggingStatus(), false), null)).toBe("ACCEPTED");
+    expect(kind(submitted(appliedLaggingStatus(), true), null)).toBe("REPLAYED");
+    // A command id the screen already showed is not a replay unless the server says so.
+    expect(COMMAND_ID_LANDED).toBe((ackOnlyStatus() as { command_id: string }).command_id);
+    expect(kind(submitted(ackOnlyStatus(), false), null)).toBe("ACCEPTED");
+  });
+
+  it("a bare status is not a submit answer: without the bit the screen would have to guess 'first send', so it is unreadable and therefore UNKNOWN", () => {
+    expect(classifySubmit(respond(200, ackOnlyStatus()), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    expect(classifySubmit(respond(200, { ...submitResultBody(ackOnlyStatus(), false), replayed: "false" }), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("DENIED: the 409 wire envelope for THIS operation; a denial for another operation, another key or another status is not this command's answer", () => {
+    const denied = (extra?: (d: Record<string, unknown>) => void) => {
+      const body = structuredClone(F0_APPLY_DENIED_BODY) as unknown as { details: Record<string, unknown> };
+      extra?.(body.details);
+      return body;
+    };
+    expect(kind(respond(409, denied()))).toBe("DENIED");
+    expect(classifySubmit(respond(409, denied((d) => { d.operation_id = "op_other"; })), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    expect(classifySubmit(respond(200, denied()), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    // The request key the send carried is echoed; a denial recorded under another key is not this send's answer.
+    const keyed = { ...ctx, requestKey: "ui:apply:0001" };
+    expect(classifySubmit(respond(409, denied()), keyed).kind).toBe("DENIED");
+    expect(classifySubmit(respond(409, denied((d) => { d.request_key = "ui:apply:9999"; })), keyed)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("DENIED reads the wire envelope, not the bare RelayDenied: that body never was the 409 body, and a copy at the top level is not an answer", () => {
+    expect(classifySubmit(respond(409, structuredClone(F0_DENIED_BODY)), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    const denied = classifySubmit(respond(409, structuredClone(F0_APPLY_DENIED_BODY)), ctx);
+    expect(denied).toMatchObject({ kind: "DENIED", decision: { sourceRequestSent: false, retryAllowed: false, replayed: false, requestKey: "ui:apply:0001" } });
+    // `source_request_sent` is read from `details`: a body that moved it to the top level (the legacy reading) is refused whole.
+    const legacy = { ...structuredClone(F0_APPLY_DENIED_BODY), source_request_sent: false };
+    expect(classifySubmit(respond(409, legacy), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("DENIED keeps the server's replayed bit; a denial that says a request was sent is never read as 'nothing reached the Trading System'", () => {
+    expect(classifySubmit(respond(409, structuredClone(F0_APPLY_REPLAYED_BODY)), ctx)).toMatchObject({ kind: "DENIED", decision: { replayed: true } });
+    const sent = f0ApplyAnswer(F0_APPLY_DENIED_BODY, "ui:apply:0001") as { details: Record<string, unknown> };
+    sent.details.source_request_sent = true;
+    expect(classifySubmit(respond(409, sent), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("REJECTED (typed): the F0 key conflict is a definite refusal that created nothing; the form stays editable and the other operation is not named", () => {
+    const conflict = classifySubmit(respond(409, structuredClone(F0_APPLY_CONFLICT_BODY)), ctx);
+    expect(conflict).toMatchObject({ kind: "REJECTED", code: "REQUEST_KEY_PAYLOAD_CONFLICT", known: true, sentence: REASON_COPY.COMMAND_IDEMPOTENCY_CONFLICT, status: null });
+    expect(isSettled(conflict)).toBe(false);
+    expect(isDismissible(conflict)).toBe(true);
+    expect(JSON.stringify(conflict)).not.toMatch(/op_/);
+    expect(classifySubmit(respond(200, structuredClone(F0_APPLY_CONFLICT_BODY)), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    expect(classifySubmit(respond(409, structuredClone(F0_APPLY_CONFLICT_BODY)), { ...ctx, requestKey: "ui:apply:9999" })).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("REJECTED (typed): a 4xx problem with a word in the dictionary, a word outside it, or no readable word", () => {
+    const known = classifySubmit(respond(409, problemBody("COMMAND_PREVIEW_CHANGED")), ctx);
+    expect(known).toMatchObject({ kind: "REJECTED", code: "COMMAND_PREVIEW_CHANGED", known: true, sentence: REASON_COPY.COMMAND_PREVIEW_CHANGED });
+    expect(classifySubmit(respond(422, problemBody("SOMETHING_NEW")), ctx)).toMatchObject({ kind: "REJECTED", code: "SOMETHING_NEW", known: false });
+    expect(classifySubmit(respond(400, { nope: true }), ctx)).toMatchObject({ kind: "REJECTED", code: null, known: false });
+  });
+
+  it("REJECTED: a source rejection and a failed-before-send status are rejections that created a command; neither invites a new key", () => {
+    const rejected = classifySubmit(submitted(rejectedBusinessStatus()), ctx);
+    expect(rejected).toMatchObject({ kind: "REJECTED", code: null });
+    expect(isSettled(rejected)).toBe(true);
+    expect(isDismissible(rejected)).toBe(false);
+    const failed = classifySubmit(submitted({ ...ackOnlyStatus(), delivery: "FAILED_BEFORE_SEND", next_action: "REVIEW_BLOCKER" }), ctx);
+    expect(failed).toMatchObject({ kind: "REJECTED", code: "FAILED_BEFORE_SEND", nextAction: "REVIEW_BLOCKER" });
+    expect((failed as { sentence: string }).sentence).toMatch(/not an invitation to use a new key/);
+    // A typed refusal created nothing: it can be dismissed and the request changed.
+    const refusal = classifySubmit(respond(409, problemBody("COMMAND_PREVIEW_CHANGED")), ctx);
+    expect(isSettled(refusal)).toBe(false);
+    expect(isDismissible(refusal)).toBe(true);
+  });
+
+  it("UNKNOWN: no answer, a 5xx, an unverified receipt (any status), an unreadable 2xx and an unconfirmed delivery are never failed and never ok", () => {
+    expect(classifySubmit({ kind: "no_response", why: "timeout" }, ctx)).toMatchObject({ kind: "UNKNOWN", why: "no_response" });
+    expect(classifySubmit({ kind: "no_response", why: "network" }, ctx)).toMatchObject({ kind: "UNKNOWN", why: "no_response" });
+    expect(classifySubmit(respond(500, "boom"), ctx)).toMatchObject({ kind: "UNKNOWN", why: "server_error" });
+    expect(classifySubmit(respond(502, problemBody("SOMETHING")), ctx)).toMatchObject({ kind: "UNKNOWN", why: "server_error" });
+    expect(classifySubmit(respond(503, problemBody("COMMAND_STATUS_UNVERIFIED")), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unverified" });
+    expect(classifySubmit(respond(409, problemBody("COMMAND_STATUS_UNVERIFIED")), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unverified" });
+    expect(classifySubmit(respond(200, { receipt: "ok" }), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    expect(classifySubmit(respond(200, null), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    expect(classifySubmit(respond(302, {}), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    const delivery = classifySubmit(submitted(deliveryUnknownStatus()), ctx);
+    expect(delivery).toMatchObject({ kind: "UNKNOWN", why: "delivery_unknown" });
+    expect(receiptCommandId(delivery)).toBe("ecm_00000000000000000000000000000005");
+    for (const state of ["PREPARED", "SENDING"]) {
+      expect(classifySubmit(submitted({ ...ackOnlyStatus(), delivery: state }), ctx)).toMatchObject({ kind: "UNKNOWN", why: "delivery_unknown" });
+    }
+  });
+
+  it("ACCESS_STOPPED: 401, 403 and 404 end the screen's disclosure whatever the body says, before the body is read", () => {
+    for (const status of [401, 403, 404]) {
+      expect(classifySubmit(respond(status, structuredClone(F0_APPLY_DENIED_BODY)), ctx)).toEqual({ kind: "ACCESS_STOPPED", httpStatus: status });
+      expect(classifySubmit(respond(status, ackOnlyStatus()), ctx)).toEqual({ kind: "ACCESS_STOPPED", httpStatus: status });
+    }
+  });
+
+  it("an unknown receipt keeps the key and locks; every other kind releases it", () => {
+    const unknown = classifySubmit({ kind: "no_response", why: "timeout" }, ctx);
+    expect(unknown.kind).toBe("UNKNOWN");
+    expect(isSettled(unknown)).toBe(false);
+  });
+});
+
+describe("a request-key check: only FOUND and CONFLICT end the unknown, and only for exactly this operation and key", () => {
+  const ask: { operationId: string; requestKey: string } = { operationId: F0_ATTEMPT_NONE_BODY.operation_id, requestKey: F0_ATTEMPT_NONE_BODY.request_key };
+  const check = (answer: PortResponse, over = ask) => classifyKeyCheck(classifyAttemptLookup(answer), over);
+
+  it("NONE stays unknown; FOUND is a definite stored denial (settled); CONFLICT is a dismissible typed refusal that created nothing", () => {
+    expect(check(respond(200, F0_ATTEMPT_NONE_BODY))).toEqual({ kind: "check", check: { kind: "NONE" } });
+    const found = check(respond(200, F0_ATTEMPT_FOUND_BODY));
+    expect(found.kind).toBe("receipt");
+    if (found.kind !== "receipt" || found.receipt.kind !== "RECOVERED") throw new Error("FOUND did not become RECOVERED");
+    expect(found.receipt.decision).toMatchObject({ decision: "DENIED", retryAllowed: false, sourceRequestSent: false });
+    expect(found.receipt.requestKey).toBe(ask.requestKey);
+    expect(isSettled(found.receipt)).toBe(true);
+    expect(isUncertain(found.receipt)).toBe(false);
+    expect(receiptCommandId(found.receipt)).toBe(ask.operationId);
+    const conflict = check(respond(200, F0_ATTEMPT_CONFLICT_BODY));
+    if (conflict.kind !== "receipt" || conflict.receipt.kind !== "REJECTED") throw new Error("CONFLICT did not become REJECTED");
+    expect(conflict.receipt).toMatchObject({ code: "REQUEST_KEY_PAYLOAD_CONFLICT", known: true, status: null, via: "key_check" });
+    expect(isDismissible(conflict.receipt)).toBe(true);
+  });
+
+  it("an answer that echoes another key or operation is not this send's answer; so is a FOUND whose decision names another operation", () => {
+    const other = { operationId: ask.operationId, requestKey: "command_apply:another" };
+    for (const body of [F0_ATTEMPT_NONE_BODY, F0_ATTEMPT_FOUND_BODY, F0_ATTEMPT_CONFLICT_BODY]) {
+      expect(check(respond(200, body), other), body.state).toEqual({ kind: "check", check: { kind: "UNANSWERED", why: "unreadable" } });
+      expect(check(respond(200, body), { ...ask, operationId: "op_someone_else" }), body.state).toEqual({ kind: "check", check: { kind: "UNANSWERED", why: "unreadable" } });
+    }
+    const foreign = { ...structuredClone(F0_ATTEMPT_FOUND_BODY), relay_decision: { ...structuredClone(F0_ATTEMPT_FOUND_BODY.relay_decision), operation_id: "op_someone_else" } };
+    expect(check(respond(200, foreign)).kind).toBe("check");
+  });
+
+  it("doubt stays doubt: no answer, 503, 5xx, a refusal and an unreadable body leave the send unknown; 401, 403 and 404 stop the screen", () => {
+    const unanswered = (why: string) => ({ kind: "check", check: { kind: "UNANSWERED", why } });
+    expect(check({ kind: "no_response", why: "timeout" })).toEqual(unanswered("no_response"));
+    expect(check(respond(503, problemBody("COMMAND_STATUS_UNVERIFIED")))).toEqual(unanswered("unverified"));
+    expect(check(respond(500, {}))).toEqual(unanswered("unverified"));
+    expect(check(respond(400, problemBody("COMMAND_VALIDATION_FAILED")))).toEqual(unanswered("refused"));
+    expect(check(respond(200, { state: "NONE" }))).toEqual(unanswered("unreadable"));
+    expect(check(respond(401, {}))).toEqual({ kind: "receipt", receipt: { kind: "ACCESS_STOPPED", httpStatus: 401 } });
+    expect(check(respond(403, {}))).toEqual({ kind: "receipt", receipt: { kind: "ACCESS_STOPPED", httpStatus: 403 } });
+    expect(check(respond(404, {}))).toEqual({ kind: "receipt", receipt: { kind: "ACCESS_STOPPED", httpStatus: 404 } });
+  });
+});
+
+describe("the four answers of a capital status are never merged", () => {
+  const read = (body: unknown) => {
+    const r = readCommandStatusV1(body);
+    if (r === null || r.kind !== "command_status") throw new Error("status did not read");
+    return r.status;
+  };
+
+  it("ACK + UNKNOWN: acknowledged is neutral transport, business is unknown, nothing is applied", () => {
+    const facets = statusFacets(read(ackOnlyStatus()));
+    expect(facets.map((f) => [f.dimension, f.kind, f.label])).toEqual([
+      ["Delivery", "neutral", "Acknowledged"], ["Business", "unknown", "Unknown"], ["Projection", "display", "Catching up"], ["Venue", "unknown", "Unknown"],
+    ]);
+    expect(facets[0]!.note).toMatch(/does not say the command was applied/);
+    expect(facets.some((f) => f.kind === "applied")).toBe(false);
+  });
+
+  it("UX-F17, APPLIED + CATCHING_UP + venue PENDING: three states at once, the view lag is not a reason to resubmit", () => {
+    const status = read(appliedLaggingStatus());
+    const facets = statusFacets(status);
+    expect(facets.find((f) => f.dimension === "Business")).toMatchObject({ kind: "applied", label: "Applied" });
+    expect(facets.find((f) => f.dimension === "Projection")).toMatchObject({ kind: "display" });
+    expect(facets.find((f) => f.dimension === "Projection")!.note).toMatch(/Never resubmit/);
+    expect(facets.find((f) => f.dimension === "Venue")).toMatchObject({ kind: "pending" });
+    expect(facets.find((f) => f.dimension === "Venue")!.absence).toMatchObject({ field: "fill", state: "NOT_PUBLISHED", text: "Fill: not published" });
+    expect(status.commandId).toBe(COMMAND_ID_APPLIED);
+    expect(classifyStatus(status, false).kind).toBe("ACCEPTED");
+    expect(classifyStatus(status, true).kind).toBe("REPLAYED");
+  });
+
+  it("fill and rejection absences come from venue_fill and source_rejection, not from the venue or business word", () => {
+    const abs = (body: Record<string, unknown>) => {
+      const facets = statusFacets(read(body));
+      return [facets[1]!.absence, facets[3]!.absence] as const;
+    };
+    // A venue word that implies order flow, with a field that says "not applicable": the field wins.
+    const pendingButNa = { ...appliedLaggingStatus(), venue_fill: { state: "NOT_APPLICABLE", reason: null, quantities: null } };
+    expect(abs(pendingButNa)[1]).toMatchObject({ field: "fill", state: "NOT_APPLICABLE", text: "Fill: not applicable" });
+    // The venue word "not applicable", with a field that says "not published": the field wins.
+    const naButNp = { ...rejectedBusinessStatus(), venue_fill: { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES", quantities: null } };
+    const [rejection, fill] = abs(naButNp);
+    expect(fill).toMatchObject({ field: "fill", state: "NOT_PUBLISHED", text: "Fill: not published" });
+    expect(fill!.title).toMatch(/Not published: receipt state and amounts/);
+    expect(rejection).toMatchObject({ field: "rejection", state: "NOT_PUBLISHED", text: "Reason: not published" });
+    // The not-applicable and not-published lines never share words.
+    expect(new Set([abs(pendingButNa)[1]!.text, fill!.text]).size).toBe(2);
+    // The ids stay out of the line.
+    expect(JSON.stringify([rejection!.text, fill!.text])).not.toMatch(/FE-|SOURCE_RESULT/);
+  });
+
+  it("amounts keep their exact strings and the unit; absent amounts are absent, not zero", () => {
+    expect(read(appliedLaggingStatus()).business.amounts!.requested.fullText).toBe("100.000000000000000001 USDT");
+    expect(read(ackOnlyStatus()).business.amounts).toBeNull();
+  });
+});
+
+describe("the status lookup grammar", () => {
+  it("routes a command id, an operation id and refuses the rest without a call", () => {
+    expect(routeLookup(" ecm_00000000000000000000000000000001 ")).toEqual({ kind: "command", id: "ecm_00000000000000000000000000000001" });
+    expect(routeLookup("op_01K3COMMANDPLAN000000000000")).toEqual({ kind: "operation", id: "op_01K3COMMANDPLAN000000000000" });
+    expect(routeLookup("")).toMatchObject({ kind: "invalid" });
+    expect(routeLookup("ecm_XYZ")).toMatchObject({ kind: "invalid", reason: expect.stringContaining("32 lower-case hex") });
+    expect(routeLookup("has space")).toMatchObject({ kind: "invalid" });
+    expect(routeLookup("a".repeat(192))).toMatchObject({ kind: "invalid" });
+    expect(routeLookup("x/../y")).toMatchObject({ kind: "invalid" });
+  });
+
+  it("only an op_ id links to the Operations screen", () => {
+    expect(operationHref("op_01K3COMMANDPLAN000000000000")).toBe("/execution/operations?operation=op_01K3COMMANDPLAN000000000000");
+    expect(operationHref("ecm_00000000000000000000000000000001")).toBeNull();
+    expect(operationHref("other")).toBeNull();
+  });
+});
+
+describe("every operation that is not sendable carries its exact reason, and a capability only when one is published", () => {
+  const catalogue = catalogueOf(loadCanonical("execution-command-catalog.served"))!;
+  const groups = catalogueRows(catalogue);
+  const rows = groups.flatMap((g) => g.rows);
+
+  it("all 64 catalogue commands are listed, none is missing a reason, and none is invented", () => {
+    expect(rows).toHaveLength(64);
+    expect(new Set(rows.map((r) => r.id)).size).toBe(64);
+    for (const row of rows) {
+      expect(row.reason.length, row.id).toBeGreaterThan(20);
+      expect(row.code, row.id).not.toBeNull();
+    }
+    expect(catalogue.entries.every((e) => e.portalReachable === false)).toBe(true);
+  });
+
+  it("BE-P13: the N16B primitive row says it is described and not active, with its own reason word, and is one of the 64 (not a 65th)", () => {
+    const row = rows.find((r) => r.id === "ops/emergency-close")!;
+    expect(row.code).toBe("N16B_RUNTIME_ACTIVATION_PENDING");
+    expect(row.reason).toMatch(/not active/);
+    expect(row.reason).not.toMatch(/no reason was published/);
+    expect(rows.filter((r) => r.code === "N16B_RUNTIME_ACTIVATION_PENDING")).toHaveLength(1);
+    expect(groups.find((g) => g.rows.includes(row))?.code).toBe("OPERATIONS_INCIDENTS");
+  });
+
+  it("the capability is the published staged-activation key of the tier, and only for a command blocked by the relay itself", () => {
+    const entry = (key: string) => catalogue.entries.find((e) => e.key === key)!;
+    expect(enablingCapability(entry("account/sync"))).toEqual({ kind: "staged_activation", key: "COMMAND_R2" });
+    expect(enablingCapability(entry("ops/emergency-close-verify"))).toEqual({ kind: "staged_activation", key: "COMMAND_R3" });
+    // The emergency close is the accepted N16B primitive: described, not active, and no HTTP route. No capability would unlock it.
+    expect(enablingCapability(entry("ops/emergency-close"))).toMatchObject({ kind: "none_published", because: expect.stringContaining("route itself") });
+    // A read has no COMMAND_R0 capability: nothing is invented for it.
+    const read = catalogue.entries.find((e) => e.riskTier === "R0_READ" && e.blockedReason === "COMMAND_RELAY_DISABLED")!;
+    expect(enablingCapability(read)).toMatchObject({ kind: "none_published", because: expect.stringContaining("Not published: per-row eligibility and the reason a control is off") });
+    // A route the source does not publish is not unlocked by any capability.
+    const ambiguous = catalogue.entries.find((e) => e.blockedReason === "SOURCE_ROUTE_MAPPING_AMBIGUOUS")!;
+    expect(enablingCapability(ambiguous)).toMatchObject({ kind: "none_published", because: expect.stringContaining("route itself") });
+    for (const row of rows) {
+      if (row.capability.kind === "staged_activation") expect(["COMMAND_R1", "COMMAND_R2", "COMMAND_R3", "COMMAND_R4"]).toContain(row.capability.key);
+    }
+  });
+
+  it("the capital operations and the unadmitted families are listed with the reason the ELP2-07 packet gives", () => {
+    expect(CAPITAL_OPERATION_ROWS.map((r) => r.id)).toEqual(["FUND", "INITIAL_GRANT", "TOP_UP", "IMMEDIATE_DECREASE", "RECALL_PARTIAL", "RECALL_FULL", "ADJUST_TARGET_BUDGET", "SET_ROOT_LIMIT"]);
+    for (const row of CAPITAL_OPERATION_ROWS) expect(row.reason).toContain(SEND_DISABLED_REASON);
+    expect(EXCLUDED_FAMILY_ROWS.map((r) => r.id)).toContain("RETURN_CAPITAL");
+    for (const row of [...CAPITAL_OPERATION_ROWS, ...EXCLUDED_FAMILY_ROWS]) expect(row.capability.kind).toBe("none_published");
+  });
+
+  it("no placeholder dash or N/A stands in for a missing value in any row", () => {
+    const text = JSON.stringify([rows, CAPITAL_OPERATION_ROWS, EXCLUDED_FAMILY_ROWS, CERTIFICATION_FLOWS]);
+    expect(text).not.toMatch(/"—"|N\/A|n\/a/);
+  });
+});
+
+describe("flows that need their own certification", () => {
+  it("cover UX-F14 to UX-F17 and the mainnet canary, each with a reason", () => {
+    const cases = new Set(CERTIFICATION_FLOWS.flatMap((f) => f.cases));
+    for (const id of ["UX-F14", "UX-F15", "UX-F16", "UX-F17"]) expect(cases.has(id), id).toBe(true);
+    expect(CERTIFICATION_FLOWS.map((f) => f.id)).toContain("mainnet-canary");
+    for (const flow of CERTIFICATION_FLOWS) expect(flow.why.length, flow.id).toBeGreaterThan(30);
+    expect(CERTIFICATION_PHRASE).toBe("Requires separate certification");
+  });
+});

@@ -4,9 +4,20 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACTS_DIR="${ROOT_DIR}/packages/contracts"
-NODE_CONTAINER="contracts-test-node"
+# Focused reruns accept exact checked-in spec paths only, never arbitrary
+# Vitest flags, glob patterns or traversal. Refuse before temp/Docker resources.
+for spec in "$@"; do
+  if [[ ! "$spec" =~ ^test/[A-Za-z0-9][A-Za-z0-9._-]*\.spec\.ts$ ||
+    ! -f "${CONTRACTS_DIR}/${spec}" || -L "${CONTRACTS_DIR}/${spec}" ]]; then
+    printf 'Expected an existing test/*.spec.ts file argument.\n' >&2
+    exit 2
+  fi
+done
 NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
 DEPS_DIR="$(mktemp -d)"
+# Different worktrees/agents may verify concurrently. A fixed name collided
+# and its unconditional cleanup could remove another invocation's container.
+NODE_CONTAINER="contracts-test-node-${DEPS_DIR##*/}"
 WORKSPACE_DIR="${DEPS_DIR}/workspace"
 RUN_UID="${HOST_UID:-$(id -u)}"
 RUN_GID="${HOST_GID:-$(id -g)}"
@@ -41,7 +52,12 @@ if "${DOCKER[@]}" info --format '{{json .SecurityOptions}}' | grep -Fq 'name=roo
 fi
 
 cleanup() {
-  "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" >/dev/null 2>&1 || true
+  local owner
+  owner="$("${DOCKER[@]}" inspect -f '{{index .Config.Labels "io.primus.contract-test.owner"}}' \
+    "${NODE_CONTAINER}" 2>/dev/null || true)"
+  if [[ "$owner" == "$DEPS_DIR" ]]; then
+    "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" >/dev/null 2>&1 || true
+  fi
   rm -rf -- "${DEPS_DIR}"
 }
 trap cleanup EXIT
@@ -50,7 +66,7 @@ trap cleanup EXIT
 # application source are mounted later, read-only, in a networkless container.
 cp "${CONTRACTS_DIR}/package.json" "${CONTRACTS_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
-  --cpus 2 --memory 1536m --memory-swap 1536m \
+  --cpus 2 --memory 1536m --memory-swap 1536m --pids-limit 512 \
   -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
@@ -59,11 +75,24 @@ cp "${CONTRACTS_DIR}/package.json" "${CONTRACTS_DIR}/package-lock.json" "${DEPS_
 
 # Keep the host checkout immutable while avoiding nested mounts below a
 # read-only /repo bind (unsupported by some containerd snapshotters). Only the
-# contract workspace and the one canonical Portal OpenAPI input are copied.
+# contract workspace and explicit non-secret source/receipt dependencies are copied.
 mkdir -p \
   "${WORKSPACE_DIR}/packages/contracts" \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations" \
+  "${WORKSPACE_DIR}/apps/control-api/src/activation" \
+  "${WORKSPACE_DIR}/apps/control-api/src/live" \
+  "${WORKSPACE_DIR}/apps/control-api/src/governance" \
+  "${WORKSPACE_DIR}/apps/control-api/src/research" \
+  "${WORKSPACE_DIR}/apps/control-api/src/repos" \
+  "${WORKSPACE_DIR}/apps/control-api/src/auth" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution-v2" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution" \
+  "${WORKSPACE_DIR}/apps/control-api/src/manager-lists" \
+  "${WORKSPACE_DIR}/apps/control-api/src/resource-read" \
+  "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain" \
+  "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02" \
+  "${WORKSPACE_DIR}/upgrade/execution_loop/evidence/ELP2-01" \
   "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract"
 cp -a \
   "${CONTRACTS_DIR}/README.md" \
@@ -83,18 +112,258 @@ cp -a \
   "${WORKSPACE_DIR}/apps/portal/registry/openapi/"
 cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/catalog.generated.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/contracts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/f0-read.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/f0-apply.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/incident-eligibility.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
+# ELP2-01 validates its runtime parser against the identical published fixtures.
+cp -a "${ROOT_DIR}/apps/control-api/src/execution/stage-drift.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/deployment-identity.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/stage-facts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/scoped-stage-wire.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution/"
+# S3-U4: pure leaf (no imports) shared by the Paper producer and its contract spec.
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/src/paper-read"
+cp -a "${ROOT_DIR}/apps/control-api/src/paper-read/positions-by-side.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/paper-read/"
+# Copy only this pure validator and compatibility dictionary, not app config,
+# credentials, node_modules or any runtime mount. The test cell stays networkless.
+cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/access.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/access-digest.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/self-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/step-up-family.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/self-context.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/access-policy.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/access-current-relations.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/current-audit-read.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/read-fields.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/parent-read-fields.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/history.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/profile-adapter.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/subject-activity.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/technical-read.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/service-heartbeats.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/retained-context.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/read-publication.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-model.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-dataset-invariants.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-query-p1.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-revision.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-regime-history.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-composition-publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-regime-publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-series-publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-series.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-lifecycle.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-all-scope.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-catalogue.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-source.generated.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
+cp -a "${ROOT_DIR}/apps/control-api/src/research/exact-decimal.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/research/"
+cp -a "${ROOT_DIR}/apps/control-api/src/auth/cookies.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/auth/"
+# ELP2-04 parser parity stays pure; no Nest services or application runtime
+# dependencies are copied into the networkless contract verification cell.
+cp -a "${ROOT_DIR}/apps/control-api/src/manager-lists/scoped-manager.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/manager-lists/"
+# RV-12: the scoped scenario generator proves every published cursor with the REAL signed codec (two pure files: node:crypto + type-only imports).
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/src/query"
+cp -a "${ROOT_DIR}/apps/control-api/src/query/cursor.ts" "${ROOT_DIR}/apps/control-api/src/query/contracts.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/query/"
+cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/instance-registration.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/pending-control.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-pending-control-adapter.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-instance-registration-adapter.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-http-request-binding.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/command-collection.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/realtime.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/alpha-fleet-realtime.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow-criteria.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow-criteria.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/execution-v2/"
+cp -a "${ROOT_DIR}/apps/control-api/src/resource-read/scoped-resource.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/resource-read/"
+cp -a "${ROOT_DIR}/apps/control-api/src/operations/operational-read.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/operations/"
+# Finite parent schema/field-digest parity stays pure: no repository, service,
+# private provider, configuration or PostgreSQL runtime is copied here.
+cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/parent-followthrough.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/parent-recorded-facts.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/following-parent.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/live-parent.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/stage-action-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/capture-authority.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/approval-request-lookup.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/paper-exit-parent.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/review-context.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/governance/"
+# R-C: source-backed equity projection V2 contract is pure zod; the port, service and controller are not copied.
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/src/equity-projection"
+cp -a "${ROOT_DIR}/apps/control-api/src/equity-projection/equity-projection-source.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/equity-projection/"
+# FE-068 stage-action eligibility is a pure projection; it needs only the type-only gate adapter.
+cp -a "${ROOT_DIR}/apps/control-api/src/auth/governance-access.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/auth/"
+# Pure source/ownership regression: explicit non-secret inputs only. The SQL is
+# parsed, never executed; this does not mount an app, connect a DB or grant roles.
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/migrations" \
+  "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger"
+cp -a "${ROOT_DIR}/apps/control-api/migrations/1723680000133_governance-portal-decisions.sql" \
+  "${WORKSPACE_DIR}/apps/control-api/migrations/"
+cp -a "${ROOT_DIR}/apps/control-api/src/governance/contracts.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/governance/"
+cp -a "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger/persistence-ownership.v1.json" \
+  "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger/"
+cp -a "${ROOT_DIR}/apps/control-api/src/activation/current-activation.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/activation/contracts.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/activation/"
+cp -a "${ROOT_DIR}/apps/control-api/src/live/live-source.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/live/"
+# Access validation reuses the finite capability vocabulary. Its PostgreSQL
+# imports are type-only: copying this explicit dependency opens no DB/runtime
+# access and keeps contract/parser parity in the networkless test cell.
+cp -a "${ROOT_DIR}/apps/control-api/src/repos/owner-access.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/repos/"
+cp -a "${ROOT_DIR}/upgrade/execution_loop/evidence/ELP2-01/contract-map.md" \
+  "${WORKSPACE_DIR}/upgrade/execution_loop/evidence/ELP2-01/"
+# Verify image-owned TS/Python views and every exact checked-in receipt
+# reference (legacy/FULL02–06/expanded/native). No private runtime inputs are staged.
+cp -a "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.json" \
+  "${ROOT_DIR}/apps/portal/registry/research-execution-recipes.v1.schema.json" \
+  "${ROOT_DIR}/apps/portal/registry/research-native-delta-bindings.v1.json" \
+  "${WORKSPACE_DIR}/apps/portal/registry/"
+cp -a "${ROOT_DIR}/apps/control-api/src/research/execution-recipes.generated.ts" \
+  "${ROOT_DIR}/apps/control-api/src/research/window-execution.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/research/replay-continuity.contract.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/research/"
+cp -a "${ROOT_DIR}/apps/portal/backend/src/portal_api/domain/research_execution_recipes_generated.py" \
+  "${WORKSPACE_DIR}/apps/portal/backend/src/portal_api/domain/"
+for receipt in \
+  P04/phase-report.md \
+  P23/P23_QUALIFICATION_CLOSEOUT_2026-10-05.md \
+  P10/B7_B8_TEMPORAL_EXECUTOR_2026-10-02.md \
+  P10/B8_CAUSAL_INNER_CURRENT_SOURCE_2026-10-02.md \
+  P10/B8_VN_FIXED_PRODUCT_VERTICAL_2026-10-02.md \
+  P10/E17_IMPORTED_DRAFT_EXECUTION_BACKEND_RECEIPT_2026-09-27.md \
+  P10/FULL_02_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/FULL_03_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/FULL_04_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/FULL_05_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/FULL_06_PERCENT_EQUITY_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/EXPANDED_TRIAL_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/NATIVE_ROUTE_PRODUCT_QUALIFICATION_2026-10-06.md \
+  P10/BRACKET_V4_SOURCE_JOURNAL_QUALIFICATION_2026-10-07.md \
+  P10/LIMIT_OCO_PRODUCT_QUALIFICATION_2026-10-08.md \
+  P10/LIMIT_OCO_MULTICYCLE_PRODUCT_QUALIFICATION_2026-10-08.md; do
+  mkdir -p "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt%/*}"
+  cp -a "${ROOT_DIR}/upgrade/research_loop/evidence/${receipt}" \
+    "${WORKSPACE_DIR}/upgrade/research_loop/evidence/${receipt}"
+done
+cp -a \
+  "${ROOT_DIR}/upgrade/research_loop/evidence/P02/requested-spec.v1.schema.json" \
+  "${WORKSPACE_DIR}/upgrade/research_loop/evidence/P02/"
 cp -a \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract/cli-command-map.json" \
   "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract/"
 cp -a \
   "${ROOT_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/openapi.sanitized.json" \
   "${WORKSPACE_DIR}/upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/"
+# Linked Accounts/Contributors/finance/visit-digest/positive-BFF specs exercise
+# the real, pure fixture graph and canonical readers, not replacement stubs.
+# This explicit runtime-import closure contains only checked-in public inputs;
+# never copy the whole frontend/BFF tree, env files, configs or credentials.
+for input in \
+  apps/control-api/src/command-center/contracts.ts \
+  apps/control-api/src/command-center/visit-digest.ts \
+  apps/control-api/src/domain.ts \
+  apps/control-api/src/manager-lists/binding-figures.ts \
+  apps/portal/fixture-bff/alpha-catalogue.ts \
+  apps/portal/fixture-bff/app.ts \
+  apps/portal/fixture-bff/command-story.ts \
+  apps/portal/fixture-bff/equity-projection.ts \
+  apps/portal/fixture-bff/review-accounts.ts \
+  apps/portal/fixture-bff/review-catalog.ts \
+  apps/portal/fixture-bff/review-finance.ts \
+  apps/portal/fixture-bff/review-manager.ts \
+  apps/portal/fixture-bff/review-relations.ts \
+  apps/portal/fixture-bff/review-visit-digest.ts \
+  apps/portal/fixture-bff/roster-names.ts \
+  apps/portal/fixture-bff/scenario-apply.ts \
+  apps/portal/fixture-bff/scenario.ts \
+  apps/portal/fixture-bff/time-rebase.ts \
+  apps/portal/frontend/e2e/bffAnswerer.ts \
+  apps/portal/frontend/e2e/bffApprovalWorld.ts \
+  apps/portal/frontend/e2e/bffDouble.ts \
+  apps/portal/frontend/e2e/bffDoubleAccess.ts \
+  apps/portal/frontend/e2e/bffDoubleAccount.ts \
+  apps/portal/frontend/e2e/bffDoubleAlpha.ts \
+  apps/portal/frontend/e2e/bffDoubleApprovalEnvelopes.ts \
+  apps/portal/frontend/e2e/bffDoubleCatalogue.ts \
+  apps/portal/frontend/e2e/bffDoubleGovernance.ts \
+  apps/portal/frontend/e2e/bffDoubleManager.ts \
+  apps/portal/frontend/e2e/bffDoubleOverview.ts \
+  apps/portal/frontend/e2e/bffDoublePendingPreview.ts \
+  apps/portal/frontend/e2e/bffDoublePortfolios.ts \
+  apps/portal/frontend/e2e/bffDoubleScopedResource.ts \
+  apps/portal/frontend/e2e/bffDoubleSelfAccess.ts \
+  apps/portal/frontend/e2e/bffDoubleShell.ts \
+  apps/portal/frontend/e2e/bffDoubleStage.ts \
+  apps/portal/frontend/e2e/bffDoubleUsers.ts \
+  apps/portal/frontend/e2e/bffDoubleV2.ts \
+  apps/portal/frontend/e2e/bffPositiveMode.ts \
+  apps/portal/frontend/e2e/bffScale.ts \
+  apps/portal/frontend/e2e/bffSimulated.ts \
+  apps/portal/frontend/e2e/bffSimulatedStage.ts \
+  apps/portal/frontend/e2e/bffWorld.ts \
+  apps/portal/frontend/e2e/bffWorldBooks.ts \
+  apps/portal/frontend/e2e/bffWorldGenerated.ts \
+  apps/portal/frontend/e2e/bffWorldGovernance.ts \
+  apps/portal/frontend/e2e/bffWorldHandoff.ts \
+  apps/portal/frontend/e2e/bffWorldOrders.ts \
+  apps/portal/frontend/e2e/bffWorldStage.ts \
+  apps/portal/frontend/e2e/bffWorldVariants.ts \
+  apps/portal/frontend/src/execution/adapter.ts \
+  apps/portal/frontend/src/execution/adminCatalog.fixtures.ts \
+  apps/portal/frontend/src/execution/analytics.presentation.fixtures.ts \
+  apps/portal/frontend/src/execution/analytics.ts \
+  apps/portal/frontend/src/execution/api/fixtureData.ts \
+  apps/portal/frontend/src/execution/api/profileRead.ts \
+  apps/portal/frontend/src/execution/api/schemaGuard.ts \
+  apps/portal/frontend/src/execution/certification.fixtures.ts \
+  apps/portal/frontend/src/execution/contracts.ts \
+  apps/portal/frontend/src/execution/derivedReads.fixtures.ts \
+  apps/portal/frontend/src/execution/formatExact.ts \
+  apps/portal/frontend/src/execution/operations.fixtures.ts \
+  apps/portal/frontend/src/execution/screenContracts.fixtures.ts \
+  apps/portal/frontend/src/execution/screenDataContract.ts \
+  apps/portal/frontend/src/execution/v2/boundary.ts \
+  apps/portal/frontend/src/execution/v2/readers/managerDataset.ts \
+  apps/portal/frontend/src/execution/v2/readers/managerMetric.ts \
+  apps/portal/frontend/src/execution/v2/screens/account/model.ts \
+  apps/portal/frontend/src/execution/v2/screens/stage/reasons.ts \
+  apps/portal/frontend/src/execution/v2/shell/roleNav.ts \
+  apps/portal/registry/fixtures/links.public.json \
+  apps/portal/registry/fixtures/registry.public.json \
+  apps/portal/registry/fixtures/summary.healthy.json; do
+  mkdir -p "${WORKSPACE_DIR}/${input%/*}"
+  cp -a "${ROOT_DIR}/${input}" "${WORKSPACE_DIR}/${input}"
+done
 mv "${DEPS_DIR}/node_modules" "${WORKSPACE_DIR}/node_modules"
 ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network none --read-only \
-  --cpus 2 --memory 1536m --memory-swap 1536m \
+  --cpus 2 --memory 1536m --memory-swap 1536m --pids-limit 512 \
+  --label "io.primus.contract-test.owner=${DEPS_DIR}" \
   -u "${CONTAINER_USER}" \
   -v "${WORKSPACE_DIR}:/repo" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
@@ -102,6 +371,14 @@ ln -s ../../node_modules "${WORKSPACE_DIR}/packages/contracts/node_modules"
   -e HOME=/tmp \
   "${NODE_IMAGE}" sh -c '
     set -e
-    ./tooling/verify-generated.sh
-  '
-printf 'Contracts workspace tests passed.\n'
+    if [ "$#" -gt 0 ]; then
+      ./node_modules/.bin/vitest run --no-cache --maxWorkers=2 "$@"
+    else
+      ./tooling/verify-generated.sh
+    fi
+  ' contracts-test "$@"
+if [[ $# -gt 0 ]]; then
+  printf 'Focused contracts tests passed (%s files).\n' "$#"
+else
+  printf 'Contracts workspace tests passed.\n'
+fi

@@ -10,6 +10,7 @@ import { ProfileReadService } from "./profile-read.service";
 interface ProfileReadRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -44,14 +45,19 @@ export class ProfileReadController {
       throw new ProfileReadError("PHASE2_ACCOUNT_QUERY_INVALID", 400);
     }
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new ProfileReadError("WORKSPACE_NOT_FOUND", 404);
     }
-    return this.profiles.accountBroker({
+    const result = await this.profiles.accountBroker({
       user: request.portalUser,
       session: request.portalSession,
       workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
     }, accountId, query.data.environment);
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
+      throw new ProfileReadError("WORKSPACE_NOT_FOUND", 404);
+    }
+    return result;
   }
 
   /**
@@ -81,14 +87,19 @@ export class ProfileReadController {
     const query = ProfileOverviewQuerySchema.safeParse(raw);
     if (!query.success) throw new ProfileReadError("N23_QUERY_INVALID", 400);
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, environment))) {
       throw new ProfileReadError("WORKSPACE_NOT_FOUND", 404);
     }
-    return this.profiles.overview({
+    const result = await this.profiles.overview({
       user: request.portalUser,
       session: request.portalSession,
       workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
     }, environment);
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, environment))) {
+      throw new ProfileReadError("WORKSPACE_NOT_FOUND", 404);
+    }
+    return result;
   }
 }
 

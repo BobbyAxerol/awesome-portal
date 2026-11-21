@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { loadConfig } from "../config";
-import { buildPool } from "../db/pool";
+import { buildPool, buildExecutionPool } from "../db/pool";
 import { ExecutionSharedReadRepository } from "../execution/shared-read.repository";
 import { runSharedReadCacheSweep } from "../execution/shared-read-cache-maintenance";
 
@@ -17,7 +17,7 @@ async function main(): Promise<void> {
     throw new Error("choose either --dry-run or --apply");
   }
   const config = loadConfig();
-  const pool = buildPool(config.DATABASE_URL);
+  const pool = config.EXECUTION_DATABASE_URL ? buildExecutionPool(config) : buildPool(config.DATABASE_URL);
   try {
     const repository = new ExecutionSharedReadRepository(pool, config);
     const report = await runSharedReadCacheSweep(repository, config, {

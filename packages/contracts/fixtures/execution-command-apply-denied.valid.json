@@ -1,0 +1,17 @@
+{
+  "error": {
+    "code": "COMMAND_RELAY_DISABLED",
+    "message": "Execution command relay is disabled in EX-BE-05b/F0."
+  },
+  "request_id": "req_apply_first_0001",
+  "details": {
+    "schema_version": "execution.command-relay-decision.v1",
+    "operation_id": "op_01K3COMMANDPLAN000000000000",
+    "decision": "DENIED",
+    "reason": "COMMAND_RELAY_DISABLED",
+    "retry_allowed": false,
+    "source_request_sent": false,
+    "request_key": "ui:apply:0001",
+    "replayed": false
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "fixture_scope": "SYNTHETIC_CONTRACT_ONLY_NOT_QUALIFICATION",
+  "protocol": {
+    "schema_version": "research.current-source-protocol-disclosure.v1",
+    "protocol": "three_window_decay",
+    "engine_operation": "train_test_split",
+    "calibration_scope": "IS_OOS_ONLY",
+    "observation_scope": "OOS_SELECTION_INPUT",
+    "independent_holdout": {
+      "state": "AVAILABLE",
+      "start_utc_ms": 7200000,
+      "end_exclusive_utc_ms": 10800000,
+      "bar_count": 1,
+      "holdout_used_for_selection": false,
+      "selected_params_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "freeze_before_holdout": true
+    },
+    "windows": {
+      "is": {
+        "start_utc_ms": 0,
+        "end_exclusive_utc_ms": 3600000,
+        "bar_count": 1
+      },
+      "oos": {
+        "start_utc_ms": 3600000,
+        "end_exclusive_utc_ms": 7200000,
+        "bar_count": 1
+      },
+      "holdout": {
+        "start_utc_ms": 7200000,
+        "end_exclusive_utc_ms": 10800000,
+        "bar_count": 1
+      }
+    },
+    "window_series": {
+      "is": [
+        {
+          "at_utc_ms": 0,
+          "equity": "20000",
+          "return_fraction": "0",
+          "accepted_position": "0",
+          "drawdown_fraction": "0",
+          "signal_target": null
+        }
+      ],
+      "oos": [
+        {
+          "at_utc_ms": 3600000,
+          "equity": "20001",
+          "return_fraction": "0.00005",
+          "accepted_position": "0",
+          "drawdown_fraction": "0",
+          "signal_target": null
+        }
+      ],
+      "holdout": [
+        {
+          "at_utc_ms": 7200000,
+          "equity": "20002",
+          "return_fraction": "0.0001",
+          "accepted_position": "0",
+          "drawdown_fraction": "0",
+          "signal_target": null
+        }
+      ]
+    },
+    "window_series_metadata": {
+      "is": {
+        "source_observation_count": 1,
+        "emitted_point_count": 1,
+        "sampling": "FULL"
+      },
+      "oos": {
+        "source_observation_count": 1,
+        "emitted_point_count": 1,
+        "sampling": "FULL"
+      },
+      "holdout": {
+        "source_observation_count": 1,
+        "emitted_point_count": 1,
+        "sampling": "FULL"
+      }
+    }
+  }
+}

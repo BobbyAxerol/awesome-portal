@@ -1,0 +1,15 @@
+{
+  "schema_version": "research.engine-atlas-response.v1",
+  "selected_release_id": "er_quantbt_108",
+  "selected_release_kind": "HISTORICAL",
+  "atlas": null,
+  "historical_identity": {
+    "release_id": "er_quantbt_108",
+    "package": "quantbt-engine",
+    "version": "1.0.8",
+    "status": "HISTORICAL_IDENTITY_RETAINED",
+    "facts_state": "NOT_PUBLISHED",
+    "facts_reason": "Only the historical release identity is retained; route, mode and claim facts for that release are not published."
+  },
+  "etag": "W/\"research-atlas-829799eb4b08de19e11b319c\""
+}

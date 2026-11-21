@@ -1,0 +1,95 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+Portfolios
+Core
+pf_TEST_ONLY_core · M. Tran · USDT
+✓
+OK:
+ACTIVE
+As of 2026-10-17 12:04:00 UTC
+Compare with
+Actions
+OVERVIEW
+ALLOCATIONS
+ALPHAS
+ACCOUNTS
+RISK AND HEALTH
+PEOPLE AND ACTIVITY
+EXPOSURE
+Current, per deployment
+Drawdown now and max	Not published
+(FE-013, FE-025)
+Portfolio gross exposure	Not available
+· not published; it is not worked out here
+Exposure cap	Not available
+· no cap published
+DEPLOYMENT	ALPHA	ALLOCATION	GROSS EXPOSURE, NOW
+live-0192	BTC-Trend	120,000.00 USDT	114,100.00 USDT
+live-0193	BTC-Trend	80,000.00 USDT	73,500.00 USDT
+live-0210	ETH-Mean	160,000.00 USDT	132,200.00 USDT
+pap-0301	Funding-Carry	80,000.00 USDT	78,400.00 USDT
+live-0215	SOL-Breakout	100,000.00 USDT	61,000.00 USDT
+MARGIN
+Venue-reported, per account
+ACCOUNT	INITIAL MARGIN	MAINTENANCE MARGIN	UTILIZATION
+Binance-02	
+100,430.00 USDT
+	
+50,215.00 USDT
+	Not available
+· not published
+Bybit-01	
+15,860.00 USDT
+	
+7,930.00 USDT
+	Not available
+· not published
+OKX-01	
+24,500.00 USDT
+	
+12,250.00 USDT
+	Not available
+· not published
+Paper-Binance	Not available
+· no margin published
+	Not available
+· no margin published
+	Not available
+· not published
+RECONCILIATION
+ACCOUNT	LAST SYNCED · UTC	STATUS	OPEN FINDINGS
+Binance-02	2026-10-17 11:50:00 UTC	
+◷
+STALE	1
+Bybit-01	2026-10-17 12:03:40 UTC	
+✓
+OK:
+SYNCED	0
+OKX-01	2026-10-17 12:03:40 UTC	
+✓
+OK:
+SYNCED	0
+Paper-Binance	2026-10-17 12:03:40 UTC	
+✓
+OK:
+SYNCED	0
+CORRELATION
+BTC-Trend
+ETH-Mean
+Funding-Carry
+SOL-Breakout
+BTC-Trend
+ETH-Mean
+Funding-Carry
+SOL-Breakout
+Not available
+· No correlation data source
+ · The source system serves no route for this panel, so there is nothing to compute yet.

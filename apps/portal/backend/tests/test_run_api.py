@@ -7,6 +7,9 @@ through TestClient with an in-memory provider and the real QuantBT gateway.
 
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import os
 import time
@@ -265,8 +268,26 @@ async def test_wfo_and_series_endpoints(client) -> None:
     assert any(value is None for value in presentation["series"]["oos_equity"])
 
 
+def _legacy_export_principal(secret: str, role: str = "ADMIN") -> str:
+    payload = {
+        "principalId": "p4-export-owner",
+        "username": "p4-export-owner",
+        "role": role,
+        "authnMethods": ["portal_session"],
+        "exp": int(time.time()) + 60,
+        "policyVersion": "auth-policy-v1",
+    }
+    encoded = base64.urlsafe_b64encode(
+        json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    ).decode("ascii").rstrip("=")
+    signature = base64.urlsafe_b64encode(
+        hmac.new(secret.encode("utf-8"), encoded.encode("ascii"), hashlib.sha256).digest()
+    ).decode("ascii").rstrip("=")
+    return f"{encoded}.{signature}"
+
+
 @pytest.mark.anyio
-async def test_audit_and_export_endpoints(client) -> None:
+async def test_audit_and_export_endpoints(client, monkeypatch) -> None:
     http, _ = client
     frame = build_market_frame()
     run_id = (await http.post("/api/runs", json=_payload(frame))).json()["run_id"]
@@ -277,10 +298,26 @@ async def test_audit_and_export_endpoints(client) -> None:
     assert audit["manifest"]["protocol"] == "three_window_decay"
     assert "config" in audit and "strategy" in audit and "metrics" in audit
 
-    response = await http.get(f"/api/runs/{run_id}/export")
+    secret = "research-export-private-test-secret"
+    monkeypatch.setenv("INTERNAL_PRINCIPAL_SECRET", secret)
+    export_path = f"/api/runs/{run_id}/export"
+    bundle = _ / run_id / "export" / f"{run_id}-export.zip"
+    assert (await http.get(export_path)).status_code == 401
+    user_headers = {"x-portal-principal": _legacy_export_principal(secret, "USER")}
+    assert (await http.get(export_path, headers=user_headers)).status_code == 403
+    admin_headers = {"x-portal-principal": _legacy_export_principal(secret)}
+    assert (await http.get(export_path, headers=admin_headers)).status_code == 404
+    assert not bundle.exists()  # GET never creates the archive.
+    prepared = await http.post(export_path, headers=admin_headers)
+    assert prepared.status_code == 201
+    assert prepared.json()["download_href"] == export_path
+    assert bundle.is_file()
+    before = bundle.stat().st_mtime_ns
+    response = await http.get(export_path, headers=admin_headers)
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/zip"
     assert len(response.content) > 0
+    assert bundle.stat().st_mtime_ns == before
 
 
 @pytest.mark.anyio

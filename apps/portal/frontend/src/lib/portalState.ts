@@ -240,6 +240,18 @@ export function maturityPresentation(maturity: FeatureMaturity): MaturityPresent
   return MATURITY_PRESENTATION[maturity];
 }
 
+/**
+ * Sidebar chips for SOON and PROTOTYPE are not drawn (W3A). This returns the
+ * lower-case state word the row exposes in its accessible name instead, or
+ * `null` for every maturity whose chip is still drawn (BLOCKED, LEGACY) or
+ * unmarked (AVAILABLE).
+ */
+export function maturityStateName(maturity: FeatureMaturity): "soon" | "prototype" | null {
+  if (maturity === "COMMISSIONED") return "soon";
+  if (maturity === "PROTOTYPE") return "prototype";
+  return null;
+}
+
 /** Data-mode banner copy (v0.4 §P0.24). `REAL` gets no banner. */
 export function dataModeBanner(mode: FeatureDataMode): string | null {
   switch (mode) {

@@ -64,6 +64,13 @@ const analyticsFixtureSchemas: Record<string, string> = {
 };
 
 const schemaIds: Record<string, string> = {
+  "execution-retained-review.valid.json": "portal.execution.retained-review.v1",
+  "execution-retained-operation-page.valid.json": "portal.execution.retained-operation-page.v1",
+  "execution-account-policy-metadata.synthetic.valid.json": "portal.execution.retained-operation-page.v1",
+  "research-all-time-distributions.valid.json":
+    "https://schemas.primusspark.com/portal/research-retained-analytics.v2.schema.json#/$defs/Distributions",
+  "research-artifact-manifest.valid.json":
+    "https://schemas.primusspark.com/portal/research-artifact-manifest.v1.schema.json",
   "execution-governance.review-capture.r2.valid.json": "https://portal.primusspark.com/contracts/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse",
   "execution-governance.review-capture.paper-exit.valid.json": "https://portal.primusspark.com/contracts/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse",
   "execution-governance.review-capture.sandbox-note.valid.json": "https://portal.primusspark.com/contracts/execution-governance-review-capture.v1.schema.json#/$defs/CaptureResponse",
@@ -133,9 +140,25 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
   "execution-command-catalog.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/CommandCatalogue",
+  "execution-command-apply-denied.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyDeniedProblem",
+  "execution-command-apply-denied.replayed.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyDeniedProblem",
+  "execution-command-apply-key-conflict.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyKeyConflictProblem",
+  "execution-command-apply-attempt.none.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyAttemptLookup",
+  "execution-command-apply-attempt.found.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyAttemptLookup",
+  "execution-command-apply-attempt.conflict.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyAttemptLookup",
+  "execution-command-catalog.served.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ServedCommandCatalogue",
   "execution-command-tasks.valid.json":
     "https://schemas.primusspark.com/portal/execution-command-tasks.v1.schema.json",
   "execution-command-plan.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlan",
+  "execution-command-plan.emergency-close.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlan",
   "execution-command-operation.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandOperation",
@@ -419,12 +442,31 @@ describe("canonical contracts (cross-language fixture compilation)", () => {
     });
     expect(JSON.stringify(account)).not.toMatch(/password|token|credential|dsn/i);
     expect(validate!({ ...account, selected_environment: "canary" })).toBe(false);
+    const capabilities = account.capabilities as Array<Record<string, unknown>>;
+    const actualSourceCapabilities = capabilities.map((entry) => entry.capability_id === "source.accounts"
+      ? { ...entry, relations: [], lineage_scoped_out: { account: 1 } } : entry);
+    expect(validate!({ ...account, capabilities: actualSourceCapabilities })).toBe(true);
+    const invalidCounts = capabilities.map((entry) => entry.capability_id === "source.accounts"
+      ? { ...entry, relations: [], lineage_rejects: { account: -1 } } : entry);
+    expect(validate!({ ...account, capabilities: invalidCounts })).toBe(false);
+    const otherCapabilities = capabilities.filter((entry) => entry.capability_id !== "derived.differences");
+    const comparison = capabilities.find((entry) => entry.capability_id === "derived.differences")!;
+    const withComparison = (state: string, reason_code: string | null) => ({ ...account,
+      capabilities: [...otherCapabilities, { ...comparison, state, reason_code }] });
+    expect(validate!(withComparison("PARTIAL", "ACCOUNT_COMPARISON_INCOMPLETE"))).toBe(true);
+    expect(validate!(withComparison("UNAVAILABLE", "ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED"))).toBe(true);
+    expect(validate!(withComparison("AVAILABLE", "ACCOUNT_COMPARISON_INCOMPLETE"))).toBe(false);
+    expect(validate!(withComparison("PARTIAL", null))).toBe(false);
+    expect(validate!(withComparison("UNAVAILABLE", "SOURCE_AVAILABLE"))).toBe(false);
+    const generated = readFileSync(join(ROOT, "generated/execution-profile-read.d.ts"), "utf8");
+    expect(generated).toContain("ComparisonCapability:");
+    expect(generated).toContain('"ACCOUNT_COMPARISON_INPUTS_NOT_QUALIFIED"');
   });
 
-  it("keeps the N23 Live gate read-only over the existing R2 backbone", () => {
+  it("keeps Live read-only over its own gate backbone and unpublished parent refusal", () => {
     const backbone = loadJson(
-      join(fixtureDir, "execution-governance.r2-review.valid.json"),
-    );
+      join(fixtureDir, "governance-live-review.valid.json"),
+    ).governance_backbone;
     const currentSource = loadJson(
       join(fixtureDir, "execution-canary-live-facts.empty.valid.json"),
     );

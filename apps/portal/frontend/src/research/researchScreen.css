@@ -1,0 +1,409 @@
+/*
+ * Research Loop screen chrome (RF-06 fidelity pass, HiFi release-v1.1).
+ *
+ * Scoped to `.research-screen`, which QuantBTModule puts around the Research
+ * Loop routes only; legacy QuantBT screens and every other module keep the
+ * shell's rules. Two measured root causes this file removes, on every screen:
+ *
+ *  - the HiFi screens are `font-size: 13px; line-height: normal`; the build
+ *    inherited 16px / 1.5, so every chip, pill and label stack was 2–6 px taller;
+ *  - the shell's content padding (24/32/64) sat around each screen's own HiFi
+ *    padding, so content started ~32 px late and ~64 px narrower. On these
+ *    routes the screen owns its padding and max width, as the HiFi does.
+ */
+
+/* Only screens that draw their own HiFi frame opt in (`data-own-frame`):
+   01, 03, 04, 05, 06, 07, 08 (07/08 since E2). The others keep the shell's gutter until they do. */
+.portal-content:has(.research-screen[data-own-frame]) {
+  padding: 0;
+  max-width: none;
+}
+
+/* The screens that keep the shell's gutter (00, 02, 09–13) sit on the HiFi frame too:
+   the sidebar edge + 24px, as the screens that own their frame (x = 272 at 1440). */
+.portal-content:has(.research-screen:not([data-own-frame])) {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.research-screen {
+  font-size: 13px;
+  line-height: normal;
+}
+
+/* HiFi global control motion: 120 ms on colour changes only. */
+.research-screen button,
+.research-screen a,
+.research-screen [role="tab"],
+.research-screen [role="checkbox"] {
+  transition:
+    border-color 120ms cubic-bezier(0.2, 0, 0.2, 1),
+    color 120ms cubic-bezier(0.2, 0, 0.2, 1),
+    background-color 120ms cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+.research-screen a:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+/* Links that sit inside running text (Compare's run line: run · report · RC) are told apart from the
+   words around them by more than colour (axe `link-in-text-block`: 1.83:1 link-to-text). A thin
+   underline, offset 2px; navigation and button-like links keep their own look. */
+.research-screen a:is([data-run-link], [data-report-link], [data-rc-link]) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* HiFi focus ring: a paper gap, then the accent ring. */
+.research-screen :focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--paper-raised),
+    0 0 0 4px var(--accent);
+}
+
+/* Motion vocabulary of the HiFi, one name each:
+ *  - `rs-pulse`: opacity 1 → .35 → 1 (rl-/rp-/sw-/sr-pulse in the HiFi files);
+ *  - `rs-flow`: the freeze-line arrow drift on Screen 06.
+ * Elements opt in with `data-motion` and a duration custom property. */
+@keyframes rs-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes rs-flow {
+  0% {
+    transform: translateX(-4px);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(4px);
+    opacity: 0.2;
+  }
+}
+
+@keyframes rs-caret {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.research-screen [data-motion="pulse"] {
+  animation: rs-pulse var(--rs-motion-duration, 1.6s) ease infinite;
+}
+
+.research-screen [data-motion="flow"] {
+  animation: rs-flow var(--rs-motion-duration, 1.6s) ease-in-out infinite;
+}
+
+.research-screen [data-motion="caret"] {
+  animation: rs-caret var(--rs-motion-duration, 1s) steps(1) infinite;
+}
+
+/* Spec 07 §8 `fz-blink`: the "preview only" badge flashes ONCE (600 ms,
+ * .3 → 1) after a slider move — never a loop, and never under
+ * prefers-reduced-motion (the [data-motion] rule below turns it off). */
+@keyframes rs-blink-once {
+  0% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.research-screen [data-motion="blink-once"] {
+  animation: rs-blink-once 600ms ease-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-screen [data-motion] {
+    animation: none !important;
+  }
+  .research-screen button,
+  .research-screen a,
+  .research-screen [role="tab"],
+  .research-screen [role="checkbox"] {
+    transition: none;
+  }
+}
+
+/* The primary button reads against the screen's own accent in both themes (white on the dark theme's light accent was 2.29:1). */
+.research-screen .btn-primary { color: var(--accent-contrast); }
+
+/*
+ * W3b: the evidence-cursor summary toggle exists for phones only. Above 720px it is not rendered, so
+ * the 1280 / 1440 px cursor bar is exactly what it was. (The mobile rules that read it sit in the one block below.)
+ */
+[data-screen="evidence-flow"] [data-cursor-toggle] {
+  display: none;
+}
+
+/* S07 causal fold rows: a long word or digest wraps inside the row instead of running past the card edge. */
+[data-fold-row] > [data-boundary-words],
+[data-fold-row] > [data-verdict-words],
+[data-fold-row] > [data-child-words] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * Phone width (QA 2026-10-02): no Research Loop screen may widen the page at 390 / 360 px.
+ * Everything below sits inside one max-width media query, so the 1440 px layout is untouched.
+ * Long codes wrap; fixed-width cards, stat rows, fold notes and the parameter table either
+ * shrink/wrap or scroll inside their own box. Measured by e2e (scrollWidth == viewport).
+ */
+@media (max-width: 720px) {
+  .research-screen {
+    overflow-wrap: anywhere;
+    max-width: 100%;
+  }
+  .research-screen [data-card-group],
+  .research-screen .jm-card {
+    min-width: 0;
+    max-width: none;
+  }
+  .research-screen [data-card-group] {
+    flex-basis: 100%;
+  }
+  .research-screen [data-phase] {
+    flex-direction: column;
+  }
+  .research-screen [data-phase] > :first-child {
+    width: auto;
+  }
+  .research-screen [data-stats] {
+    max-width: 100%;
+  }
+  .research-screen [data-fold-note] {
+    width: auto !important;
+    flex: 0 1 auto !important;
+    min-width: 0;
+    text-align: left !important;
+  }
+  .research-screen .ln-diff[data-gates="true"] {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .research-screen .flex-none.flex-wrap {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .research-screen .whitespace-nowrap {
+    white-space: normal;
+  }
+  .research-screen [data-parameters] {
+    position: relative;
+    overflow-x: auto;
+  }
+  .research-screen [data-parameters] > * {
+    min-width: max-content;
+  }
+  /* S03 pool funnel: a fixed 158px label + bar + count leaves the note no room at 390px; wrap the row and give the note its own line. */
+  .research-screen [data-pool-row] {
+    flex-wrap: wrap;
+  }
+  .research-screen [data-pool-row] > :first-child {
+    width: auto;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .research-screen [data-pool-row] > :last-child {
+    flex: 1 1 100%;
+    padding-left: 0;
+  }
+  /* ---- W3b: Evidence Flow hub, Progress and the four stage screens on a phone ---- */
+  /* (2) The evidence cursor is one summary line until opened; open, it scrolls with the page instead of pinning 165px. */
+  [data-screen="evidence-flow"] [data-cursor-toggle] {
+    display: flex;
+    min-height: 36px;
+    padding: 0;
+  }
+  [data-screen="evidence-flow"] [data-cursor-bar][data-collapsed="true"] > :not([data-cursor-toggle]) {
+    display: none;
+  }
+  [data-screen="evidence-flow"] [data-stage-card]:has([data-cursor-bar][data-collapsed="false"]) {
+    position: static !important;
+  }
+  /* (3) The tab strip scrolls and snaps; the "Promotion · soon" cell is not a tab and leaves the row. */
+  [data-screen="evidence-flow"] [data-promotion-soon] {
+    display: none;
+  }
+  [data-screen="evidence-flow"] [data-stage-tabs] {
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  [data-screen="evidence-flow"] [data-stage-tabs] > [role="tablist"] {
+    flex: none;
+  }
+  [data-screen="evidence-flow"] [data-stage-tabs] [role="tab"] {
+    scroll-snap-align: start;
+    min-height: 44px;
+  }
+  /* (4) Hit areas. Controls keep their look; they gain height/width (secondary >= 24px) ... */
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) :is(button, summary, select, input:not([type="range"], [type="checkbox"], [type="radio"]), [role="tab"]) {
+    min-height: 24px;
+  }
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) button {
+    min-width: 24px;
+  }
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) input[type="range"] {
+    min-height: 24px;
+  }
+  /* ... links gain an invisible vertical halo rather than a taller line box ... */
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) a[href]:not(:has(> *)) {
+    position: relative;
+  }
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) a[href]:not(:has(> *))::after {
+    content: "";
+    position: absolute;
+    inset: -6px -2px;
+  }
+  /* ... and the way to the previous/next stage is a full 44px bar-height target. */
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) a[href]:is(
+      [data-action="next-stage"],
+      [data-action="next-execute"],
+      [data-action="next-evidence"],
+      [data-action="back-to-split"],
+      [data-action="back-to-search"],
+      [data-action="back-to-freeze"],
+      [data-action="back-to-hub"],
+      [data-next="run-report"]
+    ) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) a[href]:is(
+      [data-action="next-stage"],
+      [data-action="next-execute"],
+      [data-action="next-evidence"],
+      [data-action="back-to-split"],
+      [data-action="back-to-search"],
+      [data-action="back-to-freeze"],
+      [data-action="back-to-hub"],
+      [data-next="run-report"]
+    )::after {
+    display: none;
+  }
+  /* Breadcrumb and cursor deep-dive links: a 24px row instead of a 13px line. */
+  :is([data-screen="evidence-flow"], [data-screen="run-progress"], [data-screen="split-detail"], [data-screen="search-detail"], [data-screen="freeze-detail"], [data-screen="execute-replay"]) nav a[href] {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+  }
+  /* (5) Progress: the claim chips wrap inside the card, and the console wraps its lines (S03 at 360). */
+  [data-screen="run-progress"] [data-claims] > span {
+    white-space: normal;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+  [data-screen="run-progress"] [data-console-box] {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  /* S07 causal fold rows at phone width: label, bar and words stack. */
+  [data-fold-row] {
+    min-width: 0;
+    max-width: 100%;
+  }
+  /* QA 360 (S03/S05/S07): the chips and table cells keep their words whole; wide tables scroll in their own card. */
+  .research-screen [data-claims] > span {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .research-screen [data-artifact] {
+    flex-wrap: wrap;
+    row-gap: 1px;
+  }
+  .research-screen [data-artifact-path] {
+    flex: 1 1 100% !important;
+    width: auto !important;
+    direction: ltr !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere;
+  }
+  .research-screen [data-artifact-state-cell] {
+    flex: none;
+    width: auto !important;
+  }
+  .research-screen [data-artifact-note] {
+    flex: 0 0 auto !important;
+    white-space: nowrap;
+  }
+  .research-screen [data-card="fold-table"] :is(th, td) {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .research-screen [data-card="fold-table"] {
+    background:
+      linear-gradient(to right, var(--paper-raised) 30%, transparent) left / 24px 100% no-repeat local,
+      linear-gradient(to left, var(--paper-raised) 30%, transparent) right / 24px 100% no-repeat local,
+      linear-gradient(to right, var(--line), transparent) left / 8px 100% no-repeat scroll,
+      linear-gradient(to left, var(--line), transparent) right / 8px 100% no-repeat scroll;
+  }
+  /* S07 frozen-parameter headers: words stay whole (the wrap is between words) at a smaller size. */
+  .research-screen [data-frozen-table] th {
+    overflow-wrap: normal;
+    word-break: normal;
+    font-size: 8px;
+    letter-spacing: 0;
+    padding-right: 3px;
+  }
+  /* S07 "each fold's own selection": one stacked block per fold instead of a clipped 6-column table. */
+  .research-screen [data-fold-selection-table] {
+    min-width: 0 !important;
+    display: block;
+  }
+  .research-screen [data-fold-selection-table] thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .research-screen [data-fold-selection-table] tbody {
+    display: block;
+  }
+  .research-screen [data-fold-selection-table] tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px 10px;
+    padding: 5px 0;
+  }
+  .research-screen [data-fold-selection-table] td {
+    display: block;
+    padding: 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .research-screen [data-fold-selection-table] td:nth-child(2) {
+    flex: 1 1 60%;
+  }
+  .research-screen [data-fold-selection-table] td:nth-child(n + 3) {
+    flex: 0 1 auto;
+  }
+}

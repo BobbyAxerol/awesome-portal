@@ -1,0 +1,20 @@
+{
+  "schema_version": "research.phase-changes.v1",
+  "phase": "P17",
+  "areas": [
+    "bounded current-source route-aware Replay and state-at-cursor reader",
+    "signed workspace/run/revision-bound page and direct-seek cursor contract",
+    "generated Research Replay OpenAPI declaration and contract snapshot integration",
+    "feature-dark Control API/compose/example configuration and route ownership ledger",
+    "focused unit, disposable PostgreSQL and generated-contract proof",
+    "Unified Plan current-source amendment and Claude Screen-08 handoff"
+  ],
+  "excluded": [
+    "frontend TSX/CSS/HiFi changes",
+    "runtime activation/deployment",
+    "execution order/fill/trade/position/event/candle/MAE-MFE replay synthesis",
+    "source database, worker, artifact, Parquet or raw market-data access",
+    "worker/job/checkpoint/cache/table/migration creation",
+    "Execution Edge, Trading System, broker, Redis or CLI changes"
+  ]
+}

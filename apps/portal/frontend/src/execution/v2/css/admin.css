@@ -1,0 +1,337 @@
+/* Admin Actions, plan only (UXM-07 S2). Tokens and type roles only; no
+ * uppercase, no raw colour. Text/fill pairs repeat ones proven by fleet.css. */
+.exec-adm-v2 {
+  --exec-topbar-h: 56px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-adm-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-adm-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-adm-sub-head {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-adm-chips,
+.exec-adm-fresh {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-adm-meta {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-adm-link {
+  font: var(--exec-font-control);
+  color: var(--accent);
+}
+/* The "Open" beside a state flag is no bigger than the flag's own words (layout audit: sublabel-bigger-than-primary). */
+.exec-adm-state .exec-adm-link {
+  font: var(--exec-font-label);
+}
+.exec-adm-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+/* Relay off is a warning (hi-fi .banner: warn fill and edge), same pair account.css and access.css proved. */
+.exec-adm-banner[data-tone="warn"] {
+  color: var(--ink);
+  background: var(--warn-bg);
+  border-color: var(--warn);
+}
+/* A failed refresh keeps the last good read: the edge is the stale colour and the rows are demoted. */
+.exec-adm-banner[data-tone="stale"] {
+  border-color: var(--f-stale);
+}
+.exec-adm-tiers[data-stale="true"] {
+  opacity: 0.7;
+}
+/* Operations link in the head is a bordered chip (hi-fi .chipx), the footer one is a plain link. */
+.exec-adm-link[data-variant="outline"] {
+  color: var(--accent);
+  padding: 5px var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  text-decoration: none;
+}
+.exec-adm-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+
+/* controls */
+.exec-adm-btn {
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-adm-btn[data-variant="primary"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-adm-btn:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-adm-btn:focus-visible,
+.exec-adm-segbtn:focus-visible,
+.exec-adm-input:focus-visible,
+.exec-adm-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-adm-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-adm-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+.exec-adm-segbtn {
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-adm-segbtn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* layout */
+.exec-adm-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.exec-adm-main[data-docked="true"] {
+  grid-template-columns: minmax(0, 1fr) 400px;
+}
+/* The pane stays in view while the tiers scroll (QA1 I-35), under the top bar. */
+.exec-adm-main[data-docked="true"] > .exec-dock {
+  position: sticky;
+  top: calc(var(--exec-topbar-h) + var(--space-3));
+  max-height: calc(100vh - var(--exec-topbar-h) - 2 * var(--space-3));
+  overflow-y: auto;
+}
+.exec-adm-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.exec-adm-name {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+.exec-adm-title-cell {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-adm-sub {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-adm-state {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-adm-note {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-adm-prov {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-adm-prov summary {
+  cursor: pointer;
+  color: var(--accent);
+  font: var(--exec-font-meta);
+}
+.exec-adm-gone {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px dashed var(--line-strong);
+}
+
+/* detail pane */
+.exec-adm-facts {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 4px var(--space-3);
+  margin: 0 0 var(--space-3);
+  font: var(--exec-font-body);
+}
+.exec-adm-facts dt {
+  color: var(--ink-faint);
+}
+.exec-adm-facts dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-adm-mono {
+  font: var(--exec-font-id);
+  font-variant-numeric: tabular-nums;
+}
+.exec-adm-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+.exec-adm-block p {
+  margin: 0;
+}
+.exec-adm-h4 {
+  margin: 0;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.exec-adm-label {
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-adm-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 5px 8px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-adm-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-adm-pav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  list-style: none;
+}
+.exec-adm-pav-item {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-adm-pav-label {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-adm-strip-item {
+  opacity: 0.55;
+}
+.exec-adm-strip-item[data-current="true"] {
+  opacity: 1;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-adm-plan,
+.exec-adm-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+.exec-adm-plan-line {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-adm-pre {
+  max-height: 240px;
+  margin: 0;
+  overflow: auto;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+
+@media (max-width: 660px) {
+  .exec-adm-main[data-docked="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exec-adm-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The provenance table's reasons are long sentences with codes: they wrap inside the panel instead of widening it (QA2 R3-23, 1024px). */
+.exec-adm-prov .exec-cards tbody td,
+.exec-adm-prov .exec-cards tbody td * {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

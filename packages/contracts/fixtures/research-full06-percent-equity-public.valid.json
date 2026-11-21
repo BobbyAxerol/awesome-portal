@@ -1,0 +1,184 @@
+{
+  "scope": "SANITIZED_PUBLIC_CONTRACT_FIXTURE_NOT_ACTIVATION_PROOF",
+  "run_id": "rrun_069f8691e7d4a0af66b2f1a9bca181e8",
+  "profile": {
+    "profile_id": "p10.delta-pct-equity-wfo-temporal-1h.v1",
+    "state": "ENABLED",
+    "reason_code": null,
+    "refusals": [],
+    "engine_release_id": "er_quantbt_111",
+    "execution_route": "pct_equity",
+    "protocol": "advanced",
+    "optimization_mode": "mode_1_decay",
+    "optimization_schedule": "global",
+    "requested_spec_versions": [
+      "research.requested-spec.v2"
+    ],
+    "timeframe": "1h",
+    "trial_count": {
+      "min": 3,
+      "max": 3
+    },
+    "trial_default": 3,
+    "trial_scope": "GLOBAL_STUDY",
+    "max_total_trials": null,
+    "seed_policy": "LOCKED",
+    "random_seed": 42,
+    "max_span_days": 3650,
+    "fold_bounds": {
+      "min": 2,
+      "max": 16
+    },
+    "frequencies": [
+      "weekly",
+      "monthly",
+      "quarterly"
+    ],
+    "window_modes": [
+      "expanding",
+      "rolling"
+    ],
+    "parameter_policy": "DELTA_SEARCH_WITH_QUALIFIED_PINS",
+    "allowed_pin_names": [
+      "rvol",
+      "slpercent"
+    ],
+    "inner_validation": "NOT_ADMITTED_GLOBAL_RETENTION_ONLY",
+    "inner_constraints": null,
+    "temporal_guards": {
+      "policy": "V1_ABSENT_V2_EXPLICIT",
+      "defaults": {
+        "label_horizon_bars": 0,
+        "purge_bars": 0,
+        "embargo_bars": 0
+      },
+      "max_bars": 10000,
+      "zero_semantics": "ZERO_APPLIES_NO_TEMPORAL_GUARD"
+    },
+    "independent_holdout": false,
+    "budget": {
+      "scope": "DECLARED_CAPS_NOT_RESERVATION_OR_ESTIMATE",
+      "recipe_digest": "15cd3c36a318128e623773f11ce0a27b557a408a96c00972a82bea4c38aa530b",
+      "profile_digest": "142b616104a5e356d8473c99f594e88c2e08abaa70bb524942a218706fa77a85",
+      "qualification": "PRODUCT_RUN_QUALIFIED",
+      "memory_bytes": 4294967296,
+      "cpu_seconds": 120,
+      "wall_seconds": 240,
+      "scratch_bytes": 134217728,
+      "io_bytes": 536870912,
+      "file_bytes": 16777216,
+      "fd_limit": 128,
+      "planning_max_bars": 100000,
+      "max_warmup_bars": 100000,
+      "queue_class": "HEAVY",
+      "resource_class": "p10-delta-wfo-v1",
+      "preview_override": false
+    },
+    "account_model": "QUANTBT_PERCENT_EQUITY_V1",
+    "account": {
+      "initial_capital": 20000,
+      "leverage": 3,
+      "alloc_per_trade": 0.1,
+      "allocation_unit": "EQUITY_FRACTION",
+      "canonical_one_way_fee_rate": 0.0005,
+      "slippage": 0,
+      "funding_enabled": false,
+      "sizing_authority": "QUANTBT_PCT_EQUITY_LIVE_EQUITY_ON_SIGNAL_CHANGE_V1"
+    }
+  },
+  "provenance": {
+    "source_adapter_id": "full06.quantbt-pct-equity-wfo-temporal-1h.v1",
+    "profile_id": "full06.delta-pct-equity-wfo-temporal-1h.v1",
+    "engine_version": "1.1.1",
+    "source_manifest_digest": "a3e4acd7dcdb576a39cb5c8a6bcad39291bd9f4ea0e9fe3eb9152f1900670181",
+    "source_transform_digest": "b388b0fb1d021053b5537c22143f859702a3fc14c3f7b8ab2d2035c67e65857f",
+    "retained_import_digest": "6b7db31215eaf470d3b7b478e47a445adbc3edc3db2b04bf2a010f1e332fd20b",
+    "requested_spec_digest": "927415e1ab8ee0951e872daf68a1a8e813a767ffc9c63ea681d879f8dd473c54",
+    "effective_spec_digest": "ee9c294aa4106d1722d62dc7e1f69913a60c905282aeffd49ef3ca82e5062255",
+    "dataset_binding_digest": "1aef26e0ac2758da748171ee29968a6b47b43c3b290bf442636990035a2688e6",
+    "retained_at_utc_ms": 1791289960242
+  },
+  "stage4_binding": {
+    "schema_version": "research.stage4-binding.v1",
+    "lane": "RS02_RETAINED_CHILD_AUDIT",
+    "state": "BOUND",
+    "reason_code": null,
+    "sealed_params_sha256": "a954753bcaf926f612511b2c3a5c226a39cf58bd664a87f9124fe0f44080a7f8",
+    "rows": [
+      {
+        "key": "SEALED_PARAMS",
+        "label": "sealed params digest",
+        "value": "baf7c707c2436a55bb012a15",
+        "identity_rule": "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1",
+        "source_key": "rs02.seal.selection.parameters",
+        "folds": [],
+        "state": "MATCH",
+        "reason_code": null
+      },
+      {
+        "key": "REPLAY_PARAMS",
+        "label": "params digest used by replay",
+        "value": "baf7c707c2436a55bb012a15",
+        "identity_rule": "QUANTBT_WALKFORWARD_STRATEGY_CANDIDATE_ID_V1",
+        "source_key": "rs02.fold.child_audit.out_of_sample_generation.candidate_id",
+        "folds": [
+          {
+            "fold_id": "0",
+            "value": "baf7c707c2436a55bb012a15",
+            "audit_ordinal": 10,
+            "state": "MATCH",
+            "reason_code": null
+          },
+          {
+            "fold_id": "1",
+            "value": "baf7c707c2436a55bb012a15",
+            "audit_ordinal": 11,
+            "state": "MATCH",
+            "reason_code": null
+          }
+        ],
+        "state": "MATCH",
+        "reason_code": null
+      },
+      {
+        "key": "SEALED_BUNDLE",
+        "label": "sealed bundle digest",
+        "value": "398bb6d041504f840eb656e033838cbc0d4ba72d3e7fe75294f714f52ce5405d",
+        "identity_rule": "QUANTBT_STRATEGY_FINGERPRINT_V1",
+        "source_key": "rs02.fold.child_audit.selection_stage.strategy_fingerprint",
+        "folds": [],
+        "state": "MATCH",
+        "reason_code": null
+      },
+      {
+        "key": "RUNTIME_BUNDLE",
+        "label": "runtime bundle digest",
+        "value": "398bb6d041504f840eb656e033838cbc0d4ba72d3e7fe75294f714f52ce5405d",
+        "identity_rule": "QUANTBT_STRATEGY_FINGERPRINT_V1",
+        "source_key": "rs02.fold.child_audit.out_of_sample_generation.strategy_fingerprint",
+        "folds": [
+          {
+            "fold_id": "0",
+            "value": "398bb6d041504f840eb656e033838cbc0d4ba72d3e7fe75294f714f52ce5405d",
+            "audit_ordinal": 10,
+            "state": "MATCH",
+            "reason_code": null
+          },
+          {
+            "fold_id": "1",
+            "value": "398bb6d041504f840eb656e033838cbc0d4ba72d3e7fe75294f714f52ce5405d",
+            "audit_ordinal": 11,
+            "state": "MATCH",
+            "reason_code": null
+          }
+        ],
+        "state": "MATCH",
+        "reason_code": null
+      }
+    ],
+    "pairs": {
+      "params": "MATCH",
+      "bundle": "MATCH"
+    }
+  }
+}

@@ -1,0 +1,651 @@
+{
+ "_comment": "Captured 2026-09-24 from the isolated preview http://localhost:8095 (QuantBT 1.1.1, historical crypto-binance-1m BTCUSDT 1h). Rows read-only from portal_control; API bodies from GET /api/v1/quantbt/runs and /runs/{id}/evidence. Used by the P12 PostgreSQL lane to seed live-shaped P13/P11 rows. Not a live receipt for RF-05 code: that code is not deployed on the preview.",
+ "run_id": "rrun_34a6beaa911baacd8509c66bb85adf74",
+ "projection_revision": "p13r1_016e8d8ab4ca3f408b5f9aa5d98a14db297fbb6160b89fca9f8cc5c898cdea2b",
+ "projection": {
+  "direct": {
+   "bars": "2508",
+   "num_trades": "45",
+   "final_equity": "19965.998848845535",
+   "initial_equity": "19996.892873321103"
+  },
+  "series": {
+   "EQUITY_OOS": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "MONTHLY_RETURNS": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "ROLLING_RETURNS_20": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "RETURN_DISTRIBUTION": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   }
+  },
+  "source": {
+   "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
+   "chart_sampling": "EXTREMA_BUCKET_V1",
+   "engine_version": "1.1.1",
+   "series_metadata": {
+    "equity_oos": {
+     "sampling": "EXTREMA_BUCKET_V1",
+     "emitted_point_count": 25,
+     "source_observation_count": 744
+    },
+    "monthly_returns": {
+     "sampling": "FULL",
+     "total_period_count": 0,
+     "emitted_point_count": 0,
+     "source_observation_count": 744,
+     "omitted_leading_period_count": 1,
+     "omitted_transport_period_count": 0
+    },
+    "rolling_returns_20": {
+     "sampling": "EXTREMA_BUCKET_V1",
+     "emitted_point_count": 15,
+     "window_observations": 20,
+     "source_observation_count": 724
+    },
+    "return_distribution": {
+     "sampling": "FULL_RETURN_HISTOGRAM_V2",
+     "emitted_point_count": 12,
+     "source_observation_count": 744
+    }
+   },
+   "direct_metric_scopes": {
+    "bars": "FULL_CHILD_TAPE",
+    "num_trades": "FULL_CHILD_TAPE",
+    "final_equity": "OOS_EQUITY_SERIES",
+    "initial_equity": "OOS_EQUITY_SERIES"
+   },
+   "execution_adapter_id": "p04.delta-rsi.v1",
+   "emitted_equity_points": 25,
+   "oos_observation_count": 744,
+   "source_transform_digest": "8924794d8e61094ebe3bf7b709b2a432c73694a04ba200fbc5474f5f0dec532b",
+   "evidence_transform_revision": "P13_SOURCE_R2"
+  },
+  "derived": {
+   "net_return_fraction": "-0.001544941240185635450293621818514223089782795749",
+   "max_drawdown_fraction": "-0.00677683426162735796942751839545032620160288915"
+  },
+  "unavailable": {
+   "funding": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_FUNDING"
+   },
+   "benchmark": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_BENCHMARK"
+   },
+   "audited_fills": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_AUDITED_FILLS"
+   },
+   "per_fold_metrics": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "P04_SOURCE_DID_NOT_PUBLISH_PER_FOLD_METRICS"
+   }
+  },
+  "schema_version": "research.evidence-projection.v1",
+  "series_identity": {
+   "EQUITY_OOS": {
+    "digest": "1c06daec220b64566ed7d219f32bfc47cbdeafdc144c692ff49a1c669488aad5",
+    "sampling": "EXTREMA_BUCKET_V1",
+    "emitted_point_count": 25,
+    "source_observation_count": 744
+   },
+   "MONTHLY_RETURNS": {
+    "digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+    "sampling": "FULL",
+    "emitted_point_count": 0,
+    "source_observation_count": 744
+   },
+   "ROLLING_RETURNS_20": {
+    "digest": "68431e7c7b70f1d9c69487a1d70a4b8c8918a1fceda67c6d082459a465df80aa",
+    "sampling": "EXTREMA_BUCKET_V1",
+    "emitted_point_count": 15,
+    "source_observation_count": 724
+   },
+   "RETURN_DISTRIBUTION": {
+    "digest": "b72f2fcf6a45ed606b955787da13e232a8159185056f250ebeaf7a6d8ea15e8d",
+    "sampling": "FULL_RETURN_HISTOGRAM_V2",
+    "emitted_point_count": 12,
+    "source_observation_count": 744
+   }
+  },
+  "transform_revision": "P13_SOURCE_R2",
+  "source_evidence_digest": "88f983e7e0aea09891092ffea589db514733359d617533e9d775de26f908b9d0",
+  "metric_registry_version": "research.metric-registry.v2"
+ },
+ "equity_oos": {
+  "source_observation_count": 744,
+  "emitted_point_count": 25,
+  "sampling": "EXTREMA_BUCKET_V1",
+  "series_digest": "1c06daec220b64566ed7d219f32bfc47cbdeafdc144c692ff49a1c669488aad5",
+  "payload": [
+   {
+    "equity": "19996.892873321103",
+    "at_utc_ms": 1782864000000,
+    "drawdown_fraction": "0"
+   },
+   {
+    "equity": "20004.363467965017",
+    "at_utc_ms": 1782907200000,
+    "drawdown_fraction": "0"
+   },
+   {
+    "equity": "19947.087150562846",
+    "at_utc_ms": 1782921600000,
+    "drawdown_fraction": "-0.002863191197955050224529246766933654409025539909"
+   },
+   {
+    "equity": "19949.317436960147",
+    "at_utc_ms": 1783044000000,
+    "drawdown_fraction": "-0.002751701202241236080062110435244607844542697554"
+   },
+   {
+    "equity": "19949.317436960147",
+    "at_utc_ms": 1783220400000,
+    "drawdown_fraction": "-0.002751701202241236080062110435244607844542697554"
+   },
+   {
+    "equity": "19949.317436960147",
+    "at_utc_ms": 1783400400000,
+    "drawdown_fraction": "-0.002751701202241236080062110435244607844542697554"
+   },
+   {
+    "equity": "19949.317436960147",
+    "at_utc_ms": 1783576800000,
+    "drawdown_fraction": "-0.002751701202241236080062110435244607844542697554"
+   },
+   {
+    "equity": "19949.317436960147",
+    "at_utc_ms": 1783756800000,
+    "drawdown_fraction": "-0.002751701202241236080062110435244607844542697554"
+   },
+   {
+    "equity": "19946.141036998644",
+    "at_utc_ms": 1783908000000,
+    "drawdown_fraction": "-0.002910486557575820265097158597595118136213804072"
+   },
+   {
+    "equity": "19922.149372914653",
+    "at_utc_ms": 1783962000000,
+    "drawdown_fraction": "-0.004109808101718489202209011667801839894822626493"
+   },
+   {
+    "equity": "19961.99153454294",
+    "at_utc_ms": 1784070000000,
+    "drawdown_fraction": "-0.002118134550491016838235936177904483961624428557"
+   },
+   {
+    "equity": "19973.80606305893",
+    "at_utc_ms": 1784127600000,
+    "drawdown_fraction": "-0.001527536977371043127763237820096707980324147704"
+   },
+   {
+    "equity": "19892.7970791272",
+    "at_utc_ms": 1784264400000,
+    "drawdown_fraction": "-0.005577102666449716788488238962166195932848937177"
+   },
+   {
+    "equity": "19895.19955362675",
+    "at_utc_ms": 1784289600000,
+    "drawdown_fraction": "-0.00545700514355690782187386774921863329920330537"
+   },
+   {
+    "equity": "19868.797212233265",
+    "at_utc_ms": 1784552400000,
+    "drawdown_fraction": "-0.00677683426162735796942751839545032620160288915"
+   },
+   {
+    "equity": "19906.623853337936",
+    "at_utc_ms": 1784559600000,
+    "drawdown_fraction": "-0.004885914754728446926450569992154274743056549876"
+   },
+   {
+    "equity": "19896.445652319642",
+    "at_utc_ms": 1784678400000,
+    "drawdown_fraction": "-0.005394713799226581982880333431737419314543043982"
+   },
+   {
+    "equity": "19952.573881623815",
+    "at_utc_ms": 1784822400000,
+    "drawdown_fraction": "-0.002588914484789172697680428870144090227503371351"
+   },
+   {
+    "equity": "19930.28913713956",
+    "at_utc_ms": 1784876400000,
+    "drawdown_fraction": "-0.003702908665105971311570222374965330793365857282"
+   },
+   {
+    "equity": "19979.33910885368",
+    "at_utc_ms": 1784966400000,
+    "drawdown_fraction": "-0.001250945032638054335220139135236842624607723932"
+   },
+   {
+    "equity": "19949.23500016499",
+    "at_utc_ms": 1785096000000,
+    "drawdown_fraction": "-0.00275582214291945432302548839443944463829428532"
+   },
+   {
+    "equity": "19974.380678077618",
+    "at_utc_ms": 1785128400000,
+    "drawdown_fraction": "-0.001498812493354933924531661366706071645028134544"
+   },
+   {
+    "equity": "19965.998848845535",
+    "at_utc_ms": 1785182400000,
+    "drawdown_fraction": "-0.001917812540294975749942574435563652051189541166"
+   },
+   {
+    "equity": "19965.998848845535",
+    "at_utc_ms": 1785358800000,
+    "drawdown_fraction": "-0.001917812540294975749942574435563652051189541166"
+   },
+   {
+    "equity": "19965.998848845535",
+    "at_utc_ms": 1785538800000,
+    "drawdown_fraction": "-0.001917812540294975749942574435563652051189541166"
+   }
+  ]
+ },
+ "progress_claim": {
+  "text": "The fixed P10 qualification sealed its artifacts but did not issue a release claim.",
+  "state": "NOT_ISSUED",
+  "cursor": null,
+  "methodology_certificate": {
+   "grade": null,
+   "state": "NOT_PUBLISHED",
+   "reason_code": "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE",
+   "issued_at_utc_ms": null
+  }
+ },
+ "hub_claim": {
+  "state": "NOT_ISSUED",
+  "text": "The fixed P10 qualification sealed its artifacts but did not issue a release claim.",
+  "cursor": null,
+  "methodology_certificate": {
+   "state": "NOT_PUBLISHED",
+   "grade": null,
+   "issued_at_utc_ms": null,
+   "reason_code": "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE"
+  },
+  "availability": {
+   "state": "AVAILABLE",
+   "reason_code": null
+  }
+ },
+ "hub_trade_count": {
+  "key": "TRADE_COUNT",
+  "label": "Trade count (child tape)",
+  "unit": "COUNT",
+  "scope": "CHILD_TAPE",
+  "frequency": "RUN_FINAL",
+  "origin": "ENGINE_DIRECT",
+  "definition_id": "research.metric.v1.trade_count",
+  "value": "45",
+  "availability": {
+   "state": "AVAILABLE",
+   "reason_code": null
+  }
+ },
+ "hub_run_identity_mode": "mode_1_decay",
+ "hub_run_identity_schedule": "global",
+ "library_before_rf05": {
+  "item": {
+   "run_id": "rrun_34a6beaa911baacd8509c66bb85adf74",
+   "attempt_id": "ratt_34a6beaa911baacd8509c66bb85adf74",
+   "source_kind": "RESEARCH_DURABLE",
+   "row_kind": "LOGICAL_RUN",
+   "relationship": {
+    "kind": "PRIMARY",
+    "logical_run_key": "primary",
+    "parent_run_id": null,
+    "technical_retry_count": 0
+   },
+   "status": "COMPLETED",
+   "mode": {
+    "display": "mode_1_decay · three_window_decay",
+    "key": "mode_1_decay",
+    "availability": {
+     "state": "AVAILABLE",
+     "reason_code": null
+    }
+   },
+   "strategy_id": {
+    "value": "delta-rsi-polynomial-alpha",
+    "availability": {
+     "state": "AVAILABLE",
+     "reason_code": null
+    }
+   },
+   "binding": {
+    "alpha_id": "delta-rsi-polynomial-alpha",
+    "alpha_name": "Delta-RSI Polynomial Alpha",
+    "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_0",
+    "av": "av_1_0_0",
+    "digest": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d"
+   },
+   "binding_availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "rc": null,
+   "instrument": {
+    "display": "BTCUSDT · 1h",
+    "availability": {
+     "state": "AVAILABLE",
+     "reason_code": null
+    }
+   },
+   "created_at_utc_ms": 1790235794822,
+   "certificate": {
+    "grade": null,
+    "availability": {
+     "state": "NOT_PUBLISHED",
+     "reason_code": "SOURCE_DID_NOT_PUBLISH_METHODOLOGY_CERTIFICATE"
+    }
+   },
+   "claim": {
+    "text": null,
+    "availability": {
+     "state": "NOT_PUBLISHED",
+     "reason_code": "SOURCE_CLAIM_NOT_ISSUED"
+    }
+   },
+   "stages": [
+    {
+     "key": "S1",
+     "state": "done",
+     "tip": "Persisted S1 state: DONE.",
+     "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+     "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+     }
+    },
+    {
+     "key": "S2",
+     "state": "done",
+     "tip": "Persisted S2 state: DONE.",
+     "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+     "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+     }
+    },
+    {
+     "key": "S3",
+     "state": "done",
+     "tip": "Persisted S3 state: DONE.",
+     "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+     "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+     }
+    },
+    {
+     "key": "S4",
+     "state": "done",
+     "tip": "Persisted S4 state: DONE.",
+     "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+     "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+     }
+    },
+    {
+     "key": "S5",
+     "state": "done",
+     "tip": "Persisted S5 state: DONE.",
+     "tooltip_source": "DERIVED_FROM_PERSISTED_STATE",
+     "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+     }
+    }
+   ],
+   "stats": [
+    {
+     "key": "oos_sharpe",
+     "label": "OOS sharpe",
+     "role": "OOS_SHARPE",
+     "value": null,
+     "tone": "DEFAULT",
+     "availability": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P12_DOES_NOT_INFER_FINAL_METRICS_FROM_PROGRESS_OR_ARTIFACTS"
+     }
+    },
+    {
+     "key": "decay",
+     "label": "Δ decay",
+     "role": "DECAY",
+     "value": null,
+     "tone": "DEFAULT",
+     "availability": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P12_DOES_NOT_INFER_FINAL_METRICS_FROM_PROGRESS_OR_ARTIFACTS"
+     }
+    },
+    {
+     "key": "trade_count",
+     "label": "trades",
+     "role": "TRADE_COUNT",
+     "value": null,
+     "tone": "DEFAULT",
+     "availability": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P12_DOES_NOT_INFER_FINAL_METRICS_FROM_PROGRESS_OR_ARTIFACTS"
+     }
+    }
+   ],
+   "superseded_note": null,
+   "comparison": {
+    "key": "rck1_xs79jdkyFhy3pk09_EXh4Mguf-uERSGFBQHZaAm_Jtk",
+    "availability": {
+     "state": "AVAILABLE",
+     "reason_code": null
+    }
+   },
+   "sparkline": {
+    "kind": "oos_equity",
+    "availability": {
+     "state": "NOT_PUBLISHED",
+     "reason_code": "P12_DOES_NOT_READ_ARTIFACT_OR_PARQUET_SERIES"
+    }
+   },
+   "source_updated_at_utc_ms": 1790235802890
+  },
+  "legacy_item": {
+   "run_id": "527d2b993c834729",
+   "attempt_id": null,
+   "source_kind": "LEGACY_1_0_8_METADATA",
+   "row_kind": "LEGACY_RUN",
+   "relationship": {
+    "kind": "LEGACY_UNKNOWN",
+    "logical_run_key": "527d2b993c834729",
+    "parent_run_id": null,
+    "technical_retry_count": 0
+   },
+   "status": "QUEUED",
+   "mode": {
+    "display": "three_window_decay",
+    "key": "three_window_decay",
+    "availability": {
+     "state": "LEGACY_METADATA_ONLY",
+     "reason_code": "LEGACY_1_0_8_PROTOCOL_METADATA_ONLY"
+    }
+   },
+   "strategy_id": {
+    "value": "delta-rsi-polynomial-alpha",
+    "availability": {
+     "state": "LEGACY_METADATA_ONLY",
+     "reason_code": "LEGACY_1_0_8_STRATEGY_METADATA_ONLY"
+    }
+   },
+   "binding": null,
+   "binding_availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+   },
+   "rc": null,
+   "instrument": {
+    "display": null,
+    "availability": {
+     "state": "LEGACY_METADATA_ONLY",
+     "reason_code": "LEGACY_DATASET_ID_DOES_NOT_DECLARE_SYMBOL_TIMEFRAME"
+    }
+   },
+   "created_at_utc_ms": 1790179122981,
+   "certificate": {
+    "grade": null,
+    "availability": {
+     "state": "LEGACY_METADATA_ONLY",
+     "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+    }
+   },
+   "claim": {
+    "text": null,
+    "availability": {
+     "state": "LEGACY_METADATA_ONLY",
+     "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+    }
+   },
+   "stages": [
+    {
+     "key": "S1",
+     "state": "pend",
+     "tip": null,
+     "tooltip_source": "NOT_PUBLISHED",
+     "availability": {
+      "state": "LEGACY_METADATA_ONLY",
+      "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+     }
+    },
+    {
+     "key": "S2",
+     "state": "pend",
+     "tip": null,
+     "tooltip_source": "NOT_PUBLISHED",
+     "availability": {
+      "state": "LEGACY_METADATA_ONLY",
+      "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+     }
+    },
+    {
+     "key": "S3",
+     "state": "pend",
+     "tip": null,
+     "tooltip_source": "NOT_PUBLISHED",
+     "availability": {
+      "state": "LEGACY_METADATA_ONLY",
+      "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+     }
+    },
+    {
+     "key": "S4",
+     "state": "pend",
+     "tip": null,
+     "tooltip_source": "NOT_PUBLISHED",
+     "availability": {
+      "state": "LEGACY_METADATA_ONLY",
+      "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+     }
+    },
+    {
+     "key": "S5",
+     "state": "pend",
+     "tip": null,
+     "tooltip_source": "NOT_PUBLISHED",
+     "availability": {
+      "state": "LEGACY_METADATA_ONLY",
+      "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+     }
+    }
+   ],
+   "stats": [
+    {
+     "key": "progress",
+     "label": "progress",
+     "role": "PROGRESS",
+     "value": null,
+     "tone": "DEFAULT",
+     "availability": {
+      "state": "LEGACY_METADATA_ONLY",
+      "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+     }
+    },
+    {
+     "key": "trials",
+     "label": "trials",
+     "role": "TRIALS",
+     "value": null,
+     "tone": "DEFAULT",
+     "availability": {
+      "state": "LEGACY_METADATA_ONLY",
+      "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+     }
+    },
+    {
+     "key": "elapsed",
+     "label": "elapsed",
+     "role": "ELAPSED",
+     "value": null,
+     "tone": "DEFAULT",
+     "availability": {
+      "state": "LEGACY_METADATA_ONLY",
+      "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_PROGRESS"
+     }
+    }
+   ],
+   "superseded_note": null,
+   "comparison": {
+    "key": null,
+    "availability": {
+     "state": "LEGACY_METADATA_ONLY",
+     "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_COMPARISON_COMPATIBILITY"
+    }
+   },
+   "sparkline": {
+    "kind": null,
+    "availability": {
+     "state": "LEGACY_METADATA_ONLY",
+     "reason_code": "LEGACY_1_0_8_DOES_NOT_PUBLISH_SPARKLINE_SERIES"
+    }
+   },
+   "source_updated_at_utc_ms": 1790179122981
+  },
+  "claim_ledger": {
+   "issued": 0,
+   "not_issued": 9,
+   "pending_source": 5,
+   "failed": 0
+  },
+  "filter_catalog": {
+   "alphas": [
+    {
+     "alpha_id": "delta-rsi-polynomial-alpha",
+     "alpha_name": "Delta-RSI Polynomial Alpha"
+    }
+   ],
+   "modes": [
+    {
+     "key": "mode_1_decay",
+     "display": "mode_1_decay"
+    },
+    {
+     "key": "three_window_decay",
+     "display": "three_window_decay"
+    }
+   ],
+   "scratch_available": true
+  }
+ }
+}

@@ -1,0 +1,12 @@
+-- New native edition must retain exact protected code, declaration and adapter identity.
+ALTER TABLE research.alpha_versions ADD CONSTRAINT alpha_versions_limit_oco_identity_check
+ CHECK(alpha_version_id<>'av_delta_rsi_polynomial_alpha_1_0_12' OR (alpha_id='delta-rsi-polynomial-alpha'
+ AND code_digest='34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d'
+ AND entrypoint='strategy.delta_rsi:generate_signals' AND declared_contract='{"schema_version":"research.alpha-source.v1","version":"1.0.12","entrypoint":"strategy.delta_rsi:generate_signals","required_columns":["open","high","low","close","volume"],"timeframes":["1h"],"warmup_bars":300,"determinism":{"seed_required":false,"external_io":false},"parameter_space":{"window":{"minimum":20,"maximum":60,"step":2},"rsi_l":{"minimum":12,"maximum":30,"step":1},"signalLength":{"minimum":3,"maximum":20,"step":1},"len_atr1":{"minimum":5,"maximum":20,"step":1},"len_atr2":{"minimum":25,"maximum":60,"step":1},"rvol":{"minimum":1,"maximum":2.5,"step":0.1},"len_vol":{"minimum":8,"maximum":40,"step":2},"slpercent":{"minimum":0.7,"maximum":2.5,"step":0.1}},"execution":{"adapter_id":"full03.delta-rsi.v1","engine_release_id":"er_quantbt_111","execution_route":"event_driven","protocol":"three_window_decay","parameter_mode":"FIXED_NATIVE_LIMIT_OCO_DELTA_V1"},"provenance":{"protected_kernel_sha256":"34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d","specification_sha256":"3a4f7e5beb79eecebda61f46a8501d0128bffa0b29508ee1826835b1eeb59730","native_adapter_sha256":"10453d3e2ab548371df4344c46601241501fff76e4fe109a0e3c91068a29b118"}}'::jsonb));
+DO $adapter$ DECLARE definition text; BEGIN
+ SELECT pg_get_constraintdef(oid) INTO STRICT definition FROM pg_constraint
+ WHERE conrelid='research.execution_adapter_bindings'::regclass AND conname='execution_adapter_bindings_full03_exact_check';
+ IF left(definition,7)<>'CHECK (' OR right(definition,1)<>')' THEN RAISE EXCEPTION 'unsupported exact binding constraint'; END IF;
+ ALTER TABLE research.execution_adapter_bindings DROP CONSTRAINT execution_adapter_bindings_full03_exact_check;
+ EXECUTE format('ALTER TABLE research.execution_adapter_bindings ADD CONSTRAINT execution_adapter_bindings_full03_exact_check CHECK ((%s) OR (adapter_id=%L AND alpha_version_id=%L AND contract_digest=%L))',substring(definition from 8 for char_length(definition)-8),'full03.delta-rsi.v1','av_delta_rsi_polynomial_alpha_1_0_12','915da40aee3724cf17443b2027685ff5d9c29801ee332fa487aeca2e6e90f4b5');
+END $adapter$;

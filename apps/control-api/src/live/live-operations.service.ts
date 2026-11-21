@@ -1,16 +1,20 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "../canary/canary.repository";
 import { AuthSession, PortalUser } from "../domain";
 import { ProfileReadService } from "../profile-read/profile-read.service";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
+import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
 import {
   exactCurrencySum,
   latest,
   openOrders,
   ProfileScreenSource,
 } from "../execution/profile-screen-composer";
+import { profileStageFacts } from "../execution/stage-facts-profile";
+import { gapRanges, sourceFigures, typedOrders, typedPositions } from "../execution/stage-rows";
 import { GovernanceError } from "../governance/governance.service";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import {
@@ -55,9 +59,34 @@ export class LiveOperationsService {
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
   ) {}
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string,
+    query:import("./live-source.contract").LiveSourceReadQuery={}) {
+    const principal = { user, session, workspaceId, viewerWorkspaceId };
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
+      // Independent positive source-only path. No Canary read, artifact/R1/R2
+      // ancestry inference, owner/ADMIN fallback or new business permission.
+      return this.profileReads.liveOperations(principal,deploymentId,undefined,query);
+    await this.assertReadAccess(user, workspaceId);
+    // New finite navigation is V2-only, never silently ignored by legacy.
+    if(query.panel!==undefined||query.cursor!==undefined)
+      throw new GovernanceError("LIVE_SOURCE_QUERY_INVALID","Live source navigation is not available.",400);
+    const result = await this.detailLegacy(user, session, workspaceId, deploymentId, viewerWorkspaceId);
+    await this.assertReadAccess(user, workspaceId);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
+  }
+
+  private async assertReadAccess(user: PortalUser, workspaceId: string): Promise<void> {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const denial = governanceDenial({ access, gate: "live", mode: "read", workspaceId });
+    if (denial) throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
+  }
+
+  private async detailLegacy(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
     /*
      * A4-3 · the Live gate, decided from a capability.
      *
@@ -66,11 +95,6 @@ export class LiveOperationsService {
      * reach the workspace could read it; §20.3 makes it `governance.live.read`,
      * which the owner holds and anybody else holds only by explicit grant.
      */
-    const access = await this.ownerAccess.effectiveAccess(user.userId);
-    const denial = governanceDenial({ access, gate: "live", mode: "read", workspaceId });
-    if (denial) {
-      throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
-    }
     let canary: CanaryEnvelopeRow;
     try {
       canary = await this.canaries.latestByDeployment(workspaceId, deploymentId);
@@ -80,7 +104,7 @@ export class LiveOperationsService {
       // read behind a generic unavailable page.
       if (error instanceof GovernanceError && error.code === "CANARY_ENVELOPE_NOT_FOUND") {
         const currentSource = await this.profileReads.snapshot(
-          { user, session, workspaceId },
+          { user, session, workspaceId, viewerWorkspaceId },
           "live",
           "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
           deploymentId,
@@ -108,7 +132,7 @@ export class LiveOperationsService {
     const [lineage, currentSource] = await Promise.all([
       this.canaries.lineageFor(canary),
       this.profileReads.snapshot(
-        { user, session, workspaceId },
+        { user, session, workspaceId, viewerWorkspaceId },
         "live",
         "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN",
         deploymentId,
@@ -206,6 +230,7 @@ export class LiveOperationsService {
       deployment: {
         deployment_id: typeof deployment?.deployment_id === "string" ? deployment.deployment_id : deploymentId,
         portfolio_id: typeof deployment?.portfolio_id === "string" ? deployment.portfolio_id : null,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         account_id: typeof deployment?.account_id === "string" ? deployment.account_id : null,
         external_account_ref: null,
         venue: typeof deployment?.venue === "string" ? deployment.venue : null,
@@ -220,6 +245,9 @@ export class LiveOperationsService {
         activated_at: null,
         blocker_codes: blockers,
       },
+      // FE-067: typed runtime / reconciliation / sessions; additive, see stage-facts.ts.
+      stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
+      source_figures: sourceFigures(source, "LIVE_SOURCE_UNAVAILABLE"),
       predecessor_canary_envelope: null,
       kpis: [
         kpi("capital", "Capital", "EXECUTION", currency, capital, ["account_balances"], false, capitalReason),
@@ -254,9 +282,11 @@ export class LiveOperationsService {
         gap_detected: source.projection ? false : null,
         affected_authorities: source.projection ? [] : ["EXECUTION", "BROKER", "DERIVED"],
         blocker_codes: source.projection ? [] : ["SOURCE_CONTINUITY_UNAVAILABLE"],
+        // FE-072: the wall-clock window of a gap is not recorded by the projection journal.
+        gap_ranges: gapRanges(source.projection !== null),
       },
-      positions: source.collection("positions", "EXECUTION", "positions"),
-      orders: source.collection("orders", "EXECUTION", "orders"),
+      positions: { ...source.collection("positions", "EXECUTION", "positions"), typed: typedPositions(source, "LIVE_SOURCE_UNAVAILABLE") },
+      orders: { ...source.collection("orders", "EXECUTION", "orders"), typed: typedOrders(source, "LIVE_SOURCE_UNAVAILABLE") },
       open_order_footer: {
         envelope: source.panel("open-order-footer", "EXECUTION", ["orders"], { exact_open_order_count: open.length }),
         exact_open_order_count: source.connected ? open.length : null,
@@ -416,6 +446,7 @@ export class LiveOperationsService {
       deployment: {
         deployment_id: canary.deployment_id,
         portfolio_id: certification.portfolio_id,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         account_id: certification.account_id,
         external_account_ref: certification.external_account_ref,
         venue: certification.venue,
@@ -438,6 +469,9 @@ export class LiveOperationsService {
         activated_at: null,
         blocker_codes: blockers,
       },
+      // FE-067: typed runtime / reconciliation / sessions; additive, see stage-facts.ts.
+      stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
+      source_figures: sourceFigures(source, "LIVE_SOURCE_UNAVAILABLE"),
       predecessor_canary_envelope: {
         envelope_id: canary.envelope_id,
         revision: canary.revision,
@@ -497,9 +531,10 @@ export class LiveOperationsService {
         gap_detected: source.projection ? false : null,
         affected_authorities: source.projection ? [] : ["EXECUTION", "BROKER", "DERIVED"],
         blocker_codes: source.projection ? [] : ["SOURCE_CONTINUITY_UNAVAILABLE", "EX_BE_08_PENDING"],
+        gap_ranges: gapRanges(source.projection !== null),
       },
-      positions: sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION"),
-      orders: sourceConnected ? sourceOrders : unavailableCollection("orders", "EXECUTION"),
+      positions: { ...(sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION")), typed: typedPositions(source, "LIVE_SOURCE_UNAVAILABLE") },
+      orders: { ...(sourceConnected ? sourceOrders : unavailableCollection("orders", "EXECUTION")), typed: typedOrders(source, "LIVE_SOURCE_UNAVAILABLE") },
       open_order_footer: {
         envelope: sourceConnected ? source.panel("open-order-footer", "EXECUTION", ["orders"], { exact_open_order_count: open.length }) : unavailablePanel("open-order-footer", "EXECUTION"),
         exact_open_order_count: sourceConnected ? open.length : null,

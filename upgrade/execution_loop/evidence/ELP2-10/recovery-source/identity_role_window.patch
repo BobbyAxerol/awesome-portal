@@ -1,0 +1,49 @@
+--- a/identity_role_window.py
++++ b/identity_role_window.py
+@@ -86,0 +87,4 @@ class IdentityRoleWindow:
++        # Failure before SDK ENTER needs a physical terminal, not a fake SDK
++        # `finished` flag. These fields only retain a same-attempt recovery result.
++        self._pre_enter_failure = False
++        self._pre_enter_resolution = None
+@@ -176,2 +180,13 @@ class IdentityRoleWindow:
+-        result = await resolve_prepared_identity(self.prepared,self.selection,self.raw)
+-        return result
++        try:
++            return await resolve_prepared_identity(self.prepared,self.selection,self.raw)
++        except BaseException:
++            # The SDK verifies JWT again before its authority context. Expiry or
++            # cancellation here may leave `finished=False`; no source terminal
++            # has been proved. Preserve the exact attempt for fenced readback.
++            if self.prepared.finished is False and self._never_entered():
++                self._pre_enter_failure = True
++            raise
++
++    def _never_entered(self):
++        return all(getattr(self.prepared, name) is False for name in
++                   ('entered', 'admitted', 'borrowed', 'outer_started'))
+@@ -182 +197,4 @@ class IdentityRoleWindow:
+-        require(self.state == 'RECOVERY_REQUIRED' and self.prepared.finished,
++        r = self.prepared
++        pre_enter = (self._pre_enter_failure and r.finished is False
++                     and self._never_entered())
++        require(self.state == 'RECOVERY_REQUIRED' and (r.finished or pre_enter),
+@@ -184,2 +202,10 @@ class IdentityRoleWindow:
+-        self.prepared.resolution = await self.prepared.owner.recover(self.prepared.attempt)
+-        return self.prepared.resolution
++        if pre_enter:
++            # Repeated or interrupted recovery never reuses a prior local flag
++            # as permission. Only this returned physical terminal+ACK may settle.
++            self._pre_enter_resolution = None
++        r.resolution = await r.owner.recover(r.attempt)
++        if (pre_enter and type(r.resolution) is SourceResolution
++                and r.resolution.phase == 'ROLLED_BACK'
++                and r.resolution.portal_acknowledged is True):
++            self._pre_enter_resolution = r.resolution
++        return r.resolution
+@@ -192 +218,5 @@ class IdentityRoleWindow:
+-        require(self.state == 'RECOVERY_REQUIRED' and r.finished
++        pre_enter_settled = (self._pre_enter_failure and r.finished is False
++            and self._never_entered() and self._pre_enter_resolution is terminal
++            and type(terminal) is SourceResolution and terminal.phase == 'ROLLED_BACK'
++            and terminal.portal_acknowledged is True)
++        require(self.state == 'RECOVERY_REQUIRED' and (r.finished or pre_enter_settled)

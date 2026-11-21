@@ -73,12 +73,15 @@ class PreflightService:
         from portal_api.services.data_catalog import compute_quality
 
         timeframe = getattr(descriptor, "timeframe", None) or "1d"
+        from portal_api.adapters.market_data import VN_STOCK_DAILY_DATASET_ID, VN_SOURCE_TIMEZONE
+        observed_vn = getattr(descriptor, "dataset_id", None) == VN_STOCK_DAILY_DATASET_ID \
+            and getattr(descriptor, "source_timezone", None) == VN_SOURCE_TIMEZONE
         report = compute_quality(
             frame,
             snapshot_id="preflight",
             max_gap_ratio=0.1,
             max_duplicate_rows=0,
-            expected_frequency=timeframe,
+            expected_frequency=None if observed_vn else timeframe,
         )
         if not report.passed:
             raise DataSchemaError(

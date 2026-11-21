@@ -1,21 +1,62 @@
+/*
+ * Planning is an embedded feature, not a second Tailwind application.
+ *
+ * Its feature stylesheet is imported directly, but the small set of Portal
+ * `@layer components` primitives below is shared by its TSX.  Scanning the
+ * complete sibling Planning tree changed Tailwind's generated utility order
+ * across the whole Portal and invalidated unrelated visual baselines.  Keep
+ * the Portal scan boundary local; retain only the explicit, reviewed shared
+ * primitive contract through purge.  Add a name here only when the Planning
+ * UI primitive actually needs a Portal-owned `@layer` rule.
+ */
+const EMBEDDED_PLANNING_PORTAL_PRIMITIVES = [
+  "card",
+  "chip",
+  "chip-accent",
+  "chip-good",
+  "chip-bad",
+  "badge-pass",
+  "badge-fail",
+  "badge-pending",
+  "btn-primary",
+  "btn-ghost",
+  "input",
+  "navtab",
+  "navtab-active",
+  "state-loading",
+  "state-empty",
+  "state-failed",
+  "mono-label",
+  "section-title",
+  "definition-list",
+  "collapsible",
+  "table-wrap",
+  "chart-figure",
+  "dek",
+  "modal-backdrop",
+  "modal-panel",
+  "modal-head",
+  "icon-btn",
+  "modal-body",
+  "toast-stack",
+  "toast",
+  "toast-info",
+  "toast-good",
+  "toast-bad",
+  "sr-only",
+  // This is the embedded route-level Suspense fallback. It must survive
+  // Tailwind purge before a lazy Planning view mounts; do not replace this
+  // explicit declaration with a sibling-tree scan.
+  "feature-loading",
+];
+
 /** @type {import('tailwindcss').Config} */
 export default {
-  /*
-   * The embedded Planning source is scanned too.
-   *
-   * The Portal compiles Planning's components in place and owns the primitives
-   * they use — `.modal-backdrop`, `.modal-panel` and friends live in this
-   * package's `@layer components`. With only `./src` scanned, Tailwind found no
-   * use for them and purged them, so Planning's task editor and every other
-   * dialog rendered as unstyled blocks at the bottom of the page inside the
-   * Portal. Measured, not guessed: `document.styleSheets` contained no rule
-   * matching `.modal-backdrop` at all.
-   */
   content: [
     "./index.html",
     "./src/**/*.{ts,tsx}",
-    "../../../features/roadmap-task-board/frontend/src/**/*.{ts,tsx}",
   ],
+  safelist: EMBEDDED_PLANNING_PORTAL_PRIMITIVES,
   theme: {
     extend: {
       colors: {

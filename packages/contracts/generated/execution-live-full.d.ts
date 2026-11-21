@@ -11,6 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Sticky current Core preserves legacy separately. SCOPED_V2 is the exact DEPLOYMENT/LIVE source-only reader under independent governance.live.read, original Alpha/Account purposes and exact reviewed fields. Before retained reads, after every purpose, after snapshot equality and at LAST Core, the SAME combined flight retains all current obligations for body and held errors. No Canary/root lookup or fallback, source/broker acceptance, stream, activation, command, mutation, synthetic total or global population claim. Panel/source clock absence remains typed; Portal observed time is not source freshness. */
         get: operations["getLiveFullOperations"];
         put?: never;
         post?: never;
@@ -33,6 +34,1112 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** @description Source-only finite Live deployment read; NEVER approval/root/captured lineage, current broker verdict, source completeness, runtime activation, stream or command permission. Legacy LiveFullOperations remains a separate version. Alpha and Account original purposes and reviewed field permissions are independently enforced by the runtime before rows/counts/fields; THIS SCHEMA DOES NOT AUTHORIZE. Portal observed time is not source freshness. Runtime also applies a1MiB encoded body bound and combined current-authority/fresh-source/LAST-Core fence. These are proposed implementation bounds, not measured performance qualification. */
+        LiveSourceOperationsReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.live-source-operations.v2";
+            workspace_id: string;
+            /** @constant */
+            environment: "live";
+            profile_id: string;
+            deployment_id: string;
+            /** @constant */
+            record_authority: "PORTAL_RETAINED_OBSERVATION";
+            /** @constant */
+            source_verdict: "NOT_ASSERTED";
+            /** @constant */
+            visibility: "SCOPED";
+            /** @constant */
+            coverage: "AUTHORIZED_ONLY";
+            observed_at_ms: number;
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @constant */
+            runtime_activation_requested: false;
+            data: {
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                deployments: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "DEPLOYMENT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                positions: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "DEPLOYMENT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                sessions: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "DEPLOYMENT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                orders: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "DEPLOYMENT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                fills: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "DEPLOYMENT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                accounts: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "ACCOUNT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                account_balances: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "ACCOUNT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                margin_balances: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "ACCOUNT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                account_sync: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "ACCOUNT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                reconciliation: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "DEPLOYMENT";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+                /** @description Bounded CURRENT authorized retained observations only, not source census/full history. Runtime additionally enforces returned_count===records.length. NOT_PUBLISHED has no records or more page. Omitted value is not null and not exact zero. Text maxLength uses JSON code points; canonical Zod additionally applies its UTF16 length, and the projector bounds source text bytes. */
+                broker_sync: {
+                    /** @enum {string} */
+                    state: "PARTIAL" | "NOT_PUBLISHED";
+                    /** @enum {string} */
+                    reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY" | "NO_AUTHORIZED_RETAINED_OBSERVATION" | "SOURCE_PANEL_NOT_CAPTURED" | "DEPLOYMENT_GRAIN_NOT_PROVEN" | "BROKER_PURPOSE_NOT_COMMISSIONED";
+                    source_as_of_ms: null;
+                    /** @constant */
+                    source_clock_reason: "SOURCE_CLOCK_NOT_SCOPED";
+                    provenance: {
+                        dataset_id: string | null;
+                        purpose: ("alpha.read" | "account.read") | null;
+                        /** @constant */
+                        field_contract_revision: "portal.execution.live-source-fields.v2";
+                        field_policy_ref: string | null;
+                        /** @constant */
+                        projection_basis: "SAME_RETAINED_DOCUMENT";
+                        source_revision: null;
+                        source_cursor: null;
+                        /** @constant */
+                        source_completeness: "UNKNOWN";
+                        /** @constant */
+                        history_semantics: "BOUNDED_RETAINED_NOT_FULL_HISTORY";
+                    };
+                    /** @constant */
+                    grain: "NOT_COMMISSIONED";
+                    exact_total: null;
+                    /** @constant */
+                    limit: 200;
+                    returned_count: number;
+                    has_more: boolean;
+                    next_cursor: string | null;
+                    previous_cursor: string | null;
+                    records: {
+                        observation_id: string;
+                        values: {
+                            deployment_id?: string | null;
+                            strategy_id?: string | null;
+                            account_id?: string | null;
+                            portfolio_id?: string | null;
+                            position_id?: string | null;
+                            order_id?: string | null;
+                            fill_id?: string | null;
+                            instrument_id?: string | null;
+                            venue?: string | null;
+                            currency?: string | null;
+                            base_currency?: string | null;
+                            state?: string | null;
+                            status?: string | null;
+                            side?: string | null;
+                            runtime_state_since?: string | null;
+                            runtime_state_changed_at?: string | null;
+                            execution_session_id?: string | null;
+                            started_at?: string | null;
+                            completed_at?: string | null;
+                            account_type?: string | null;
+                            position_side?: string | null;
+                            time_in_force?: string | null;
+                            client_order_id?: string | null;
+                            order_type?: string | null;
+                            commission_currency?: string | null;
+                            runtime_state?: ("RUNNING" | "PAUSED" | "HALTED" | "STOPPED") | null;
+                            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
+                            reduce_only?: boolean | null;
+                            post_only?: boolean | null;
+                            mode?: "live" | null;
+                            signed_qty?: string | null;
+                            quantity?: string | null;
+                            price?: string | null;
+                            avg_px_open?: string | null;
+                            avg_px_close?: string | null;
+                            mark_price?: string | null;
+                            notional?: string | null;
+                            realized_pnl?: string | null;
+                            unrealized_pnl?: string | null;
+                            total?: string | null;
+                            locked?: string | null;
+                            free?: string | null;
+                            initial?: string | null;
+                            maintenance?: string | null;
+                            trigger_price?: string | null;
+                            filled_quantity?: string | null;
+                            average_fill_price?: string | null;
+                            commission?: string | null;
+                            submitted_count?: string | null;
+                            risk_rejected_count?: string | null;
+                            broker_rejected_count?: string | null;
+                            filled_count?: string | null;
+                            created_at_ms?: number | null;
+                            updated_at_ms?: number | null;
+                            trade_time_ms?: number | null;
+                        };
+                    }[];
+                } & (unknown & unknown);
+            };
+            runtime: {
+                state: null;
+                /** @constant */
+                reason_code: "SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED";
+            };
+            realtime: {
+                /** @constant */
+                active: false;
+                /** @constant */
+                reason_code: "FINITE_SCOPED_READ_NOT_STREAM_AUTHORITY";
+            };
+            commands: {
+                /** @constant */
+                enabled: false;
+                /** @constant */
+                reason_code: "READ_NOT_COMMAND_AUTHORITY";
+            };
+            /** @description BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose. */
+            identity?: {
+                /** @constant */
+                basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY";
+                alpha_id: string | null;
+                alpha_name: null;
+                portfolio_name: string | null;
+                /** @enum {string} */
+                alpha_reason_code: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ";
+                portfolio_name_reason_code: ("PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ") | null;
+            } & (unknown & unknown);
+            /** @description FE-067/072: optional authorized runtime/session observations from exact deployment source fields, never inferred activation or global completeness. OPEN_FINDINGS is monotone; NO_OPEN_FINDINGS and exact population counts remain refused. Sessions are bounded authorized rows, source_complete never true. Missing/hidden source fields retain typed absence. */
+            stage_facts?: components["schemas"]["StageFacts"] & {
+                reconciliation?: {
+                    verdict?: {
+                        value?: unknown;
+                    };
+                    open_finding_count?: {
+                        /** @constant */
+                        availability?: "NOT_PUBLISHED";
+                    };
+                    unknown_order_count?: {
+                        /** @constant */
+                        availability?: "NOT_PUBLISHED";
+                    };
+                };
+                sessions?: {
+                    source_complete?: unknown;
+                };
+            };
+        };
         /** Format: date-time */
         Timestamp: string;
         Identifier: string;
@@ -45,6 +1152,12 @@ export interface components {
             reason_code: string | null;
             /** @constant */
             retryable: false;
+            lineage_rejects?: {
+                [key: string]: number;
+            };
+            lineage_scoped_out?: {
+                [key: string]: number;
+            };
         };
         Scalar: string | number | boolean | null | (string | number | boolean | null)[];
         ManagerRecord: {
@@ -105,6 +1218,141 @@ export interface components {
             };
             unavailable_branches: components["schemas"]["UnavailableBranch"][];
         } & (unknown & unknown & unknown);
+        /** @description FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id. */
+        DeploymentIdentityRules: unknown & unknown;
+        /** @description FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace. */
+        DeploymentDisplayName: string | null;
+        /**
+         * @description FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id.
+         * @enum {unknown}
+         */
+        AlphaIdentityReason: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
+        /**
+         * @description FE-066: why portfolio_name is null.
+         * @enum {unknown}
+         */
+        PortfolioNameReason: "PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
+        /** @description Reviewed machine code saying why a fact is not published. Never free text, never a source message. */
+        StageReasonCode: string;
+        /** @description Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed. */
+        StageFactRuntimeState: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "RUNNING" | "PAUSED" | "HALTED" | "STOPPED";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** Format: date-time */
+        StageTimestamp: string;
+        StageFactTimestamp: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageTimestamp"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageRuntimeFacts: {
+            runtime_state: components["schemas"]["StageFactRuntimeState"];
+            since: components["schemas"]["StageFactTimestamp"];
+        };
+        /** @description NO_OPEN_FINDINGS is a statement about the findings relation, not a reconciliation run: it is never published from a partial window or when any finding status is unreadable. */
+        StageFactVerdict: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "NO_OPEN_FINDINGS" | "OPEN_FINDINGS";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFactInteger: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: number;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageReconciliationFacts: {
+            /** @constant */
+            basis: "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN";
+            verdict: components["schemas"]["StageFactVerdict"];
+            open_finding_count: components["schemas"]["StageFactInteger"];
+            /** @description Open findings the reviewed finding-type table classes as UNKNOWN_ORDER. Exact 0 only when no finding is open; NOT_PUBLISHED (FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED) while any open finding is unclassified. */
+            unknown_order_count: components["schemas"]["StageFactInteger"];
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        StageSessionRow: {
+            id: string;
+            started: components["schemas"]["StageTimestamp"];
+            ended: components["schemas"]["StageTimestamp"] | null;
+            state: string | null;
+        };
+        /** @description Newest first. `ended` null while the session has no completion time. A row the reader cannot type is counted in omitted_count, never listed. `state` is the source's own word or null. */
+        StageSessionsFact: {
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            /** @constant */
+            basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW";
+            rows: components["schemas"]["StageSessionRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+        } & unknown;
+        /** @description FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged. */
+        StageFacts: {
+            /** @constant */
+            schema_version: "execution.stage-facts.v1";
+            runtime: components["schemas"]["StageRuntimeFacts"];
+            reconciliation: components["schemas"]["StageReconciliationFacts"];
+            sessions: components["schemas"]["StageSessionsFact"];
+        };
+        /** @description Canonical signed exact decimal string: no exponent, no leading zero, no trailing fractional zero, no negative zero. */
+        StageSignedDecimal: string;
+        StageFactSignedDecimal: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageSignedDecimal"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFigure: {
+            /** @enum {unknown} */
+            key: "equity" | "gross_notional" | "positions" | "open_orders" | "fees";
+            label: string;
+            unit: string | null;
+            internal: components["schemas"]["StageFactSignedDecimal"];
+            /** @description The broker side. No broker population, equity or fee total is held by the Portal today, so each is NOT_PUBLISHED with its own reason; it is never copied from the internal side. */
+            broker: components["schemas"]["StageFactSignedDecimal"];
+            /** @description internal minus broker, exact, computed by the server only when both sides are AVAILABLE; otherwise NOT_PUBLISHED (DIFFERENCE_REQUIRES_BOTH_SIDES). The browser never subtracts. */
+            difference: components["schemas"]["StageFactSignedDecimal"];
+        };
+        /** @description The Internal / Broker / Difference rows, fixed order equity, gross_notional, positions, open_orders, fees. */
+        StageSourceFigures: {
+            /** @constant */
+            basis: "SOURCE_RELATIONS_HELD_BY_THE_PORTAL";
+            figures: components["schemas"]["StageFigure"][];
+        };
         PositiveDecimal: string;
         Hash: string;
         Warning: {
@@ -133,6 +1381,80 @@ export interface components {
             data: Record<string, never> | null;
             warnings: components["schemas"]["Warning"][];
         } & (unknown & unknown);
+        StageGapRange: {
+            from: components["schemas"]["StageTimestamp"];
+            to: components["schemas"]["StageTimestamp"];
+        };
+        StageFactGapRanges: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageGapRange"][];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageIdentifier: string;
+        StageSymbol: string;
+        /** @description Canonical non-negative exact decimal string: no exponent, no leading zero, no trailing fractional zero. Never a JSON number. */
+        StageDecimal: string;
+        /** @description From positions_v2 only. side is the source word LONG/SHORT, else the sign of signed_qty; quantity is the source quantity, else |signed_qty|. leverage is always null: see not_published_columns. */
+        StagePositionRow: {
+            id: components["schemas"]["StageIdentifier"] | null;
+            symbol: components["schemas"]["StageSymbol"];
+            side: ("long" | "short") | null;
+            quantity: components["schemas"]["StageDecimal"] | null;
+            entry: components["schemas"]["StageDecimal"] | null;
+            mark: components["schemas"]["StageDecimal"] | null;
+            unrealised: components["schemas"]["StageSignedDecimal"] | null;
+            leverage: null;
+        };
+        /** @description A column the hi-fi shows and the source relation does not carry. It is named here instead of being filled with a null that reads like data. */
+        StageNotPublishedColumn: {
+            column: string;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description Typed view of the same relation the collection's free `rows` come from. A row the reader cannot type is counted in omitted_count, never listed. */
+        StageTypedPositions: {
+            /** @constant */
+            kind: "positions";
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            rows: components["schemas"]["StagePositionRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+            not_published_columns: components["schemas"]["StageNotPublishedColumn"][];
+        } & unknown;
+        StageWord: string;
+        /** @description From the orders relation only. since is submitted_at. ack_latency_ms is always null (gateway-event data, not an orders column): see not_published_columns. */
+        StageOrderRow: {
+            id: components["schemas"]["StageIdentifier"] | null;
+            symbol: components["schemas"]["StageSymbol"];
+            type: components["schemas"]["StageWord"] | null;
+            side: ("buy" | "sell") | null;
+            quantity: components["schemas"]["StageDecimal"] | null;
+            price: components["schemas"]["StageDecimal"] | null;
+            status: components["schemas"]["StageWord"] | null;
+            since: components["schemas"]["StageTimestamp"] | null;
+            ack_latency_ms: null;
+        };
+        /** @description Typed view of the same relation the collection's free `rows` come from. A row the reader cannot type is counted in omitted_count, never listed. */
+        StageTypedOrders: {
+            /** @constant */
+            kind: "orders";
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            rows: components["schemas"]["StageOrderRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+            not_published_columns: components["schemas"]["StageNotPublishedColumn"][];
+        } & unknown;
         UnavailableCollection: {
             envelope: components["schemas"]["SourceEnvelope"];
             exact_total: number | null;
@@ -140,6 +1462,13 @@ export interface components {
             next_cursor: string | null;
             previous_cursor: string | null;
             rows: Record<string, never>[];
+            typed?: components["schemas"]["StageTypedPositions"] | components["schemas"]["StageTypedOrders"];
+        };
+        StageSeriesResolution: string;
+        /** @description A deployment-level point: an exact decimal string, never a JSON number. The series names its methodology_ref. */
+        StageSeriesPoint: {
+            t: components["schemas"]["StageTimestamp"];
+            value: components["schemas"]["StageSignedDecimal"];
         };
         ActionPolicy: {
             /** @enum {unknown} */
@@ -186,7 +1515,12 @@ export interface components {
                 declared_environment: "LIVE_FULL";
                 runtime_state: null;
                 activated_at: null;
-            };
+                alpha_id?: components["schemas"]["Identifier"] | null;
+                alpha_name?: components["schemas"]["DeploymentDisplayName"];
+                portfolio_name?: components["schemas"]["DeploymentDisplayName"];
+                alpha_reason_code?: components["schemas"]["AlphaIdentityReason"];
+                portfolio_name_reason_code?: components["schemas"]["PortfolioNameReason"];
+            } & components["schemas"]["DeploymentIdentityRules"];
             lineage: {
                 /** @enum {unknown} */
                 kind: "ARTIFACT" | "R1_APPROVAL" | "R2_APPROVAL" | "SANDBOX_EXIT" | "CANARY_ENVELOPE" | "CANARY_EXIT" | "LIVE_DUAL_APPROVAL";
@@ -202,6 +1536,8 @@ export interface components {
                 activated_at: null;
                 blocker_codes: string[];
             };
+            stage_facts?: components["schemas"]["StageFacts"];
+            source_figures?: components["schemas"]["StageSourceFigures"];
             predecessor_canary_envelope: {
                 envelope_id: components["schemas"]["Identifier"];
                 revision: number;
@@ -250,6 +1586,7 @@ export interface components {
                 gap_detected: boolean | null;
                 affected_authorities: ("EXECUTION" | "BROKER" | "DERIVED")[];
                 blocker_codes: string[];
+                gap_ranges?: components["schemas"]["StageFactGapRanges"];
             };
             positions: components["schemas"]["UnavailableCollection"];
             orders: components["schemas"]["UnavailableCollection"];
@@ -260,8 +1597,10 @@ export interface components {
             };
             series: {
                 envelope: components["schemas"]["SourceEnvelope"];
-                resolution: null;
-                points: unknown[];
+                resolution: null | components["schemas"]["StageSeriesResolution"];
+                points: components["schemas"]["StageSeriesPoint"][];
+                methodology_ref?: null | string;
+                unit?: null | string;
             };
             rollback_readiness: {
                 envelope: components["schemas"]["SourceEnvelope"];
@@ -285,6 +1624,16 @@ export interface components {
                 risk_increasing: components["schemas"]["ActionPolicy"];
             };
         } & unknown;
+        CommandProblem: {
+            error: {
+                code: string;
+                message: string;
+            };
+            request_id: string;
+            public_copy_key?: string;
+            /** @enum {string} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
+        };
     };
     responses: {
         /** @description Typed fail-closed problem. */
@@ -308,6 +1657,12 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: string;
+                /** @description Fixed Live panel only. Advances that panel; all other panels return their first page. Same independent Live/Alpha/Account current-authority flight. Account panels remain ACCOUNT grain, not deployment economics. */
+                panel?: "deployments" | "positions" | "sessions" | "orders" | "fills" | "accounts" | "account_balances" | "margin_balances" | "account_sync" | "reconciliation";
+                /** @description Opaque Portal lps2 continuation from this exact panel under the SAME deployment/workspace/profile/session/current scope and immutable retained snapshot. Requires panel. Never a source cursor; no source or authority selection. Expired/changed-view cursor is refused; restart this panel from its first page. */
+                cursor?: string;
+                /** @description SCOPED_V2 only; the legacy body already carries identity and stage facts and ignores it. A comma list of distinct fixed tokens: identity (the closed `identity` block) and/or stage_facts (the V1 fact vocabulary over the authorized population). Any other value, a duplicate or an empty token is refused (400 EXECUTION_READ_QUERY_INVALID), never ignored. Omitted: the body is byte-identical to before. Both members are derived from rows this reader already authorized, under the same scopes and final fence; no legacy composer or extra source read. */
+                include?: "identity" | "stage_facts" | "identity,stage_facts" | "stage_facts,identity";
             };
             header?: never;
             path: {
@@ -317,16 +1672,79 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Portal predecessor facts plus bounded Live-profile panels and local projection continuity. */
+            /** @description Legacy Live operations OR finite current-authorized source-only retained observations, never a joint ROOT+source acceptance. */
             200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LiveFullOperations"] | components["schemas"]["LiveSourceOperationsReadV2"];
+                };
+            };
+            /** @description Current authenticated session, exact app/source/field authority and valid request required. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["LiveFullOperations"];
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
-            404: components["responses"]["Problem"];
+            /** @description Current authenticated session, exact app/source/field authority and valid request required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authenticated session, exact app/source/field authority and valid request required. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform hidden/missing workspace, deployment or source grain; no existence leak. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authority/publication changed; refresh without fallback. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed INTERNAL_ERROR envelope for unexpected faults; not raw exception text. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed unavailable/unqualified/overflow refusal; no private provider or SQL text. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
         };
     };
 }

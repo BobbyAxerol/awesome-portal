@@ -1,0 +1,72 @@
+{
+  "schema_version": "portal.execution.phase-test-results.v1",
+  "phase": "ELP2-10",
+  "tier": "R1",
+  "status": "FOCUSED_IMPLEMENTATION_AND_RESEARCH_CODE_INSTALL_PASS_CONNECTED_NOT_MET",
+  "observed_on_utc": "2026-10-26",
+  "packet_date_note": "Filename follows the preceding 27-Oct packet; observations are 26 October UTC.",
+  "source": {
+    "core_entry": "1ce829bd60bb9b1b1bca9708b70e2b9b38ad1355",
+    "core_configuration_commit": "c1fecde97",
+    "core_runtime_commit": "05ab409900bdd87dffc6ed0c6b0c4a9dfa5d1af0",
+    "pm_runtime_commit": "c8871acf3c5bcbd8c5ddad10eaa4a5294616a7a2",
+    "pm_target_branch": "feat/core-financial-assembly-20261024",
+    "pm_target_source_only": true
+  },
+  "checks": [
+    {"name": "Research native-current orchestration", "status": "PASS", "tests": 18},
+    {"name": "Source stamp", "status": "PASS", "tests": 3},
+    {"name": "Independent-CA ROOT/CURRENT focused PKI", "status": "PASS", "tests": 52, "elapsed_seconds": 15.90},
+    {"name": "Checked production emitting compile", "status": "PASS", "elapsed_seconds": 220.17, "oom_killed": false},
+    {"name": "PM operators focused unit", "status": "PASS", "tests": 62, "elapsed_seconds": 3.65, "source_only": true},
+    {"name": "N29/EDS-12 integrity refresh/check", "status": "PASS", "changed": false, "runtime_effect": "NONE"},
+    {"name": "Original restored backup to actual postmigration/pre-image observation", "status": "PASS", "exact_critical_hashes": 19, "original_nonledger_counts_unchanged": 189, "appended_migrations": [152, 153, 154], "new_empty_tables": 5},
+    {"name": "Research final-image install", "status": "PASS", "healthz": 200, "readyz": 200, "native_configuration_selected": false, "unaffected_containers_unchanged": 4, "authority_before": 67, "authority_after": 67},
+    {"name": "PM public bundle exact transfer and owned-candidate fast-forward", "status": "PASS", "runtime_installed": false},
+    {"name": "Independent bounded source/evidence reviews", "status": "ACCEPT", "full_phase_acceptance": false},
+    {"name": "Execution tracking, diff and handoff links", "status": "PASS"}
+  ],
+  "runtime": {
+    "core_image": "sha256:d65e77860860dbf24fa5bbf6ded8bc6225b063ebc15578ed6a2dd8d1e92132f8",
+    "installed": true,
+    "native_configuration_selected": false,
+    "business_read_stream_acceptance": "NOT_MET",
+    "source_original_for_exact_research_identity": "NOT_ESTABLISHED_BY_THIS_RECEIPT",
+    "source_ack": "NOT_RUN",
+    "command_live_enabled": false
+  },
+  "failed_or_limited_observations": [
+    {"name": "Existing unified-preview test", "status": "FAIL", "passed": 2, "failed": 1, "reason": "Existing stale frontend regex; not repaired or called green."},
+    {"name": "First final-image immediate health check", "status": "FAIL_ROLLED_BACK", "reason": "Listener startup race ECONNREFUSED; bounded-wait retake passed."},
+    {"name": "Original backup to later live critical hashes", "status": "18_OF_19_EXACT", "changed_table": "elp210_candidate.authority", "authority_revision_before": 64, "authority_revision_after": 67, "reason": "Three diagnostic Compose-start dependency bootstrap replays; no-deps cleanup fixed; users/owner/rights unchanged."},
+    {"name": "First migration post-checks", "status": "FAIL_REPAIRED", "reason": "Harness contradicted migration037 identity lookup; protected-session denial used instead; no legitimate grant revoked."},
+    {"name": "Restore harness preparation failures", "status": "FAIL_REPAIRED", "reason": "PGDATA ownership, 512MiB tmpfs capacity, inet identity formatting; retained logs and bounded retake."}
+  ],
+  "not_claimed": [
+    "APP_ROLE_RLS_PROOF",
+    "GLOBAL_ROLE_OR_ACL_EQUIVALENCE",
+    "ALL_NONCRITICAL_ROW_BYTES",
+    "NATIVE_SOURCE_COMMISSIONING",
+    "CONNECTED_READ_STREAM_BROWSER",
+    "FINANCIAL_COMMIT_APPLIED_SOURCE_ACK",
+    "BUDGET_CALIBRATION_COEXISTENCE_G2",
+    "FULL_R2_OR_ELP2_10_CLOSEOUT"
+  ],
+  "public_bundle_sha256": "8d694d164f5042305ffc126301f552dbadb0819604c58dddc04b42d8e967dbd5",
+  "evidence": {
+    "packet": "ACCOUNTS_RUNTIME_COMMISSIONING_2026-10-27.md",
+    "core_tests_sha256": "0a19d92ae87dd36ec61405e8d993b76df25140a6ea1ac69495e258b49ae22034",
+    "checked_emit_sha256": "c30e8a774e03bcacd2b574486baf4dc3c47aa9ce07a09d3527c53df43fc1b1a1",
+    "install_sha256": "51824bdcb85da35699975d2e9b24101ed9a371319a47224cfab1645961a3358d",
+    "pm_tests_sha256": "67fbc413450afa9a6bc3d00cb369185eb8aa764571e7733b6328941a8d50f1c9",
+    "migration_bridge_sha256": "b8d6b603f4f38abeafb3b2fe6b1fc4f8239f1a1d6a577b86ad82f0f6d52ed3e4"
+  },
+  "cleanup": {
+    "owned_correctness_cells_remaining": 0,
+    "backups_rollback_images_and_evidence_retained": true,
+    "local_disk_used_percent": 68,
+    "local_disk_available_gib_approximate": 202,
+    "disposition": "NO_ACTION_NEEDED",
+    "resource_sample_is_load_or_peak_rss_evidence": false
+  }
+}

@@ -21,6 +21,12 @@ Nếu branch, mục tiêu, hoặc phạm vi chưa rõ, agent phải dừng và h
   đã checkout và cấp workspace.
 - Thanh được commit local trên branch được giao. Khi Bobby yêu cầu handoff,
   Thanh được chạy git push -u primus-origin <branch> và tạo PR có base là dev.
+- **Campaign exception do Bobby ghi rõ:** `feat/thanhvuong/research-p17-p21`
+  được provision từ `primus-origin/docs/research-loop-plan`, chỉ được push
+  cùng tên lên `primus-origin`, và chỉ được mở PR về
+  `docs/research-loop-plan`. Ngoại lệ này không cấp quyền trực tiếp ghi/merge
+  vào baseline đó, `dev` hoặc `main`, và không tự áp dụng cho P22 hay campaign
+  khác.
 - Chỉ primus-origin được phép dùng từ workspace này. Origin không tồn tại và
   không được thêm lại. Không push main, dev, tag, branch khác, branch deletion,
   hay ref mapping khác tên branch hiện tại.
@@ -44,6 +50,8 @@ Nếu branch, mục tiêu, hoặc phạm vi chưa rõ, agent phải dừng và h
    Bobby không yêu cầu.
 6. Chỉ khi Bobby yêu cầu, push branch đó lên primus-origin và tạo/cập nhật PR
    vào dev. Sau đó dừng, không tự merge.
+   Với campaign exception Research P17–P21 nói trên, branch và PR base phải
+   đúng `feat/thanhvuong/research-p17-p21` → `docs/research-loop-plan`.
 7. Kết thúc bằng handoff: branch, commit SHA, link PR nếu có, file thay đổi,
    test đã chạy/kết quả, và rủi ro hoặc việc chưa làm.
 

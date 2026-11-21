@@ -8,7 +8,7 @@ const ExecutionRiskTierSchema = z.enum([
   "R0_READ", "R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE",
   "R4_LIVE_RISK_INCREASING", "UNCLASSIFIED", "BLOCKED",
 ]);
-const IdentifierSchema = z.string().regex(/^[A-Za-z0-9._:-]{1,191}$/);
+export const IdentifierSchema = z.string().regex(/^[A-Za-z0-9._:-]{1,191}$/);
 
 const PAYLOAD_MAX_UTF8_BYTES = 32_768;
 const PAYLOAD_MAX_DEPTH = 6;
@@ -214,13 +214,18 @@ export const ExecutionCommandPlanRequestSchema = z
 
 export type ExecutionCommandPlanRequest = z.infer<typeof ExecutionCommandPlanRequestSchema>;
 
+/** BE-P13: `request_key` joins the neighbouring F0 request grammar (plan, acknowledge, resolve,
+ * incident). F0 apply can only ever be denied (see f0-apply.contract.ts), so the key exists to
+ * make that answer replayable and recoverable, not to dedupe an effect. */
 export const ExecutionCommandApplyRequestSchema = z
   .object({
     schema_version: z.literal("execution.command-apply-request.v1"),
     workspace_id: z.string().min(3).max(96),
+    request_key: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/),
     command_type: z.literal("EXECUTION_COMMAND"),
   })
   .strict();
+export type ExecutionCommandApplyRequest = z.infer<typeof ExecutionCommandApplyRequestSchema>;
 
 export const OperationQueueQuerySchema = z
   .object({

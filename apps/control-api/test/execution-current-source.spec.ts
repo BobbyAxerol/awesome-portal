@@ -30,6 +30,8 @@ import {
   currentSourceUpstreamError,
   eds11rManagerV2Path,
   nextAdaptiveManagerRelationPagePath,
+  selectProfileTransport,
+  enabledProfileConfigurationsForTest,
 } from "../src/execution/current-source.proxy";
 import {
   managerRelationOperationByRelation,
@@ -683,5 +685,57 @@ describe("BR-EX-72 Manager list source acceptance", () => {
     expect(() => managerListManagerV2Path(
       "canary", "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.strategies", "strategies",
     )).toThrowError(expect.objectContaining({ code: "BR72_MANAGER_LIST_NOT_ACCEPTED" }));
+  });
+});
+
+describe("OKX Paper transport selection (staged groundwork, flag off by default)", () => {
+  const edgeFiles = {
+    QUERY_CURSOR_KEYS_JSON: '{"query-k1":"query-taxonomy-test-key-that-is-longer-than-thirty-two-bytes"}',
+    GOVERNANCE_APPLY_KEYS_JSON: '{"governance-k1":"governance-taxonomy-test-key-longer-than-thirty-two-b"}',
+  };
+
+  it("activates no OKX transport unless its flag is on", () => {
+    const config = loadConfig({
+      ...base, ...edgeFiles, ...edgeIdentity,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper.execution.internal",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+    });
+    expect(enabledProfileConfigurationsForTest(config).map((item) => item.key)).toEqual(["paper"]);
+  });
+
+  it("adds a separate paper-okx transport with its own origin, profile and audience", () => {
+    const config = loadConfig({
+      ...base, ...edgeFiles, ...edgeIdentity,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "true",
+      EXECUTION_EDGE_PAPER_ORIGIN: "https://paper.execution.internal",
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      EXECUTION_EDGE_PAPER_AUDIENCE: "portal-execution-edge-paper",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+      EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.execution.internal",
+      EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+      EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper-okx",
+    });
+    const enabled = enabledProfileConfigurationsForTest(config);
+    expect(enabled.map((item) => [item.key, item.environment, item.profileId, item.audience])).toEqual([
+      ["paper", "paper", "PAPER_BINANCE_USDM", "portal-execution-edge-paper"],
+      ["paper-okx", "paper", "PAPER_OKX_SWAP", "portal-execution-edge-paper-okx"],
+    ]);
+  });
+
+  it("selects the transport by profile inside an environment and by environment alone otherwise", () => {
+    const transports = new Map([
+      ["paper", { environment: "paper", profileId: "PAPER_BINANCE_USDM" }],
+      ["paper-okx", { environment: "paper", profileId: "PAPER_OKX_SWAP" }],
+      ["sandbox", { environment: "sandbox", profileId: "SANDBOX_BINANCE_USDM" }],
+    ]);
+    expect(selectProfileTransport(transports, "paper")?.profileId).toBe("PAPER_BINANCE_USDM");
+    expect(selectProfileTransport(transports, "paper", "PAPER_OKX_SWAP")?.profileId).toBe("PAPER_OKX_SWAP");
+    expect(selectProfileTransport(transports, "paper", "PAPER_BINANCE_USDM")?.profileId).toBe("PAPER_BINANCE_USDM");
+    // never crosses an environment or answers an unknown profile
+    expect(selectProfileTransport(transports, "sandbox", "PAPER_OKX_SWAP")).toBeUndefined();
+    expect(selectProfileTransport(transports, "paper", "PAPER_DNSE_VNM")).toBeUndefined();
+    expect(selectProfileTransport(transports, "live")).toBeUndefined();
   });
 });

@@ -36,6 +36,7 @@ const actor: PortalUser = {
   createdAt: READ_AT,
   updatedAt: READ_AT,
   disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 
 function availableStatus(
@@ -97,7 +98,6 @@ function emptyInputs(overrides: Partial<CommandCenterInputs> = {}): CommandCente
       cells: fleetCells.map((cell) => ({ ...cell, value: 0 })),
       deployment_labels: {},
     }], 0),
-    pins: [],
     todaySources: [
       slice("PORTAL_GOVERNANCE", "PORTAL", []),
       slice("EXECUTION_OPERATIONS", "EXECUTION", []),
@@ -328,9 +328,11 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
     );
     admin = new AdminService(ctx.pool, ctx.config, auth);
     bobbyId = (await admin.createUser({ username: "bobby", displayName: "Bobby", role: "ADMIN" })).userId;
+    await ctx.pool.query("INSERT INTO portal_owner_anchor(anchor_id,user_id) VALUES('PORTAL_OWNER',$1)",[bobbyId]);
     stanId = (await admin.createUser({ username: "stan", displayName: "Stan", role: "USER" })).userId;
     const { activationToken } = await admin.resetCredential(bobbyId);
     const activationSession = await auth.login({
+      assertion: undefined,
       devEmail: "bobby@azdag.com",
       username: "bobby",
       credential: activationToken,
@@ -342,6 +344,7 @@ describe("PRE-IAM-03 PostgreSQL repository and session-bound API", () => {
       newPassword: "C0balt-River!Snapshot-42",
     });
     const activeSession = await auth.login({
+      assertion: undefined,
       devEmail: "bobby@azdag.com",
       username: "bobby",
       credential: "C0balt-River!Snapshot-42",

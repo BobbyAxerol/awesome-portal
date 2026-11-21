@@ -1,0 +1,338 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-market-candles.v1.schema.json",
+  "title": "Market candles for the Trade Replay (portal.execution.market-candles.v1)",
+  "description": "Bars for one symbol and interval, every price the source's decimal string. `source_authority` VENUE_PUBLIC_MARKET_DATA is the venue's public kline feed (market context, never the Trading System's own history); TRADING_SYSTEM_DATA_LAYER is the Trading System market gateway, reached through GET /market/candles (execution-market-context) behind the same envelope when EXECUTION_MARKET_CANDLES_SOURCE=data_layer. `state` EMPTY is a real answer (no bar in the window, or the venue does not know the symbol: reason_code says which); UNAVAILABLE is an outage or a disabled/not-wired source and carries retryable. A truncated read filled its limit with room left in the window. No bar is ever fabricated or resampled.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "logical_operation_id",
+    "record_authority",
+    "source_authority",
+    "source",
+    "symbol",
+    "interval",
+    "interval_ms",
+    "state",
+    "reason_code",
+    "retryable",
+    "fetched_at_ms",
+    "read_at_ms",
+    "coverage",
+    "last_candle_closed",
+    "candles"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.market-candles.v1"
+    },
+    "logical_operation_id": {
+      "const": "executionMarketCandlesV1"
+    },
+    "record_authority": {
+      "const": "PORTAL_CONTROL"
+    },
+    "source_authority": {
+      "enum": [
+        "VENUE_PUBLIC_MARKET_DATA",
+        "TRADING_SYSTEM_DATA_LAYER"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "venue",
+        "market",
+        "endpoint",
+        "instrument",
+        "note"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "venue_public",
+            "data_layer"
+          ]
+        },
+        "venue": {
+          "enum": [
+            "BINANCE",
+            "OKX"
+          ]
+        },
+        "market": {
+          "enum": [
+            "USDM",
+            "SWAP"
+          ]
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "instrument": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 512
+        }
+      }
+    },
+    "symbol": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "interval": {
+      "enum": [
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "4h",
+        "1d"
+      ]
+    },
+    "interval_ms": {
+      "type": "integer",
+      "minimum": 60000
+    },
+    "state": {
+      "enum": [
+        "READY",
+        "EMPTY",
+        "UNAVAILABLE"
+      ]
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 128
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "fetched_at_ms": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": -8640000000000000,
+          "maximum": 8640000000000000
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "read_at_ms": {
+      "type": "integer",
+      "minimum": -8640000000000000,
+      "maximum": 8640000000000000
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from_ms",
+        "to_ms",
+        "requested_limit",
+        "returned_count",
+        "truncated",
+        "pages"
+      ],
+      "properties": {
+        "from_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requested_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6000
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "pages": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      }
+    },
+    "last_candle_closed": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "candles": {
+      "type": "array",
+      "maxItems": 6000,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "t",
+          "o",
+          "h",
+          "l",
+          "c",
+          "v",
+          "close_t",
+          "trades"
+        ],
+        "properties": {
+          "t": {
+            "type": "integer",
+            "minimum": -8640000000000000,
+            "maximum": 8640000000000000
+          },
+          "o": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          },
+          "h": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          },
+          "l": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          },
+          "c": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          },
+          "v": {
+            "type": "string",
+            "maxLength": 128,
+            "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+          },
+          "close_t": {
+            "type": "integer",
+            "minimum": -8640000000000000,
+            "maximum": 8640000000000000
+          },
+          "trades": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "READY"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "candles": {
+            "type": "array",
+            "minItems": 1
+          },
+          "reason_code": {
+            "type": "null"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "enum": [
+              "EMPTY",
+              "UNAVAILABLE"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "then": {
+        "properties": {
+          "candles": {
+            "type": "array",
+            "maxItems": 0
+          },
+          "reason_code": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "UtcEpochMs": {
+      "type": "integer",
+      "minimum": -8640000000000000,
+      "maximum": 8640000000000000
+    }
+  }
+}

@@ -27,7 +27,7 @@ export interface ManagerPage {
 }
 
 export interface ManagerReadContext {
-  profileId: "PAPER_BINANCE_USDM" | "PAPER_DNSE_VNM" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
+  profileId: "PAPER_BINANCE_USDM" | "PAPER_DNSE_VNM" | "PAPER_OKX_SWAP" | "SANDBOX_BINANCE_USDM" | "LIVE_BINANCE_USDM";
   mode: "paper" | "sandbox" | "live";
   errorPrefix: "N22" | "N23";
 }
@@ -48,6 +48,21 @@ export const PAPER_DNSE_CONTEXT: ManagerReadContext = {
   mode: "paper",
   errorPrefix: "N22",
 };
+
+/**
+ * OKX Paper family (owner decision 2026-11-18, staged): reads under its own
+ * profile context; a row published for another Paper profile never passes it.
+ */
+export const PAPER_OKX_CONTEXT: ManagerReadContext = {
+  profileId: "PAPER_OKX_SWAP",
+  mode: "paper",
+  errorPrefix: "N22",
+};
+
+/** The context a Paper read validates rows against, by the profile it serves. */
+export function paperReadContext(profileId: string | undefined): ManagerReadContext {
+  return profileId === PAPER_OKX_CONTEXT.profileId ? PAPER_OKX_CONTEXT : PAPER_CONTEXT;
+}
 
 const FORBIDDEN_FIELD = /(?:^|_)(?:raw|secret|credential|password|token|dsn)(?:_|$)/i;
 const FRESHNESS = new Set(["FRESH", "AGING", "STALE", "UNKNOWN"]);

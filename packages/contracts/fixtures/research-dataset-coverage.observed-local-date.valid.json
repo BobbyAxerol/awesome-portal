@@ -1,0 +1,27 @@
+{
+  "timeframe": "1d",
+  "resolution_seconds": 86400,
+  "availability": "AVAILABLE",
+  "reason_code": null,
+  "origin": "PORTAL_DERIVED",
+  "as_of_utc_ms": 1785862800000,
+  "first_bar_utc_ms": 1785344400000,
+  "last_bar_utc_ms": 1785776400000,
+  "last_closed_bar_end_utc_ms": null,
+  "bar_count": 4,
+  "expected_bar_count": null,
+  "missing_ratio": null,
+  "gap_count": null,
+  "largest_gap_seconds": null,
+  "duplicate_bar_count": 0,
+  "coverage_scope": "INDEXED_RANGE",
+  "indexed_start_utc_ms": 1785344400000,
+  "indexed_end_exclusive_utc_ms": 1785862800000,
+  "clock_basis": "OBSERVED_SOURCE_LOCAL_DATE_V1",
+  "source_timezone": "Asia/Ho_Chi_Minh",
+  "closed_bar_policy": "SOURCE_LOCAL_DATE_OBSERVED_AT_AS_OF_V1",
+  "calendar_availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "VN_SESSION_CALENDAR_NOT_PUBLISHED"
+  }
+}

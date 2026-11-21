@@ -41,8 +41,12 @@ import {
 } from "./maximum-data-operation.service";
 import { ExecutionProfileProjectionRepository, ProjectionEnvironment } from "./profile-projection.repository";
 import { CONTROL_API_CONFIG } from "../tokens";
-import type { ControlApiConfig } from "../config";
+import { querySigningKeys, type ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
+import { retainedReview } from "./retained-read-profile";
+import { KeysetCursorCodec } from "../query/cursor";
+import { QueryContractError } from "../query/contracts";
+import { accessDigest } from "../execution-v2/access-policy";
 
 export interface Portfolio360Principal {
   user: PortalUser;
@@ -101,6 +105,7 @@ const MOVEMENTS = new Set(["INITIAL_ALLOCATE", "ALLOCATE", "WITHDRAW", "REBALANC
 /** The relation page cap this service walks with. */
 const LEDGER_PAGE = 200;
 const LEDGER_MAX_PAGES = 8;
+export interface CapitalLedgerPageQuery { limit?: number; cursor?: string }
 
 /** The retained relation the equity standings are read from. */
 const PORTFOLIO_EQUITY_RELATION = "manager.performance:portfolio_equity_snapshots";
@@ -187,9 +192,12 @@ export class Portfolio360LocalService {
     if (!workspaceId || !profileId) {
       throw new AnalyticsProxyError("PHASE2_PROJECTION_PROFILE_NOT_CONFIGURED", 503);
     }
-    const standings = await this.projections.portfolioEquityStandings(
-      workspaceId, environment, profileId, PORTFOLIO_EQUITY_RELATION,
-    );
+    const readStandings = (scope?: Parameters<ExecutionProfileProjectionRepository["portfolioEquityStandings"]>[4]) =>
+      this.projections.portfolioEquityStandings(workspaceId, environment, profileId, PORTFOLIO_EQUITY_RELATION, scope);
+    const standings = typeof this.analytics.withPortfolioHistory === "function"
+      ? await this.analytics.withPortfolioHistory(principal, environment, readStandings)
+      : await readStandings(); // Compatibility only for old manual test doubles.
+    await context.validateRead?.();
     return this.envelope({
       formulaVersion: "portfolio-cross-equity.v1",
       ...context,
@@ -222,16 +230,51 @@ export class Portfolio360LocalService {
    * The portfolio's capital movements, bucketed by the currency they were
    * moved in — never summed across currencies.
    */
-  async capitalLedger(principal: Portfolio360Principal, portfolioId: string, environment: ProjectionEnvironment = "paper"): Promise<Record<string, unknown>> {
+  async capitalLedger(principal: Portfolio360Principal, portfolioId: string, environment: ProjectionEnvironment = "paper",
+    query: CapitalLedgerPageQuery = {}): Promise<Record<string, unknown>> {
     const context = await this.portfolioContext(principal, portfolioId, environment);
     const { version, readAt } = context;
-    const { rows, hasMore, freshness, asOf, complete, reason } = await this.ledgerRows(principal, portfolioId, environment);
+    const limit = query.limit ?? 250;
+    if (!Number.isInteger(limit) || limit < 1 || limit > 250 ||
+      query.cursor !== undefined && (typeof query.cursor !== "string" || !query.cursor.length || query.cursor.length > 4096))
+      throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+    const codec = new KeysetCursorCodec({ activeKeyId: this.config.QUERY_CURSOR_ACTIVE_KEY_ID,
+      keys: querySigningKeys(this.config), ttlSeconds: this.config.QUERY_CURSOR_TTL_SECONDS });
+    const fingerprint = accessDigest({ portfolioId, environment, version, limit,
+      user: principal.user?.userId ?? null, session: principal.session?.sessionId ?? null,
+      sessionVersion: principal.session?.sessionVersion ?? null });
+    const cursorContext = { resourceId: "portfolio-capital-ledger-local.v1", workspaceId: principal.workspaceId,
+      direction: "after" as const, queryFingerprint: fingerprint };
+    let chunkStart: string | undefined, offset = 0, expectedDigest = "";
+    if (query.cursor) {
+      try {
+        const boundary = codec.decode(query.cursor, { ...cursorContext, boundarySize: 3 });
+        if (typeof boundary[0] !== "string" || boundary[0].length > 128 ||
+          !Number.isSafeInteger(boundary[1]) || Number(boundary[1]) < 0 || Number(boundary[1]) > LEDGER_MAX_PAGES * LEDGER_PAGE ||
+          typeof boundary[2] !== "string" || boundary[2] !== "" && !/^sha256:[a-f0-9]{64}$/.test(boundary[2]))
+          throw new AnalyticsProxyError("ANALYTICS_LEDGER_CURSOR_INVALID", 400);
+        chunkStart = boundary[0] || undefined; offset = Number(boundary[1]); expectedDigest = boundary[2];
+      } catch (error) {
+        if (!(error instanceof QueryContractError)) throw error;
+        throw new AnalyticsProxyError("ANALYTICS_LEDGER_CURSOR_INVALID", 400);
+      }
+    }
+    const { rows, hasMore, nextSourceCursor, freshness, asOf, complete, reason } =
+      await this.ledgerRows(principal, portfolioId, environment, chunkStart);
+    // Reopening a bounded chunk must yield the same authorized facts. Never
+    // silently apply an offset to changed source rows or a narrowed grant set.
+    const chunkDigest = accessDigest(rows);
+    await context.validateRead?.();
+    if (expectedDigest && expectedDigest !== chunkDigest)
+      throw new AnalyticsProxyError("ANALYTICS_LEDGER_SOURCE_CHANGED", 409);
 
     const buckets = new Map<string, {
       entries: Record<string, unknown>[];
       grossIncrease: string;
       grossDecrease: string;
     }>();
+    const identities = new Map<string, string>();
+    let duplicateCount = 0;
     for (const row of rows) {
       const currency = text(row, "currency");
       const ledgerId = text(row, "capital_ledger_id") ?? text(row, "ledger_id");
@@ -242,6 +285,12 @@ export class Portfolio360LocalService {
       const after = decimalOf(row, "after_allocated");
       if (!currency || !ledgerId || !accountId || !movement || !MOVEMENTS.has(movement)) continue;
       if (amount === null || before === null || after === null) continue;
+      const rowDigest = accessDigest(row), prior = identities.get(ledgerId);
+      if (prior !== undefined) {
+        if (prior !== rowDigest) throw new AnalyticsProxyError("ANALYTICS_LEDGER_IDENTITY_CONFLICT", 502);
+        duplicateCount += 1; continue;
+      }
+      identities.set(ledgerId, rowDigest);
 
       // Direction from the two published allocations, never from the amount's
       // sign: a withdrawal and a deposit can both carry a positive amount.
@@ -261,6 +310,11 @@ export class Portfolio360LocalService {
         occurred_at: millis(row, "created_at") === null
           ? null
           : new Date(millis(row, "created_at")!).toISOString(),
+        // Only literal retained facts. No synthetic sequence/operation IDs.
+        seq: typeof row.seq === "string" && /^\d{1,40}$/.test(row.seq) ? row.seq :
+          typeof row.seq === "number" && Number.isSafeInteger(row.seq) && row.seq >= 0 ? String(row.seq) : null,
+        command_id: typeof row.command_id === "string" && row.command_id.length > 0 && row.command_id.length <= 256 ? row.command_id : null,
+        receipt_ref: typeof row.receipt_ref === "string" && row.receipt_ref.length > 0 && row.receipt_ref.length <= 256 ? row.receipt_ref : null,
       });
       if (direction === "INCREASE") bucket.grossIncrease = addExact(bucket.grossIncrease, amount);
       if (direction === "DECREASE") bucket.grossDecrease = addExact(bucket.grossDecrease, amount);
@@ -268,10 +322,20 @@ export class Portfolio360LocalService {
     }
 
     const entryCount = [...buckets.values()].reduce((total, bucket) => total + bucket.entries.length, 0);
-    const visibleIds = new Set([...buckets.values()].flatMap(bucket => bucket.entries)
+    const orderedEntries = [...buckets.values()].flatMap(bucket => bucket.entries)
       .sort((left,right) => String(right.occurred_at ?? "").localeCompare(String(left.occurred_at ?? "")) ||
-        String(left.ledger_id).localeCompare(String(right.ledger_id)))
-      .slice(0,250).map(entry=>entry.ledger_id));
+        String(left.ledger_id).localeCompare(String(right.ledger_id)));
+    if (offset > orderedEntries.length || offset > 0 && offset === orderedEntries.length)
+      throw new AnalyticsProxyError("ANALYTICS_LEDGER_CURSOR_INVALID", 400);
+    const pageEntries = orderedEntries.slice(offset, offset + limit);
+    // Object membership avoids duplicate IDs expanding a bounded visible page.
+    const visibleEntries = new Set(pageEntries);
+    const moreInChunk = offset + pageEntries.length < orderedEntries.length;
+    const nextCursor = moreInChunk || nextSourceCursor ? codec.encode({
+      resource_id: cursorContext.resourceId, workspace_id: principal.workspaceId, direction: "after",
+      query_fingerprint: fingerprint,
+      boundary: moreInChunk ? [chunkStart ?? "", offset + pageEntries.length, chunkDigest] : [nextSourceCursor!, 0, ""],
+    }) : null;
     return this.envelope({
       formulaVersion: "portfolio-capital-ledger.v1",
       ...context,
@@ -279,7 +343,7 @@ export class Portfolio360LocalService {
       inputAsOf: asOf,
       inputFreshness: freshness,
       inputCompleteness: complete && entryCount === rows.length ? "COMPLETE" : "PARTIAL",
-      panelState: entryCount > 0 ? "ok" : "empty",
+      panelState: entryCount > 0 ? "ok" : reason ? "unavailable" : "empty",
       version,
       readAt,
       windowDays: null,
@@ -293,14 +357,19 @@ export class Portfolio360LocalService {
             gross_increase: bucket.grossIncrease,
             gross_decrease: bucket.grossDecrease,
             // Newest first: an operator asking what changed reads downwards.
-            entries: bucket.entries.filter(entry=>visibleIds.has(entry.ledger_id)).sort((left, right) =>
+            entries: bucket.entries.filter(entry=>visibleEntries.has(entry)).sort((left, right) =>
               String(right.occurred_at ?? "").localeCompare(String(left.occurred_at ?? ""))),
           })),
         entry_count: entryCount,
-        returned_entry_count: visibleIds.size,
-        has_more: hasMore || entryCount > visibleIds.size,
+        returned_entry_count: pageEntries.length,
+        has_more: moreInChunk || hasMore,
+        next_cursor: nextCursor, page_limit: limit,
+        totals_scope: "AUTHORIZED_VALIDATED_SOURCE_CHUNK",
+        ordering: "CREATED_AT_DESC_WITHIN_SOURCE_CHUNK",
+        continuation_consistency: "SOURCE_PAGE_CONTRACT_AND_CURRENT_AUTHORIZATION",
         window: "LATEST",
-        rejected_row_count: rows.length - entryCount,
+        rejected_row_count: rows.length - entryCount - duplicateCount,
+        duplicate_row_count: duplicateCount,
         reason_code: reason,
       },
     });
@@ -311,6 +380,7 @@ export class Portfolio360LocalService {
     principal: Portfolio360Principal,
     portfolioId: string,
     environment: ProjectionEnvironment,
+    initialCursor?: string,
   ) {
     if (!this.operations) throw new AnalyticsProxyError("ANALYTICS_LEDGER_NOT_CONFIGURED", 503);
     const rows: Row[] = [];
@@ -318,8 +388,10 @@ export class Portfolio360LocalService {
     let asOf: string | null = null;
     let complete = true;
     let reason: string | null = null;
-    const result = (hasMore: boolean) => ({ rows, hasMore, freshness, asOf, complete: complete && !hasMore, reason });
-    let cursor: string | undefined;
+    const result = (hasMore: boolean, nextSourceCursor: string | null = null) =>
+      ({ rows, hasMore, nextSourceCursor, freshness, asOf, complete: complete && !hasMore, reason });
+    let cursor = initialCursor;
+    const seenCursors = new Set<string>(cursor ? [cursor] : []);
     for (let page = 0; page < LEDGER_MAX_PAGES; page += 1) {
       let response: Record<string, unknown>;
       try {
@@ -335,12 +407,17 @@ export class Portfolio360LocalService {
           if (rows.length === 0) throw new AnalyticsProxyError("ANALYTICS_LEDGER_SOURCE_UNAVAILABLE", 503);
           reason = "ANALYTICS_LEDGER_PAGE_UNAVAILABLE";
           freshness = "UNKNOWN";
-          return result(true);
+          return result(true, cursor ?? null);
         }
         throw error;
       }
       const records = Array.isArray(response.records) ? response.records : [];
       const metadata = (response.source_health ?? {}) as Record<string, unknown>;
+      if (retainedReview(this.config)) {
+        complete = false;
+        reason = typeof response.reason_code === "string" ? response.reason_code : "UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE";
+        if (response.state === "UNAVAILABLE") return result(false);
+      }
       if (metadata.freshness === "STALE") freshness = "STALE";
       else if (metadata.freshness !== "FRESH" && metadata.freshness !== "AGING" && freshness !== "STALE") freshness = "UNKNOWN";
       complete = complete && metadata.completeness === "COMPLETE";
@@ -358,17 +435,19 @@ export class Portfolio360LocalService {
       const pageInfo = (response.page ?? {}) as Record<string, unknown>;
       const next = typeof pageInfo.next_cursor === "string" ? pageInfo.next_cursor : null;
       if (pageInfo.has_more !== true) return result(false);
-      if (!next || next === cursor) { reason = "ANALYTICS_LEDGER_CONTINUATION_MISSING"; return result(true); }
+      if (!next) { reason = "ANALYTICS_LEDGER_CONTINUATION_MISSING"; return result(true); }
+      if (seenCursors.has(next)) throw new AnalyticsProxyError("ANALYTICS_LEDGER_CONTINUATION_LOOP", 502);
+      seenCursors.add(next);
       cursor = next;
     }
     reason = "ANALYTICS_LEDGER_BOUNDED_POPULATION";
-    return result(true);
+    return result(true, cursor ?? null);
   }
 
   /** The portfolio's strategies and the fleet statistics, from one snapshot read. */
   private async portfolioContext(principal: Portfolio360Principal, portfolioId: string, environment: ProjectionEnvironment) {
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
-    const view = await this.analytics.portfolioView({ workspaceId: principal.workspaceId }, portfolioId, environment);
+    const view = await this.analytics.portfolioView(principal, portfolioId, environment);
     return { ...view, readAt: new Date().toISOString() };
   }
 

@@ -1,0 +1,75 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Incident — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* layout only */
+.eq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}@media(max-width:1100px){.eq{grid-template-columns:1fr}}
+.step{display:flex;gap:0;align-items:stretch;flex-wrap:wrap}.step div{padding:8px 16px;border:1px solid var(--line-strong);font:500 12px/18px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin-right:-1px}.step div.done{color:var(--ink-soft)}.step div.on{color:var(--accent);background:var(--accent-soft);border-color:var(--accent);position:relative;z-index:1}
+.gl{margin:0;padding:0;list-style:none}.gl li{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:flex-start}.gl b{font-family:var(--font-mono);width:16px}.gl .no b{color:var(--bad)}.gl .go b{color:var(--ink-soft)}
+.idc{font:500 11px/16px var(--font-mono);border:1px solid var(--line-strong);padding:0 5px;background:var(--paper);white-space:nowrap}.m{font-size:12px;line-height:16px;color:var(--ink-faint)}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}textarea{width:100%;font:400 13px/18px var(--font-sans);color:var(--ink);background:var(--paper);border:1px solid var(--line-strong);padding:8px 10px;min-height:56px;resize:vertical}
+.tl{margin:0;padding:0;list-style:none}.tl li{padding:8px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:110px 1fr;gap:10px}.tl .t{font:400 12px/18px var(--font-mono);color:var(--ink-faint)}
+.chk{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+</style></head>
+<body data-page="Incident" data-nav="operations" data-crumb="Execution / Operations / Incident">
+<main><div class="stack">
+<div class="panel empty" data-roles="researcher"><div style="text-align:center"><div style="font:600 15px/22px var(--font-sans);color:var(--ink)">You can't open this page.</div><div style="margin-top:6px"><a href="access.html">See what you can access</a></div></div></div>
+
+<div class="stack" data-hide-roles="researcher" id="inc">
+<div class="mast"><div><div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="flag" data-k="incident">Incident</span><h1>Position mismatch requires investigation</h1></div>
+ <div class="sub"><a class="idc" href="operations.html">INC-44</a> · <a href="account.html">paper-grid-v21</a> · <span id="asg">No assignee</span></div></div>
+ <div class="ctrls"><span class="flag" data-k="attention" id="stt">Open · Critical</span><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Source not qualified</span></span></div></div>
+<div class="banner" data-data="nq">Source not qualified. Evidence stays unavailable; no transition can be sent.</div>
+
+<div class="panel" style="padding:12px 16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center"><div class="step" id="step"></div><span class="m">Forward only · every transition is audited</span></div>
+
+<div class="eq">
+ <div class="panel"><div class="ph">Evidence <span class="r" id="evn">0 references</span></div>
+  <div class="chk"><span class="flag" data-k="na">Findings · Not available</span><span class="flag" data-k="na">Alerts · Not available</span><span class="flag" data-k="na">Dead letters · Not available</span><span class="flag" data-k="na">Order trace · Not available</span></div>
+  <div class="m" style="margin-top:10px">Missing evidence, not an absence of findings. References only: a digest and metadata, never the artifact itself.</div><div id="evref" style="margin-top:8px"></div></div>
+ <div class="panel"><div class="ph">Operations taken <span class="r">1 operation</span></div>
+  <table><tbody><tr><td><a class="idc" href="operations.html">Account sync</a></td><td>Triggered by this incident</td><td><span class="flag" data-k="pending">Verify not started</span></td></tr></tbody></table>
+  <div class="m" style="margin-top:10px">Changes run plan → apply → verify in Operations. This page only links to them.</div></div>
+ <div class="panel"><div class="ph">Resolution gates <span class="r" id="gn">4 blocked</span></div><ul class="gl" id="gates"></ul><div class="m" style="margin-top:8px">Resolve unlocks only when every gate is met. The server enforces the gates; this list mirrors them.</div></div>
+ <div class="panel"><div class="ph">Timeline <span class="r" id="tn">2 events</span></div><ul class="tl" id="tl"></ul></div>
+</div>
+
+<div class="panel"><div class="ph">Actions</div>
+ <div class="acts" id="acts"></div>
+ <div style="margin-top:12px" id="notebox" hidden><label class="m" for="note">Resolution note · required</label><textarea id="note" placeholder="What was found and what closed it"></textarea></div>
+ <div class="m" style="margin-top:10px">Resolving closes the incident only. It never resumes a deployment; resuming is its own plan, apply and verify with a fresh sync.</div></div>
+</div></div>
+</main>
+<script src="kit.js"></script>
+<script>
+function F(k,t){return KIT.flag(k,t)}
+var S={step:0,g:{ack:0,asg:0,exp:0,evd:0},tl:[["17 Oct 11:55Z","Bobby","Created","v0 → v1"],["17 Oct 11:56Z","Bobby","Annotated","v1 → v2"]],assignee:"",note:""};
+var GN=[["ack","Somebody has acknowledged this incident"],["asg","This incident has an assignee"],["exp","Exposure is recorded as mitigated"],["evd","A clean dry-run evidence reference is attached"]];
+function me(){return {manager:"Bobby",operator:"Lan",reviewer:"Minh"}[KIT.state.role]||""}
+function canAct(){return KIT.state.data==="ok"&&(KIT.state.role==="manager"||KIT.state.role==="operator")}
+function dis(l,k){return'<div><button class="btn" disabled>'+l+"</button>"+KIT.why(k)+"</div>"}
+function log(a,d){S.tl.push(["17 Oct 12:0"+(S.tl.length%10)+"Z",me()||"You",a,d||""])}
+function render(){if(!document.getElementById("step"))return;var steps=["Open","Mitigated","Resolved"];
+ document.getElementById("step").innerHTML=steps.map(function(s,i){return'<div class="'+(i<S.step?"done":i===S.step?"on":"")+'">'+(i<S.step?"✓ ":"")+s+"</div>"}).join("");
+ var met=GN.filter(function(g){return S.g[g[0]]}).length,all=met===4;
+ document.getElementById("stt").outerHTML='<span class="flag" data-k="'+(S.step===2?"ok":"attention")+'" id="stt">'+(S.step===0?"Open · Critical":S.step===1?"Mitigated · Critical":"Resolved")+"</span>";
+ document.getElementById("gates").innerHTML=GN.map(function(g){var on=S.g[g[0]];return'<li class="'+(on?"go":"no")+'"><b>'+(on?"✓":"✕")+"</b><span>"+g[1]+"</span></li>"}).join("");
+ document.getElementById("gn").textContent=all?"All met":(4-met)+" blocked";
+ document.getElementById("asg").textContent=S.assignee?"Assigned to "+S.assignee:"No assignee";
+ document.getElementById("evn").textContent=S.g.evd?"1 reference":"0 references";document.getElementById("evref").innerHTML=S.g.evd?'<span class="idc">Dry-run · clean · 12:03Z</span>':"";
+ document.getElementById("tl").innerHTML=S.tl.map(function(t){return'<li><span class="t">'+t[0]+"</span><span><b>"+t[2]+"</b> · "+t[1]+(t[3]?' <span class="m">'+t[3]+"</span>":"")+"</span></li>"}).join("");document.getElementById("tn").textContent=S.tl.length+" events";
+ var a="",ok=canAct(),ro=KIT.state.role==="reviewer";
+ if(S.step===2)a='<span class="m">Resolved. Nothing further to do.</span>';
+ else if(!ok){var key=KIT.state.data==="nq"?"relay":"readOnly";a='<div><div class="acts">'+["Acknowledge","Assign to me","Record exposure mitigated","Attach dry-run evidence","Mark mitigated","Mark resolved"].map(function(l){return'<button class="btn" disabled>'+l+"</button>"}).join("")+"</div>"+KIT.why(key)+"</div>"}
+ else{a+=S.g.ack?'<button class="btn" disabled>Acknowledged</button>':'<button class="btn" data-a="ack">Acknowledge</button>';
+  a+=S.g.asg?'<button class="btn" disabled>Assigned to you</button>':'<button class="btn" data-a="asg">Assign to me</button>';
+  a+=S.g.exp?'<button class="btn" disabled>Exposure recorded</button>':'<button class="btn" data-a="exp">Record exposure mitigated</button>';
+  a+=S.g.evd?'<button class="btn" disabled>Evidence attached</button>':'<button class="btn" data-a="evd">Attach dry-run evidence</button>';
+  if(S.step===0)a+=(S.g.ack&&S.g.asg?'<button class="btn" data-a="mit">Mark mitigated</button>':'<div><button class="btn" disabled>Mark mitigated</button><span class="why">Acknowledge and assign first</span></div>');
+  var nok=document.getElementById("note")&&document.getElementById("note").value.trim().length>=12;
+  if(S.step===1)a+=(all&&nok?'<button class="btn pri" data-a="res">Mark resolved</button>':'<div><button class="btn pri" disabled>Mark resolved</button><span class="why">'+(!all?(4-met)+" gates are not met":KIT.WHY.needNote)+"</span></div>")}
+ document.getElementById("acts").innerHTML=a;document.getElementById("notebox").hidden=!(S.step===1&&ok)}
+document.addEventListener("click",function(e){var b=e.target.closest("[data-a]");if(!b)return;var k=b.getAttribute("data-a");
+ if(k==="ack"){S.g.ack=1;log("Acknowledged")}else if(k==="asg"){S.g.asg=1;S.assignee=me();log("Assigned")}else if(k==="exp"){S.g.exp=1;log("Exposure recorded as mitigated")}else if(k==="evd"){S.g.evd=1;log("Dry-run evidence attached")}
+ else if(k==="mit"){S.step=1;log("Mitigated","v2 → v3")}else if(k==="res"){S.step=2;log("Resolved",document.getElementById("note").value.trim())}render()});
+document.addEventListener("input",function(e){if(e.target.id==="note")render()});
+KIT.on(render);
+</script></body></html>

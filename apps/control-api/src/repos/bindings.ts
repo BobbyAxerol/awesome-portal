@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 import { ExternalIdentityBinding, normalizeEmail } from "../domain";
 
 interface BindingRow {
@@ -28,7 +28,15 @@ function toBinding(row: BindingRow): ExternalIdentityBinding {
 }
 
 export class BindingsRepository {
-  constructor(private readonly pool: Pool) {}
+  constructor(private readonly pool: Pool | PoolClient) {}
+
+  async findByUser(userId: string): Promise<ExternalIdentityBinding[]> {
+    const result = await this.pool.query<BindingRow>(
+      `SELECT * FROM external_identity_bindings WHERE user_id = $1 ORDER BY binding_id`,
+      [userId],
+    );
+    return result.rows.map(toBinding);
+  }
 
   async findByProviderIdentity(
     issuer: string,

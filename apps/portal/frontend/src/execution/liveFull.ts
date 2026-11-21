@@ -27,7 +27,26 @@
  * token, and both are read from structured fields rather than from that string.
  */
 import type { Authority, PanelStatus } from "./contracts";
-import { readPanelEnvelope, type LineageItem, type PanelEnvelope } from "./certification";
+import { v1Refusal } from "./api/schemaGuard";
+import { readPanelEnvelope, readRowCollection, type LineageItem, type PanelEnvelope, type RowCollection } from "./certification";
+import {
+  readDeploymentIdentity,
+  readGapRanges,
+  readSeriesMembers,
+  readSourceFigures,
+  readStageFacts,
+  readTypedOrders,
+  readTypedPositions,
+  type DeploymentIdentity,
+  type Fact,
+  type GapRange,
+  type SourceFigure,
+  type StageFacts,
+  type StageSeries,
+  type TypedOrderRow,
+  type TypedPositionRow,
+  type TypedRows,
+} from "./stageFacts";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw)
@@ -162,6 +181,39 @@ export interface LiveFullOperations {
   realtimeBlockers: readonly string[];
   commandPolicy: LiveCommandPolicy | null;
   /**
+   * `positions` and `orders` as the response states them: the source envelope, the server's exact total
+   * and the rows (free objects, scalar cells only; see `RowCollection`). ADDITIVE: the V1 screen reads
+   * only `panels` and ignores these. A collection whose envelope is BROKER-authored while
+   * `broker_values_visible` is not `true` arrives here WITHOUT rows and WITHOUT a total, exactly like a
+   * suppressed KPI (the strip below), and is named in `withheldRows`. (Not in `suppressedBrokerFields`:
+   * that list is the V1 screen's, and V1 never read rows.)
+   */
+  positionRows: RowCollection | null;
+  orderRows: RowCollection | null;
+  /** Which row collections the strip emptied. V2 reads this; V1 does not, so its output is unchanged. */
+  withheldRows: readonly ("positions" | "orders")[];
+  /*
+   * Additive fields (BE-P2/P3). Each is `null` when the key is absent or does not match the published schema exactly
+   * (`stageFacts.ts` reads them closed); the V1 screen ignores all of them.
+   */
+  /** FE-066: the five identity keys of the `deployment` block. */
+  identity: DeploymentIdentity | null;
+  /** FE-067: runtime, reconciliation and sessions. */
+  stageFacts: StageFacts | null;
+  /**
+   * FE-072: Internal / Broker / Difference. While broker values are not visible the Broker and Difference sides are stripped
+   * HERE (replaced by `null`, `withheldFigures` set), exactly like a suppressed KPI: the value never enters the tree.
+   */
+  sourceFigures: readonly LiveSourceFigure[] | null;
+  withheldFigures: boolean;
+  /** FE-072: `positions.typed` / `orders.typed`; `null` also when the strip emptied that collection. */
+  typedPositions: TypedRows<TypedPositionRow> | null;
+  typedOrders: TypedRows<TypedOrderRow> | null;
+  /** FE-072: `series` members (resolution, methodology, unit, exact points). */
+  seriesMembers: StageSeries | null;
+  /** FE-072: `projection_continuity.gap_ranges`. */
+  gapRanges: Fact<readonly GapRange[]> | null;
+  /**
    * Broker figures the reader refused to carry.
    *
    * Reported so the screen can say suppression happened rather than leaving a
@@ -170,9 +222,22 @@ export interface LiveFullOperations {
   suppressedBrokerFields: readonly string[];
 }
 
-/** Which authorities are broker-derived, and therefore suppressible. */
-function isBrokerDerived(authority: Authority | null): boolean {
-  return authority === "BROKER";
+/** A source figure after the broker strip: `broker` and `difference` are `null` while broker values are withheld. */
+export interface LiveSourceFigure extends Omit<SourceFigure, "broker" | "difference"> {
+  broker: SourceFigure["broker"] | null;
+  difference: SourceFigure["difference"] | null;
+}
+
+/** Authorities the server explicitly names as NOT broker-authored. Only these survive the strip. */
+const KNOWN_NON_BROKER: readonly Authority[] = ["EXECUTION", "PORTAL", "RESEARCH"];
+
+/**
+ * Whether a figure may be broker-derived, and therefore suppressible. Fail-closed: a missing,
+ * unreadable or `DERIVED` authority (derived from what?) is treated as broker-derived; only an
+ * authority explicitly named as not broker survives.
+ */
+function mayBeBrokerDerived(authority: Authority | null): boolean {
+  return authority === null || !KNOWN_NON_BROKER.includes(authority);
 }
 
 function actionPolicy(raw: unknown): LiveActionPolicy | null {
@@ -192,6 +257,7 @@ function actionPolicy(raw: unknown): LiveActionPolicy | null {
 }
 
 export function readLiveFullOperations(raw: unknown): LiveFullOperations | null {
+  if (v1Refusal(raw) !== null) return null;
   const root = obj(raw);
   const dep = obj(root?.deployment);
   if (!root || !dep) return null;
@@ -207,12 +273,22 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
   // The switch, read once. Absent is NOT permission to show broker figures.
   const brokerValuesVisible = consistency?.broker_values_visible === true;
   const suppressed: string[] = [];
+  const withheldRows: ("positions" | "orders")[] = [];
+  const figures = Object.hasOwn(root, "source_figures") ? readSourceFigures(root.source_figures) : null;
 
   const panelsRaw = obj(root.source_panels) ?? {};
   const panels: Record<string, LivePanel> = {};
   for (const [key, value] of Object.entries(panelsRaw)) {
     panels[key] = readLivePanel(value, key);
   }
+
+  /** THE STRIP, for a row collection: a BROKER-authored one loses its rows and total while suppression is on. */
+  const rowCollection = (key: "positions" | "orders"): RowCollection | null => {
+    const read = readRowCollection(root[key], key);
+    if (read === null || !mayBeBrokerDerived(read.envelope.authority) || brokerValuesVisible) return read;
+    withheldRows.push(key);
+    return { ...read, rows: [], exactTotal: null, returnedCount: null, rowsDropped: 0, rowLosses: [], rowsUnreadable: 0 };
+  };
 
   return {
     deploymentId: str(dep.deployment_id),
@@ -260,21 +336,25 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
       const key = str(o?.key);
       if (!key) return [];
       const envelope = readPanelEnvelope(o!.envelope, `kpi-${key}`);
-      const broker = isBrokerDerived(envelope.authority);
+      // `BROKER` is the word the V1 screen has always stripped (flag set even with no value). Any other
+      // authority that is not explicitly non-broker is stripped too, but only counts as suppressed when it
+      // actually carried a value, so a body that has none reads exactly as before.
+      const broker = envelope.authority === "BROKER";
+      const strip = !brokerValuesVisible && mayBeBrokerDerived(envelope.authority);
       const rawValue = str(o!.value);
       // THE STRIP. A broker figure never becomes a prop while suppression is on
       // — it is dropped here, where no later edit can put it back on screen.
-      const withheld = broker && !brokerValuesVisible && rawValue !== null;
+      const withheld = strip && rawValue !== null;
       if (withheld) suppressed.push(`kpi:${key}`);
       return [
         {
           key,
           label: str(o!.label) ?? key,
-          value: broker && !brokerValuesVisible ? null : rawValue,
+          value: strip ? null : rawValue,
           unit: str(o!.unit),
           authority: envelope.authority,
           panelState: envelope.panelState,
-          suppressed: broker && !brokerValuesVisible,
+          suppressed: (broker && !brokerValuesVisible) || withheld,
         },
       ];
     }),
@@ -310,8 +390,24 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
           riskIncreasing: actionPolicy(policy.risk_increasing),
         }
       : null,
+    positionRows: rowCollection("positions"),
+    orderRows: rowCollection("orders"),
     suppressedBrokerFields: suppressed,
+    withheldRows,
+    identity: readDeploymentIdentity(dep),
+    stageFacts: Object.hasOwn(root, "stage_facts") ? readStageFacts(root.stage_facts) : null,
+    sourceFigures: figures?.map((figure) => (brokerValuesVisible ? figure : { ...figure, broker: null, difference: null })) ?? null,
+    withheldFigures: figures !== null && !brokerValuesVisible,
+    typedPositions: withheldRows.includes("positions") ? null : typedOf(root.positions, readTypedPositions),
+    typedOrders: withheldRows.includes("orders") ? null : typedOf(root.orders, readTypedOrders),
+    seriesMembers: obj(root.series) !== null ? readSeriesMembers(obj(root.series)!) : null,
+    gapRanges: continuity !== null && Object.hasOwn(continuity, "gap_ranges") ? readGapRanges(continuity.gap_ranges) : null,
   };
+}
+
+function typedOf<R>(collection: unknown, read: (raw: unknown) => TypedRows<R> | null): TypedRows<R> | null {
+  const o = obj(collection);
+  return o !== null && Object.hasOwn(o, "typed") ? read(o.typed) : null;
 }
 
 /**

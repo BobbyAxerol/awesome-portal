@@ -143,6 +143,180 @@ describe("#4 — suppressed is not unavailable", () => {
   });
 });
 
+describe("positions and orders rows (additive; the V1 screen ignores them)", () => {
+  const meta = (id: string, authority: string, state = "ready") => ({
+    panel_id: id, source_authority: authority, panel_state: state, freshness_state: "FRESH", delivery_profile: "fixture",
+    source_verification_state: "VERIFIED", as_of: "2026-10-17T12:04:00.000Z", read_at: "2026-10-17T12:04:00.000Z", age_seconds: null, lag_ms: null,
+    source_cursor: null, projection_epoch: null, projection_sequence: null, capability_snapshot_id: null, data: { page: "first" }, warnings: [],
+  });
+  const collection = (id: string, authority: string, rows: unknown[], state = "ready") => ({
+    envelope: meta(id, authority, state), exact_total: rows.length, returned_count: rows.length, next_cursor: null, previous_cursor: null, rows,
+  });
+  const withRows = (authority: string, visible: boolean, rows: unknown[] = [{ instrument: "BTCUSDT", qty: "0.0120", reduce_only: false, size: 3 }]) =>
+    patched((raw) => {
+      raw.positions = collection("positions", authority, rows);
+      raw.orders = collection("orders", authority, [{ order_id: "o-1" }]);
+      (raw.broker_consistency as Record<string, unknown>).broker_values_visible = visible;
+    });
+
+  it("the published dark body: collections are read, empty, and unavailable", () => {
+    const r = live();
+    expect(r.positionRows).toMatchObject({ exactTotal: null, returnedCount: 0, rows: [], rowsDropped: 0 });
+    expect(r.positionRows?.envelope.panelState).toBe("unavailable");
+    expect(r.orderRows?.envelope.panelState).toBe("unavailable");
+  });
+
+  it("keeps scalar cells as the server wrote them; a number, array or object cell is dropped, never printed", () => {
+    const r = withRows("EXECUTION", false);
+    expect(r.positionRows?.rows).toEqual([{ instrument: "BTCUSDT", qty: "0.0120", reduce_only: false }]);
+    expect(r.positionRows?.exactTotal).toBe(1);
+    expect(r.suppressedBrokerFields).not.toContain("positions:rows");
+  });
+
+  it("strips a BROKER collection at the reader while broker figures are hidden, and names it", () => {
+    const hidden = withRows("BROKER", false);
+    expect(hidden.positionRows).toMatchObject({ rows: [], exactTotal: null, returnedCount: null });
+    expect(hidden.orderRows).toMatchObject({ rows: [], exactTotal: null });
+    // V2 reads `withheldRows`; the V1 list is not extended (V1 never read rows).
+    expect(hidden.withheldRows).toEqual(["positions", "orders"]);
+    expect(hidden.suppressedBrokerFields.some((f) => f.endsWith(":rows"))).toBe(false);
+    expect(JSON.stringify(hidden)).not.toContain("BTCUSDT");
+    expect(JSON.stringify(hidden)).not.toContain("0.0120");
+    // An absent visibility flag is hidden too.
+    const absent = patched((raw) => {
+      raw.positions = collection("positions", "BROKER", [{ instrument: "BTCUSDT" }]);
+      delete (raw.broker_consistency as Record<string, unknown>).broker_values_visible;
+    });
+    expect(JSON.stringify(absent)).not.toContain("BTCUSDT");
+    const shown = withRows("BROKER", true);
+    expect(shown.positionRows?.rows).toHaveLength(1);
+    expect(shown.withheldRows).toEqual([]);
+  });
+
+  it.each(["DERIVED", "MYSTERY", "", "broker"])("fail-closed: a collection with authority %j is stripped like a BROKER one while broker figures are hidden", (authority) => {
+    const hidden = withRows(authority, false);
+    expect(hidden.positionRows).toMatchObject({ rows: [], exactTotal: null, returnedCount: null });
+    expect(hidden.withheldRows).toEqual(["positions", "orders"]);
+    expect(JSON.stringify(hidden)).not.toContain("BTCUSDT");
+    expect(withRows(authority, true).positionRows?.rows).toHaveLength(1);
+  });
+
+  it("fail-closed: a collection whose authority is missing altogether is stripped", () => {
+    const missing = patched((raw) => {
+      const c = collection("positions", "EXECUTION", [{ instrument: "BTCUSDT" }]);
+      delete (c.envelope as Record<string, unknown>).source_authority;
+      raw.positions = c;
+    });
+    expect(missing.positionRows?.rows).toEqual([]);
+    expect(missing.withheldRows).toContain("positions");
+  });
+
+  it.each(["EXECUTION", "PORTAL", "RESEARCH"])("a collection explicitly authored by %s keeps its rows", (authority) => {
+    const kept = withRows(authority, false);
+    expect(kept.positionRows?.rows).toHaveLength(1);
+    expect(kept.withheldRows).toEqual([]);
+  });
+
+  it.each([["DERIVED"], ["MYSTERY"], [null]])("fail-closed: a KPI with authority %j and a value is stripped while broker figures are hidden", (authority) => {
+    const r = patched((raw) => {
+      const k = (raw.kpis as Record<string, unknown>[]).find((x) => x.key === "daily_pnl")!;
+      k.value = "-38.60";
+      const env = k.envelope as Record<string, unknown>;
+      if (authority === null) delete env.source_authority;
+      else env.source_authority = authority;
+    });
+    const kpi = r.kpis.find((x) => x.key === "daily_pnl")!;
+    expect(kpi.value).toBeNull();
+    expect(kpi.suppressed).toBe(true);
+    expect(r.suppressedBrokerFields).toContain("kpi:daily_pnl");
+    expect(JSON.stringify(r)).not.toContain("-38.60");
+  });
+
+  it("a KPI with a value and an authority the server names as not broker keeps it", () => {
+    for (const authority of ["EXECUTION", "PORTAL", "RESEARCH"]) {
+      const r = patched((raw) => {
+        const k = (raw.kpis as Record<string, unknown>[]).find((x) => x.key === "capital")!;
+        k.value = "1234.5600";
+        (k.envelope as Record<string, unknown>).source_authority = authority;
+      });
+      expect(r.kpis.find((x) => x.key === "capital")!.value).toBe("1234.5600");
+    }
+  });
+
+  it("a DERIVED KPI with NO value reads exactly as the published body always did (not flagged suppressed)", () => {
+    expect(live().kpis.find((x) => x.key === "daily_pnl")).toMatchObject({ value: null, suppressed: false });
+    expect(live().suppressedBrokerFields).toEqual(["kpi:broker_equity"].filter(() => false));
+  });
+
+  it("bounds a collection: 200 rows, at most 80 cells a row, 256 characters a cell, and counts what it did not keep", () => {
+    const wide = Object.fromEntries(Array.from({ length: 90 }, (_, i) => [`k${i}`, "v"]));
+    const r = withRows("EXECUTION", true, [...Array.from({ length: 205 }, () => wide), {}, "not a row", null]);
+    expect(r.positionRows?.rows).toHaveLength(200);
+    expect(Object.keys(r.positionRows!.rows[0]!)).toHaveLength(80);
+    expect(r.positionRows?.rowsDropped).toBe(8);
+    const long = withRows("EXECUTION", true, [{ a: "x".repeat(257), b: "x".repeat(256) }]);
+    expect(Object.keys(long.positionRows!.rows[0]!)).toEqual(["b"]);
+  });
+
+  it("the V1 screen renders identically with or without rows (it reads only the panels)", () => {
+    // React's generated ids count up per render; the markup is otherwise compared byte for byte.
+    const markup = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
+    const plain = markup(render(<LiveFullOperationsScreen live={live()} />).container.innerHTML);
+    cleanup();
+    const raw = JSON.parse(JSON.stringify(LIVE_FULL_FIXTURE));
+    raw.positions = collection("positions", "EXECUTION", [{ instrument: "BTCUSDT" }]);
+    const rich = markup(render(<LiveFullOperationsScreen live={readLiveFullOperations(raw)!} />).container.innerHTML);
+    expect(rich).toBe(plain);
+  });
+
+  it("V1 is unchanged by cells the reader drops (a number, an array, an unsafe key): the markup and the V1 list are the same as with no rows", () => {
+    const markup = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
+    const base = readLiveFullOperations(LIVE_FULL_FIXTURE)!;
+    const plain = markup(render(<LiveFullOperationsScreen live={base} />).container.innerHTML);
+    cleanup();
+    const raw = JSON.parse(JSON.stringify(LIVE_FULL_FIXTURE));
+    raw.positions = collection("positions", "EXECUTION", [{ instrument: "BTCUSDT", qty: 0.012, legs: ["a"], "bad name": "x" }, { qty: 5 }]);
+    const withDrops = readLiveFullOperations(raw)!;
+    expect(withDrops.positionRows?.rows).toEqual([{ instrument: "BTCUSDT" }]);
+    expect(withDrops.positionRows?.rowLosses?.[0]).toEqual({ cells: { qty: "number", legs: "unreadable" }, notShown: 1 });
+    expect(withDrops.suppressedBrokerFields).toEqual(base.suppressedBrokerFields);
+    expect(markup(render(<LiveFullOperationsScreen live={withDrops} />).container.innerHTML)).toBe(plain);
+  });
+
+  it("V1 is unchanged by rows that the strip empties: a BROKER collection (hidden) prints and lists exactly what a body without rows does", () => {
+    const markup = (html: string) => html.replace(/:r[0-9a-z]+:/g, ":r:");
+    const base = readLiveFullOperations(LIVE_FULL_FIXTURE)!;
+    const plain = markup(render(<LiveFullOperationsScreen live={base} />).container.innerHTML);
+    cleanup();
+    const raw = JSON.parse(JSON.stringify(LIVE_FULL_FIXTURE));
+    raw.positions = collection("positions", "BROKER", []);
+    raw.orders = collection("orders", "BROKER", [{ order_id: "o-1" }]);
+    const withBroker = readLiveFullOperations(raw)!;
+    // The pre-change reader (855ad7c0) had no rows: its list was the KPI entries only, and this still is.
+    expect(withBroker.suppressedBrokerFields).toEqual(base.suppressedBrokerFields);
+    expect(withBroker.suppressedBrokerFields.some((f) => f.endsWith(":rows"))).toBe(false);
+    expect(withBroker.withheldRows).toEqual(["positions", "orders"]);
+    const rich = markup(render(<LiveFullOperationsScreen live={withBroker} />).container.innerHTML);
+    expect(rich).toBe(plain);
+    expect(rich).not.toContain("o-1");
+  });
+});
+
+describe("panel vocabulary is the schema's", () => {
+  it("ready reads as ok, FRESH as OK; error is a failed read; a word outside the schema is unavailable", () => {
+    const state = (word: string, freshness: string) =>
+      patched((raw) => {
+        const internal = (raw.source_panels as Record<string, Record<string, unknown>>).internal!;
+        internal.panel_state = word;
+        internal.freshness_state = freshness;
+      }).panels.internal!.envelope;
+    expect(state("ready", "FRESH")).toMatchObject({ panelState: "ok", freshness: "OK" });
+    expect(state("error", "AGING")).toMatchObject({ panelState: "terminal", freshness: "AGING" });
+    expect(state("ok", "OK")).toMatchObject({ panelState: "unavailable", freshness: "OK" });
+    expect(state("loading", "PAUSED")).toMatchObject({ panelState: "unavailable", freshness: null });
+  });
+});
+
 describe("#5 — the two guard rules, stated separately", () => {
   it("splits the token into suppression and gap rules", () => {
     const rules = liveGuardRules(live());

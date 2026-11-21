@@ -2,11 +2,19 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Governance Review API",
-    "version": "1.5.0",
+    "version": "1.7.0",
     "description": "Same-origin, session-guarded Portal governance boundaries for R1/R2 review, immutable approval history, R1 request creation, conditions/waivers, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
   },
-  "servers": [{ "url": "/" }],
-  "security": [{ "portalSession": [] }],
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
   "paths": {
     "/api/v1/execution/governance/review-capture-capabilities": {
       "get": {
@@ -132,31 +140,134 @@
         "operationId": "executionApprovalInbox",
         "description": "Returns the Portal-owned approval inbox for one authorized workspace. read_truth is scoped to this exact view, filter set and opaque cursor; a 403/404 remains an authorization or concealed-scope outcome, never an empty inbox.",
         "parameters": [
-          { "$ref": "#/components/parameters/WorkspaceId" },
-          { "name": "after", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
-          { "name": "before", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 250 } },
-          { "name": "sort", "in": "query", "schema": { "type": "string", "maxLength": 256 } },
-          { "name": "view", "in": "query", "schema": { "type": "string", "enum": ["INBOX", "ALL", "R1", "R2", "PAPER", "SANDBOX", "LIVE_GATES", "EXIT_REVIEWS", "OVERDUE"], "default": "INBOX" } },
-          { "name": "status", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
-          { "name": "gate", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
-          { "name": "environment", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
-          { "name": "sla_state", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
-          { "name": "requester", "in": "query", "schema": { "type": "string", "maxLength": 64 } },
-          { "name": "subject", "in": "query", "schema": { "type": "string", "maxLength": 160 } },
-          { "name": "evidence_complete", "in": "query", "schema": { "type": "boolean" } }
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          },
+          {
+            "name": "view",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INBOX",
+                "ALL",
+                "R1",
+                "R2",
+                "PAPER",
+                "SANDBOX",
+                "LIVE_GATES",
+                "EXIT_REVIEWS",
+                "OVERDUE"
+              ],
+              "default": "INBOX"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "gate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "sla_state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "requester",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "evidence_complete",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "Portal-owned approval inbox with exact page counts and request-scoped truth",
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalInboxResponse" }
+                "schema": {
+                  "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalInboxResponse"
+                }
               }
             }
           },
-          "403": { "description": "Role policy denied" },
-          "404": { "description": "Workspace not found or not visible to the session" }
+          "403": {
+            "description": "Role policy denied"
+          },
+          "404": {
+            "description": "Workspace not found or not visible to the session"
+          }
         }
       },
       "post": {
@@ -166,7 +277,9 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalCreateRequest" }
+              "schema": {
+                "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalCreateRequest"
+              }
             }
           }
         },
@@ -175,11 +288,32 @@
             "description": "Created or idempotently replayed R1 request",
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalCreateResponse" }
+                "schema": {
+                  "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ApprovalCreateResponse"
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "409": {
+            "description": "Duplicate open request (typed approval_id) or another structured conflict. An existing approval ID does not grant read access.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DuplicateOpenApprovalProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Problem"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -188,30 +322,121 @@
         "operationId": "executionWaiversRegisterV1",
         "description": "Returns every Portal-owned approval condition with exact counts, bounded bidirectional keyset pagination and server-computed OPEN/WAIVED/EXPIRING/LAPSED state.",
         "parameters": [
-          { "$ref": "#/components/parameters/WorkspaceId" },
-          { "name": "after", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
-          { "name": "before", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 250 } },
-          { "name": "state", "in": "query", "schema": { "type": "string", "maxLength": 64 } },
-          { "name": "kind", "in": "query", "schema": { "type": "string", "maxLength": 64 } },
-          { "name": "gate", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
-          { "name": "environment", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
-          { "name": "owner", "in": "query", "schema": { "type": "string", "maxLength": 128 } },
-          { "name": "subject", "in": "query", "schema": { "type": "string", "maxLength": 160 } },
-          { "name": "due_from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
-          { "name": "due_to", "in": "query", "schema": { "type": "string", "format": "date-time" } },
-          { "name": "sort", "in": "query", "schema": { "type": "string", "maxLength": 256 } }
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          {
+            "name": "gate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "owner",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 128
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "due_from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "due_to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "Portal-owned conditions and waivers register",
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ConditionsRegisterResponse" }
+                "schema": {
+                  "$ref": "../schemas/execution-governance-product.v1.schema.json#/$defs/ConditionsRegisterResponse"
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -220,19 +445,27 @@
         "operationId": "executionGovernanceR1Review",
         "description": "Returns one workspace-bound Portal R1 review, its immutable evidence manifest, known limitations, eligibility and decision history.",
         "parameters": [
-          { "$ref": "#/components/parameters/ApprovalId" },
-          { "$ref": "#/components/parameters/WorkspaceId" }
+          {
+            "$ref": "#/components/parameters/ApprovalId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
         ],
         "responses": {
           "200": {
             "description": "Portal-owned R1 review",
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/R1ReviewResponse" }
+                "schema": {
+                  "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/R1ReviewResponse"
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -241,81 +474,393 @@
         "operationId": "executionGovernanceApprovalHistory",
         "description": "Returns immutable terminal approval attempts with bounded bidirectional keyset pagination. REQUEST_CHANGES appears as CHANGES_REQUESTED and never rewrites the governed gate.",
         "parameters": [
-          { "$ref": "#/components/parameters/WorkspaceId" },
-          { "name": "after", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
-          { "name": "before", "in": "query", "schema": { "type": "string", "maxLength": 4096 } },
-          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 250 } },
-          { "name": "gate", "in": "query", "schema": { "enum": ["R1", "R2", "PAPER_EXIT", "SANDBOX_EXIT", "LIVE_GATE"] } },
-          { "name": "subject", "in": "query", "schema": { "type": "string", "maxLength": 160 } },
-          { "name": "sort", "in": "query", "schema": { "type": "string", "maxLength": 256 } }
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 4096
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 250
+            }
+          },
+          {
+            "name": "gate",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "R1",
+                "R2",
+                "PAPER_EXIT",
+                "SANDBOX_EXIT",
+                "LIVE_GATE"
+              ]
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 160
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "maxLength": 256
+            }
+          }
         ],
         "responses": {
           "200": {
             "description": "Portal-owned immutable approval history",
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/ApprovalHistoryResponse" }
+                "schema": {
+                  "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/ApprovalHistoryResponse"
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
     "/api/v1/execution/governance/approvals/{approval_id}/r2": {
       "get": {
         "operationId": "executionGovernanceR2Review",
-        "description": "Returns an active, workspace-bound R2 review only when its immutable portfolio/currency scope exists. Missing, cross-workspace, closed, and expired reviews are not disclosed.",
+        "description": "Sticky current Core mode is selected before finite parent detail. Legacy v1 remains separate. SCOPED_V2 requires current exact deployment AND portfolio PAPER audit plus the existing gate and reviewed root field purpose before protected loading. R2 uses governance.r2.read; Paper Exit preserves active membership. Optional lineage/evaluation has its own purpose. Historical planning expiry is not read expiry; CURRENT_CORE_BASELINE is not source attestation. No owner/ADMIN shortcut, mutation, upstream call or current-source verdict. One shared authority flight fences the pure response after storage/source rechecks and LAST Core.",
         "parameters": [
-          { "$ref": "#/components/parameters/ApprovalId" },
-          { "$ref": "#/components/parameters/WorkspaceId" }
+          {
+            "$ref": "#/components/parameters/ApprovalId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
         ],
         "responses": {
           "200": {
-            "description": "Portal-owned R2 review scope",
+            "description": "Legacy parent OR finite current-authorized v2 parent; optional absence stays typed and no source decision is asserted.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/R2ReviewResponse" }
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/R2ReviewResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/R2ParentReadV2"
+                    }
+                  ]
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Strict finite input invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current authenticated Portal session required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current actor/session lifecycle denied; no parent detail returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
     "/api/v1/execution/governance/exit-reviews/{review_id}": {
       "get": {
         "operationId": "executionGovernancePaperExitReview",
-        "description": "Returns a Portal-owned Paper Exit Review with deterministic evidence evaluation. Missing, partial, stale and unavailable evidence are explicit fail-closed states.",
+        "description": "Sticky current Core mode is selected before finite parent detail. Legacy v1 remains separate. SCOPED_V2 requires current exact deployment AND portfolio PAPER audit plus the existing gate and reviewed root field purpose before protected loading. R2 uses governance.r2.read; Paper Exit preserves active membership. Optional lineage/evaluation has its own purpose. Historical planning expiry is not read expiry; CURRENT_CORE_BASELINE is not source attestation. No owner/ADMIN shortcut, mutation, upstream call or current-source verdict. One shared authority flight fences the pure response after storage/source rechecks and LAST Core.",
         "parameters": [
-          { "$ref": "#/components/parameters/ReviewId" },
-          { "$ref": "#/components/parameters/WorkspaceId" }
+          {
+            "$ref": "#/components/parameters/ReviewId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
         ],
         "responses": {
           "200": {
-            "description": "Portal-owned Paper Exit Review",
+            "description": "Legacy parent OR finite current-authorized v2 parent; optional absence stays typed and no source decision is asserted.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse" }
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitReviewResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentReadV2"
+                    }
+                  ]
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "400": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Strict finite input invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current authenticated Portal session required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Current actor/session lifecycle denied; no parent detail returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Uniform unknown, hidden, wrong workspace/family/target parent; no disclosure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "ACCESS_RETRY_REQUIRED: current authority or stored parent changed; no legacy fallback.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "description": "Fixed parent field-purpose, integrity, bound or configuration unavailable; no raw SQL/provider/Zod text.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
     "/api/v1/execution/commands/plans": {
       "post": {
         "operationId": "planGovernanceDecision",
-        "description": "Plans a Portal-local R1 or Paper Exit decision. REQUEST_CHANGES closes only the current immutable approval attempt; it does not deny the governed gate or create a replacement request.",
+        "description": "Plans a named Portal-only R1, R2, Live or Paper Exit decision. Live remains typed blocked without an immutable commissioned parent policy. Never execution authorization.",
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "oneOf": [
-                  { "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/R1DecisionPlanRequest" },
-                  { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlanRequest" }
+                  {
+                    "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1DecisionPlanRequest"
+                  },
+                  {
+                    "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2DecisionPlanRequest"
+                  },
+                  {
+                    "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveDecisionPlanRequest"
+                  },
+                  {
+                    "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlanRequest"
+                  }
                 ]
               }
             }
@@ -326,11 +871,28 @@
             "description": "Immutable decision plan",
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlan" }
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1DecisionPlan"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2DecisionPlan"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveDecisionPlan"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionPlan"
+                    }
+                  ]
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -338,12 +900,31 @@
       "post": {
         "operationId": "applyPaperExitDecision",
         "description": "Records the planned Portal decision. HTTP 202 is an acknowledgement, not terminal success. No Trading System effect is requested.",
-        "parameters": [{ "$ref": "#/components/parameters/OperationId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperationId"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyRequest" }
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1ApplyRequest"
+                  },
+                  {
+                    "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2ApplyRequest"
+                  },
+                  {
+                    "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveApplyRequest"
+                  },
+                  {
+                    "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyRequest"
+                  }
+                ]
+              }
             }
           }
         },
@@ -352,49 +933,249 @@
             "description": "Accepted for Portal-local settlement",
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyResponse" }
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1ApplyResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2ApplyResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveApplyResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitApplyResponse"
+                    }
+                  ]
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
     "/api/v1/execution/operations/{operation_id}": {
       "get": {
         "operationId": "getPaperExitDecisionOperation",
-        "description": "Returns workflow status and verification_result separately for a Paper Exit decision operation.",
+        "description": "Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. SCOPED_V2 uses positive stored family identity: F0 keeps immutable queue/intent provenance and exact target audit; selected R2/Paper plans require BOTH current PAPER deployment/portfolio audit anchors, ROOT plus exact DECISION_OPERATION field purpose and the actual gate/member requirement. Unknown, unsupported or ambiguous identity never tries another family. No creator/ADMIN/read_all permission substitute. Legacy decision readers remain separate. Historical expiry/expected versions do not expire today's authorized read or assert current apply eligibility. GET never dispatches/reconciles; stored Portal APPLIED is not TS acceptance/FILLED. HTTP private, no-store.",
         "parameters": [
-          { "$ref": "#/components/parameters/OperationId" },
-          { "$ref": "#/components/parameters/WorkspaceId" }
+          {
+            "$ref": "#/components/parameters/OperationId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
         ],
         "responses": {
           "200": {
-            "description": "Decision operation",
+            "description": "Authorized concrete operation; finite workflow and selected R2/Paper plan variants are additive, not source receipts.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
             "content": {
               "application/json": {
-                "schema": { "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation" }
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandOperation"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1DecisionOperation"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2DecisionOperation"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveDecisionOperation"
+                    },
+                    {
+                      "$ref": "../schemas/execution-governance-paper-exit.v1.schema.json#/$defs/PaperExitDecisionOperation"
+                    },
+                    {
+                      "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandStatus"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalWorkflowV2"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/R2ParentOperationReadV2"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentOperationReadV2"
+                    }
+                  ]
+                }
               }
             }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "400": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown and hidden commands have the same safe envelope.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed current-authority refusal; no upstream or legacy fallback.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
     "/api/v1/execution/deployments/{deployment_id}/certification": {
       "get": {
         "operationId": "getSandboxCertification",
-        "description": "Returns the Portal-owned seven-step Sandbox Certification and three source-attributed panels. Missing source evidence remains explicitly unavailable.",
+        "description": "Sticky current Core mode preserves legacy v1 separately. SCOPED_V2 publishes only a finite current-authorized Portal parent after BOTH current TS-qualified deployment/portfolio audit anchors and the exact reviewed root field purpose. Sandbox uses SANDBOX current correspondence and active membership; Canary uses LIVE current correspondence plus independent governance.canary.read. Current association is NOT captured historical native membership. Optional fields require separate purposes. Stored Portal evaluation/DRAFT never asserts a source verdict, current eligibility, activated runtime or effective capital; source screens remain explicitly unpublished. No mutation/upstream call, owner/ADMIN shortcut or fallback after current-authority refusal. One shared flight fences body and contextual errors after local/source checks and LAST Core.",
         "parameters": [
-          { "$ref": "#/components/parameters/DeploymentId" },
-          { "$ref": "#/components/parameters/WorkspaceId" }
+          {
+            "$ref": "#/components/parameters/DeploymentId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "include",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "identity"
+              ]
+            },
+            "description": "SCOPED_V2 only; the legacy body ignores it. include=identity attaches the closed `identity` block from a separate fenced retained-projection read under the viewer's own alpha.read row and field policy. Any other value is refused (400 EXECUTION_READ_QUERY_INVALID). Omitted: the body is byte-identical to before. It is not a parent record field and not a parent-field purpose."
+          }
         ],
         "responses": {
           "200": {
-            "description": "Sandbox Certification detail",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse" } } }
+            "description": "Legacy parent OR finite current-authorized v2 Portal root; not an effective source, certification, capital or execution verdict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse"
+                    },
+                    {
+                      "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/SandboxParentReadV2"
+                    }
+                  ]
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -404,14 +1185,28 @@
         "description": "Creates one Portal-owned certification from an available Paper Exit promotion grant; does not activate sandbox runtime.",
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CreateRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CreateRequest"
+              }
+            }
+          }
         },
         "responses": {
           "201": {
             "description": "Created or idempotently replayed certification",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse"
+                }
+              }
+            }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -419,17 +1214,35 @@
       "post": {
         "operationId": "submitSandboxCertification",
         "description": "Submits only a complete, verified and current 7/7 evidence set for review.",
-        "parameters": [{ "$ref": "#/components/parameters/CertificationId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CertificationId"
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/SubmitRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/SubmitRequest"
+              }
+            }
+          }
         },
         "responses": {
           "201": {
             "description": "Submitted or idempotently replayed certification",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse"
+                }
+              }
+            }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -437,17 +1250,35 @@
       "post": {
         "operationId": "decideSandboxCertification",
         "description": "Approves or denies an in-review certification. Approval is separation-of-duties and evidence-hash gated.",
-        "parameters": [{ "$ref": "#/components/parameters/CertificationId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CertificationId"
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/DecisionRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/DecisionRequest"
+              }
+            }
+          }
         },
         "responses": {
           "201": {
             "description": "Recorded or idempotently replayed decision",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse"
+                }
+              }
+            }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     },
@@ -455,72 +1286,343 @@
       "post": {
         "operationId": "planSandboxPromotion",
         "description": "Records a hash-bound CANARY promotion intent as BLOCKED. No outbox, runtime activation or Trading System side effect is created.",
-        "parameters": [{ "$ref": "#/components/parameters/CertificationId" }],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CertificationId"
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/PromotionPlanRequest" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/PromotionPlanRequest"
+              }
+            }
+          }
         },
         "responses": {
           "201": {
             "description": "Immutable blocked promotion plan",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/PromotionPlanResponse" } } }
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-sandbox-certification.v1.schema.json#/$defs/PromotionPlanResponse"
+                }
+              }
+            }
           },
-          "default": { "$ref": "#/components/responses/Problem" }
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/governance/stage-action-eligibility": {
+      "get": {
+        "operationId": "executionStageActionEligibilityV1",
+        "description": "FE-068. Advisory own eligibility for the ten stage actions; see StageActionEligibility.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private, no-store.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageActionEligibility"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/governance/approvals/request-lookup": {
+      "get": {
+        "operationId": "executionApprovalRequestLookupV1",
+        "description": "FE-069. Look up the caller's own approval request by request_key without replaying it; see ApprovalRequestLookup.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "request_key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+            }
+          },
+          {
+            "name": "alpha_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "description": "Optional replay payload; supply all four or none."
+          },
+          {
+            "name": "evidence_run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "description": "Optional replay payload; supply all four or none."
+          },
+          {
+            "name": "methodology_claim_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "description": "Optional replay payload; supply all four or none."
+          },
+          {
+            "name": "summary",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 2000
+            },
+            "description": "Optional replay payload; supply all four or none."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private, no-store.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestLookup"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/governance/paper-exit/parent": {
+      "get": {
+        "operationId": "executionPaperExitParentV1",
+        "description": "RV-10. The R2 parent of a deployment as the PAPER_EXIT_CREATE capture context the Paper exit request is bound to; see PaperExitParent.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "deployment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private, no-store.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperExitParent"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
         }
       }
     }
   },
   "components": {
     "securitySchemes": {
-      "portalSession": { "type": "apiKey", "in": "cookie", "name": "portal_session" }
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
     },
     "parameters": {
       "ApprovalId": {
         "name": "approval_id",
         "in": "path",
         "required": true,
-        "schema": { "$ref": "#/components/schemas/Identifier" }
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
       },
       "ReviewId": {
         "name": "review_id",
         "in": "path",
         "required": true,
-        "schema": { "$ref": "#/components/schemas/Identifier" }
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
       },
       "OperationId": {
         "name": "operation_id",
         "in": "path",
         "required": true,
-        "schema": { "$ref": "#/components/schemas/Identifier" }
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
       },
       "DeploymentId": {
         "name": "deployment_id",
         "in": "path",
         "required": true,
-        "schema": { "$ref": "#/components/schemas/Identifier" }
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
       },
       "CertificationId": {
         "name": "certification_id",
         "in": "path",
         "required": true,
-        "schema": { "$ref": "#/components/schemas/Identifier" }
+        "schema": {
+          "$ref": "#/components/schemas/Identifier"
+        }
       },
       "WorkspaceId": {
         "name": "workspace_id",
         "in": "query",
         "required": false,
-        "schema": { "$ref": "#/components/schemas/WorkspaceId" }
+        "schema": {
+          "$ref": "#/components/schemas/WorkspaceId"
+        }
       }
     },
     "responses": {
       "Problem": {
         "description": "Typed fail-closed error",
         "content": {
-          "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } }
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
         }
       }
     },
     "schemas": {
+      "DuplicateOpenApprovalProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id",
+          "details"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "const": "DUPLICATE_OPEN_APPROVAL"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "approval_id"
+            ],
+            "properties": {
+              "approval_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+              }
+            }
+          },
+          "public_copy_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "safe_next_action": {
+            "enum": [
+              "QUERY_SAME_INTENT",
+              "REVIEW_BLOCKER"
+            ]
+          }
+        },
+        "description": "An existing open approval in the authenticated workspace. The ID is navigation metadata, never a permission grant."
+      },
+      "PaperExitDecisionContext": {
+        "$ref": "../schemas/execution-governance-review-context.v1.schema.json#/$defs/PaperExitDecisionContext"
+      },
+      "DecisionContext": {
+        "$ref": "../schemas/execution-governance-review-context.v1.schema.json#/$defs/DecisionContext"
+      },
+      "CaptureContext": {
+        "$ref": "../schemas/execution-governance-review-context.v1.schema.json#/$defs/CaptureContext"
+      },
       "Identifier": {
         "type": "string",
         "pattern": "^[A-Za-z0-9._-]{1,128}$"
@@ -534,7 +1636,10 @@
         "type": "string",
         "pattern": "^[A-Z0-9]{2,12}$"
       },
-      "DateTime": { "type": "string", "format": "date-time" },
+      "DateTime": {
+        "type": "string",
+        "format": "date-time"
+      },
       "Hash": {
         "type": "string",
         "pattern": "^sha256:[0-9a-f]{64}$"
@@ -542,24 +1647,49 @@
       "PortalActor": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["user_id", "username"],
+        "required": [
+          "user_id",
+          "username"
+        ],
         "properties": {
-          "user_id": { "$ref": "#/components/schemas/Identifier" },
-          "username": { "type": "string", "minLength": 1, "maxLength": 128 }
+          "user_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
         }
       },
       "ReviewActor": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["user_id", "username", "roles"],
+        "required": [
+          "user_id",
+          "username",
+          "roles"
+        ],
         "properties": {
-          "user_id": { "$ref": "#/components/schemas/Identifier" },
-          "username": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "user_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "username": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
           "roles": {
             "type": "array",
             "minItems": 1,
             "maxItems": 1,
-            "items": { "type": "string", "enum": ["ADMIN", "USER"] }
+            "items": {
+              "type": "string",
+              "enum": [
+                "ADMIN",
+                "USER"
+              ]
+            }
           }
         }
       },
@@ -594,40 +1724,121 @@
           "currency"
         ],
         "properties": {
-          "approval_id": { "$ref": "#/components/schemas/Identifier" },
-          "gate": { "type": "string", "const": "R2" },
-          "subject_type": { "type": "string", "minLength": 1, "maxLength": 64 },
-          "subject_id": { "$ref": "#/components/schemas/Identifier" },
-          "subject_label": { "type": "string", "minLength": 1, "maxLength": 512 },
-          "release_candidate": { "type": ["string", "null"], "maxLength": 256 },
-          "environment": { "type": "string", "minLength": 1, "maxLength": 32 },
-          "target_label": { "type": "string", "minLength": 1, "maxLength": 256 },
-          "requester": { "$ref": "#/components/schemas/PortalActor" },
-          "creator": { "$ref": "#/components/schemas/PortalActor" },
-          "status": { "type": "string", "const": "PENDING" },
-          "policy_version": { "type": "string", "minLength": 1, "maxLength": 128 },
-          "quorum_met": { "type": "integer", "minimum": 0 },
-          "quorum_required": { "type": "integer", "minimum": 1 },
-          "approval_version": { "type": "integer", "minimum": 1 },
-          "evidence_set_hash": { "$ref": "#/components/schemas/Hash" },
-          "evidence_complete": { "type": "boolean" },
-          "blocker_count": { "type": "integer", "minimum": 0 },
-          "blocker_summary": { "type": ["string", "null"], "maxLength": 2000 },
-          "sla_due_at": { "$ref": "#/components/schemas/DateTime" },
-          "expires_at": { "$ref": "#/components/schemas/DateTime" },
-          "created_at": { "$ref": "#/components/schemas/DateTime" },
-          "updated_at": { "$ref": "#/components/schemas/DateTime" },
-          "portfolio_id": { "$ref": "#/components/schemas/Identifier" },
-          "currency": { "$ref": "#/components/schemas/Currency" }
+          "approval_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "gate": {
+            "type": "string",
+            "const": "R2"
+          },
+          "subject_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "subject_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "subject_label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "release_candidate": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 256
+          },
+          "environment": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "target_label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "requester": {
+            "$ref": "#/components/schemas/PortalActor"
+          },
+          "creator": {
+            "$ref": "#/components/schemas/PortalActor"
+          },
+          "status": {
+            "type": "string",
+            "const": "PENDING"
+          },
+          "policy_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "quorum_met": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "quorum_required": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "approval_version": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "evidence_set_hash": {
+            "$ref": "#/components/schemas/Hash"
+          },
+          "evidence_complete": {
+            "type": "boolean"
+          },
+          "blocker_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "blocker_summary": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "sla_due_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "expires_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "created_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "updated_at": {
+            "$ref": "#/components/schemas/DateTime"
+          },
+          "portfolio_id": {
+            "$ref": "#/components/schemas/Identifier"
+          },
+          "currency": {
+            "$ref": "#/components/schemas/Currency"
+          }
         }
       },
       "R2ReviewData": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["approval", "actor"],
+        "required": [
+          "approval",
+          "actor"
+        ],
         "properties": {
-          "approval": { "$ref": "#/components/schemas/R2Approval" },
-          "actor": { "$ref": "#/components/schemas/ReviewActor" }
+          "approval": {
+            "$ref": "#/components/schemas/R2Approval"
+          },
+          "actor": {
+            "$ref": "#/components/schemas/ReviewActor"
+          }
         }
       },
       "R2ReviewResponse": {
@@ -636,19 +1847,1294 @@
       "Problem": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["error", "request_id"],
+        "required": [
+          "error",
+          "request_id"
+        ],
         "properties": {
           "error": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["code", "message"],
+            "required": [
+              "code",
+              "message"
+            ],
             "properties": {
-              "code": { "type": "string", "minLength": 1, "maxLength": 128 },
-              "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+              "code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
             }
           },
-          "request_id": { "type": "string", "minLength": 1, "maxLength": 128 }
-        }
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "details": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": true,
+            "description": "Public structured refusal context. Do not parse arbitrary details as authority or an identifier; use a named error variant."
+          },
+          "public_copy_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "safe_next_action": {
+            "enum": [
+              "QUERY_SAME_INTENT",
+              "REVIEW_BLOCKER"
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "error": {
+                  "type": "object",
+                  "required": [
+                    "code"
+                  ],
+                  "properties": {
+                    "code": {
+                      "const": "DUPLICATE_OPEN_APPROVAL"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "error"
+              ]
+            },
+            "then": {
+              "required": [
+                "details"
+              ],
+              "properties": {
+                "details": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "approval_id"
+                  ],
+                  "properties": {
+                    "approval_id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "R1DecisionPlanRequest": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1DecisionPlanRequest"
+      },
+      "R1DecisionPlan": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1DecisionPlan"
+      },
+      "R1ApplyRequest": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1ApplyRequest"
+      },
+      "R1ApplyResponse": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1ApplyResponse"
+      },
+      "R1DecisionOperation": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1DecisionOperation"
+      },
+      "R2DecisionPlanRequest": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2DecisionPlanRequest"
+      },
+      "R2DecisionPlan": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2DecisionPlan"
+      },
+      "R2ApplyRequest": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2ApplyRequest"
+      },
+      "R2ApplyResponse": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2ApplyResponse"
+      },
+      "R2DecisionOperation": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R2DecisionOperation"
+      },
+      "LiveDecisionPlanRequest": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveDecisionPlanRequest"
+      },
+      "LiveDecisionPlan": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveDecisionPlan"
+      },
+      "LiveApplyRequest": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveApplyRequest"
+      },
+      "LiveApplyResponse": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveApplyResponse"
+      },
+      "LiveDecisionOperation": {
+        "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/LiveDecisionOperation"
+      },
+      "R2ParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/R2ParentReadV2"
+      },
+      "PaperExitParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentReadV2"
+      },
+      "OperationalR2ParentCompositionV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalR2ParentCompositionV2"
+      },
+      "OperationalPaperExitParentCompositionV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalPaperExitParentCompositionV2"
+      },
+      "R2ParentOperationReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/R2ParentOperationReadV2"
+      },
+      "PaperExitParentOperationReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/PaperExitParentOperationReadV2"
+      },
+      "SandboxParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/SandboxParentReadV2"
+      },
+      "CanaryParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/CanaryParentReadV2"
+      },
+      "LiveParentReadV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/LiveParentReadV2"
+      },
+      "OperationalLiveParentCompositionV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalLiveParentCompositionV2"
+      },
+      "StageActionEligibilityRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stage_action",
+          "verdict",
+          "eligible",
+          "reason_class",
+          "public_copy_key",
+          "basis",
+          "step_up_required",
+          "step_up_state",
+          "alpha_scope"
+        ],
+        "properties": {
+          "stage_action": {
+            "enum": [
+              "approval.create",
+              "sandbox.review_note",
+              "paper.exit_review_request",
+              "canary.hold",
+              "canary.reduce",
+              "canary.rollback",
+              "canary.request_scale",
+              "live.halt",
+              "live.reduce",
+              "live.emergency_close"
+            ]
+          },
+          "verdict": {
+            "enum": [
+              "ELIGIBLE",
+              "NOT_ELIGIBLE",
+              "NOT_COMMISSIONED"
+            ]
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "reason_class": {
+            "enum": [
+              "SUBMIT_CHECKS_REQUIRED",
+              "RETAINED_REVIEW_READ_ONLY",
+              "ADMIN_ROLE_REQUIRED",
+              "GOVERNANCE_CAPABILITY_REQUIRED",
+              "GOVERNANCE_SCOPE_MISMATCH",
+              "CAPTURE_PROJECTION_NOT_AUTHORIZED",
+              "COMMAND_FAMILY_NOT_COMMISSIONED"
+            ]
+          },
+          "public_copy_key": {
+            "enum": [
+              "SUBMIT_CHECKS_REQUIRED",
+              "RETAINED_REVIEW_READ_ONLY",
+              "ADMIN_ROLE_REQUIRED",
+              "GOVERNANCE_CAPABILITY_REQUIRED",
+              "GOVERNANCE_SCOPE_MISMATCH",
+              "CAPTURE_PROJECTION_NOT_AUTHORIZED",
+              "COMMAND_FAMILY_NOT_COMMISSIONED"
+            ]
+          },
+          "basis": {
+            "enum": [
+              "WORKSPACE_MEMBERSHIP",
+              "ADMIN_ROLE",
+              "ADMIN_ROLE_AND_GOVERNANCE_R2_READ",
+              "NONE_PUBLISHED"
+            ]
+          },
+          "step_up_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "step_up_state": {
+            "enum": [
+              "NOT_REQUIRED",
+              "NOT_DETERMINED"
+            ]
+          },
+          "alpha_scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "WORKSPACE_ALL_COMPLETED_RUNS"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "approval.create"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "WORKSPACE_MEMBERSHIP"
+                },
+                "step_up_required": {
+                  "const": false
+                },
+                "step_up_state": {
+                  "const": "NOT_REQUIRED"
+                },
+                "alpha_scope": {
+                  "const": "WORKSPACE_ALL_COMPLETED_RUNS"
+                },
+                "verdict": {
+                  "enum": [
+                    "ELIGIBLE",
+                    "NOT_ELIGIBLE"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "sandbox.review_note"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "ADMIN_ROLE"
+                },
+                "step_up_required": {
+                  "const": false
+                },
+                "step_up_state": {
+                  "const": "NOT_REQUIRED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "enum": [
+                    "ELIGIBLE",
+                    "NOT_ELIGIBLE"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "paper.exit_review_request"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "ADMIN_ROLE_AND_GOVERNANCE_R2_READ"
+                },
+                "step_up_required": {
+                  "const": false
+                },
+                "step_up_state": {
+                  "const": "NOT_REQUIRED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "enum": [
+                    "ELIGIBLE",
+                    "NOT_ELIGIBLE"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "canary.hold"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "canary.reduce"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "canary.rollback"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "canary.request_scale"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "live.halt"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "live.reduce"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "live.emergency_close"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "SUBMIT_CHECKS_REQUIRED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "SUBMIT_CHECKS_REQUIRED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "RETAINED_REVIEW_READ_ONLY"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "RETAINED_REVIEW_READ_ONLY"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "ADMIN_ROLE_REQUIRED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "ADMIN_ROLE_REQUIRED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "GOVERNANCE_CAPABILITY_REQUIRED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "GOVERNANCE_CAPABILITY_REQUIRED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "GOVERNANCE_SCOPE_MISMATCH"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "GOVERNANCE_SCOPE_MISMATCH"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "CAPTURE_PROJECTION_NOT_AUTHORIZED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "CAPTURE_PROJECTION_NOT_AUTHORIZED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "COMMAND_FAMILY_NOT_COMMISSIONED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "COMMAND_FAMILY_NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "verdict": {
+                  "const": "ELIGIBLE"
+                }
+              },
+              "required": [
+                "verdict"
+              ]
+            },
+            "then": {
+              "properties": {
+                "eligible": {
+                  "const": true
+                },
+                "reason_class": {
+                  "const": "SUBMIT_CHECKS_REQUIRED"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "eligible": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              },
+              "required": [
+                "verdict"
+              ]
+            },
+            "then": {
+              "properties": {
+                "reason_class": {
+                  "const": "COMMAND_FAMILY_NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "verdict": {
+                  "const": "NOT_ELIGIBLE"
+                }
+              },
+              "required": [
+                "verdict"
+              ]
+            },
+            "then": {
+              "properties": {
+                "reason_class": {
+                  "enum": [
+                    "RETAINED_REVIEW_READ_ONLY",
+                    "ADMIN_ROLE_REQUIRED",
+                    "GOVERNANCE_CAPABILITY_REQUIRED",
+                    "GOVERNANCE_SCOPE_MISMATCH",
+                    "CAPTURE_PROJECTION_NOT_AUTHORIZED"
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "description": "One stage action. `stage_action` is a display identifier for a button, NOT a capability name and never accepted as authority. verdict ELIGIBLE means the route's own knowable preconditions did not refuse the caller; the row-level checks (run completeness, parent approval, versions, projection freshness, idempotency) still run at submit and every route rechecks current authority. NOT_COMMISSIONED means no Portal route exists for the action, whatever grants the caller holds. basis names the rule the producing route enforces today. step_up_required is false for the three Portal routes that exist today (approval create, sandbox review note, paper-exit request; they demand none) and null (not determined, never false) where no route exists. For sandbox.review_note and paper.exit_review_request the verdict is computed by the SAME predicate as the review-capture-capabilities read (one authority, so the two cannot disagree about one control)."
+      },
+      "StageActionEligibility": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "current_only",
+          "advisory_only",
+          "observed_at_ms",
+          "session_step_up",
+          "actions"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.stage-action-eligibility.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 96
+          },
+          "current_only": {
+            "const": true
+          },
+          "advisory_only": {
+            "const": true
+          },
+          "observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Portal evaluation time (UTC epoch ms), not a source observation time and not a permission lease. Re-ask on mount, workspace switch and focus; do not cache across sessions."
+          },
+          "session_step_up": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "valid_until_ms"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "ACTIVE",
+                  "NOT_ACTIVE"
+                ]
+              },
+              "valid_until_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "description": "This session's step-up fact (the one the access/capital mutations recheck), scoped to this session only. ACTIVE requires valid_until_ms greater than observed_at_ms; NOT_ACTIVE has null. It changes no verdict above.",
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {
+                      "const": "ACTIVE"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "valid_until_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "valid_until_ms": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 10,
+            "maxItems": 10,
+            "items": false,
+            "prefixItems": [
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "approval.create"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "sandbox.review_note"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "paper.exit_review_request"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "canary.hold"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "canary.reduce"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "canary.rollback"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "canary.request_scale"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "live.halt"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "live.reduce"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "live.emergency_close"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "description": "FE-068. Own advisory per-action eligibility for exactly ten stage actions in a fixed order, before the click. Authorization: session + workspace membership + a fresh database recheck of session and role before and after the reads. Grants nothing and consults no related capability for the commands without a route. Valid_until semantics are deliberately absent: this is a snapshot, not a lease."
+      },
+      "ApprovalRequestLookup": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "request_key",
+          "state",
+          "payload_check",
+          "result"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "governance.approval-request-lookup.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 96
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+          },
+          "state": {
+            "enum": [
+              "NONE",
+              "FOUND",
+              "KEY_PAYLOAD_CONFLICT"
+            ]
+          },
+          "payload_check": {
+            "enum": [
+              "NOT_COMPARED",
+              "MATCH",
+              "MISMATCH"
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "schema_version",
+                  "replayed",
+                  "approval"
+                ],
+                "properties": {
+                  "schema_version": {
+                    "const": "governance.approval-create.v1"
+                  },
+                  "replayed": {
+                    "const": true
+                  },
+                  "approval": {
+                    "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/Approval"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "FOUND"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "payload_check": {
+                  "enum": [
+                    "NOT_COMPARED",
+                    "MATCH"
+                  ]
+                },
+                "result": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "KEY_PAYLOAD_CONFLICT"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "payload_check": {
+                  "const": "MISMATCH"
+                },
+                "result": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "NONE"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "payload_check": {
+                  "const": "NOT_COMPARED"
+                },
+                "result": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ],
+        "description": "FE-069. Read-only answer to \"what would replaying this request_key do?\" for the CALLER'S OWN requests (keyed by requester: another actor's request under the same key is indistinguishable from NONE). NONE: a replay would create. FOUND: result is exactly the governance.approval-create.v1 body a replay returns (replayed=true). KEY_PAYLOAD_CONFLICT: only when all four payload fields were supplied and differ from the stored request; a replay would answer 409 REQUEST_KEY_PAYLOAD_CONFLICT and no approval body. Without payload fields the stored payload is NOT compared (payload_check NOT_COMPARED): FOUND then only says a request exists under this key. Same authority as the replay it mirrors (current session + workspace membership, no gate capability). Writes nothing."
+      },
+      "PaperExitParent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "record_authority",
+          "workspace_id",
+          "deployment_id",
+          "state",
+          "capture_context",
+          "source_side_effect_requested"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "governance.paper-exit-parent.v1"
+          },
+          "record_authority": {
+            "const": "PORTAL"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 96
+          },
+          "deployment_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+          },
+          "state": {
+            "enum": [
+              "NONE",
+              "FOUND"
+            ]
+          },
+          "capture_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaptureContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_side_effect_requested": {
+            "const": false
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "FOUND"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "capture_context": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "PAPER_EXIT_CREATE"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "capture_context": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ],
+        "description": "RV-10. The R2 parent of one deployment, as the SAME CaptureContext the R2 review publishes for the PAPER_EXIT_CREATE capture (parent approval id and version, Paper projection digest, the accepted deployment choice): the pins POST /governance/paper-exit/create is bound to. The R2 is the approval whose subject is the deployment: the newest approved and unexpired one, else the newest of any status (its context is then BLOCKED with the reason, e.g. R2_APPROVAL_REQUIRED or APPROVAL_EXPIRED). NONE: the deployment has no R2 and capture_context is null. FOUND: capture_context is for this workspace, is a PAPER_EXIT_CREATE context and lists only this deployment; a BLOCKED context carries no digest and no candidates. Authority is the R2 review read (governance.r2.read) plus exact session and workspace membership; the ADMIN role and the capture checks are the context's own typed availability. Grants nothing, writes nothing, calls no source; the route rechecks everything at submit."
       }
     }
   }

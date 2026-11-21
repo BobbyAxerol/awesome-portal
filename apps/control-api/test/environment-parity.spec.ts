@@ -11,6 +11,7 @@
  * measured can come out as FRESH.
  */
 import { buildPool } from "../src/db/pool";
+import type { Pool } from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   BEHAVIOUR_FLAGS,
@@ -92,6 +93,14 @@ describe("the environment manifest", () => {
     // A38.7: it must not take the environments that do have an origin with it.
     const paper = parity.profiles.find((entry) => entry.environment === "paper");
     expect(paper?.origin_configured).toBe(true);
+  });
+
+  it("states an unconfigured OKX Paper origin as its own readiness fact", () => {
+    const parity = environmentParity(testConfig({ ...base, FEATURE_EXECUTION_DURABLE_MIRROR: "true" }));
+    const okx = parity.capability_readiness.find((entry) => entry.capability === "source.paper-okx");
+    expect(okx?.state).toBe("UNAVAILABLE");
+    expect(okx?.reason_code).toBe("EDS_OKX_ORIGIN_NOT_CONFIGURED");
+    expect(parity.profiles.find((entry) => entry.environment === "paper-okx")?.origin_configured).toBe(false);
   });
 });
 

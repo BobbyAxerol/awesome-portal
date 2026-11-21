@@ -1,0 +1,25 @@
+{
+  "schema_version": "research.retained-analytics.v1",
+  "input_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "scope_locator": "quantbt==1.1.1:scoped_result(scope='oos',P08.OOS.start:last_child_bar)",
+  "oos_observation_count": 168,
+  "trade_ledger_record_count": 0,
+  "net_oos_return": {"state": "AVAILABLE", "reason_code": null, "value": "0.012", "source_locator": "quantbt.full_report.total_return_pct/100", "scope": "OOS", "origin": "ENGINE_DIRECT"},
+  "total_trade_count": {"state": "AVAILABLE", "reason_code": null, "value": "4", "source_locator": "quantbt.full_report.num_trades", "scope": "CHILD_TAPE", "origin": "ENGINE_DIRECT"},
+  "rolling_sharpe_63": {"state": "NOT_APPLICABLE", "reason_code": "P13_OOS_DAILY_RETURNS_BELOW_ROLLING_WINDOW", "window_days": 63, "daily_return_count": 6, "locator": "quantbt.metrics.performance.rolling_sharpe(window=63,trading_days=365)", "source_observation_count": 0, "omitted_non_finite_count": 0, "emitted_point_count": 0, "sampling": null, "points": []},
+  "in_sample_equity": {
+    "state": "AVAILABLE", "reason_code": null, "scope": "DECLARED_IS",
+    "source_locator": "QuantBT.result.equity[P08.IS.start:P08.OOS.start)",
+    "start_utc_ms": 1725000000000, "end_exclusive_utc_ms": 1725000120000,
+    "source_observation_count": 2, "emitted_point_count": 2, "sampling": "FULL",
+    "points": [{"at_utc_ms": 1725000000000, "equity": "100"}, {"at_utc_ms": 1725000060000, "equity": "102"}]
+  },
+  "behaviour": {
+    "win_rate": {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_ROUTE_PUBLISHES_NO_AUDITED_TRADE_LEDGER", "value": null, "source_locator": "QuantBT.result.trades", "scope": "OOS", "origin": "SOURCE_DERIVED"},
+    "payoff_ratio": {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_ROUTE_PUBLISHES_NO_AUDITED_TRADE_LEDGER", "value": null, "source_locator": "QuantBT.result.trades", "scope": "OOS", "origin": "SOURCE_DERIVED"},
+    "average_hold_seconds": {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_ROUTE_PUBLISHES_NO_AUDITED_TRADE_LEDGER", "value": null, "source_locator": "QuantBT.result.trades", "scope": "OOS", "origin": "SOURCE_DERIVED"},
+    "max_consecutive_losses": {"state": "NOT_PUBLISHED", "reason_code": "QUANTBT_ROUTE_PUBLISHES_NO_AUDITED_TRADE_LEDGER", "value": null, "source_locator": "QuantBT.result.trades", "scope": "OOS", "origin": "SOURCE_DERIVED"},
+    "turnover_notional": {"state": "AVAILABLE", "reason_code": null, "value": "450", "source_locator": "QuantBT.result.diagnostics.turnover:OOS_sum", "scope": "OOS", "origin": "SOURCE_DERIVED"},
+    "exposure_fraction": {"state": "AVAILABLE", "reason_code": null, "value": "0.5", "source_locator": "QuantBT.result.positions:nonzero_OOS_bar_fraction", "scope": "OOS", "origin": "SOURCE_DERIVED"}
+  }
+}

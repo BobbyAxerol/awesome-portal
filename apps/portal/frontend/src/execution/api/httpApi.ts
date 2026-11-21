@@ -21,6 +21,7 @@ import {
   panelStatusForHttp,
   readKeysetPage,
   readOperation,
+  newRequestKey,
   readProblem,
 } from "../adapter";
 import { governanceWriteBlocked, type DeliveryPolicy } from "../profile";
@@ -40,6 +41,43 @@ import {
 import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProblem";
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
+import {
+  readAlphaResourceByVersion,
+  readCanaryByVersion,
+  readGovernanceParentByKind,
+  readLiveFullByVersion,
+  readSandboxByVersion,
+  readSubjectRecordsByVersion,
+  stageVersionedSearch,
+  FOLLOWING_STAGE_INCLUDES,
+  unsupportedText,
+  type GovernanceParentKind,
+  type GovernanceParentRead,
+  type VersionRead,
+} from "../v2/readers/dispatch";
+import { refusalReason } from "./schemaGuard";
+import { readPaperWorkbenchProfile } from "../v2/readers/paperRead";
+import { DUPLICATE_OPEN_APPROVAL, approvalCreateViolations, duplicateApprovalId, problemViolations } from "../v2/readers/approvalCreate";
+import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
+import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
+import {
+  PENDING_CONTROL_PREVIEW_PATH, pendingControlWords, previewAnswers, readPendingControlPreviewV1, readPendingControlProblemV1,
+} from "../v2/readers/pendingControlPreview";
+import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/readers/stageActionEligibility";
+import { paperExitParentAnswers, paperExitParentUrl, readPaperExitParentV1 } from "../v2/readers/paperExitParent";
+import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
+import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext } from "../v2/readers/accessSelfContext";
+import { VISIT_DIGEST_PATH, VISIT_DIGEST_SEEN_PATH, readVisitDigest, visitDigestAnswers, visitDigestQuery } from "../v2/readers/visitDigest";
+import { ACCESS_STEP_UP_PATH, accessStepUpAnswers, accessStepUpBody, readAccessStepUp } from "../v2/readers/accessStepUp";
+import { incidentChildrenAnswers, incidentChildrenPath, operationsAuditPath, readIncidentChildrenV1, readOperationsAuditV1 } from "../v2/readers/incidentChildren";
+import { run } from "../v2/readers/strictRead";
+import { SIBLINGS, type SiblingId } from "../v2/readers/siblings.generated";
+import { entitySearchAnswers, entitySearchPath, readEntitySearchV1 } from "../v2/readers/entitySearch";
+import { alphaLifecycleAnswers, alphaLifecyclePath, readAlphaLifecycleV1 } from "../v2/readers/alphaLifecycle";
+import { approvalEvidenceAnswers, approvalEvidencePath, readApprovalEvidenceV1 } from "../v2/readers/approvalEvidence";
+import { fetchEquityProjection } from "../v2/readers/equityProjection";
+import { fetchAlphaCataloguePage } from "../v2/readers/runLibraryAlphaCatalogue";
+import { approvalRequestLookupAnswers, approvalRequestLookupUrl, readApprovalRequestLookupV1 } from "../v2/readers/approvalRequestLookup";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
 import type { WorkflowResult } from "../operations";
@@ -48,6 +86,9 @@ import { readAlphaActivity, readDeploymentQuality, readPortfolioCapital, readSou
 import { marketCandlesPath, readMarketCandles, type MarketCandlesPayload, type MarketCandlesQuery } from "./marketCandles";
 import { marketContextCandlesPath, readMarketContextCandles, type MarketContextCandles, type MarketContextQuery } from "./marketContext";
 import { readRelationPage, relationPagePath, type RelationPage, type RelationPageQuery } from "./managerRelations";
+import { encodeManagerSeriesQuery, readManagerSeries, seriesAnswersQuery, type ManagerSeries, type ManagerSeriesQuery } from "../v2/readers/managerSeries";
+import { readManagerDataset, type ManagerDataset } from "../v2/readers/managerDataset";
+import { datasetQueryMismatch, encodeManagerDatasetQuery, managerDatasetPath, type ManagerDatasetQuery } from "./managerDatasetQuery";
 import { observedTimelinePath, readObservedTimeline, type ObservedTimeline, type ObservedTimelineQuery } from "./observedTimeline";
 import { readSubjectActivity, subjectActivityPath, type SubjectActivityPage, type SubjectActivityQuery } from "./subjectActivity";
 import {
@@ -65,8 +106,9 @@ import type {
   OperationSnapshot,
   Result,
 } from "./ports";
-import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable } from "./ports";
-import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
+import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable, type DecisionKind, type PlanAuthority } from "./ports";
+import { DECISION_COMMANDS } from "./governanceContext";
+import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, SiblingBody, WaiverQuery } from "./ports";
 import type { StageDrift } from "../hifiInsight";
 import { readOperationalComposition, type CompositionName, type OperationalComposition } from "../operationalComposition";
 import type { AlphaFleetQuery, BindingListQuery, BlotterQuery } from "./ports";
@@ -93,7 +135,7 @@ import { readScreenContracts, type ScreenContract } from "../screenContracts";
 import type { CapitalPreviewInput, InsightBatchInput } from "./ports";
 import type { components } from "@portal/contracts-analytics";
 import type { components as GovernanceComponents } from "@portal/contracts-governance";
-import { readReviewCapture, readReviewCaptureCapabilities, type R2CaptureInput, type PaperExitCreateInput, type SandboxNoteInput } from "./reviewCapture";
+import { readReviewCapture, readReviewCaptureCapabilities, REVIEW_CAPTURE_OUTCOME_UNKNOWN, type R2CaptureInput, type PaperExitCreateInput, type SandboxNoteInput } from "./reviewCapture";
 
 type PaperExitPlanRequest = GovernanceComponents["schemas"]["PaperExitDecisionPlanRequest"];
 type InsightBatchRequest = components["schemas"]["InsightBatchRequest"];
@@ -143,7 +185,7 @@ export function csrfToken(cookieSource: string = typeof document === "undefined"
   return null;
 }
 
-async function post(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
+async function post(path: string, body: unknown, signal?: AbortSignal, extraHeaders: Record<string, string> = {}): Promise<Response> {
   const token = csrfToken();
   return fetch(`${BASE}${path}`, {
     method: "POST",
@@ -152,6 +194,7 @@ async function post(path: string, body: unknown, signal?: AbortSignal): Promise<
     headers: {
       accept: "application/json",
       "content-type": "application/json",
+      ...extraHeaders,
       // Omitted rather than sent empty when there is no cookie: an empty header
       // is a token that fails comparison, and the 403 that follows would read
       // as "your token is wrong" instead of "you have no session".
@@ -159,6 +202,33 @@ async function post(path: string, body: unknown, signal?: AbortSignal): Promise<
     },
     body: JSON.stringify(body),
   });
+}
+
+const BLOTTER_QUERY_KEYS = ["limit", "after", "before", "status", "status_bucket", "stage", "deployment_id", "account_id", "alpha_id", "venue", "symbol", "side", "sort"] as const;
+const BLOTTER_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+const BLOTTER_ENUMS: Readonly<Record<string, readonly string[]>> = {
+  stage: ["PAPER", "SANDBOX", "CANARY", "LIVE"],
+  status_bucket: ["FILLED", "PARTIAL", "REJECTED", "OPEN"],
+  side: ["BUY", "SELL"],
+  sort: ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"],
+};
+/** `/screens/blotter?...` for a query, or null when a published key carries a value outside the contract's grammar. Never throws. */
+export function blotterPath(query: BlotterQuery): string | null {
+  const params = new URLSearchParams();
+  const record = query as Readonly<Record<string, unknown>>;
+  for (const key of BLOTTER_QUERY_KEYS) {
+    const value = record[key];
+    if (value === undefined || value === "") continue;
+    if (key === "limit") {
+      if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 200) return null;
+    } else if (key in BLOTTER_ENUMS) {
+      if (typeof value !== "string" || !BLOTTER_ENUMS[key]!.includes(value)) return null;
+    } else if (key === "deployment_id" || key === "account_id" || key === "alpha_id") {
+      if (typeof value !== "string" || !BLOTTER_ID.test(value)) return null;
+    } else if (typeof value !== "string" || value.length > 512) return null;
+    params.set(key, String(value));
+  }
+  return `/screens/blotter${params.size > 0 ? `?${params.toString()}` : ""}`;
 }
 
 async function problem(response: Response): Promise<Result<never>> {
@@ -206,6 +276,21 @@ export interface HttpApiOptions {
   policy: DeliveryPolicy | null;
   signal?: AbortSignal;
   readScope?: object;
+}
+
+/** The plan's `authority_requirements`, exactly as served; anything unreadable is `null`, never a guess. */
+function readPlanAuthority(raw: unknown): PlanAuthority | null {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  if (typeof o.capability !== "string" || o.capability === "") return null;
+  if (o.role_constraint !== null && typeof o.role_constraint !== "string") return null;
+  return {
+    capability: o.capability,
+    roleConstraint: o.role_constraint === null ? null : (o.role_constraint as string),
+    // Displayed only: these describe what the server enforces and open nothing here, so an absent field reads as not stated.
+    workspaceMembershipRequired: o.workspace_membership_required === true,
+    separationOfDutiesRequired: o.separation_of_duties_required === true,
+  };
 }
 
 export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions): ExecutionApi {
@@ -273,19 +358,29 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       let body: unknown = null;
       try { body = await response.json(); } catch { /* handled below */ }
       const outcome = readApprovalCreated(body);
-      return outcome ?? { kind: "failed", status: "unavailable", reason: "The create response could not be read." };
+      // A 2xx whose body is not a created approval: the server answered, so the request may well exist. Uncertain, not "not sent".
+      if (outcome === null) return { kind: "failed", status: "unavailable", reason: "The create response could not be read.", offline: true };
+      // V1 reads the body as it always did; the schema verdict rides along for the V2 screen (it reads a marked answer as not readable).
+      const violations = approvalCreateViolations(body);
+      return violations.length === 0 || outcome.kind === "failed" || outcome.kind === "duplicate" ? outcome : { ...outcome, schemaViolations: violations };
     }
     let body: unknown = null;
     try { body = await response.json(); } catch { /* status alone still types the failure */ }
     const problemBody = readProblem(body, response.status);
-    if (response.status === 409 && /DUPLICATE/i.test(problemBody.code)) {
-      const match = /\b(apr_[A-Za-z0-9]+|AP-\d+)\b/.exec(problemBody.message);
-      return { kind: "duplicate", existingApprovalId: match ? match[1] : null, reason: problemBody.message };
+    // The code is acted on only when the body is the published problem; the V2 screen drops it otherwise and keeps the status.
+    const untyped = problemViolations(body).length > 0 ? { untyped: { status: response.status } } : {};
+    if (response.status === 409 && problemBody.code === DUPLICATE_OPEN_APPROVAL) {
+      // FE-074: the existing approval is `details.approval_id` of the published `DuplicateOpenApprovalProblem`; the message is prose and is never parsed.
+      return { kind: "duplicate", existingApprovalId: duplicateApprovalId(body), reason: problemBody.message, ...untyped };
     }
     return {
       kind: "failed",
       status: response.status === 409 ? "unavailable" : panelStatusForHttp(response.status),
       reason: `${problemBody.code}: ${problemBody.message}`,
+      // 408 and 5xx: the server may have acted before it failed, so the outcome is unknown (same class as a dropped network).
+      // A definite 4xx refusal carries no flag: the server did not create the request.
+      ...(response.status === 408 || response.status >= 500 ? { offline: true } : {}),
+      ...untyped,
     };
   };
 
@@ -320,6 +415,24 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       : unavailable(`${what} response could not be read.`);
   };
 
+  /**
+   * `readGet` for a route outside the execution base (the access family lives under `/api/admin/profile-access`). Same shape:
+   * same-origin fetch, typed problem on !ok, reader on the body, unavailable when it cannot be read. Never cached across calls.
+   */
+  const readGetAt = async <T>(absolutePath: string, reader: (raw: unknown) => T | null, what: string): Promise<Result<T>> => {
+    let response: Response;
+    try {
+      response = await fetch(absolutePath, { signal, credentials: "same-origin", headers: { accept: "application/json" } });
+    } catch {
+      return unavailable(`${what} never reached the Portal — network failure.`);
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* reader fails closed below */ }
+    const value = reader(body);
+    return value !== null && value !== undefined ? { ok: true as const, value } : unavailable(`${what} response could not be read.`);
+  };
+
   const getCommandCenterSnapshot = () =>
     readGet("/command-center", (raw) => raw as unknown, "The command-center snapshot");
   const getScreenProfile = (screenName: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>> =>
@@ -327,7 +440,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   const getPaperWorkbenchProfile = (deploymentId: string, variant: "paper" | "vnm" = "paper"): Promise<Result<ProfileEnvelope>> =>
     readGet(
       `/screens/paper/${encodeURIComponent(deploymentId)}${variant === "vnm" ? "/vn-market" : ""}`,
-      readProfileEnvelope,
+      readPaperWorkbenchProfile,
       "The paper workbench",
     );
   const getQueryAnalytics = (
@@ -380,6 +493,73 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     );
   const getOperatorTasks = (): Promise<Result<OperatorTaskCatalogue>> =>
     readGet("/commands/tasks", readOperatorTasks, "The operator task catalogue");
+  /**
+   * The review for an approval on its V1 route, read by `schema_version`: a
+   * SCOPED_V2 workspace answers the V2 parent body on the same path, and the V1
+   * reader would misread it (v2/readers/dispatch.ts).
+   */
+  const getGovernanceParent = async (kind: GovernanceParentKind, id: string, workspaceId?: string): Promise<Result<GovernanceParentRead>> => {
+    const blocked = readBlocked();
+    if (blocked) return unavailable(blocked);
+    const route = kind === "exit" ? `/governance/exit-reviews/${encodeURIComponent(id)}` : `/governance/approvals/${encodeURIComponent(id)}/${kind === "r2" ? "r2" : "live"}`;
+    const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+    const what = kind === "r2" ? "The R2 review" : kind === "exit" ? "The exit review" : "The live review";
+    let response: Response;
+    try {
+      response = await get(`${route}${qs}`, signal);
+    } catch {
+      return unavailable(`${what} never reached the Portal — network failure.`);
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* read below as not an object */ }
+    const value = readGovernanceParentByKind(kind, body);
+    if (value.read.kind === "unsupported") return unavailable(`${what}: ${unsupportedText(value.read)} (${value.read.reason})`);
+    // A V2 body must answer the question asked: the approval id requested and, when a workspace was named, that workspace. A body for another
+    // workspace or approval is refused, never shown under this one (QA R-B browser case "gate body for another workspace").
+    if (value.read.kind === "v2") {
+      const parent = value.read.value as { header?: { workspaceId?: string }; approval?: { approvalId?: string } };
+      if (workspaceId && parent.header?.workspaceId !== undefined && parent.header.workspaceId !== workspaceId) return unavailable(`${what} answers another workspace, so it is not shown (GOVERNANCE_PARENT_ANSWERS_ANOTHER_WORKSPACE).`);
+      if (parent.approval?.approvalId !== undefined && kind !== "exit" && parent.approval.approvalId !== id) return unavailable(`${what} answers another request, so it is not shown (GOVERNANCE_PARENT_ANSWERS_ANOTHER_REQUEST).`);
+    }
+    const warnings = value.kind !== "live" && value.read.kind === "v1" ? value.read.value.gaps : undefined;
+    return { ok: true as const, value, ...(warnings ? { warnings } : {}) };
+  };
+  /**
+   * A stage route read by the body's `schema_version` (dispatch.ts). Fetch
+   * failure, `!ok` (typed by `problem`) and an aborted read are `ok: false`;
+   * a body that is not JSON is dispatched as `null` and comes back
+   * `unsupported` (NOT_AN_OBJECT). `unsupported` is an `ok` answer that never
+   * carries the body, only the version it named (capped by `unsupportedText`).
+   */
+  const readVersioned = async <A, B>(
+    path: string,
+    dispatch: (raw: unknown) => VersionRead<A, B>,
+    what: string,
+  ): Promise<Result<VersionRead<A, B>>> => {
+    let response: Response;
+    try {
+      response = await get(path, signal);
+    } catch {
+      return unavailable(`${what} never reached the Portal — network failure.`);
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* dispatched as null: unsupported, not a throw */ }
+    return { ok: true as const, value: dispatch(body) };
+  };
+  const stageVersioned = <A, B>(
+    route: string,
+    deploymentId: string,
+    options: Parameters<typeof stageVersionedSearch>[0],
+    dispatch: (raw: unknown) => VersionRead<A, B>,
+    what: string,
+    allowedIncludes?: Parameters<typeof stageVersionedSearch>[1],
+  ): Promise<Result<VersionRead<A, B>>> => {
+    const query = stageVersionedSearch(options, allowedIncludes);
+    if (!query.ok) return Promise.resolve(unavailable(query.reason));
+    return readVersioned(`/deployments/${encodeURIComponent(deploymentId)}/${route}${query.search}`, dispatch, what);
+  };
   const getLiveReview = (approvalId: string, workspaceId?: string): Promise<Result<LiveReviewPayload>> =>
     readGet(
       `/governance/approvals/${encodeURIComponent(approvalId)}/live`
@@ -391,6 +571,13 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     readGet(`/screens/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account 360");
   const getAlpha360Resource = (alphaId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/resources/alphas/${encodeURIComponent(alphaId)}`, readProfileEnvelope, "The alpha resource");
+  // R-3: the same route, read by `schema_version` (legacy v1 envelope or the SCOPED_V2 raw-facts body); the legacy method above is unchanged.
+  const getAlpha360ResourceVersioned = (alphaId: string, options: { workspaceId?: string } = {}) =>
+    readVersioned(
+      `/resources/alphas/${encodeURIComponent(alphaId)}${options.workspaceId ? `?workspace_id=${encodeURIComponent(options.workspaceId)}` : ""}`,
+      readAlphaResourceByVersion,
+      "The alpha resource",
+    );
   const getPortfolio360Resource = (portfolioId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/resources/portfolios/${encodeURIComponent(portfolioId)}`, readProfileEnvelope, "The portfolio resource");
   const getAccount360Resource = (accountId: string): Promise<Result<ProfileEnvelope>> =>
@@ -481,8 +668,38 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
 
   const getManagerRelationPage = (query: RelationPageQuery): Promise<Result<RelationPage>> =>
     readGet(relationPagePath(query), readRelationPage, "The Manager relation page");
+  const getManagerSeries = (query: ManagerSeriesQuery): Promise<Result<ManagerSeries>> => {
+    const wire = encodeManagerSeriesQuery(query);
+    if (wire === null) return Promise.resolve(unavailable("The series request was not valid (1 to 4 distinct subjects and a readable window), so it was not sent."));
+    return readGet(
+      `/manager/series?${new URLSearchParams(wire).toString()}`,
+      (raw) => { const read = readManagerSeries(raw); return read !== null && read.kind === "series" && seriesAnswersQuery(read.series, query) ? read.series : null; },
+      "The Manager series",
+    );
+  };
+  const getManagerDataset = async (query: ManagerDatasetQuery): Promise<Result<ManagerDataset>> => {
+    const request = encodeManagerDatasetQuery(query);
+    if (request === null) return unavailable("The Manager dataset request was not valid (MANAGER_DATASET_QUERY_INVALID), so it was not sent.");
+    // The reader's refusal keeps its own code: another schema, a malformed body and another question are three different facts.
+    let refusal = null as string | null;
+    const result = await readGet(
+      managerDatasetPath(request),
+      (raw) => {
+        const read = readManagerDataset(raw);
+        if (read === null) { refusal = "could not be read (MANAGER_DATASET_REFUSED)"; return null; }
+        if (read.kind !== "dataset") { refusal = `arrived in a shape this build does not accept (UNSUPPORTED_SCHEMA ${read.schemaVersion ?? "none"})`; return null; }
+        const mismatch = datasetQueryMismatch(read.dataset, query);
+        if (mismatch !== null) { refusal = `answers another question (MANAGER_DATASET_ANSWERS_ANOTHER_QUERY ${mismatch})`; return null; }
+        return read.dataset;
+      },
+      "The Manager dataset",
+    );
+    return !result.ok && refusal !== null ? unavailable(`The Manager dataset ${refusal}.`) : result;
+  };
   const getSubjectActivity = (query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>> =>
     readGet(subjectActivityPath(query), readSubjectActivity, "The retained subject activity");
+  const getSubjectActivityVersioned = (query: SubjectActivityQuery) =>
+    readVersioned(subjectActivityPath(query), readSubjectRecordsByVersion, "The retained subject activity");
   const listParameters = (query: object) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query) as Array<[string, string | number | undefined]>) {
@@ -490,8 +707,13 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     }
     return params.size > 0 ? `?${params.toString()}` : "";
   };
-  const getBlotterProfile = (query: BlotterQuery = {}): Promise<Result<ProfileEnvelope>> =>
-    readGet(`/screens/blotter${listParameters(query)}`, readProfileEnvelope, "The exact Paper blotter page");
+  const getBlotterProfile = (query: BlotterQuery = {}): Promise<Result<ProfileEnvelope>> => {
+    // Closed allowlist and validation: a key the contract does not publish, or a value outside its grammar, is never sent.
+    const path = blotterPath(query);
+    return path === null
+      ? Promise.resolve(unavailable("The blotter query named a value the contract does not accept, so no read was sent."))
+      : readGet(path, readProfileEnvelope, "The exact Paper blotter page");
+  };
   const runOperatorTask = async (
     taskId: string,
     params: Readonly<Record<string, string | number | boolean | null>>,
@@ -516,8 +738,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   };
   const getAlphaFleet = (query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> =>
     readGet(`/alphas${listParameters(query)}`, readAlphaFleet, "The Alpha Fleet");
-  const listPortfolios = (): Promise<Result<PortfolioListEnvelope>> =>
-    readGet("/portfolios", readPortfolioList, "The portfolio register");
+  const listPortfolios = (query: { workspaceId?: string } = {}): Promise<Result<PortfolioListEnvelope>> =>
+    readGet(query.workspaceId ? `/portfolios?workspace_id=${encodeURIComponent(query.workspaceId)}` : "/portfolios", readPortfolioList, "The portfolio register");
   const getBindings = (query: BindingListQuery = {}): Promise<Result<ManagerListEnvelope<BindingItem>>> =>
     readGet(`/broker-bindings${listParameters(query)}`, readBindings, "The bindings register");
   const getBindingDetail = (bindingId: string, environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<BindingDetailRead>> =>
@@ -569,6 +791,39 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       : unavailable("The triage response could not be read.");
   };
 
+  /**
+   * DEBT-UXM07-033: `captureR2` and `createPaperExit` classify like `captureSandboxNote`. Once the request is sent, a thrown fetch,
+   * a 408/5xx, or a 2xx the client cannot read or that is not this request's answer does not say the review was NOT recorded: those
+   * carry `REVIEW_CAPTURE_OUTCOME_UNKNOWN` (a retry reuses the caller's request key). A definite 4xx stays the typed refusal.
+   */
+  const unknownAwareCapture = async (
+    path: string,
+    input: object,
+    accepts: (value: NonNullable<ReturnType<typeof readReviewCapture>>) => boolean,
+  ): Promise<Result<NonNullable<ReturnType<typeof readReviewCapture>>>> => {
+    const unknownOutcome = (why: string) => unavailable(`${REVIEW_CAPTURE_OUTCOME_UNKNOWN}: ${why}`);
+    let response: Response;
+    try {
+      response = await post(path, input, signal);
+    } catch {
+      return unknownOutcome("The request ended before the Portal's answer was read.");
+    }
+    if (!response.ok) {
+      const refused = await problem(response);
+      return response.status >= 500 || response.status === 408
+        ? unknownOutcome(refused.ok ? `HTTP ${response.status}` : refused.reason)
+        : refused;
+    }
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return unknownOutcome("The Portal answered but the answer could not be read.");
+    }
+    const value = readReviewCapture(body);
+    return value !== null && accepts(value) ? { ok: true as const, value } : unknownOutcome("REVIEW_CAPTURE_CONTRACT_INVALID");
+  };
+
   return {
     createApprovalRequest,
     withReadSignal: (child: AbortSignal) => createHttpApi({ policy, signal: signal ? AbortSignal.any([signal,child]) : child, readScope }),
@@ -579,25 +834,36 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       return value ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
     },
     async captureR2(input: R2CaptureInput) {
-      const response = await post("/governance/r2/capture",input,signal);
-      if (!response.ok) return problem(response);
-      const value = readReviewCapture(await response.json());
-      return value?.action === "R2_CREATE" && value.workspace_id === input.workspace_id
-        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+      return unknownAwareCapture("/governance/r2/capture", input, (value) => value.action === "R2_CREATE" && value.workspace_id === input.workspace_id);
     },
     async createPaperExit(input: PaperExitCreateInput) {
-      const response = await post("/governance/paper-exit/create",input,signal);
-      if (!response.ok) return problem(response);
-      const value = readReviewCapture(await response.json());
-      return value?.action === "PAPER_EXIT_CREATE" && value.workspace_id === input.workspace_id
-        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+      return unknownAwareCapture("/governance/paper-exit/create", input, (value) => value.action === "PAPER_EXIT_CREATE" && value.workspace_id === input.workspace_id);
     },
     async captureSandboxNote(input: SandboxNoteInput) {
-      const response = await post("/governance/sandbox/capture-note",input,signal);
-      if (!response.ok) return problem(response);
-      const value = readReviewCapture(await response.json());
+      // Once the request is sent, a thrown fetch, a 5xx/408, or a 2xx the client cannot read does not
+      // say the note was NOT recorded. Those carry REVIEW_CAPTURE_OUTCOME_UNKNOWN; a definite 4xx does not.
+      const unknownOutcome = (why: string) => unavailable(`${REVIEW_CAPTURE_OUTCOME_UNKNOWN}: ${why}`);
+      let response: Response;
+      try {
+        response = await post("/governance/sandbox/capture-note",input,signal);
+      } catch {
+        return unknownOutcome("The request ended before the Portal's answer was read.");
+      }
+      if (!response.ok) {
+        const refused = await problem(response);
+        return response.status >= 500 || response.status === 408
+          ? unknownOutcome(refused.ok ? `HTTP ${response.status}` : refused.reason)
+          : refused;
+      }
+      let body: unknown;
+      try {
+        body = await response.json();
+      } catch {
+        return unknownOutcome("The Portal answered but the answer could not be read.");
+      }
+      const value = readReviewCapture(body);
       return value?.action === "SANDBOX_NOTE" && value.workspace_id === input.workspace_id && value.certification_id === input.certification_id
-        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+        ? {ok:true as const,value} : unknownOutcome("REVIEW_CAPTURE_CONTRACT_INVALID");
     },
     getWaivers,
     getCommandCenterSnapshot,
@@ -612,8 +878,10 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     getOperatorTasks,
     runOperatorTask,
     getLiveReview,
+    getGovernanceParent,
     getAccountBroker360,
     getAlpha360Resource,
+    getAlpha360ResourceVersioned,
     getPortfolio360Resource,
     getAccount360Resource,
     getBindingResource,
@@ -626,10 +894,13 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     getMarketContextCandles,
     getObservedTimeline,
     getManagerRelationPage,
+    getManagerSeries,
+    getManagerDataset,
     getOperationalComposition,
     getEquitySparklines,
     getStageDrift,
     getSubjectActivity,
+    getSubjectActivityVersioned,
     getAlphaFleet,
     listPortfolios,
     getBindings,
@@ -694,8 +965,12 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
                   dueSoon: typeof counts.due_soon === "number" ? counts.due_soon : null,
                 }
               : null,
+          readAt: typeof body.read_at === "string" && Number.isFinite(Date.parse(body.read_at)) ? Date.parse(body.read_at) : null,
           // Its own query when the endpoint offers one; absent is not empty.
           decided: null,
+          rawRows: Array.isArray((body.page as Record<string, unknown> | undefined)?.rows)
+            ? ((body.page as Record<string, unknown>).rows as unknown[])
+            : undefined,
         },
         warnings: gaps,
       };
@@ -750,10 +1025,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         signal,
       );
       if (!response.ok) return problem(response);
-      const cert = readSandboxCertification(await response.json());
+      const body: unknown = await response.json();
+      const cert = readSandboxCertification(body);
       return cert
         ? { ok: true as const, value: cert }
-        : unavailable("The certification response could not be read.");
+        : unavailable(refusalReason(body, "The certification response could not be read."));
     },
 
     async getCanaryControlRoom(deploymentId) {
@@ -761,10 +1037,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       if (blocked) return unavailable(blocked);
       const response = await get(`/deployments/${encodeURIComponent(deploymentId)}/canary`, signal);
       if (!response.ok) return problem(response);
-      const room = readCanaryControlRoom(await response.json());
+      const body: unknown = await response.json();
+      const room = readCanaryControlRoom(body);
       return room
         ? { ok: true as const, value: room }
-        : unavailable("The canary control room response could not be read.");
+        : unavailable(refusalReason(body, "The canary control room response could not be read."));
     },
 
     async getLiveFullOperations(deploymentId) {
@@ -772,11 +1049,19 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       if (blocked) return unavailable(blocked);
       const response = await get(`/deployments/${encodeURIComponent(deploymentId)}/live`, signal);
       if (!response.ok) return problem(response);
-      const live = readLiveFullOperations(await response.json());
+      const body: unknown = await response.json();
+      const live = readLiveFullOperations(body);
       return live
         ? { ok: true as const, value: live }
-        : unavailable("The live full operations response could not be read.");
+        : unavailable(refusalReason(body, "The live full operations response could not be read."));
     },
+
+    getSandboxCertificationVersioned: (deploymentId, options = {}) =>
+      stageVersioned("certification", deploymentId, { workspaceId: options.workspaceId, include: options.include }, readSandboxByVersion, "The sandbox certification", FOLLOWING_STAGE_INCLUDES),
+    getCanaryVersioned: (deploymentId, options = {}) =>
+      stageVersioned("canary", deploymentId, { workspaceId: options.workspaceId, include: options.include }, readCanaryByVersion, "The canary control room", FOLLOWING_STAGE_INCLUDES),
+    getLiveFullVersioned: (deploymentId, options = {}) =>
+      stageVersioned("live", deploymentId, options, readLiveFullByVersion, "The live operations"),
 
     async listOperations(query) {
       const blocked = readBlocked();
@@ -853,6 +1138,252 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       return incident
         ? { ok: true as const, value: incident }
         : unavailable("The incident response could not be read.");
+    },
+
+    async listOperationalQueueV2(query) {
+      if (query.after && query.before) {
+        // One direction per request, as the legacy queue: the page position is the caller's to place.
+        return unavailable("A page cannot be requested in both directions at once.");
+      }
+      const qs = operationalQueueSearch(query).toString();
+      return readGet(`/operations${qs ? `?${qs}` : ""}`, readOperationalQueueV2, "The operations queue");
+    },
+
+    async getIncidentRootV2(incidentId, workspaceId) {
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      return readGet(
+        `/operations/incidents/${encodeURIComponent(incidentId)}${qs}`,
+        readIncidentRootV2,
+        "The incident root",
+      );
+    },
+
+    async getPendingRecallDiscovery(query) {
+      const url = pendingRecallDiscoveryUrl(query);
+      if (url === null) return unavailable("The pending recall discovery query is not one the Portal accepts.");
+      const result = await readGet(url.slice(BASE.length), readPendingRecallDiscoveryV1, "The pending recall discovery");
+      // A body that reads is not yet an answer to the question asked: another resource or environment is refused, never shown.
+      if (result.ok && result.value.kind === "pending_recall_discovery" && !pendingRecallDiscoveryAnswers(result.value.discovery, query)) {
+        return unavailable("The pending recall discovery answered another resource than the one asked, so it is not shown.");
+      }
+      return result;
+    },
+
+    async previewPendingControl(intent) {
+      const payload = intent.business_payload;
+      // No session token, no request: the route would answer 403 and the 403 would read as "your token is wrong".
+      if (csrfToken() === null) return unavailable("SESSION_REQUIRED: the session token is missing, so nothing was sent. Sign in again.");
+      let response: Response;
+      try {
+        response = await post(PENDING_CONTROL_PREVIEW_PATH, intent, signal, { "x-portal-idempotency-key": payload.idempotency_key });
+      } catch {
+        return unavailable("The preview request never reached the Portal.");
+      }
+      let body: unknown = null;
+      try { body = await response.json(); } catch { /* the status alone still types the answer */ }
+      if (!response.ok) {
+        // A relay denial (409) carries two facts a retry depends on, so it is read before the generic refusal.
+        if (response.status === 409) {
+          const denial = readRelayDenial(body);
+          if (denial) return { ok: false, status: denial.sourceRequestSent ? "terminal" : "denied", reason: denial.text };
+        }
+        const refusal = readPendingControlProblemV1(body);
+        if (refusal === null) return { ok: false, status: panelStatusForHttp(response.status), reason: `The Portal answered HTTP ${response.status} with a refusal this build cannot read.` };
+        return { ok: false, status: panelStatusForHttp(response.status), reason: `${refusal.code}: ${pendingControlWords(refusal.code)}` };
+      }
+      const read = readPendingControlPreviewV1(body, payload.currency);
+      if (read === null) return unavailable("The preview could not be read, so it is not shown.");
+      if (read.kind === "unsupported_shape") return unavailable("The preview is a shape this build does not read, so it is not shown.");
+      if (!previewAnswers(read.preview, { operation: payload.operation, originalRecallId: payload.command_id })) {
+        return unavailable("The preview answered another operation or recall than the one asked, so it is not shown.");
+      }
+      return { ok: true, value: read };
+    },
+
+    async getStageActionEligibility(workspaceId) {
+      const url = stageActionEligibilityUrl(workspaceId);
+      if (url === null) return unavailable("The stage action eligibility query is not one the Portal accepts.");
+      return readGet(url.slice(BASE.length), readStageActionEligibilityV1, "The stage action eligibility");
+    },
+
+    async getPaperExitParent(query) {
+      const url = paperExitParentUrl(query);
+      if (url === null) return unavailable("The Paper exit parent query is not one the Portal accepts.");
+      const result = await readGet(url.slice(BASE.length), readPaperExitParentV1, "The R2 parent");
+      if (result.ok && result.value.kind === "paper_exit_parent" && !paperExitParentAnswers(result.value.parent, query)) {
+        return unavailable("The R2 parent answered another deployment or workspace than the one asked, so it is not shown.");
+      }
+      return result;
+    },
+
+    async getSelfEligibilityBatch(request) {
+      const url = accessEligibilityBatchUrl(request);
+      if (url === null) return unavailable("The eligibility batch query is not one the Portal accepts.");
+      const result = await readGetAt(url, readAccessEligibilityBatch, "The eligibility batch");
+      if (result.ok && result.value.kind === "eligibility_batch" && !eligibilityBatchAnswers(result.value.batch, request)) {
+        return unavailable("The eligibility batch answered another question than the one asked, so it is not shown.");
+      }
+      return result;
+    },
+
+    async getVisitDigest(workspaceId) {
+      const query = visitDigestQuery(workspaceId);
+      if (query === null) return unavailable("The visit digest query is not one the Portal accepts.");
+      const result = await readGetAt(`${BASE}${VISIT_DIGEST_PATH}${query}`, readVisitDigest, "The visit digest");
+      if (result.ok && result.value.kind === "digest" && !visitDigestAnswers(result.value.digest, workspaceId)) {
+        return unavailable("The visit digest answered another workspace than the one asked, so it is not shown.");
+      }
+      if (result.ok && result.value.kind === "unsupported_shape") return unavailable("The visit digest is a shape this build does not read, so it is not shown.");
+      return result;
+    },
+
+    async markVisitDigestSeen(workspaceId, body) {
+      const query = visitDigestQuery(workspaceId);
+      if (query === null) return { kind: "unavailable", reason: "The visit digest query is not one the Portal accepts, so nothing was sent." };
+      // No session token, no request: the route would answer 403 and the 403 would read as "your token is wrong".
+      if (csrfToken() === null) return { kind: "unavailable", reason: "The session token is missing, so nothing was sent. Sign in again." };
+      let response: Response;
+      try {
+        response = await post(`${VISIT_DIGEST_SEEN_PATH}${query}`, { snapshot_revision: body.snapshot_revision, expected_baseline_version: body.expected_baseline_version }, signal);
+      } catch {
+        return { kind: "unavailable", reason: "The acknowledgement never reached the Portal. Nothing changed." };
+      }
+      let answer: unknown = null;
+      try { answer = await response.json(); } catch { /* the status alone still types the answer */ }
+      if (!response.ok) {
+        const code = readProblem(answer, response.status).code;
+        const typed = /^[A-Z][A-Z0-9_]{2,63}$/.test(code) && code !== `HTTP_${response.status}` ? code : null;
+        if (response.status === 409) return { kind: "conflict", code: typed };
+        if (response.status === 503) return { kind: "unavailable", reason: "The Portal could not store the acknowledgement. Nothing changed." };
+        return { kind: "refused", status: response.status, code: typed };
+      }
+      const read = readVisitDigest(answer);
+      if (read === null || read.kind !== "digest") return { kind: "unavailable", reason: "The acknowledgement answer could not be read, so it is not used." };
+      if (!visitDigestAnswers(read.digest, workspaceId)) return { kind: "unavailable", reason: "The acknowledgement answered another workspace than the one asked, so it is not used." };
+      return { kind: "ok", digest: read.digest };
+    },
+
+    async getSelfContext() {
+      const result = await readGetAt(ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext, "The self context");
+      // Another schema is not a context: it is a typed unavailable, so a caller never has a "default workspace" it did not read.
+      if (result.ok && result.value.kind === "unsupported_shape") {
+        return unavailable(result.value.schemaVersion === null
+          ? "The self context carries no schema version this build reads."
+          : `The self context is ${result.value.schemaVersion}, which this build does not read.`);
+      }
+      return result;
+    },
+
+    async postSessionStepUp(input) {
+      // The password is read from `input` in exactly one place: the body below. It is not logged, keyed, URL-encoded or stored.
+      const body = accessStepUpBody(input);
+      if (body === null) return { kind: "unavailable", reason: "The step-up request is not one the Portal accepts, so nothing was sent." };
+      const token = csrfToken();
+      if (token === null) return { kind: "unavailable", reason: "The session token is missing, so nothing was sent. Sign in again." };
+      let response: Response;
+      try {
+        response = await fetch(ACCESS_STEP_UP_PATH, {
+          method: "POST",
+          signal,
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            accept: "application/json",
+            "content-type": "application/json",
+            [CSRF_HEADER]: token,
+            // One key per attempt: a second submit is a new intent (a different password), never a replay of the first.
+            "x-portal-idempotency-key": newRequestKey(),
+          },
+          body,
+        });
+      } catch {
+        return { kind: "unavailable", reason: "The step-up request never reached the Portal — network failure." };
+      }
+      let answer: unknown = null;
+      try { answer = await response.json(); } catch { /* the status alone still types the answer */ }
+      if (!response.ok) {
+        const code = readProblem(answer, response.status).code;
+        // `readProblem` names a body without a code `HTTP_<status>`; that is its stand-in, not a code the Portal sent.
+        return { kind: "refused", status: response.status, code: /^[A-Z][A-Z0-9_]{2,63}$/.test(code) && code !== `HTTP_${response.status}` ? code : null };
+      }
+      const read = readAccessStepUp(answer);
+      if (read === null || read.kind !== "step_up") return { kind: "unavailable", reason: "The step-up answer could not be read, so it is not used." };
+      if (!accessStepUpAnswers(read.stepUp, input.family)) {
+        return { kind: "unavailable", reason: "The step-up answer is for another proof family than the one asked, so it is not used." };
+      }
+      return { kind: "ok", stepUp: read.stepUp };
+    },
+
+    async getEquityProjection(query) {
+      return fetchEquityProjection(query, signal);
+    },
+
+    async getRunLibraryAlphaCataloguePage(query) {
+      return fetchAlphaCataloguePage(query, signal);
+    },
+
+    async lookupApprovalRequest(query) {
+      const url = approvalRequestLookupUrl(query);
+      if (url === null) return unavailable("The request lookup query is not one the Portal accepts.");
+      const result = await readGet(url.slice(BASE.length), readApprovalRequestLookupV1, "The request lookup");
+      if (result.ok && result.value.kind === "approval_request_lookup" && !approvalRequestLookupAnswers(result.value.lookup, query)) {
+        return unavailable("The request lookup answered another question than the one asked, so it is not shown.");
+      }
+      return result;
+    },
+
+    async getIncidentChildren(incidentId, workspaceId) {
+      const path = incidentChildrenPath(incidentId, workspaceId);
+      if (path === null) return unavailable("The incident id is not one the Portal accepts, so its children were not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readIncidentChildrenV1(raw); return read !== null && read.kind === "incident_children" && incidentChildrenAnswers(read.children, incidentId) ? read.children : null; },
+        "The incident children",
+      );
+    },
+
+    async getOperationsAudit(query = {}) {
+      const path = operationsAuditPath(query);
+      if (path === null) return unavailable("The audit request was not valid, so it was not sent.");
+      return readGet(path, (raw) => { const read = readOperationsAuditV1(raw); return read !== null && read.kind === "operations_audit" ? read.page : null; }, "The operations audit");
+    },
+
+    async getSibling<K extends SiblingId>(id: K, params: Readonly<Record<string, string>> = {}): Promise<Result<SiblingBody<K>>> {
+      const spec = SIBLINGS[id] as { path: (p: Readonly<Record<string, string>>) => string | null; read: (raw: unknown) => unknown };
+      const path = spec.path(params);
+      if (path === null) return unavailable(`The ${id} request was not valid (an id the Portal accepts is required), so it was not sent.`);
+      return readGet(path, (raw) => run(spec.read as never, raw) as SiblingBody<K> | null, `The ${id} read`) as Promise<Result<SiblingBody<K>>>;
+    },
+
+    async searchEntities(query) {
+      const path = entitySearchPath(query);
+      if (path === null) return unavailable("The search text was not one the Portal accepts, so it was not sent.");
+      const asked = query.q.trim();
+      return readGet(
+        path,
+        (raw) => { const read = readEntitySearchV1(raw); return read !== null && read.kind === "entity_search" && entitySearchAnswers(read.search, asked) ? read.search : null; },
+        "The entity search",
+      );
+    },
+
+    async getAlphaLifecycle(alphaId, environment, workspaceId) {
+      const path = alphaLifecyclePath(alphaId, environment, workspaceId);
+      if (path === null) return unavailable("The alpha id is not one the Portal accepts, so the lifecycle was not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readAlphaLifecycleV1(raw); return read !== null && read.kind === "alpha_lifecycle" && alphaLifecycleAnswers(read.lifecycle, alphaId) ? read.lifecycle : null; },
+        "The alpha lifecycle",
+      );
+    },
+
+    async getApprovalEvidence(approvalId, workspaceId) {
+      const path = approvalEvidencePath(approvalId, workspaceId);
+      if (path === null) return unavailable("The approval id is not one the Portal accepts, so the evidence was not requested.");
+      return readGet(
+        path,
+        (raw) => { const read = readApprovalEvidenceV1(raw); return read !== null && read.kind === "approval_evidence" && approvalEvidenceAnswers(read.evidence, approvalId) ? read.evidence : null; },
+        "The approval evidence",
+      );
     },
 
     async planCommand(input) {
@@ -1099,21 +1630,24 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
       const response = await get(`/governance/approvals/${encodeURIComponent(approvalId)}/r2${qs}`, signal);
       if (!response.ok) return problem(response);
-      const detail = readGateR2Detail(await response.json());
+      const body: unknown = await response.json();
+      const detail = readGateR2Detail(body);
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
-        : unavailable("The R2 review response could not be read.");
+        : unavailable(refusalReason(body, "The R2 review response could not be read."));
     },
 
-    async getPaperExit(reviewId: string) {
+    async getPaperExit(reviewId: string, workspaceId?: string) {
       const blocked = readBlocked();
       if (blocked) return unavailable(blocked);
-      const response = await get(`/governance/exit-reviews/${encodeURIComponent(reviewId)}`, signal);
+      const qs = workspaceId ? `?workspace_id=${encodeURIComponent(workspaceId)}` : "";
+      const response = await get(`/governance/exit-reviews/${encodeURIComponent(reviewId)}${qs}`, signal);
       if (!response.ok) return problem(response);
-      const detail = readPaperExitDetail(await response.json());
+      const body: unknown = await response.json();
+      const detail = readPaperExitDetail(body);
       return detail
         ? { ok: true as const, value: detail, warnings: detail.gaps }
-        : unavailable("The exit review response could not be read.");
+        : unavailable(refusalReason(body, "The exit review response could not be read."));
     },
 
     async planDecision(input) {
@@ -1152,12 +1686,16 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       if (isPaperExitDecision(input.decision) && supplied.length > 0) {
         return unavailable("A Paper Exit decision takes no conditions.");
       }
-      const wantsCondition = input.decision === "APPROVE_WITH_CONDITION";
+      // Typed conditions travel with exactly two verbs: approve-with-condition (what is accepted on condition) and request-changes (the remediation
+      // asked for). The server refuses either without at least one, and refuses conditions on any other verb.
+      const wantsCondition = input.decision === "APPROVE_WITH_CONDITION" || input.decision === "REQUEST_CHANGES";
       if (wantsCondition && supplied.length === 0) {
-        return unavailable("Approving with a condition requires the condition itself.");
+        return unavailable(input.decision === "REQUEST_CHANGES"
+          ? "Requesting changes requires at least one remediation condition."
+          : "Approving with a condition requires the condition itself.");
       }
       if (!wantsCondition && supplied.length > 0) {
-        return unavailable("Conditions may only accompany approve-with-condition.");
+        return unavailable("Conditions may only accompany approve-with-condition or request-changes.");
       }
       // Converted here rather than at the call site so every screen that plans
       // a decision gets the same checks and the same sentences.
@@ -1173,6 +1711,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       // and every R1 and R2 decision would have 404ed. Corrected against
       // `apps/control-api/src/governance/governance.controller.ts`.
       const decision = input.decision;
+      const gate = input.gate ?? "R1";
+      const kind: DecisionKind = isPaperExitDecision(decision) ? "PAPER_EXIT" : gate;
       // Typed against the generated declaration, so a field rename upstream
       // fails to compile here rather than 422ing in a browser. The R1 branch
       // has no generated counterpart to bind to — its schema lives in the
@@ -1197,10 +1737,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
             },
           } satisfies PaperExitPlanRequest)
         : {
-            schema_version: "governance.r1-decision-plan-request.v1",
+            // The gate's own command and request schema — never R1's for an R2 or Live decision.
+            schema_version: DECISION_COMMANDS[gate].planSchema,
             workspace_id: input.workspaceId,
             request_key: input.requestKey,
-            command_type: "GOVERNANCE_R1_DECISION",
+            command_type: DECISION_COMMANDS[gate].commandType,
             command_version: 1,
             target: { approval_id: input.approvalId },
             expected_approval_version: expectedVersion,
@@ -1260,6 +1801,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
           applyToken: typeof body.apply_token === "string" ? body.apply_token : null,
           blockers: list(body.blockers),
           warnings: list(body.warnings),
+          kind,
+          authority: readPlanAuthority(body.authority_requirements),
           expectedApprovalVersion:
             typeof body.expected_approval_version === "number"
               ? body.expected_approval_version
@@ -1273,6 +1816,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       operationId: string,
       applyToken: string,
       workspaceId: string,
+      kind: DecisionKind = "R1",
     ): Promise<Result<ApplyReceipt>> {
       const blocked = governanceWriteBlocked(policy);
       if (blocked) return unavailable(blocked);
@@ -1284,7 +1828,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const response = await post(
         `/operations/${encodeURIComponent(operationId)}/apply`,
         {
-          schema_version: "governance.r1-decision-apply-request.v1",
+          // The apply schema of the kind the plan was made for: the server routes an apply by it (Paper Exit has its own, and so do R2 and Live).
+          schema_version: kind === "PAPER_EXIT" ? "governance.paper-exit-decision-apply-request.v1" : DECISION_COMMANDS[kind].applySchema,
           workspace_id: workspaceId,
           apply_token: applyToken,
         },

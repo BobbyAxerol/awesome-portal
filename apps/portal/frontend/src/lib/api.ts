@@ -272,24 +272,38 @@ function withMutationSecurity(init?: RequestInit): RequestInit | undefined {
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, withMutationSecurity(init));
-  if (!response.ok) {
-    let detail = `${response.status} ${response.statusText}`;
-    let code: string | null = null;
-    let requestId: string | null = response.headers.get("x-request-id");
-    try {
-      const body = await response.json();
-      // The backend nests its own copy under `error`; FastAPI validation
-      // failures use `detail`. Both are the server's words, not ours.
-      if (body?.error?.message) detail = body.error.message;
-      else if (typeof body?.detail === "string") detail = body.detail;
-      code = body?.error?.code ?? null;
-      requestId = body?.error?.request_id ?? body?.request_id ?? requestId;
-    } catch {
-      /* non-JSON error body */
-    }
-    throw new PortalApiError(detail, response.status, code, requestId);
-  }
+  if (!response.ok) throw await apiErrorOf(response);
   return (await response.json()) as T;
+}
+
+/** The server's own words for a refused call: status, message, code and request id. */
+async function apiErrorOf(response: Response): Promise<PortalApiError> {
+  let detail = `${response.status} ${response.statusText}`;
+  let code: string | null = null;
+  let requestId: string | null = response.headers.get("x-request-id");
+  try {
+    const body = await response.json();
+    // The backend nests its own copy under `error`; FastAPI validation
+    // failures use `detail`. Both are the server's words, not ours.
+    if (body?.error?.message) detail = body.error.message;
+    else if (typeof body?.detail === "string") detail = body.detail;
+    code = body?.error?.code ?? null;
+    requestId = body?.error?.request_id ?? body?.request_id ?? requestId;
+  } catch {
+    /* non-JSON error body */
+  }
+  return new PortalApiError(detail, response.status, code, requestId);
+}
+
+/**
+ * Legacy run export, step one: ask the server to prepare the archive.
+ *
+ * The backend refuses a direct GET until an archive exists (404) and never builds one on GET; preparing is an
+ * ADMIN + same-origin CSRF write. The reply body is not read — the download is a separate GET.
+ */
+export async function prepareRunExport(runId: string): Promise<void> {
+  const response = await fetch(`/api/runs/${encodeURIComponent(runId)}/export`, withMutationSecurity({ method: "POST" }));
+  if (!response.ok) throw await apiErrorOf(response);
 }
 
 export const api = {

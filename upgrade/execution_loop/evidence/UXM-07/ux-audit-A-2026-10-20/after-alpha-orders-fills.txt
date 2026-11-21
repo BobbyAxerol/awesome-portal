@@ -1,0 +1,208 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+← Alpha Fleet
+alpha_a
+◔
+PENDING:
+NOT SCORED · POLICY NOT SET
+Owner asmith
+Core
+Not available: Name, Version, Run, Evidence
+(Not published FE-066, Not published FE-066, Not published FE-029, Not published FE-029)
+Request archive
+Not published
+(FE-034)
+. Archive requests cannot be recorded yet.
+My access
+Request gate review
+Not published
+(FE-020)
+. Gate-review requests cannot be recorded yet.
+My access
+✓
+OK:
+FRESH
+As of 2026-10-17 12:04:00 UTC
+LIFECYCLE
+Now in Live
+R1 GATE
+?
+UNKNOWN
+Review gate
+Not published (FE-027/028)
+Stage history
+R2 GATE
+?
+UNKNOWN
+Review gate
+Not published (FE-027/028)
+Stage history
+PAPER
+?
+UNKNOWN
+Simulated
+Not published (FE-027/028)
+Stage history
+SANDBOX
+?
+UNKNOWN
+Simulated
+Not published (FE-027/028)
+Stage history
+CANARY
+?
+UNKNOWN
+Real-funded domain
+Not published (FE-027/028)
+Stage history
+LIVE
+◆
+OPERATION:
+NOW
+Real-funded domain
+Not published (FE-027/028)
+Days in stage
+No exit gate
+Not published (FE-027/028)
+Decider
+Not published
+(FE-027/028)
+ Days in stage, gate criteria and decider are not published
+LIVE · NOW
+No exit gate on Live. Capital actions start in Portfolio.
+dep_live_01
+✓
+OK:
+RUNNING
+BINANCE
+Allocated, current 
+40,000.00
+USDT
+NET PNL, CURRENT
++1,120.80
+USDT
+All stages, current facts
+EXPOSURE, CURRENT
+126,500.00
+USDT
+All stages, current facts
+Not available: Return, Max drawdown, Regime fit
+(Not published FE-006, Not published FE-025, Not published FE-011)
+PERFORMANCE
+DEPLOYMENTS
+RESEARCH EVIDENCE
+REGIME FIT
+ORDERS & FILLS
+ACTIVITY & DECISIONS
+MORE
+Book
+Real-funded
+Paper
+Sandbox
+ORDERS
+8
+Retained window
+FILLS
+3
+Retained window
+REJECTED
+1
+Of 8 orders
+LATENCY
+Not available · Broker timestamps not published
+Filled 1
+Partially filled 1
+Working 3
+Rejected 1
+Cancelled 1
+Unknown 1
+ORDERS
+6 loaded
+TIME (UTC)	ORDER	CLIENT ORDER	SYMBOL	TYPE	QUANTITY	PRICE OR TRIGGER	STATE	REPLAY
+17 Oct 02:00Z	ord_007	bt3-007	BTCUSDT	Market, Sell	
+0.1
+	Not available
+Market order
+	
+?
+UNKNOWN
+Source says UNKNOWN
+	Open
+16 Oct 22:00Z	ord_005	bt3-005	ETHUSDT	Market, Buy	
+3
+	Not available
+Market order
+	
+✕
+REJECTED
+Margin is insufficient for this order.
+	Open
+16 Oct 20:00Z	ord_004	bt3-004	BTCUSDT	Limit, Buy	
+0.52
+	
+67,410.55
+	
+◐
+PARTIAL DATA:
+PARTIALLY FILLED	Open
+16 Oct 14:00Z	ord_003	bt3-003	BTCUSDT	Stop market, Sell	
+0.4
+	
+66,100.00
+	
+◆
+OPERATION:
+WORKING	Open
+16 Oct 14:00Z	ord_002	bt3-002	BTCUSDT	Take profit market, Sell	
+0.4
+	
+68,500.00
+	
+◆
+OPERATION:
+WORKING	Open
+16 Oct 14:00Z	ord_001	bt3-001	BTCUSDT	Limit, Buy	
+0.4
+	
+67,200.50
+	
+✓
+APPLIED:
+FILLED	Open
+6 orders loaded, more in the retained window
+Load more
+FILLS
+3 loaded
+TIME (UTC)	FILL	CLIENT ORDER	SYMBOL	SIDE	QUANTITY	PRICE	FEE	LIQUIDITY
+16 Oct 20:01Z	fill_003	bt3-004	BTCUSDT	Buy	
+0.05
+	
+67,411.00
+	Not available
+Fee not published
+	Maker
+16 Oct 20:00Z	fill_002	bt3-004	BTCUSDT	Buy	
+0.31
+	
+67,410.55
+	
+4.18
+USDT
+	Maker
+16 Oct 14:00Z	fill_001	bt3-001	BTCUSDT	Buy	
+0.4
+	
+67,200.50
+	
+5.38
+USDT
+	Maker
+3 fills loaded, the whole retained window

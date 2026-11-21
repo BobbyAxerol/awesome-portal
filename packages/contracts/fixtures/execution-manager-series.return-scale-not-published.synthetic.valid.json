@@ -1,0 +1,75 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.manager-series.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "environment": "paper",
+    "record_authority": "PORTAL_PROJECTION",
+    "source_authority": "TRADING_SYSTEM",
+    "metric": "RETURN",
+    "selected_window": {
+      "requested": "30D",
+      "resolved": {
+        "from_ms": 1797408000000,
+        "to_ms": 1800000000000
+      },
+      "selection_basis": "EXACT_PUBLISHED_METRIC_WINDOW_ONLY",
+      "reason_code": null
+    },
+    "series_source": {
+      "state": "PUBLISHED",
+      "reason_code": null
+    },
+    "as_of_ms": 1800000000000,
+    "recorded_through_ms": 1800000000050,
+    "quality": {
+      "completeness": "COMPLETE",
+      "freshness": "FRESH",
+      "reasons": []
+    },
+    "series": [
+      {
+        "subject": {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-a"
+        },
+        "state": "UNAVAILABLE",
+        "reason_code": "RATIO_SCALE_NOT_PUBLISHED",
+        "partition": null,
+        "unit": null,
+        "currency": null,
+        "ratio_scale": null,
+        "basis": null,
+        "methodology_ref": null,
+        "window": null,
+        "points": [],
+        "gaps": [],
+        "quality": {
+          "completeness": "UNRESOLVED",
+          "freshness": "UNKNOWN",
+          "reasons": [
+            "RATIO_SCALE_NOT_PUBLISHED"
+          ]
+        },
+        "source_confidence": "UNKNOWN",
+        "provenance_refs": [
+          "SOURCE_NOT_PUBLISHED"
+        ],
+        "calculation_revision": "manager-series.v1",
+        "policy_revision": "NOT_PUBLISHED"
+      }
+    ],
+    "comparison": {
+      "state": "SINGLE_SUBJECT",
+      "reason_code": null,
+      "transform": "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM",
+      "common": null,
+      "axis_ms": null
+    },
+    "lineage": {
+      "reducer_revision": "manager-series.v1",
+      "source_set_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  }
+}

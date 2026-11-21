@@ -1,0 +1,1548 @@
+import { accessDigest, AccessEvaluationContext, businessReadDenied, evaluateAccess, evaluateBusinessRead, grantCurrent, policyReady,
+  environmentRelations, currentBoundaryProof, currentExplicitReadAllows } from "./access-policy";
+import { AccessAction, AccessPolicyError, AccessResource, accessResource } from "./access.contract";
+import { ExecutionReadPublication, ExecutionReadPublicationRequest, ReadDatasetBinding, readDatasetBinding, readPublication } from "./read-publication";
+import { AUDIT_READ_FIELDS, BUSINESS_READ_FIELDS, TECHNICAL_READ_FIELDS, isBusinessReadField, isRecordDetailReadField, isSiblingDetailReadField } from "./read-fields";
+import type { ExecutionAccessService } from "./access.service";
+import type { ControlApiConfig } from "../config";
+import type { AuthSession, PortalUser } from "../domain";
+import type { Pool,PoolClient } from "pg";
+import type {ServerResponse} from "node:http";
+import { createHash } from "node:crypto";
+import { types } from "node:util";
+import { lockCurrentHumanSnapshot,evaluateManagerDomainStream } from "./current-human-snapshot";
+import type { ManagerDomainStreamDecision } from "./access.contract";
+import { withTransaction } from "../db/pool";
+import { selectedNativeBusinessReadSelection,selectedNativeBusinessReadInstallationExpiresAtMs,
+  type SelectedNativeBusinessReadSource } from "./native-business-read-selected-source";
+import { scopedReplayBinding,scopedRealtimeFrame } from "./realtime.contract";
+import { ScopedReplayCursorCodec,decodeScopedReplayContinuation } from "./scoped-replay-cursor";
+import { retainedReview } from "../execution/retained-read-profile";
+import { currentAccessRelations } from "./access-current-relations";
+
+export type ReadEnvironment="paper"|"sandbox"|"live";
+export interface ReadScopePrincipal {user:PortalUser;session:AuthSession;workspaceId:string;viewerWorkspaceId?:string;}
+export interface ReadScopeBinding {environment:ReadEnvironment;profileId:string;}
+export interface ReadScopeRequirement {
+  action:"business.read_all"|"alpha.read"|"portfolio.read"|"portfolio.read_restricted"|"portfolio.discover_linked"|"account.read"|"binding.read"|
+    "maintenance.read"|"development.read"|"audit.read"|"report.export"|"stream.subscribe"|"governance.live.read";
+  resource?:AccessResource;
+  dataset?:ReadDatasetBinding;
+  requireWholePopulation?:boolean;
+}
+export type ReadScopeErrorCode="EXECUTION_READ_SCOPE_REQUIRED"|"EXECUTION_READ_ACCESS_CHANGED"|
+  "EXECUTION_READ_QUERY_INVALID"|"EXECUTION_READ_CURRENT_ONLY"|"EXECUTION_READ_CURSOR_INVALID"|
+  "EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED"|
+  "EXECUTION_READ_NOT_AVAILABLE"|"EXECUTION_READ_POLICY_PENDING"|"EXECUTION_READ_PUBLICATION_NOT_QUALIFIED"|
+  "EXECUTION_READ_FIELD_POLICY_PENDING"|"EXECUTION_READ_SCOPE_LIMIT"|"EXECUTION_READ_AUTHORITY_UNAVAILABLE";
+export class ExecutionReadScopeError extends Error {
+  constructor(readonly code:ReadScopeErrorCode,readonly status=403){super("The requested Execution read is not available.");}
+}
+declare const scopeBrand:unique symbol;
+/** In-process, server-minted capability. JSON/casts/cursors cannot reconstruct it. */
+export interface AuthorizedExecutionReadScope {
+  readonly [scopeBrand]:true;
+  readonly mode:"LEGACY_COMPATIBILITY"|"SCOPED_V2";
+  readonly fingerprint:string;
+  readonly workspaceId:string;
+  readonly viewerWorkspaceId:string;
+  readonly environment:ReadEnvironment;
+  readonly profileId:string;
+  readonly policyRevision:string|null;
+  readonly fieldPolicyRef:string|null;
+  readonly wholePopulation:boolean;
+}
+/** Private in-process composition outcome, NEVER a browser entitlement.
+ * Even an AUTHORIZED wrapper is not itself a branded read scope. */
+export type PortfolioCollectionPurpose = Readonly<{
+  state:"AUTHORIZED";scope:AuthorizedExecutionReadScope;fingerprint:string;
+}> | Readonly<{state:"NO_CURRENT_ENTITLEMENT";fingerprint:string}>;
+type PortfolioPurposeAction="portfolio.read"|"portfolio.read_restricted";
+type PortfolioPurposeOptions={expected?:PortfolioCollectionPurpose};
+type PortfolioPurposeState={issuer:ExecutionReadScopes;principal:ReadScopePrincipal;
+  binding:ReadScopeBinding;requirement:ReadScopeRequirement;context:AccessEvaluationContext;
+  publication:ExecutionReadPublication;proof:string;};
+const portfolioPurposes=new WeakMap<object,PortfolioPurposeState>();
+declare const managerNativeScopeBrand:unique symbol;
+/** Manager observation capability, deliberately NOT an entity/census scope. */
+export interface AuthorizedManagerNativeNoticeScope {readonly [managerNativeScopeBrand]:true;}
+export type NativeExecutionReadScope=AuthorizedExecutionReadScope|AuthorizedManagerNativeNoticeScope;
+type ManagerNativeState={source:SelectedNativeBusinessReadSource;
+  domain:Readonly<{profile_id:string;catalogue_sha256:string;profile_sha256:string;field_policy_sha256:string}>;
+  source_identity_digest:string;decision:Readonly<ManagerDomainStreamDecision>;fingerprint:string;};
+type ScopeState={kind:"ENTITY"|"MANAGER";manager?:ManagerNativeState;issuer:ExecutionReadScopes;principal:ReadScopePrincipal;binding:ReadScopeBinding;
+  requirement:ReadScopeRequirement;tuples:ExecutionReadPublication["tuples"];resources:AccessResource[];
+  population:ExecutionReadPublication["tuples"];fields:readonly string[];context:AccessEvaluationContext|null;
+  /** null = the whole record-detail vocabulary (full-business read); an array = the reviewed researcher subset. */
+  detail?:readonly string[]|null;
+  strategyPairs:readonly {strategy_id:string;alpha_id:string}[];
+  bindingPairs:readonly {binding_id:string;account_id:string}[];};
+const minted=new WeakMap<object,ScopeState>();
+declare const heldNativeReadBrand:unique symbol;
+/** Provisional PRIVATE query context during a genuine native finite build.
+ * Not a send permit/terminal: source ENTER and the physical egress still own
+ * delivery. A clone/JSON/cast has no entry and build exit kills the ticket. */
+export interface HeldNativeReadScopes {readonly [heldNativeReadBrand]:true;}
+type HeldNativeReadState={issuer:ExecutionReadScopes;scopes:readonly AuthorizedExecutionReadScope[];
+  states:readonly ScopeState[];contexts:readonly AccessEvaluationContext[];active:boolean;};
+const heldNativeReads=new WeakMap<object,HeldNativeReadState>();
+const businessReads=new Set<AccessAction>(["business.read_all","alpha.read","portfolio.read","portfolio.read_restricted",
+  "portfolio.discover_linked","account.read","binding.read"]);
+/** The only cross-environment retained derivation admitted below. These are
+ * source-health inputs, not new grants or a general cross-profile reader. */
+const retainedSourceHealthDatasets=new Set([
+  "relation:manager.strategies:strategies", "relation:manager.deployments:strategy_deployments",
+  "relation:manager.accounts:accounts", "relation:manager.accounts:account_balances",
+  "relation:manager.portfolios:portfolios", "relation:manager.portfolios:portfolio_allocations",
+  "relation:manager.sessions:execution_sessions", "relation:manager.orders:orders", "relation:manager.fills:fills",
+  "relation:manager.conditional-orders:conditional_order_groups",
+  "relation:manager.conditional-orders:conditional_order_group_legs", "derivation:empty",
+]);
+/** Only the Account 360 environment-selection read may combine these
+ * separately authorized current relations across profiles. No item here
+ * grants a new purpose or a whole-population entitlement. */
+const retainedAccountProfilePurposes:Readonly<Record<string,readonly ReadScopeRequirement["action"][]>>=Object.freeze({
+  "relation:manager.accounts:accounts":["account.read"],
+  "relation:manager.accounts:account_balances":["account.read"],
+  "relation:manager.accounts:margin_balances":["account.read"],
+  "relation:manager.accounts:account_sync_effective":["account.read"],
+  "relation:manager.deployments:strategy_deployments":["alpha.read","account.read"],
+  "relation:manager.positions:positions_v2":["alpha.read","account.read"],
+  "relation:manager.reconciliation:reconciliation_findings":["account.read"],
+});
+const exactKey=(r:AccessResource)=>JSON.stringify([r.kind,r.id]);
+/** One private retained technical input, not a public alias/grant/purpose
+ * registry. Other technical datasets still need their own reviewed branch. */
+const heartbeatTechnicalDataset=(dataset:ReadDatasetBinding):boolean=>
+  dataset.dataset_id==="relation:manager.current.service-heartbeats:service_heartbeats"&&
+  dataset.window===null&&typeof dataset.projection_generation==="string"&&
+  dataset.catalogue_revision!==undefined;
+const resourceAction=(r:AccessResource):ReadScopeRequirement["action"]=>({ROOT:"business.read_all",ALPHA:"alpha.read",
+  ALPHA_VERSION:"alpha.read",DEPLOYMENT:"alpha.read",PORTFOLIO:"portfolio.read",ACCOUNT:"account.read",BINDING:"binding.read",USER:"business.read_all"} as const)[r.kind];
+function fail(code:ReadScopeErrorCode,status=403):never {throw new ExecutionReadScopeError(code,status);}
+/** One safe boundary for native Core/provider failures, including root lookup
+ * before the main scope issuer. Never disclose adapter/SQL exception prose. */
+function rethrowReadScopeError(error:unknown):never {
+  if(error instanceof ExecutionReadScopeError)throw error;
+  if(error instanceof AccessPolicyError){
+    if(error.code==="ACCESS_DENIED")fail("EXECUTION_READ_SCOPE_REQUIRED");
+    if(error.code==="ACCESS_RETRY_REQUIRED")fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(error.code==="CURRENT_ACTOR_AUTHORITY_REQUIRED"||error.code==="ACCESS_RESOURCE_NOT_FOUND")fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    if(error.code==="POLICY_PENDING")fail("EXECUTION_READ_POLICY_PENDING");
+    if(error.code==="ACCESS_SCOPE_LIMIT_EXCEEDED")fail("EXECUTION_READ_SCOPE_LIMIT",503);
+  }
+  throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+}
+
+function nativeScopeState(scope:unknown):ScopeState {
+  const state=scope&&typeof scope==="object"?minted.get(scope):undefined;
+  if(!state)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  return state;
+}
+function managerScopeState(scope:unknown):ScopeState & {manager:ManagerNativeState} {
+  const state=nativeScopeState(scope);
+  if(state.kind!=="MANAGER"||!state.manager)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  return state as ScopeState & {manager:ManagerNativeState};
+}
+/** Server-only detached adapter context, NOT a transferable permission. */
+export function managerNativeReplayContext(scope:AuthorizedManagerNativeNoticeScope) {
+  const state=managerScopeState(scope),manager=state.manager;
+  return Object.freeze({workspace_id:state.principal.workspaceId,environment:state.binding.environment,
+    profile_id:manager.domain.profile_id,domain:manager.domain,source_identity_digest:manager.source_identity_digest,
+    principal_scope_digest:manager.fingerprint,policy_revision:manager.decision.policy_revision,
+    field_policy_ref:manager.decision.field_policy_ref,read_scope_digest:manager.decision.scope_digest});
+}
+export function assertExecutionReadScope(scope:AuthorizedExecutionReadScope):void {
+  if(nativeScopeState(scope).kind!=="ENTITY")fail("EXECUTION_READ_SCOPE_REQUIRED");
+}
+export function scopeResources(scope:AuthorizedExecutionReadScope):readonly AccessResource[] {
+  assertExecutionReadScope(scope);return minted.get(scope)!.resources.map(r=>({...r}));
+}
+/** Server-only relation adapter input. Detached copies cannot alter authority. */
+export function scopeReadPopulation(scope:AuthorizedExecutionReadScope) {
+  assertExecutionReadScope(scope);
+  const state=minted.get(scope)!;
+  return {allowedTuples:structuredClone(state.tuples),populationTuples:structuredClone(state.population),
+    binding:state.requirement.dataset?structuredClone(state.requirement.dataset):null,
+    strategyPairs:structuredClone(state.strategyPairs),bindingPairs:structuredClone(state.bindingPairs)};
+}
+/** Correlated predicates for SQL adapters, not independent ID allowlists. */
+export function scopeTuples(scope:AuthorizedExecutionReadScope) {
+  assertExecutionReadScope(scope);
+  if(scope.mode==="LEGACY_COMPATIBILITY")return null;
+  const state=minted.get(scope)!;
+  if(!state.requirement.dataset)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+  return {columns:["alpha_id","alpha_version_id","portfolio_id","deployment_id","account_id"] as const,
+    allowedTuples:state.tuples.map(t=>[t.alpha_id,t.alpha_version_id,t.portfolio_id,t.deployment_id,t.account_id]),fingerprint:scope.fingerprint};
+}
+export function scopeAllowsField(scope:AuthorizedExecutionReadScope,field:string):boolean {
+  assertExecutionReadScope(scope);
+  return minted.get(scope)!.fields.includes(field);
+}
+/** Record-detail names (BE-P15) are a second closed vocabulary that is NOT part of `scope.fields`: the scope
+ * fingerprint, the full-business field-policy revision and every `scopeAllowsField` guard stay as they were.
+ * Allowed only for a business read, and for a researcher only when the reviewed artifact lists the name. */
+export function scopeAllowsDetailField(scope:AuthorizedExecutionReadScope,field:string):boolean {
+  assertExecutionReadScope(scope);
+  const state=minted.get(scope)!;
+  if(!businessReads.has(state.requirement.action))return false;
+  if(isSiblingDetailReadField(field)) {
+    const context=state.context,policy=context?.policy?.researcher_fields;
+    return scope.mode==="SCOPED_V2" && !!context && policyReady(context) && policy?.state==="QUALIFIED" &&
+      !!policy.policy_ref && policy.fields.includes(field);
+  }
+  if(!isRecordDetailReadField(field))return false;
+  return state.detail==null||state.detail.includes(field);
+}
+/** Hidden values must not become a filter, sort, group or ranking oracle. */
+export const scopeAllowsQueryField = scopeAllowsField;
+
+/** Full economic accounting is independent of a researcher field whitelist.
+ * Evaluate the unfiltered source census; seeing every currently visible row is
+ * not proof that hidden peer allocations do not exist. Delivery still rechecks
+ * the minted current authority after all asynchronous work. */
+export function scopeAllowsFullAccountingPopulation(scope:AuthorizedExecutionReadScope,portfolioId?:string,alphaId?:string):boolean {
+  assertExecutionReadScope(scope);const state=minted.get(scope)!;
+  if(scope.mode!=="SCOPED_V2"||!state.context||!state.requirement.dataset||!businessReads.has(state.requirement.action))return false;
+  const full=(resource:AccessResource)=>!businessReadDenied(state.context!,resource,scope.environment)&&
+    evaluateBusinessRead(state.context!,"business.read_all",resource,scope.environment).allowed;
+  const population=state.population.filter(t=>(portfolioId===undefined||t.portfolio_id===portfolioId)&&(alphaId===undefined||t.alpha_id===alphaId));
+  if(!population.length)return alphaId!==undefined?state.resources.some(r=>r.kind==="ALPHA"&&r.id===alphaId)&&full({kind:"ALPHA",id:alphaId}):
+    portfolioId===undefined?scope.wholePopulation:
+    state.resources.some(r=>r.kind==="PORTFOLIO"&&r.id===portfolioId)&&full({kind:"PORTFOLIO",id:portfolioId});
+  const visible=new Set(state.tuples.map(t=>JSON.stringify(t)));
+  return population.every(t=>visible.has(JSON.stringify(t))&&tupleLineage(t).every(full));
+}
+
+/** Stable *authorization* identity for a named replay query. Unlike the page
+ * fingerprint it excludes a document's changing source revision. It retains
+ * current visible tuples, fields, actor/session, policy, lineage and generation;
+ * hidden source offsets/population counts are never returned to the browser. */
+export function scopeRealtimeIdentity(scope:NativeExecutionReadScope):string {
+  const state=nativeScopeState(scope);
+  if(state.kind==="MANAGER")return managerScopeState(scope).manager.fingerprint;
+  const entity=scope as AuthorizedExecutionReadScope;
+  assertExecutionReadScope(entity);const s=state;
+  scope=entity;
+  const dataset=s.requirement.dataset;
+  return accessDigest({mode:scope.mode,actor:s.principal.user.userId,session:s.principal.session.sessionId,
+    session_generation:s.principal.session.sessionVersion,workspace:scope.workspaceId,viewer:scope.viewerWorkspaceId,
+    binding:s.binding,action:s.requirement.action,resource:s.requirement.resource??null,
+    dataset:dataset&&{...dataset,source_revision:undefined},authority:s.context&&{
+      db:s.context.authority_fingerprint,role:s.context.actor_role,policy:s.context.policy,
+      grants:s.context.grants.map(g=>[g,Object.hasOwn(s.context!.relationsFor(g.subject_user_id),"current_authority")?
+        s.resources.some(resource=>grantCurrent(g,s.context!,new Set(),{resource,environment:scope.environment})):grantCurrent(g,s.context!)]),active:[...s.context.active_principals].sort(),
+      // Population is bound BELOW, after authorization. A hidden-only change
+      // in a provider's root directory must not change this visible identity.
+      relations:[...new Set(s.context.grants.flatMap(g=>[g.subject_user_id,g.issued_by]).concat(s.context.principal_id))].sort()
+        .map(id=>{const r=s.context!.relationsFor(id);return Object.hasOwn(r,"current_authority")?
+          [id,currentBoundaryProof(s.context!,scope.environment,[...s.resources,...(s.requirement.resource?[s.requirement.resource]:[])])]:
+          [id,r.qualified,r.revision,r.membership];})},
+    tuples:s.tuples,resources:s.resources,fields:s.fields,field_policy:scope.fieldPolicyRef,
+    strategy:s.strategyPairs,bindings:s.bindingPairs});
+}
+
+declare const nativeNoticeBrand:unique symbol;
+export interface PreparedExecutionNativeNotice {readonly [nativeNoticeBrand]:true;}
+type NativeNoticeIntent={schema_version:"pma.manager-read-intent.v2";action:"scoped_notice";
+  stream_id:string;frame_ordinal:string;dataset_id:string;query_digest:string;field_set_digest:string;
+  projection_generation:string;source_cursor_digest:string;frame_sha256:string;stream_scope_digest:string;};
+export type NativeExecutionNoticeView=Readonly<{actor:Readonly<{user_id:string;session_id:string;session_generation:number}>;
+  workspace_id:string;environment:ReadEnvironment;profile_id:string;scope_digest:string;
+  intent:Readonly<NativeNoticeIntent>;payload:Buffer;
+  manager?:Readonly<{domain:ManagerNativeState["domain"];source_identity_digest:string;read_scope_digest:string}>;}>;
+type NativeNoticeState={scope:NativeExecutionReadScope;resource:AccessResource|null;
+  issuer:ExecutionReadScopes;pool:Pool;view:Omit<NativeExecutionNoticeView,"payload">;payload:Buffer;};
+const nativeNotices=new WeakMap<object,NativeNoticeState>();
+/** Effective served-field revision, not a researcher or PM policy receipt.
+ * Full-domain business reads have no researcher fieldPolicyRef by design.
+ * Bind their actual installed field set instead of inventing a source ref. */
+export function scopeReplayFieldPolicyRevision(scope:NativeExecutionReadScope):string {
+  const state=nativeScopeState(scope);
+  if(state.kind==="MANAGER")return managerScopeState(scope).manager.decision.field_policy_ref;
+  scope=scope as AuthorizedExecutionReadScope;
+  assertExecutionReadScope(scope);
+  if(scope.fieldPolicyRef!==null)return scope.fieldPolicyRef;
+  if(scope.mode!=="SCOPED_V2"||!scope.wholePopulation||
+    state.requirement.action!=="business.read_all"||state.requirement.resource?.kind!=="ROOT")
+    fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
+  return `portal.execution.full-business-fields.v1:${accessDigest([...state.fields].sort())}`;
+}
+type NativeNoticeInput={delivery_json:string;replay_binding_json:string;source_cursor:string;frame_json:string;};
+function captureNativeNoticeInput(input:NativeNoticeInput) {
+  if(!input||typeof input!=="object"||types.isProxy(input)||
+    ![Object.prototype,null].includes(Object.getPrototypeOf(input)))fail("EXECUTION_READ_SCOPE_REQUIRED");
+  const wanted=["delivery_json","replay_binding_json","source_cursor","frame_json"];
+  const keys=Reflect.ownKeys(input),values:Record<string,string>=Object.create(null);
+  if(keys.length!==wanted.length||keys.some(key=>typeof key!=="string"||!wanted.includes(key)))fail("EXECUTION_READ_SCOPE_REQUIRED");
+  for(const key of wanted){
+    const field=Object.getOwnPropertyDescriptor(input,key);
+    if(!field?.enumerable||!Object.hasOwn(field,"value")||typeof field.value!=="string")fail("EXECUTION_READ_SCOPE_REQUIRED");
+    values[key]=field.value;
+  }
+  // Bound every JSON parse before work or adapter awaits. Original private
+  // source token is never returned in the view, wire Base or browser frame.
+  if(Buffer.byteLength(values.delivery_json)>256||Buffer.byteLength(values.replay_binding_json)>16384||
+    Buffer.byteLength(values.frame_json)>1048576||Buffer.byteLength(values.source_cursor)>2048||
+    !/^[A-Za-z0-9._~-]+$(?![\s\S])/.test(values.source_cursor))fail("EXECUTION_READ_SCOPE_REQUIRED");
+  let delivery:{kind:string;stream_id:string;frame_ordinal:string},binding:ReturnType<typeof scopedReplayBinding.parse>,
+    frame:ReturnType<typeof scopedRealtimeFrame.parse>;
+  try{
+    delivery=JSON.parse(values.delivery_json);
+    binding=scopedReplayBinding.parse(JSON.parse(values.replay_binding_json));
+    frame=scopedRealtimeFrame.parse(JSON.parse(values.frame_json));
+    if(!delivery||typeof delivery!=="object"||Object.keys(delivery).sort().join()!=="frame_ordinal,kind,stream_id"||
+      delivery.kind!=="SSE_FRAME"||typeof delivery.stream_id!=="string"||
+      !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$(?![\s\S])/.test(delivery.stream_id)||
+      typeof delivery.frame_ordinal!=="string"||!/^[1-9][0-9]{0,18}$(?![\s\S])/.test(delivery.frame_ordinal)||
+      BigInt(delivery.frame_ordinal)>=(1n<<63n)||JSON.stringify(delivery)!==values.delivery_json||
+      JSON.stringify(frame)!==values.frame_json)throw new Error();
+  }catch{fail("EXECUTION_READ_SCOPE_REQUIRED");}
+  return {values,delivery,binding,frame};
+}
+function nativeNoticePayload(frame:ReturnType<typeof scopedRealtimeFrame.parse>):Buffer {
+  const payload=Buffer.from(`id: ${frame.resume_cursor}\nevent: ${frame.event_type}\ndata: ${JSON.stringify(frame)}\n\n`,"utf8");
+  if(payload.length>1048576)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+  return payload;
+}
+function nativeNoticeState(input:unknown):NativeNoticeState {
+  const state=input&&typeof input==="object"?nativeNotices.get(input):undefined;
+  if(!state)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(nativeScopeState(state.scope).issuer!==state.issuer)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  return state;
+}
+/** Exact registered proof only. A JSON/cast/Proxy/clone has no registry entry.
+ * Never return the issuer's mutable payload backing to a caller. */
+export function nativeExecutionNoticeView(input:PreparedExecutionNativeNotice):NativeExecutionNoticeView {
+  const state=nativeNoticeState(input);
+  return Object.freeze({...state.view,payload:Buffer.from(state.payload)});
+}
+export async function revalidateNativeExecutionNotice(input:PreparedExecutionNativeNotice):Promise<void> {
+  const state=nativeNoticeState(input);
+  if(nativeScopeState(state.scope).kind==="MANAGER")await state.issuer.revalidateManagerNativeStream(state.scope as AuthorizedManagerNativeNoticeScope);
+  else await state.issuer.revalidate(state.scope as AuthorizedExecutionReadScope);
+}
+/** Purely temporal ceiling over the SAME complete evaluator graph. Conservative
+ * unrelated transitions can shorten a private frame but never widen a grant.
+ * Capture receipt/target start as well as expiry so future DENYs cannot become
+ * effective between the DB clock and physical callback. No TTL releases rows. */
+// Reused by finite current Core audit reads; this is a temporal ceiling only,
+// never a permission, source custody token or physical-send guarantee.
+export function nativeNoticeValidUntil(context:AccessEvaluationContext,environment:ReadEnvironment,
+  sessionUntil:number):number {
+  let until=sessionUntil;
+  const transition=(value:number|null|undefined)=>{
+    if(typeof value==="number"&&Number.isSafeInteger(value)&&value>context.now_ms)until=Math.min(until,value);
+  };
+  const ids=new Set<string>([context.principal_id]);
+  for(const grant of context.grants){
+    if(grant.workspace_id!==context.workspace_id||!grant.environments.includes(environment))continue;
+    ids.add(grant.subject_user_id);ids.add(grant.issued_by);
+    transition(grant.valid_from_ms);transition(grant.valid_until_ms);transition(grant.revoked_at_ms);
+    transition(grant.ts_receipt?.effective_at_ms);transition(grant.ts_receipt?.expires_at_ms);
+  }
+  for(const principal of ids){
+    const relations=context.relationsFor(principal);
+    if(!Object.hasOwn(relations,"current_authority"))continue;
+    const parsed=currentAccessRelations.safeParse(relations.current_authority);
+    if(!parsed.success)fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    for(const grant of parsed.data.grants){
+      transition(grant.accepted.effective_at_ms);transition(grant.accepted.expires_at_ms);
+      for(const target of grant.targets)if(target.environment===environment){
+        transition(target.valid_from_ms);transition(target.valid_until_ms);
+      }
+    }
+  }
+  if(!Number.isSafeInteger(until)||until<=context.now_ms)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  return until;
+}
+/** Last DB-only check in Candidate's OWN short RC transaction. SAME NC01 lock
+ * is acquired by lockCurrentHumanSnapshot; no nested pool or source/socket I/O.
+ * Current physical send is protected only once the SAME durable native frame
+ * obligation exists; this returned DTO alone is NOT a held/send permit. */
+export async function assertNativeExecutionNoticeCurrent(db:PoolClient,input:PreparedExecutionNativeNotice,
+  pool:Pool):Promise<{authority_fingerprint:string;now_ms:number;valid_until_ms:number;scope_digest:string;
+    manager_read_decision?:ManagerDomainStreamDecision}> {
+  const state=nativeNoticeState(input),scopeState=nativeScopeState(state.scope);
+  if(state.pool!==pool)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(scopeState.kind==="MANAGER"){
+    const manager=managerScopeState(state.scope).manager;
+    const d=await evaluateManagerDomainStream(db,{actor:state.view.actor,workspace_id:state.view.workspace_id,
+      environment:state.view.environment,domain:manager.domain,expected_scope_digest:manager.decision.scope_digest});
+    if(d.stream_scope_digest!==manager.decision.stream_scope_digest||
+      d.authority_fingerprint!==manager.decision.authority_fingerprint||
+      Math.max(d.now_ms,Date.now())>=d.valid_until_ms||
+      Date.now()>=selectedNativeBusinessReadInstallationExpiresAtMs(manager.source))
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    return {authority_fingerprint:d.authority_fingerprint,now_ms:d.now_ms,valid_until_ms:Math.min(d.valid_until_ms,selectedNativeBusinessReadInstallationExpiresAtMs(manager.source)),
+      scope_digest:manager.fingerprint,manager_read_decision:d};
+  }
+  const scope=state.scope as AuthorizedExecutionReadScope;
+  if(!scopeState.context||!state.resource)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  const expected=scopeState.context,actor=state.view.actor;
+  const current=await lockCurrentHumanSnapshot(db,actor,scope.workspaceId);
+  if(current.authority_fingerprint!==expected.authority_fingerprint||current.actor_role!==scopeState.principal.user.role)
+    fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  const now=Math.max(current.now,Date.now());
+  if(!Number.isSafeInteger(now)||now<0||now>=current.lease_until_ms)
+    fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  // The original source relations were verified outside locks. Do not call
+  // their adapter again after this boundary; NC01 covers Core-owned changes.
+  const context:AccessEvaluationContext={...expected,now_ms:now,actor_current:true,actor_role:current.actor_role};
+  const resources=[...scopeState.resources,...(scopeState.requirement.resource?[scopeState.requirement.resource]:[])];
+  if(accessDigest(contextProof(context,scope.environment,resources))!==
+      accessDigest(contextProof(expected,scope.environment,resources))||
+    !evaluateAccess(context,"stream.subscribe",state.resource,scope.environment).allowed)
+    fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  // Complete lineage remains present in context; an independent future DENY
+  // cannot be filtered out merely because an older ALLOW supplied this scope.
+  if(scopeState.requirement.resource&&businessReadDenied(context,scopeState.requirement.resource,scope.environment)||
+    scopeState.tuples.some(tuple=>tupleLineage(tuple).some(resource=>businessReadDenied(context,resource,scope.environment))))
+    fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  return {authority_fingerprint:current.authority_fingerprint,now_ms:now,
+    valid_until_ms:nativeNoticeValidUntil(context,scope.environment,current.lease_until_ms),
+    scope_digest:state.view.scope_digest};
+}
+
+const contextProof=(context:AccessEvaluationContext,environment?:ReadEnvironment,resources:readonly AccessResource[]=[])=>({
+  db:context.authority_fingerprint??null,role:context.actor_role??null,policy:context.policy,
+  grants:context.grants.map(g=>[g,environment&&Object.hasOwn(context.relationsFor(g.subject_user_id),"current_authority")?
+    resources.some(resource=>grantCurrent(g,context,new Set(),{resource,environment})):grantCurrent(g,context)]),active:[...context.active_principals].sort(),
+  relations:environment?currentBoundaryProof(context,environment,resources):[...new Set(context.grants.flatMap(g=>[g.subject_user_id,g.issued_by]).concat(context.principal_id))].sort()
+    .map(id=>[id,context.relationsFor(id)]),
+});
+const tupleLineage=(t:ExecutionReadPublication["tuples"][number]):AccessResource[]=>[
+  {kind:"ALPHA",id:t.alpha_id},{kind:"ALPHA_VERSION",id:t.alpha_version_id},{kind:"PORTFOLIO",id:t.portfolio_id},
+  {kind:"DEPLOYMENT",id:t.deployment_id},{kind:"ACCOUNT",id:t.account_id},
+];
+const requestProofResources=(requirement:ReadScopeRequirement,publication:ExecutionReadPublication):AccessResource[]=>{
+  const resource=requirement.resource;
+  if(!resource||resource.kind==="ROOT")return publication.resources;
+  const accounts=resource.kind==="BINDING"?new Set(publication.binding_lineage?.bindings
+    .filter(pair=>pair.binding_id===resource.id).map(pair=>pair.account_id)):null;
+  return [resource,...publication.tuples.filter(tuple=>accounts?accounts.has(tuple.account_id):
+    tupleLineage(tuple).some(item=>exactKey(item)===exactKey(resource))).flatMap(tupleLineage)];
+};
+
+/** The ordinary grammar and pre-await snapshot are shared; optional purpose
+ * callers cannot author a second, weaker identity/dataset validator. */
+function captureReadScopeInputs(principal:ReadScopePrincipal,binding:ReadScopeBinding,requirement:ReadScopeRequirement){
+  const p={user:{...principal.user},session:{...principal.session},workspaceId:principal.workspaceId,
+    viewerWorkspaceId:principal.viewerWorkspaceId??principal.workspaceId};
+  const b=structuredClone(binding),r=structuredClone(requirement);
+  if(!p.workspaceId||!p.viewerWorkspaceId||!p.user.userId||!p.session.sessionId||
+    p.session.userId!==p.user.userId||p.session.sessionVersion!==p.user.sessionVersion||
+    !["paper","sandbox","live"].includes(b.environment)||!b.profileId)fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(!businessReads.has(r.action)&&!["maintenance.read","development.read","audit.read","report.export","stream.subscribe","governance.live.read"].includes(r.action))
+    fail("EXECUTION_READ_SCOPE_REQUIRED");
+  // Existing Portal capability, only an independent screen gate. It supplies
+  // NO business, Account, custody, audit, stream or physical-delivery fields.
+  if(r.action==="governance.live.read"&&(b.environment!=="live"||r.resource?.kind!=="DEPLOYMENT"||r.dataset||r.requireWholePopulation))
+    fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(r.resource&&!accessResource.safeParse(r.resource).success||r.dataset&&!readDatasetBinding.safeParse(r.dataset).success)
+    fail("EXECUTION_READ_SCOPE_REQUIRED");
+  if(!businessReads.has(r.action)&&!r.resource)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+  if(r.dataset&&(r.action==="maintenance.read"||r.action==="development.read")&&
+    (r.action!=="maintenance.read"||r.resource?.kind!=="ROOT"||!heartbeatTechnicalDataset(r.dataset)))
+    fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+  if(r.requireWholePopulation&&!r.dataset)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+  return {p,b,r};
+}
+
+/** This is only an omission classifier. Preserve canonical full-graph DENY
+ * precedence before pending fields; this function NEVER issues a read scope. */
+function portfolioPurposePresent(context:AccessEvaluationContext,action:PortfolioPurposeAction,
+  binding:ReadScopeBinding,publication:ExecutionReadPublication):boolean {
+  return publication.resources.some(resource=>resource.kind==="PORTFOLIO"&&
+    !businessReadDenied(context,resource,binding.environment)&&(
+    evaluateBusinessRead(context,action,resource,binding.environment).allowed||
+    evaluateAccess(context,action,resource,binding.environment).reason_code==="RESEARCHER_FIELD_POLICY_PENDING"));
+}
+const portfolioPurposeProof=(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,
+  context:AccessEvaluationContext,publication:ExecutionReadPublication)=>accessDigest({
+  domain:"manager-portfolio-purpose-proof.v1",actor:p.user.userId,session:p.session.sessionId,
+  generation:p.session.sessionVersion,workspace:p.workspaceId,viewer:p.viewerWorkspaceId,
+  binding:b,requirement:r,authority:contextProof(context,b.environment,publication.resources),publication,
+});
+
+/** Qualifying negative evidence is different from granting it. Only inspect
+ * potential purpose/ceiling source dependencies; no raw ALLOW scan grants
+ * rights and a disjoint/expired native leg is not a global prerequisite. */
+function assertPortfolioPurposeSource(context:AccessEvaluationContext,action:PortfolioPurposeAction,
+  binding:ReadScopeBinding,publication:ExecutionReadPublication,negative:boolean):void {
+  if(!context.actor_current||!context.active_principals.has(context.principal_id))fail("EXECUTION_READ_NOT_AVAILABLE",404);
+  if(!context.authority_fingerprint||!Number.isSafeInteger(context.now_ms)||context.now_ms<0)
+    fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+  const checked=new Set<string>();
+  const qualified=(id:string)=>{
+    if(checked.has(id))return;checked.add(id);
+    const relations=context.relationsFor(id);
+    if(!relations||relations.qualified!==true)fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    if(Object.hasOwn(relations,"current_authority")){
+      const parsed=currentAccessRelations.safeParse(relations.current_authority);
+      if(!parsed.success||parsed.data.subject_user_id!==id||parsed.data.workspace_id!==context.workspace_id)
+        fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    }
+  };
+  qualified(context.principal_id);
+  if(!negative)return;
+  const portfolios=new Set(publication.resources.filter(resource=>resource.kind==="PORTFOLIO").map(resource=>resource.id));
+  if(!portfolios.size)return; // exact complete empty dataset, not an actor-wide entitlement claim
+  type Grant=AccessEvaluationContext["grants"][number];
+  const live=(grant:Grant)=>grant.workspace_id===context.workspace_id&&grant.policy_revision===context.policy!.revision&&
+    grant.revoked_at_ms===null&&grant.valid_from_ms<=context.now_ms&&
+    (grant.valid_until_ms===null||context.now_ms<grant.valid_until_ms)&&grant.environments.includes(binding.environment)&&
+    context.active_principals.has(grant.subject_user_id)&&context.active_principals.has(grant.issued_by);
+  const couldTouch=(grant:Grant)=>grant.selector.kind==="ROOT_SCOPE"||
+    grant.selector.kind==="EXPLICIT_RESOURCE_SET"&&grant.selector.resource_kind==="PORTFOLIO"&&
+      grant.selector.ids.some(id=>portfolios.has(id))||
+    grant.selector.kind==="PORTFOLIO_MEMBERSHIP"&&grant.selector.portfolio_ids.some(id=>portfolios.has(id));
+  for(const candidate of context.grants){
+    if(candidate.subject_user_id!==context.principal_id||
+      candidate.action!==action&&candidate.action!=="business.read_all"||!live(candidate)||!couldTouch(candidate))continue;
+    const seen=new Set<string>();let node:Grant|undefined=candidate;
+    while(node&&seen.size<16&&!seen.has(node.grant_id)&&live(node)&&couldTouch(node)){
+      seen.add(node.grant_id);qualified(node.subject_user_id);
+      const child:Grant=node;
+      node=child.parent_grant_id?context.grants.find(parent=>parent.grant_id===child.parent_grant_id&&
+        parent.subject_user_id===child.issued_by&&parent.action==="access.grant"&&parent.effect==="ALLOW"):undefined;
+    }
+  }
+}
+
+/** Sticky per-workspace policy selection. V2 denial/error never falls back to
+ * legacy. This service alone can mint scopes; every delivery is freshly fenced. */
+export class ExecutionReadScopes {
+  constructor(private readonly pool:Pool,private readonly access:ExecutionAccessService,
+    private readonly config:ControlApiConfig) {}
+
+  /** Policy routing only, NOT a data capability. Callers must authorize a
+   * concrete action/dataset before accessing V2 records. Sticky activation
+   * prevents a deleted policy from silently selecting legacy compatibility. */
+  async selectionMode(principal:ReadScopePrincipal):Promise<AuthorizedExecutionReadScope["mode"]> {
+    const identity=await this.identity(principal);
+    if(identity.role!==principal.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(identity.policy!==null||identity.policy_seen)return "SCOPED_V2";
+    const retained=retainedReview(this.config);
+    if(retained?(principal.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID||
+      !(identity.owner||identity.member||identity.retained.length>0)):!identity.member)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    return "LEGACY_COMPATIBILITY";
+  }
+
+  /** Portal-owned governance/technical records live in their Core workspace,
+   * not necessarily the retained source workspace. This is only a policy
+   * router: it grants no resource, field, gate, command or source access. */
+  async coreSelectionMode(principal:ReadScopePrincipal):Promise<AuthorizedExecutionReadScope["mode"]> {
+    const identity=await this.identity(principal);
+    if(identity.role!==principal.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(!identity.member)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    return identity.policy!==null||identity.policy_seen?"SCOPED_V2":"LEGACY_COMPATIBILITY";
+  }
+
+  /** Explicit technical authority, never derived from business.read_all. A
+   * profile-wide diagnostic requires one unambiguous published authority root;
+   * absence/ambiguity cannot be filled using a workspace or guessed root ID. */
+  async authorizeTechnicalProfile(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    action:"maintenance.read"|"development.read"="maintenance.read",
+    dataset?:ReadDatasetBinding):Promise<AuthorizedExecutionReadScope> {
+    try {
+    // Snapshot before root-provider I/O; caller mutation cannot retarget the
+    // internal publication capability or replace its Core actor/workspace.
+    const p={user:{...principal.user},session:{...principal.session},workspaceId:principal.workspaceId,
+      viewerWorkspaceId:principal.viewerWorkspaceId??principal.workspaceId};
+    const b=structuredClone(binding),d=dataset===undefined?undefined:structuredClone(dataset);
+    if(d!==undefined&&(action!=="maintenance.read"||!readDatasetBinding.safeParse(d).success||!heartbeatTechnicalDataset(d)))
+      fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const context=await this.access.readContext({user_id:p.user.userId,
+      session_id:p.session.sessionId,session_generation:p.session.sessionVersion},p.workspaceId);
+    const roots=Object.keys(environmentRelations(context.relationsFor(p.user.userId),b.environment).roots);
+    if(roots.length!==1)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const scope=await this.authorize(p,b,{action,resource:{kind:"ROOT",id:roots[0]},...(d?{dataset:d}:{})});
+    const currentContext=minted.get(scope)!.context;
+    const current=currentContext?Object.keys(environmentRelations(currentContext.relationsFor(p.user.userId),b.environment).roots):[];
+    if(scope.mode!=="SCOPED_V2"||current.length!==1||current[0]!==roots[0])fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    return scope;
+    }catch(error){return rethrowReadScopeError(error);}
+  }
+
+  /** ELP2-09 `alpha_fleet_overview`: whole-fleet business authority anchored at the ONE published authority root, so the
+   * `stream.subscribe` fence of `deliverRealtime` covers exactly the population the named read answers. A principal without
+   * a single unambiguous root and whole-population read gets 404, never a partial fleet stream (a notice for a population
+   * larger than the principal may see would disclose hidden activity). Same root re-resolution as the technical path. */
+  async authorizeFleetRoot(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    dataset:ReadDatasetBinding):Promise<{scope:AuthorizedExecutionReadScope;resource:AccessResource}> {
+    try {
+    const p={user:{...principal.user},session:{...principal.session},workspaceId:principal.workspaceId,
+      viewerWorkspaceId:principal.viewerWorkspaceId??principal.workspaceId};
+    const b=structuredClone(binding),d=structuredClone(dataset);
+    if(!readDatasetBinding.safeParse(d).success)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const rootsOf=(context:AccessEvaluationContext)=>
+      Object.keys(environmentRelations(context.relationsFor(p.user.userId),b.environment).roots);
+    const context=await this.access.readContext({user_id:p.user.userId,
+      session_id:p.session.sessionId,session_generation:p.session.sessionVersion},p.workspaceId);
+    const roots=rootsOf(context);
+    if(roots.length!==1)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const resource:AccessResource={kind:"ROOT",id:roots[0]};
+    const scope=await this.authorize(p,b,{action:"business.read_all",resource,requireWholePopulation:true,dataset:d});
+    const currentContext=minted.get(scope)!.context;
+    const current=currentContext?rootsOf(currentContext):[];
+    if(scope.mode!=="SCOPED_V2"||!scope.wholePopulation||current.length!==1||current[0]!==resource.id)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    return{scope,resource};
+    }catch(error){return rethrowReadScopeError(error);}
+  }
+
+  /** Existing unscoped transports are compatibility-only. A policy activation
+   * during a legacy stream terminates it; a V2 grant cannot commission a raw
+   * profile/global event feed. No publication or upstream I/O is needed. */
+  async assertLegacyStream(principal:ReadScopePrincipal):Promise<void> {
+    const identity=await this.identity(principal);
+    if(identity.role!==principal.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(identity.policy!==null||identity.policy_seen)fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
+    if(!identity.member)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+  }
+
+  async authorize(principal:ReadScopePrincipal,binding:ReadScopeBinding,requirement:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope> {
+    const {p,b,r}=captureReadScopeInputs(principal,binding,requirement);
+    try{return await this.mint(p,b,r);}catch(error){return rethrowReadScopeError(error);}
+  }
+
+  /** Narrow V2-only private collection composition; no new public capability. */
+  async authorizePortfolioCollectionPurpose(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    action:PortfolioPurposeAction,dataset:ReadDatasetBinding):Promise<PortfolioCollectionPurpose> {
+    return this.issuePortfolioCollectionPurpose(principal,binding,action,dataset);
+  }
+
+  private assertPortfolioOutcome(outcome:PortfolioCollectionPurpose):PortfolioPurposeState {
+    const state=outcome&&typeof outcome==="object"?portfolioPurposes.get(outcome):undefined;
+    if(!state||state.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    if(outcome.state==="AUTHORIZED"){
+      assertExecutionReadScope(outcome.scope);
+      if(minted.get(outcome.scope)!.issuer!==this||outcome.scope.mode!=="SCOPED_V2")fail("EXECUTION_READ_SCOPE_REQUIRED");
+    }
+    return state;
+  }
+
+  private async issuePortfolioCollectionPurpose(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    action:PortfolioPurposeAction,dataset:ReadDatasetBinding,expected?:PortfolioCollectionPurpose):Promise<PortfolioCollectionPurpose> {
+    if(expected)this.assertPortfolioOutcome(expected);
+    const {p,b,r}=captureReadScopeInputs(principal,binding,{action,dataset});
+    if(action!=="portfolio.read"&&action!=="portfolio.read_restricted"||!r.dataset||
+      r.dataset.dataset_id!=="manager:PORTFOLIOS"||r.dataset.window!==null)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    try{
+      const current=await this.mint(p,b,r,{expected});
+      if(expected&&current.fingerprint!==expected.fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      return current;
+    }catch(error){
+      // These known original-flight identity/policy losses are changes, never
+      // an optional omission. A genuine source503 remains503, not a fallback.
+      if(expected&&(error instanceof ExecutionReadScopeError&&
+        (error.code==="EXECUTION_READ_NOT_AVAILABLE"||error.code==="EXECUTION_READ_POLICY_PENDING")||
+        error instanceof AccessPolicyError&&["CURRENT_ACTOR_AUTHORITY_REQUIRED","ACCESS_RESOURCE_NOT_FOUND","POLICY_PENDING"].includes(error.code)))
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      return rethrowReadScopeError(error);
+    }
+  }
+
+  private portfolioOutcome(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,
+    context:AccessEvaluationContext,publication:ExecutionReadPublication,scope?:AuthorizedExecutionReadScope):PortfolioCollectionPurpose {
+    const proof=portfolioPurposeProof(p,b,r,context,publication);
+    const state=scope?"AUTHORIZED" as const:"NO_CURRENT_ENTITLEMENT" as const;
+    const fingerprint=accessDigest({domain:"manager-portfolio-purpose.v1",state,proof,scope:scope?.fingerprint??null});
+    const outcome:PortfolioCollectionPurpose=scope?Object.freeze({state:"AUTHORIZED",scope,fingerprint}):
+      Object.freeze({state:"NO_CURRENT_ENTITLEMENT",fingerprint});
+    portfolioPurposes.set(outcome,{issuer:this,principal:p,binding:b,requirement:r,context,publication,proof});
+    return outcome;
+  }
+
+  /** All purpose flights, including shadowed positives and denied profiles,
+   * remain bound to ONE combined read. Negative wrappers grant no row access. */
+  async deliverPortfolioCollectionPurposes<T>(outcomes:readonly PortfolioCollectionPurpose[],read:()=>Promise<T>):Promise<T> {
+    if(!Array.isArray(outcomes)||outcomes.length===0||outcomes.length>6)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const originals=[...outcomes],states=originals.map(outcome=>this.assertPortfolioOutcome(outcome));
+    if(!originals.some(outcome=>outcome.state==="AUTHORIZED"))fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const actor=states[0].principal;
+    const actorKey=(p:ReadScopePrincipal)=>JSON.stringify([p.user.userId,p.user.role,p.user.sessionVersion,p.session.sessionId,
+      p.session.sessionVersion,p.session.userId,p.workspaceId,p.viewerWorkspaceId]);
+    const expectedActor=actorKey(actor),keys=new Set<string>(),profiles=new Map<ReadEnvironment,PortfolioPurposeState>();
+    for(const state of states){
+      if(actorKey(state.principal)!==expectedActor)fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const key=JSON.stringify([state.binding.environment,state.binding.profileId,state.requirement.action]);
+      if(keys.has(key))fail("EXECUTION_READ_SCOPE_REQUIRED");keys.add(key);
+      const previous=profiles.get(state.binding.environment);
+      if(previous&&(previous.binding.profileId!==state.binding.profileId||
+        accessDigest(previous.requirement.dataset)!==accessDigest(state.requirement.dataset)||
+        accessDigest(previous.publication)!==accessDigest(state.publication)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      profiles.set(state.binding.environment,state);
+    }
+    const renew=async()=>{
+      const current:PortfolioCollectionPurpose[]=[];
+      for(let index=0;index<originals.length;index++){
+        const state=states[index];
+        current.push(await this.issuePortfolioCollectionPurpose(state.principal,state.binding,
+          state.requirement.action as PortfolioPurposeAction,state.requirement.dataset!,originals[index]));
+      }
+      return current;
+    };
+    await renew();
+    const result=await read();
+    const final=await renew(),latest=final.map(outcome=>this.assertPortfolioOutcome(outcome));
+    const shared=latest[0].context;
+    if(latest.some(state=>state.context.authority_fingerprint!==shared.authority_fingerprint))
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    let confirmed:AccessEvaluationContext;
+    try{
+      // LAST await: Core only. Never open a new adapter gap after confirmation.
+      confirmed=await this.access.confirmReadContext({user_id:actor.user.userId,session_id:actor.session.sessionId,
+        session_generation:actor.session.sessionVersion},actor.workspaceId,shared);
+    }catch(error){
+      if(error instanceof AccessPolicyError&&["ACCESS_RETRY_REQUIRED","CURRENT_ACTOR_AUTHORITY_REQUIRED","ACCESS_RESOURCE_NOT_FOUND","POLICY_PENDING"].includes(error.code))
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      return rethrowReadScopeError(error);
+    }
+    if(!Number.isSafeInteger(confirmed.now_ms)||confirmed.now_ms<0||confirmed.authority_fingerprint!==shared.authority_fingerprint||
+      confirmed.actor_role!==actor.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // Synchronous interval/evaluator/proof pass against the latest actual Core
+    // clock, not an earlier flight clock or a browser/host clock. No more awaits.
+    for(let index=0;index<latest.length;index++){
+      const state=latest[index],outcome=final[index];
+      const context={...state.context,now_ms:confirmed.now_ms,actor_current:confirmed.actor_current,actor_role:confirmed.actor_role};
+      const action=state.requirement.action as PortfolioPurposeAction;
+      assertPortfolioPurposeSource(context,action,state.binding,state.publication,outcome.state==="NO_CURRENT_ENTITLEMENT");
+      const present=portfolioPurposePresent(context,action,state.binding,state.publication);
+      if(present!==(outcome.state==="AUTHORIZED")||
+        portfolioPurposeProof(state.principal,state.binding,state.requirement,context,state.publication)!==state.proof)
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    }
+    return result;
+  }
+
+  /** Genuine selected source + ONE DB snapshot's READ and independent STREAM.
+   * This mints no entity ROOT, publication census, PM grant or send permit. */
+  async authorizeManagerNativeStream(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    source:SelectedNativeBusinessReadSource):Promise<AuthorizedManagerNativeNoticeScope> {
+    try {
+      const {p,b,r}=captureReadScopeInputs(principal,binding,{action:"business.read_all"});
+      const selected=selectedNativeBusinessReadSelection(source);
+      if(selected.binding.subject!==p.user.userId||selected.binding.workspace_id!==p.workspaceId||
+        selected.binding.environment!==b.environment||selected.domain.profile_id!==b.profileId||
+        Date.now()>=selectedNativeBusinessReadInstallationExpiresAtMs(source))
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const domain=Object.freeze({...selected.domain});
+      const decision=await withTransaction(this.pool,db=>evaluateManagerDomainStream(db,{
+        actor:{user_id:p.user.userId,session_id:p.session.sessionId,session_generation:p.session.sessionVersion},
+        workspace_id:p.workspaceId,environment:b.environment,domain}));
+      if(Math.max(decision.now_ms,Date.now())>=decision.valid_until_ms||
+        Date.now()>=selectedNativeBusinessReadInstallationExpiresAtMs(source))
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      const fingerprint=accessDigest({schema:"portal.manager-native-notice-scope.v1",domain,
+        source_identity_digest:selected.source_identity_digest,read_scope_digest:decision.scope_digest,
+        stream_scope_digest:decision.stream_scope_digest,viewer_workspace_id:p.viewerWorkspaceId});
+      const scope=Object.freeze({}) as AuthorizedManagerNativeNoticeScope;
+      minted.set(scope,{kind:"MANAGER",issuer:this,principal:p,binding:b,requirement:r,
+        resources:[],tuples:[],population:[],fields:[],context:null,strategyPairs:[],bindingPairs:[],
+        manager:{source,domain,source_identity_digest:selected.source_identity_digest,fingerprint,
+          decision:Object.freeze({...decision,actor:Object.freeze({...decision.actor})})}});
+      return scope;
+    }catch(error){return rethrowReadScopeError(error);}
+  }
+
+  async revalidateManagerNativeStream(scope:AuthorizedManagerNativeNoticeScope):Promise<void> {
+    const state=managerScopeState(scope);
+    if(state.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const fresh=await this.authorizeManagerNativeStream(state.principal,state.binding,state.manager.source);
+    if(managerScopeState(fresh).manager.fingerprint!==state.manager.fingerprint)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  }
+
+  async prepareManagerNativeNotice(scope:AuthorizedManagerNativeNoticeScope,codec:ScopedReplayCursorCodec,
+    input:NativeNoticeInput):Promise<PreparedExecutionNativeNotice> {
+    const original=managerScopeState(scope);
+    if(original.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const {values,delivery,binding,frame}=captureNativeNoticeInput(input);
+    const current=await this.authorizeManagerNativeStream(original.principal,original.binding,original.manager.source),
+      fresh=managerScopeState(current),manager=fresh.manager,identity=manager.fingerprint;
+    if(manager.fingerprint!==original.manager.fingerprint||
+      binding.principal_scope_digest!==identity||binding.workspace_id!==fresh.principal.workspaceId||
+      binding.environment!==fresh.binding.environment||binding.profile_id!==manager.domain.profile_id||
+      binding.app_policy_revision!==manager.decision.policy_revision||
+      binding.field_policy_revision!==manager.decision.field_policy_ref||
+      binding.dataset!=="execution_profile_observation"||binding.window!==null||
+      frame.terminal||!frame.resume_cursor||frame.projection_generation!==binding.projection_generation||
+      frame.quality&&(frame.quality.coverage!=="CURRENT_PAGE_ONLY"||frame.quality.confidence==="VERIFIED")||
+      decodeScopedReplayContinuation(codec,frame.resume_cursor,binding)!==values.source_cursor)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    const rawDigest=(value:string)=>{
+      if(/^[a-f0-9]{64}$(?![\s\S])/.test(value))return value;
+      if(/^sha256:[a-f0-9]{64}$(?![\s\S])/.test(value))return value.slice(7);
+      return fail("EXECUTION_READ_SCOPE_REQUIRED");
+    };
+    const payload=nativeNoticePayload(frame);
+    const intent:Readonly<NativeNoticeIntent>=Object.freeze({schema_version:"pma.manager-read-intent.v2",action:"scoped_notice",
+      stream_id:delivery.stream_id,frame_ordinal:delivery.frame_ordinal,dataset_id:binding.dataset,
+      query_digest:rawDigest(binding.query_digest),field_set_digest:rawDigest(manager.domain.field_policy_sha256),
+      projection_generation:binding.projection_generation,
+      source_cursor_digest:createHash("sha256").update(values.source_cursor,"utf8").digest("hex"),
+      frame_sha256:createHash("sha256").update(payload).digest("hex"),stream_scope_digest:rawDigest(identity)});
+    const view=Object.freeze({actor:Object.freeze({...manager.decision.actor}),workspace_id:fresh.principal.workspaceId,
+      environment:fresh.binding.environment,profile_id:manager.domain.profile_id,scope_digest:identity,intent,
+      manager:Object.freeze({domain:manager.domain,source_identity_digest:manager.source_identity_digest,
+        read_scope_digest:manager.decision.scope_digest})});
+    const prepared=Object.freeze({}) as PreparedExecutionNativeNotice;
+    nativeNotices.set(prepared,{scope:current,resource:null,issuer:this,pool:this.pool,view,payload});
+    return prepared;
+  }
+
+  async prepareNativeNotice(scope:AuthorizedExecutionReadScope,resource:AccessResource,codec:ScopedReplayCursorCodec,input:{
+    delivery_json:string;replay_binding_json:string;source_cursor:string;frame_json:string;
+  }):Promise<PreparedExecutionNativeNotice> {
+    assertExecutionReadScope(scope);const original=minted.get(scope)!;
+    if(original.issuer!==this||scope.mode!=="SCOPED_V2"||!scope.wholePopulation||!original.context||
+      original.requirement.action!=="business.read_all"||original.requirement.resource?.kind!=="ROOT"||
+      !original.requirement.dataset)
+      fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
+    const {values,delivery,binding,frame}=captureNativeNoticeInput(input);
+    // Resource must be a genuine captured resource, not a caller's inherited
+    // accessor. Use the existing closed resource schema on detached JSON only.
+    if(!resource||typeof resource!=="object"||types.isProxy(resource))fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const kind=Object.getOwnPropertyDescriptor(resource,"kind"),id=Object.getOwnPropertyDescriptor(resource,"id");
+    if(Reflect.ownKeys(resource).length!==2||!kind?.enumerable||!id?.enumerable||
+      !Object.hasOwn(kind,"value")||!Object.hasOwn(id,"value"))fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const target=accessResource.parse({kind:kind.value,id:id.value});
+    // Initial PM held bridge covers the exact whole-domain lane. Being complete
+    // for a filtered Alpha dataset does not qualify dynamic restricted ownership.
+    if(exactKey(target)!==exactKey(original.requirement.resource!))
+      fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
+    if(!original.resources.some(value=>exactKey(value)===exactKey(target))&&
+      (!original.requirement.resource||exactKey(original.requirement.resource)!==exactKey(target)))
+      fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const current=await this.authorize(original.principal,original.binding,original.requirement);
+    if(current.fingerprint!==scope.fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    const fresh=minted.get(current)!,context=fresh.context!,dataset=fresh.requirement.dataset!;
+    const identity=scopeRealtimeIdentity(current);
+    if(binding.principal_scope_digest!==identity||binding.workspace_id!==current.workspaceId||
+      binding.environment!==current.environment||binding.profile_id!==current.profileId||
+      binding.app_policy_revision!==current.policyRevision||
+      binding.field_policy_revision!==scopeReplayFieldPolicyRevision(current)||
+      dataset.dataset_id!==binding.dataset||
+      !dataset.projection_generation||binding.projection_generation!==dataset.projection_generation||
+      accessDigest(binding.window)!==accessDigest(dataset.window)||frame.terminal||
+      frame.projection_generation!==binding.projection_generation||!frame.resume_cursor||
+      !evaluateAccess(context,"stream.subscribe",target,current.environment).allowed)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // SAME original authenticated codec; no request-selected verifier callback.
+    // Its genuine instance registry rejects clones and prototype-shaped fakes.
+    if(decodeScopedReplayContinuation(codec,frame.resume_cursor,binding)!==values.source_cursor)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // The same trusted coordinator owns the qualified source batch and codec:
+    // it must provide this frame's exact continuation/resume token pairing.
+    // These checks do not falsely promote a source interface into installed
+    // artifact/continuity/entitlement qualification.
+    const rawDigest=(value:string)=>{
+      if(/^[a-f0-9]{64}$(?![\s\S])/.test(value))return value;
+      if(/^sha256:[a-f0-9]{64}$(?![\s\S])/.test(value))return value.slice(7);
+      return fail("EXECUTION_READ_SCOPE_REQUIRED");
+    };
+    const payload=nativeNoticePayload(frame);
+    const intent:Readonly<NativeNoticeIntent>=Object.freeze({schema_version:"pma.manager-read-intent.v2",action:"scoped_notice",
+      stream_id:delivery.stream_id,frame_ordinal:delivery.frame_ordinal,dataset_id:dataset.dataset_id,
+      query_digest:rawDigest(binding.query_digest),field_set_digest:rawDigest(accessDigest([...fresh.fields].sort())),
+      projection_generation:dataset.projection_generation,
+      source_cursor_digest:createHash("sha256").update(values.source_cursor,"utf8").digest("hex"),
+      frame_sha256:createHash("sha256").update(payload).digest("hex"),stream_scope_digest:rawDigest(identity)});
+    const principal=fresh.principal,view=Object.freeze({actor:Object.freeze({user_id:principal.user.userId,
+      session_id:principal.session.sessionId,session_generation:principal.session.sessionVersion}),
+      workspace_id:current.workspaceId,environment:current.environment,profile_id:current.profileId,
+      scope_digest:identity,intent});
+    const prepared=Object.freeze({}) as PreparedExecutionNativeNotice;
+    nativeNotices.set(prepared,{scope:current,resource:target,issuer:this,pool:this.pool,view,payload});
+    return prepared;
+  }
+
+  private async identity(principal:ReadScopePrincipal) {
+    const result=await this.pool.query(`SELECT u.role,u.session_version,
+      p.policy,p.revision AS policy_revision,
+      (EXISTS(SELECT 1 FROM portal_access_policy_events e WHERE e.workspace_id=$4)
+        OR EXISTS(SELECT 1 FROM portal_access_grants_v2 g WHERE g.workspace_id=$4)) AS policy_seen,
+      EXISTS(SELECT 1 FROM workspaces w WHERE w.workspace_id=$4) AS workspace_exists,
+      EXISTS(SELECT 1 FROM workspace_members m WHERE m.workspace_id=$4 AND m.user_id=u.user_id) AS member,
+      EXISTS(SELECT 1 FROM portal_owner_anchor a WHERE a.anchor_id='PORTAL_OWNER' AND a.user_id=u.user_id) AS owner,
+      COALESCE((SELECT jsonb_agg(jsonb_build_array(g.user_id,g.expires_at) ORDER BY g.expires_at)
+        FROM execution_retained_review_access g WHERE g.workspace_id=$4 AND g.user_id=u.user_id
+          AND g.revoked_at IS NULL AND g.expires_at>clock_timestamp()),'[]'::jsonb) AS retained
+      FROM portal_users u JOIN auth_sessions s ON s.user_id=u.user_id
+      LEFT JOIN portal_access_policy_state p ON p.workspace_id=$4
+      WHERE u.user_id=$1 AND u.status='ACTIVE' AND NOT u.must_change_password AND u.archived_at IS NULL
+        AND u.session_version=$2 AND s.session_id=$3 AND s.session_version=u.session_version
+        AND s.state='ACTIVE' AND s.idle_expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`,
+      [principal.user.userId,principal.session.sessionVersion,principal.session.sessionId,principal.workspaceId]);
+    const row=result.rows[0];
+    if(!row||!row.workspace_exists)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    return row as {role:string;session_version:number;policy:unknown|null;policy_revision:string|null;policy_seen:boolean;
+      workspace_exists:boolean;member:boolean;owner:boolean;retained:unknown[]};
+  }
+
+  private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope>;
+  private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,optional:PortfolioPurposeOptions):Promise<PortfolioCollectionPurpose>;
+  private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,optional?:PortfolioPurposeOptions):Promise<AuthorizedExecutionReadScope|PortfolioCollectionPurpose> {
+    const identity=await this.identity(p);
+    if(identity.role!==p.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(optional&&identity.policy===null&&!identity.policy_seen)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    let context:AccessEvaluationContext|null=null,publication:ExecutionReadPublication|null=null;
+    let bindingPairs:{binding_id:string;account_id:string}[]=[];
+    let resources:AccessResource[]=[],tuples:ExecutionReadPublication["tuples"]=[],fields:readonly string[]=[...BUSINESS_READ_FIELDS],whole=true;
+    let detail:readonly string[]|null=null;
+    let mode:AuthorizedExecutionReadScope["mode"]="LEGACY_COMPATIBILITY",policyRevision:string|null=null,fieldPolicyRef:string|null=null;
+    if(identity.policy!==null||identity.policy_seen){
+      mode="SCOPED_V2";
+      context=await this.access.readContext({user_id:p.user.userId,session_id:p.session.sessionId,
+        session_generation:p.session.sessionVersion},p.workspaceId);
+      if(!policyReady(context))fail("EXECUTION_READ_POLICY_PENDING");
+      if(context.actor_role!==p.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      policyRevision=context.policy!.revision;
+      const decisionCache=new Map<string,boolean>();
+      const allowed=(action:ReadScopeRequirement["action"],resource:AccessResource)=>{
+        const key=JSON.stringify([action,resource.kind,resource.id]);
+        const cached=decisionCache.get(key);if(cached!==undefined)return cached;
+        const result=businessReads.has(action)?
+          evaluateBusinessRead(context!,action as Parameters<typeof evaluateBusinessRead>[1],resource,b.environment).allowed:
+          evaluateAccess(context!,action,resource,b.environment).allowed;
+        decisionCache.set(key,result);return result;
+      };
+      if(r.resource&&!allowed(r.action,r.resource))fail("EXECUTION_READ_NOT_AVAILABLE",404);
+      if(r.resource&&businessReads.has(r.action)&&businessReadDenied(context,r.resource,b.environment))
+        fail("EXECUTION_READ_NOT_AVAILABLE",404);
+      if(r.dataset){
+        const request:ExecutionReadPublicationRequest={workspace_id:p.workspaceId,environment:b.environment,profile_id:b.profileId,binding:r.dataset};
+        const parsed=readPublication.safeParse(await this.access.readPublication(request));
+        if(!parsed.success)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        publication=parsed.data;
+        // The publication await is itself part of the flight, including the
+        // FINAL delivery fence. A context captured before it is insufficient.
+        const actor={user_id:p.user.userId,session_id:p.session.sessionId,session_generation:p.session.sessionVersion};
+        const fresh=await this.access.readContext({user_id:p.user.userId,session_id:p.session.sessionId,
+          session_generation:p.session.sessionVersion},p.workspaceId);
+        const proofResources=requestProofResources(r,publication);
+        if(accessDigest(contextProof(fresh,b.environment,proofResources))!==accessDigest(contextProof(context,b.environment,proofResources)))
+          fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        // A linkage-only change during fresh.readContext's final relations
+        // await does not change the DB policy fingerprint. Confirm publication
+        // AFTER those awaits, then DB-only authority after the last adapter I/O.
+        const confirmedPublication=readPublication.safeParse(await this.access.readPublication(request));
+        if(!confirmedPublication.success||accessDigest(confirmedPublication.data)!==accessDigest(publication))
+          fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        context=await this.access.confirmReadContext(actor,p.workspaceId,fresh);
+        if(accessDigest(contextProof(context,b.environment,proofResources))!==accessDigest(contextProof(fresh,b.environment,proofResources)))
+          fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        if(publication.qualification!=="SOURCE_VERIFIED"&&!(context.allow_test_only&&publication.qualification==="TEST_ONLY")||
+          publication.workspace_id!==p.workspaceId||publication.environment!==b.environment||publication.profile_id!==b.profileId||
+          accessDigest(publication.binding)!==accessDigest(r.dataset)||publication.population_coverage!=="COMPLETE_FOR_DATASET_WINDOW")
+          fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        const keys=new Set(publication.resources.map(exactKey));
+        if(keys.size!==publication.resources.length)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        const tupleKeys=new Set<string>();
+        for(const t of publication.tuples){
+          const tupleKey=accessDigest(t);
+          const lineage=tupleLineage(t);
+          if(tupleKeys.has(tupleKey)||lineage.some(x=>!keys.has(exactKey(x))))fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+          tupleKeys.add(tupleKey);
+        }
+        if(r.action==="maintenance.read"&&r.resource?.kind==="ROOT"&&heartbeatTechnicalDataset(r.dataset)){
+          // Reuse the common exact publication/current-context/double-read
+          // fences above, not business ALL or researcher discovery below.
+          // ROOT is the technical collection; it supplies no economic census.
+          if(publication.resources.length!==1||exactKey(publication.resources[0])!==exactKey(r.resource)||
+            publication.tuples.length!==0||publication.current_linkage!==null||
+            publication.binding_lineage!=null||publication.strategy_lineage!=null)
+            fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+          if(r.requireWholePopulation)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+          resources=[{...r.resource}];tuples=[];whole=false;
+        }else{
+        if(publication.strategy_lineage?.pairs.some(pair=>
+          !keys.has(exactKey({kind:"ALPHA",id:pair.alpha_id}))||!publication!.tuples.some(t=>t.alpha_id===pair.alpha_id)))
+          fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        const bindingLineage=publication.binding_lineage;
+        const bindingQualified=Boolean(bindingLineage&&(bindingLineage.qualification==="SOURCE_VERIFIED"||
+          context.allow_test_only&&bindingLineage.qualification==="TEST_ONLY"));
+        if(bindingLineage){
+          for(const pair of bindingLineage.bindings){
+            if(!keys.has(exactKey({kind:"BINDING",id:pair.binding_id}))||
+              !keys.has(exactKey({kind:"ACCOUNT",id:pair.account_id})))
+              fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+          }
+          if((bindingLineage.empty_binding_ids??[]).some(id=>!keys.has(exactKey({kind:"BINDING",id}))))
+            fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        }
+        if(optional){
+          const action=r.action as PortfolioPurposeAction;
+          if(context.principal_id!==p.user.userId||context.workspace_id!==p.workspaceId)
+            fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+          assertPortfolioPurposeSource(context,action,b,publication,false);
+          const present=portfolioPurposePresent(context,action,b,publication);
+          if(!present)assertPortfolioPurposeSource(context,action,b,publication,true);
+          const proof=portfolioPurposeProof(p,b,r,context,publication);
+          if(optional.expected){
+            const previous=this.assertPortfolioOutcome(optional.expected);
+            // Check classification/proof BEFORE a newly eligible positive can
+            // fail fields/linkage and be mistaken for an optional source fault.
+            if(present!==(optional.expected.state==="AUTHORIZED")||proof!==previous.proof)
+              fail("EXECUTION_READ_ACCESS_CHANGED",409);
+          }
+          if(!present)return this.portfolioOutcome(p,b,r,context,publication);
+        }
+        const permittedBindings=bindingQualified?publication.resources.filter(x=>x.kind==="BINDING"&&
+          (!r.resource||r.resource.kind==="BINDING"&&r.resource.id===x.id)&&
+          allowed("binding.read",x)&&!businessReadDenied(context!,x,b.environment)):[];
+        const permittedBindingIds=new Set(permittedBindings.map(x=>x.id));
+        bindingPairs=bindingQualified?bindingLineage!.bindings.filter(pair=>permittedBindingIds.has(pair.binding_id)):[];
+        const bindingAccounts=new Set(bindingPairs.map(pair=>pair.account_id));
+        if(r.action==="binding.read"&&(r.resource&&r.resource.kind!=="BINDING"||!bindingQualified))
+          fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        if(r.action==="binding.read"&&permittedBindings.some(x=>
+          !bindingPairs.some(pair=>pair.binding_id===x.id)&&!bindingLineage!.empty_binding_ids?.includes(x.id)))
+          fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        // Non-vacuous complete-population proof is distinct from an authorized empty page.
+        const explicitCollection=Boolean(r.resource&&allowed(r.action,r.resource))||
+          r.action==="binding.read"&&permittedBindings.length>0;
+        if(publication.resources.length===0&&!explicitCollection)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+        const denialCache=new Map<string,boolean>();
+        const notDenied=(resource:AccessResource)=>{
+          const key=exactKey(resource),cached=denialCache.get(key);if(cached!==undefined)return cached;
+          const result=!businessReadDenied(context!,resource,b.environment);denialCache.set(key,result);return result;
+        };
+        whole=publication.resources.length>0?publication.resources.every(x=>notDenied(x)&&allowed("business.read_all",x)):
+          Boolean(r.resource&&notDenied(r.resource)&&allowed("business.read_all",r.resource));
+        if(r.requireWholePopulation&&!whole)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+        resources=publication.resources.filter(x=>allowed(resourceAction(x),x));
+        const purposeAllows=(t:ExecutionReadPublication["tuples"][number])=>{
+          if(tupleLineage(t).some(x=>!notDenied(x)))return false;
+          if(r.action==="binding.read")return bindingAccounts.has(t.account_id);
+          if(r.resource&&r.resource.kind!=="ROOT"&&!(r.resource.kind==="BINDING"?
+            bindingQualified&&bindingAccounts.has(t.account_id):tupleLineage(t).some(x=>exactKey(x)===exactKey(r.resource!))))return false;
+          const resource=r.action==="alpha.read"?{kind:"ALPHA" as const,id:t.alpha_id}:
+            r.action.startsWith("portfolio.")?{kind:"PORTFOLIO" as const,id:t.portfolio_id}:
+            r.action==="account.read"?{kind:"ACCOUNT" as const,id:t.account_id}:r.resource;
+          return r.action==="business.read_all"?tupleLineage(t).every(x=>allowed("business.read_all",x)):
+            Boolean(resource&&allowed(r.action,resource));
+        };
+        if(whole)tuples=publication.tuples.filter(purposeAllows);
+        else{
+          const policy=context.policy!.researcher_fields;
+          // A narrower DENY must not suppress other genuinely full-business
+          // tuples, nor force a manager into a fictional researcher ownership.
+          const fullTuples=publication.tuples.filter(t=>tupleLineage(t).every(x=>notDenied(x)&&allowed("business.read_all",x))&&purposeAllows(t));
+          // An explicit binding grant is its own authority. Resolve it through
+          // qualified exact account lineage, not researcher ownership or ID sets.
+          const bindingTuples=r.action==="binding.read"?
+            publication.tuples.filter(purposeAllows):[];
+          // Exact account authority is independent of researcher ownership or
+          // Portfolio membership. purposeAllows still requires current accepted
+          // account.read and honors DENY on every correlated lineage component.
+          // An unbound/account-only population is NOT invented here.
+          const accountTuples=r.action==="account.read"?
+            publication.tuples.filter(purposeAllows):[];
+          // An explicitly shared read is not an ownership declaration. Select
+          // only original exact-ID grants of the matching family, then retain
+          // the COMPLETE evaluator graph so current/delegated DENYs still win.
+          // Dynamic OWN_ALPHA/ROOT/membership and restricted discovery keep
+          // their existing linked-slice requirements below.
+          const explicitKind=r.action==="alpha.read"?"ALPHA":r.action==="portfolio.read"?"PORTFOLIO":null;
+          const exactReadCache=new Map<string,boolean>();
+          const explicitTuples=explicitKind?publication.tuples.filter(t=>{
+            if(!purposeAllows(t))return false;
+            const id=explicitKind==="ALPHA"?t.alpha_id:t.portfolio_id;
+            let allowed=exactReadCache.get(id);
+            if(allowed===undefined){
+              allowed=currentExplicitReadAllows(context!,r.action as "alpha.read"|"portfolio.read",
+                {kind:explicitKind,id},b.environment);
+              exactReadCache.set(id,allowed);
+            }
+            return allowed;
+          }):[];
+          const currentRelations=environmentRelations(context.relationsFor(p.user.userId),b.environment);
+          const own=new Set(currentRelations.own_alpha_ids);
+          const linked=new Set(currentRelations.member_portfolio_ids);
+          const linkage=publication.current_linkage;
+          const linkQualified=linkage&&(linkage.qualification==="SOURCE_VERIFIED"||context.allow_test_only&&linkage.qualification==="TEST_ONLY");
+          if(!linkQualified&&!fullTuples.length&&!bindingTuples.length&&!accountTuples.length&&!explicitTuples.length)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+          const currentPairs=new Set(linkQualified?linkage.pairs.map(pair=>JSON.stringify([pair.alpha_id,pair.portfolio_id])):[]);
+          const linkedTuples=publication.tuples.filter(t=>context!.relationsFor(p.user.userId).qualified&&own.has(t.alpha_id)&&linked.has(t.portfolio_id)&&
+            currentPairs.has(JSON.stringify([t.alpha_id,t.portfolio_id]))&&purposeAllows(t)&&
+            allowed("alpha.read",{kind:"ALPHA",id:t.alpha_id})&&
+            (allowed("portfolio.read_restricted",{kind:"PORTFOLIO",id:t.portfolio_id})||allowed("portfolio.read",{kind:"PORTFOLIO",id:t.portfolio_id})));
+          if(!fullTuples.length||[...linkedTuples,...bindingTuples,...accountTuples,...explicitTuples].some(t=>!fullTuples.includes(t))){
+            if(policy.state!=="QUALIFIED"||!policy.policy_ref)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
+            fields=policy.fields.filter(isBusinessReadField);detail=policy.fields.filter(isRecordDetailReadField);fieldPolicyRef=policy.policy_ref;
+            if(!fields.length)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
+          }
+          tuples=[...new Set([...fullTuples,...linkedTuples,...bindingTuples,...accountTuples,...explicitTuples])];
+          // No matching row does not itself prove an authorized collection.
+          if(!tuples.length&&!explicitCollection)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+          const visibleKeys=new Set(tuples.flatMap(tupleLineage).map(exactKey));
+          // Restricted/discovery authority permits the proven portfolio shell,
+          // not portfolio.read or access to any hidden peer resource.
+          resources=publication.resources.filter(x=>notDenied(x)&&visibleKeys.has(exactKey(x))&&
+            (allowed(resourceAction(x),x)||x.kind==="PORTFOLIO"&&
+              (allowed("portfolio.read_restricted",x)||allowed("portfolio.discover_linked",x))));
+          if(r.action==="binding.read")resources.push(...permittedBindings);
+        }
+        if(r.action==="binding.read"&&!tuples.length&&!explicitCollection)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+        if(r.action==="binding.read"){
+          const visibleKeys=new Set(tuples.flatMap(tupleLineage).map(exactKey));
+          resources=resources.filter(x=>x.kind==="BINDING"?permittedBindingIds.has(x.id):visibleKeys.has(exactKey(x)));
+          bindingPairs=bindingPairs.filter(pair=>tuples.some(t=>t.account_id===pair.account_id));
+        }
+        if(r.resource&&r.resource.kind!=="ROOT"){
+          const visibleKeys=new Set(tuples.flatMap(tupleLineage).map(exactKey));
+          // A manager's broad authority does not turn a detail-purpose scope
+          // into a catalogue of peer resources. Include only its exact shell.
+          resources=resources.filter(x=>visibleKeys.has(exactKey(x))||exactKey(x)===exactKey(r.resource!));
+        }
+        if(r.resource&&(r.action==="portfolio.discover_linked"||r.action==="portfolio.read_restricted")&&
+          !tuples.some(t=>t.portfolio_id===r.resource!.id))fail("EXECUTION_READ_NOT_AVAILABLE",404);
+        }
+      }else{
+        if(!r.resource)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        resources=[r.resource];whole=false;
+        if(r.action==="portfolio.discover_linked"||r.action==="portfolio.read_restricted"){
+          // Flat current ID lists do not prove a correlated own-alpha link to
+          // this portfolio. Detail uses the same qualified dataset proof.
+          fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+        }
+        if(businessReads.has(r.action)&&!allowed("business.read_all",r.resource)){
+          const policy=context.policy!.researcher_fields;
+          if(policy.state!=="QUALIFIED"||!policy.policy_ref)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
+          fields=policy.fields.filter(isBusinessReadField);detail=policy.fields.filter(isRecordDetailReadField);fieldPolicyRef=policy.policy_ref;
+          if(!fields.length)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
+        }
+      }
+      if(!businessReads.has(r.action))fields=r.action==="maintenance.read"||r.action==="development.read"?
+        [...TECHNICAL_READ_FIELDS]:r.action==="audit.read"?[...AUDIT_READ_FIELDS]:r.action==="governance.live.read"?[]:fields;
+    }else{
+      // Legacy membership preserves the named business-read contract only.
+      // It is never a new export/stream/technical entitlement.
+      if(!businessReads.has(r.action))fail("EXECUTION_READ_NOT_AVAILABLE",404);
+      const retained=retainedReview(this.config);
+      if(retained?(p.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID||
+        !(identity.owner||identity.member||identity.retained.length>0)):!identity.member)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    }
+    const authority=context?contextProof(context,b.environment,[...resources,...(r.resource?[r.resource]:[])]):identity;
+    const fingerprint=accessDigest({mode,actor:p.user.userId,session:p.session.sessionId,generation:p.session.sessionVersion,
+      workspace:p.workspaceId,viewer:p.viewerWorkspaceId,binding:b,requirement:r,authority,
+      publication:publication&&{revision:publication.publication_revision,binding:publication.binding,resources:publication.resources,
+        tuples:publication.tuples,current_linkage:publication.current_linkage,binding_lineage:publication.binding_lineage??null,
+        strategy_lineage:publication.strategy_lineage??null},
+      fields,resources,tuples,...(detail?{detail}:{})});
+    const scope=Object.freeze({mode,fingerprint,workspaceId:p.workspaceId,viewerWorkspaceId:p.viewerWorkspaceId!,
+      environment:b.environment,profileId:b.profileId,policyRevision,fieldPolicyRef,wholePopulation:whole}) as AuthorizedExecutionReadScope;
+    minted.set(scope,{kind:"ENTITY",issuer:this,principal:p,binding:b,requirement:r,resources,tuples,
+      population:publication?.tuples??[],fields,detail,context,bindingPairs,
+      strategyPairs:publication?.strategy_lineage&&(publication.strategy_lineage.qualification==="SOURCE_VERIFIED"||
+        context?.allow_test_only&&publication.strategy_lineage.qualification==="TEST_ONLY")?publication.strategy_lineage.pairs:[]});
+    if(optional){
+      if(mode!=="SCOPED_V2"||!context||!publication)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      return this.portfolioOutcome(p,b,r,context,publication,scope);
+    }
+    return scope;
+  }
+
+  async revalidate(scope:AuthorizedExecutionReadScope):Promise<void> {
+    assertExecutionReadScope(scope);
+    const state=minted.get(scope)!;
+    if(state.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const current=await this.authorize(state.principal,state.binding,state.requirement);
+    if(current.fingerprint!==scope.fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+  }
+
+  /** Finite SAME-issuer read composition. A registrar grants nothing: it only
+   * retains already-minted obligations until the WHOLE body/error is ready.
+   * This is a point-in-time read fence, NOT native physical-send custody or
+   * an atomic snapshot of independent external writers. No external await is
+   * permitted after the final actual Core confirmation below. */
+  async deliverScopedTogether<T>(initial:readonly AuthorizedExecutionReadScope[],
+    read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,
+    validateBeforeRelease?:()=>void):Promise<T>{
+    return this.deliverReadComposition(initial,read,validateBeforeRelease,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId,state.binding]));
+  }
+
+  /** Fleet ALL is a bounded composition of independently minted environment
+   * reads, never a merged entitlement. Only this exact dataset/action may span
+   * bindings; ordinary deliverScopedTogether retains its same-binding fence.
+   * All contributing scopes are renewed and compared against the last shared
+   * authority context before the one final Core confirmation. */
+  async deliverFleetEnvironments<T>(initial:readonly AuthorizedExecutionReadScope[],
+    read:()=>Promise<T>,validateBeforeRelease?:()=>void):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>3)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const environments=new Set<ReadEnvironment>();
+    for(const scope of initial){
+      assertExecutionReadScope(scope);
+      const state=minted.get(scope)!;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||
+        state.requirement.action!=="alpha.read"||state.requirement.resource!==undefined||
+        state.requirement.requireWholePopulation===true||
+        state.requirement.dataset?.dataset_id!=="alpha_fleet_overview"||
+        state.requirement.dataset.window!==null||environments.has(state.binding.environment))
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      environments.add(state.binding.environment);
+    }
+    return this.deliverReadComposition(initial,()=>read(),validateBeforeRelease,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId]));
+  }
+
+  /** Source health contains at most 11 relation scopes and one entry scope
+   * for each of three profiles. Keep every already-authorized obligation until
+   * a single final Core confirmation; this grants no cross-environment access.
+   * This is a retained point-in-time fence, not native physical-send custody. */
+  async deliverRetainedSourceHealth<T>(initial:readonly AuthorizedExecutionReadScope[],read:()=>Promise<T>):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>36)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const environments=new Map<ReadEnvironment,{profile:string;source:string;count:number}>();
+    for(const scope of initial){
+      assertExecutionReadScope(scope);
+      const state=minted.get(scope)!, dataset=state.requirement.dataset;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||state.requirement.action!=="alpha.read"||
+        state.requirement.resource!==undefined||state.requirement.requireWholePopulation===true||!dataset||
+        !retainedSourceHealthDatasets.has(dataset.dataset_id)||dataset.window!==null)
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const source=JSON.stringify([dataset.source_revision,dataset.projection_generation,dataset.catalogue_revision]);
+      const previous=environments.get(state.binding.environment);
+      if(previous&&(previous.profile!==state.binding.profileId||previous.source!==source||previous.count>=12))
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      environments.set(state.binding.environment,{profile:state.binding.profileId,source,count:(previous?.count??0)+1});
+    }
+    return this.deliverReadComposition(initial,()=>read(),undefined,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId]),36);
+  }
+
+  /** Account 360 can select among three existing profile observations. Each
+   * scope remains an independently authorized exact relation; this only holds
+   * those obligations until one final confirmation, never merges privileges.
+   * Like other retained fences, this is not native physical-send custody. */
+  async deliverRetainedProfileAccounts<T>(initial:readonly AuthorizedExecutionReadScope[],read:()=>Promise<T>,
+    validateBeforeRelease?:()=>void):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>27)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const environments=new Map<ReadEnvironment,{profile:string;source:string;datasets:Set<string>}>();
+    for(const scope of initial){
+      assertExecutionReadScope(scope);
+      const state=minted.get(scope)!, dataset=state.requirement.dataset;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||!dataset||
+        !Object.hasOwn(retainedAccountProfilePurposes,dataset.dataset_id)||
+        !retainedAccountProfilePurposes[dataset.dataset_id].includes(state.requirement.action)||
+        state.requirement.resource!==undefined||state.requirement.requireWholePopulation===true||dataset.window!==null)
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const source=JSON.stringify([dataset.source_revision,dataset.projection_generation,dataset.catalogue_revision]);
+      const previous=environments.get(state.binding.environment);
+      const purpose=JSON.stringify([dataset.dataset_id,state.requirement.action]);
+      if(previous&&(previous.profile!==state.binding.profileId||previous.source!==source||
+        previous.datasets.has(purpose)||previous.datasets.size>=9))fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const datasets=previous?.datasets??new Set<string>();datasets.add(purpose);
+      environments.set(state.binding.environment,{profile:state.binding.profileId,source,datasets});
+    }
+    return this.deliverReadComposition(initial,()=>read(),validateBeforeRelease,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId]),27);
+  }
+
+  /** Resource360 combines at most one already-authorized resource scope per
+   * retained environment. This holds those exact existing obligations until
+   * the shared final authority confirmation; it never adds a grant or changes
+   * the resource/field visibility selected by the originating scope. */
+  async deliverRetainedResource<T>(initial:readonly AuthorizedExecutionReadScope[],
+    kind:"ALPHA"|"PORTFOLIO"|"ACCOUNT"|"BINDING",resourceId:string,read:()=>Promise<T>,
+    validateBeforeRelease?:()=>void):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>3||
+      typeof resourceId!=="string"||!resourceId)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const purposes:Readonly<Record<typeof kind,readonly ReadScopeRequirement["action"][]>>={
+      ALPHA:["alpha.read"],PORTFOLIO:["portfolio.read","portfolio.read_restricted"],
+      ACCOUNT:["account.read"],BINDING:["binding.read"],
+    };
+    const actions=Object.hasOwn(purposes,kind)?purposes[kind]:undefined;
+    if(!actions)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const environments=new Set<ReadEnvironment>();
+    for(const scope of initial){
+      assertExecutionReadScope(scope);
+      const state=minted.get(scope)!,dataset=state.requirement.dataset,resource=state.requirement.resource;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||!dataset||
+        dataset.dataset_id!==`relation:resource360:${kind.toLowerCase()}`||dataset.window!==null||
+        !actions.includes(state.requirement.action)||state.requirement.requireWholePopulation===true||
+        environments.has(state.binding.environment)||
+        (kind==="ALPHA"?resource!==undefined:resource?.kind!==kind||resource.id!==resourceId))
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      environments.add(state.binding.environment);
+    }
+    return this.deliverReadComposition(initial,()=>read(),validateBeforeRelease,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId]),3);
+  }
+
+  private async deliverReadComposition<T>(initial:readonly AuthorizedExecutionReadScope[],
+    read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,
+    validateBeforeRelease:(()=>void)|undefined,actorKey:(state:ScopeState)=>string,scopeLimit=16):Promise<T>{
+    if(this.access.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    if(!Array.isArray(initial)||!initial.length||initial.length>scopeLimit)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const original:AuthorizedExecutionReadScope[]=[],states:ScopeState[]=[];
+    let expected:string|undefined;
+    const retain=(scope:AuthorizedExecutionReadScope)=>{
+      assertExecutionReadScope(scope);const state=minted.get(scope)!;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context)fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const key=actorKey(state);if(expected!==undefined&&key!==expected)fail("EXECUTION_READ_SCOPE_REQUIRED");
+      expected=key;if(original.includes(scope))return;
+      if(original.length>=scopeLimit)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+      original.push(scope);states.push(state);
+    };
+    initial.forEach(retain);
+    let result:T|undefined,held:unknown,failed=false;
+    const priority=(e:unknown)=>e instanceof AccessPolicyError||
+      e instanceof ExecutionReadScopeError&&e.status>=401&&e.status<500?2:1;
+    const hold=(e:unknown)=>{if(!failed||priority(e)>priority(held))held=e;failed=true;};
+    try{result=await read(retain);}catch(error){hold(error);}
+    const renewed:ScopeState[]=[];
+    let authorityFailed=false;
+    // Preserve EVERY original positive, including a panel omitted after an
+    // error. A later successful purpose never replaces an earlier obligation.
+    for(let i=0;i<original.length;i++){
+      try{
+        const s=states[i],current=await this.authorize(s.principal,s.binding,s.requirement);
+        if(current.mode!=="SCOPED_V2"||current.fingerprint!==original[i].fingerprint)
+          fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        renewed.push(minted.get(current)!);
+      }catch(error){
+        // A failed current-purpose renewal (including unavailable503) is
+        // terminal authority failure, never masked by an earlier input400.
+        if(!authorityFailed||priority(error)>priority(held))held=error;
+        failed=true;authorityFailed=true;
+      }
+    }
+    const final=renewed.length?renewed[renewed.length-1]:states[0];
+    const actor=states[0].principal,shared=final.context!;
+    let confirmed:AccessEvaluationContext;
+    try{
+      // LAST await, also when parsing/projection/source/cap errors were held.
+      confirmed=await this.access.confirmReadContext({user_id:actor.user.userId,
+        session_id:actor.session.sessionId,session_generation:actor.session.sessionVersion},actor.workspaceId,shared);
+    }catch(error){return rethrowReadScopeError(error);}
+    const now=Math.max(confirmed.now_ms,Date.now()),lease=confirmed.actor_lease_until_ms;
+    if(!Number.isSafeInteger(now)||now<0||typeof lease!=="number"||!Number.isSafeInteger(lease)||lease<=now)
+      fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    if(confirmed.actor_role!==actor.user.role||confirmed.authority_fingerprint!==shared.authority_fingerprint)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    let until=lease!;
+    for(const state of renewed){
+      const previous=state.context!;
+      if(previous.authority_fingerprint!==confirmed.authority_fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      // The last fresh adapter context is shared by ALL original targets,
+      // not each relation's earlier private copy. Otherwise a revoke of the
+      // first purpose during renewal of a later purpose could be overlooked.
+      const context={...shared,now_ms:now,actor_current:confirmed.actor_current,
+        actor_role:confirmed.actor_role,actor_lease_until_ms:lease};
+      const resources=[...state.resources,...(state.requirement.resource?[state.requirement.resource]:[])];
+      if(accessDigest(contextProof(context,state.binding.environment,resources))!==
+        accessDigest(contextProof(previous,state.binding.environment,resources)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      if(state.requirement.action==="governance.live.read"&&
+        !evaluateAccess(context,"governance.live.read",state.requirement.resource!,"live").allowed)
+        fail("EXECUTION_READ_NOT_AVAILABLE",404);
+      until=Math.min(until,nativeNoticeValidUntil(context,state.binding.environment,lease!));
+    }
+    // Pure proof/hash work above consumes time too. No post-fence await or
+    // copied old lease may leak a body/error across a real transition.
+    // Trusted PURE terminal check only (currently the existing lps2 expiry/
+    // active key recheck). It grants no authority, performs no IO and runs for
+    // held errors too. Time spent here is covered by the subsequent checks.
+    let releaseError:unknown,releaseFailed=false;
+    try{
+      const checked=validateBeforeRelease?.() as unknown;
+      if(checked&&typeof checked==="object"&&typeof (checked as {then?:unknown}).then==="function")
+        fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    }catch(error){releaseError=error;releaseFailed=true;}
+    const terminal=Math.max(now,Date.now());
+    if(terminal>=lease!)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    if(terminal>=until)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // Current-authority refusals outrank cursor/cap/parse errors. A cursor
+    // expiring during awaits outranks a held PRIVATE decode failure, never a
+    // genuine failed current grant/session obligation.
+    if(releaseFailed&&!authorityFailed&&(!failed||priority(held)<2))return rethrowReadScopeError(releaseError);
+    if(failed)return rethrowReadScopeError(held);
+    return result as T;
+  }
+
+  hasNativeCurrentRelations():boolean{return this.access.hasNativeCurrentRelations();}
+
+  /** Pure lifetime check only. This neither settles source custody nor claims
+   * that the later physical HTTP boundary has been crossed. */
+  assertHeldNativeScopes(ticket:HeldNativeReadScopes):void{
+    const held=ticket&&typeof ticket==="object"?heldNativeReads.get(ticket):undefined;
+    if(!held||held.issuer!==this||!held.active)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const now=Date.now();
+    for(const context of held.contexts){
+      const lease=context.actor_lease_until_ms;
+      if(typeof lease!=="number"||!Number.isSafeInteger(lease)||now>=nativeNoticeValidUntil(context,"paper",lease))
+        fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    }
+  }
+
+  /** Exact original purpose only, checked against the source contexts actually
+   * held by deliverNativeTogether. This DB-only fence neither observes another
+   * source nor manufactures a replacement scope or ordinary detached ALLOW. */
+  async heldNativeScope(ticket:HeldNativeReadScopes,principal:ReadScopePrincipal,
+    binding:ReadScopeBinding,requirement:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope>{
+    const {p,b,r}=captureReadScopeInputs(structuredClone(principal),binding,requirement);
+    const held=ticket&&typeof ticket==="object"?heldNativeReads.get(ticket):undefined;
+    if(!held||held.issuer!==this||!held.active||!this.hasNativeCurrentRelations())fail("EXECUTION_READ_SCOPE_REQUIRED");
+    this.assertHeldNativeScopes(ticket);
+    if(b.environment!=="paper"||r.action==="stream.subscribe"||r.dataset?.window!=null)
+      fail("EXECUTION_READ_CURRENT_ONLY",503);
+    const identity=(actor:ReadScopePrincipal)=>({user:actor.user.userId,role:actor.user.role,
+      session_user:actor.session.userId,session:actor.session.sessionId,generation:actor.session.sessionVersion,
+      authentication_time:actor.session.authenticationTime.valueOf(),workspace:actor.workspaceId,
+      viewer:actor.viewerWorkspaceId??actor.workspaceId});
+    const index=held.states.findIndex(state=>accessDigest(identity(state.principal))===accessDigest(identity(p))&&
+      accessDigest(state.binding)===accessDigest(b)&&accessDigest(state.requirement)===accessDigest(r));
+    if(index<0)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const expected=held.contexts[index];
+    let confirmed:AccessEvaluationContext;
+    try{confirmed=await this.access.confirmReadContext({user_id:p.user.userId,session_id:p.session.sessionId,
+      session_generation:p.session.sessionVersion},p.workspaceId,expected);}catch(error){return rethrowReadScopeError(error);}
+    this.assertHeldNativeScopes(ticket);
+    const now=Math.max(Date.now(),confirmed.now_ms),lease=confirmed.actor_lease_until_ms;
+    if(!Number.isSafeInteger(now)||!Number.isSafeInteger(lease)||!confirmed.actor_current||
+      confirmed.principal_id!==p.user.userId||confirmed.workspace_id!==p.workspaceId||confirmed.actor_role!==p.user.role||
+      confirmed.authority_fingerprint!==expected.authority_fingerprint)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    if(typeof lease!=="number"||now>=Math.min(lease,p.session.idleExpiresAt.valueOf(),p.session.absoluteExpiresAt.valueOf()))
+      fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    if(!policyReady({...confirmed,now_ms:now}))fail("EXECUTION_READ_POLICY_PENDING",503);
+    if(now>=nativeNoticeValidUntil(expected,"paper",Math.min(lease!,p.session.idleExpiresAt.valueOf(),p.session.absoluteExpiresAt.valueOf())))
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    return held.scopes[index];
+  }
+
+  async deliver<T>(scope:AuthorizedExecutionReadScope,read:()=>Promise<T>):Promise<T> {
+    // A returned DTO is NOT the physical final HTTP boundary. Native CURRENT
+    // composition must use deliverNative; never silently fall back detached.
+    if(this.access.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    assertExecutionReadScope(scope);
+    if(minted.get(scope)!.issuer!==this)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    // Fences cover cache HIT, follower, miss AND an error derived from a
+    // protected read. A revoked caller must not receive an earlier refusal
+    // which could distinguish a protected record or source condition.
+    await this.revalidate(scope);
+    let result:T|undefined,held:unknown,failed=false;
+    try{result=await read();}catch(error){held=error;failed=true;}
+    try{await this.revalidate(scope);}catch(error){
+      // A nested parent may already have returned the deliberately uniform
+      // not-available denial; the same revoke can also change this outer
+      // scope's fingerprint. Keep that existing non-disclosing 404 instead
+      // of changing its public contract to 409. Other held errors never mask
+      // the final authority failure, including an unavailable authority.
+      if(failed&&held instanceof ExecutionReadScopeError&&held.status===404&&held.code==="EXECUTION_READ_NOT_AVAILABLE"&&
+        error instanceof ExecutionReadScopeError&&error.status===409&&error.code==="EXECUTION_READ_ACCESS_CHANGED")throw held;
+      throw error;
+    }
+    if(failed)throw held;
+    return result as T;
+  }
+
+  /** Opt-in real finite CURRENT egress. Uses this issuer's genuine scope and
+   * retains exact publication/resource proof. No history window, manager-wide
+   * notice, STREAM or Root intake is promoted to this native READ purpose. */
+  async deliverNative(scope:AuthorizedExecutionReadScope,response:ServerResponse,
+    read:()=>Promise<Buffer>,validation?:{validateAfterEnter?:()=>Promise<void>;validateBeforeDispatch?:()=>void}):Promise<void>{
+    assertExecutionReadScope(scope);const state=minted.get(scope)!;
+    if(state.issuer!==this||scope.mode!=="SCOPED_V2"||scope.environment!=="paper"||!state.context||
+      state.requirement.action==="stream.subscribe"||state.requirement.dataset?.window!=null)
+      fail("EXECUTION_READ_CURRENT_ONLY",503);
+    const resources=[...new Map([...state.resources,...(state.requirement.resource?[state.requirement.resource]:[])]
+      .map(r=>[exactKey(r),r])).values()];
+    if(!resources.length)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const expected=state.context,action=state.requirement.action;
+    const actor={user_id:state.principal.user.userId,session_id:state.principal.session.sessionId,
+      session_generation:state.principal.session.sessionVersion};
+    const check=(context:AccessEvaluationContext)=>{
+      if(context.authority_fingerprint!==expected.authority_fingerprint||
+        accessDigest(contextProof(context,scope.environment,resources))!==
+        accessDigest(contextProof(expected,scope.environment,resources)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+      // Existing scope's field/publication/purpose proof must still be exact;
+      // the fresh native cut cannot invent a broader or replacement scope.
+      if(!policyReady(context))fail("EXECUTION_READ_POLICY_PENDING",503);
+    };
+    await this.access.deliverNativeCurrent(actor,scope.workspaceId,action,resources,response,
+      async context=>{check(context);return read();},check,
+      {afterEnter:validation?.validateAfterEnter,beforeDispatch:validation?.validateBeforeDispatch});
+  }
+
+  /** One response for1–4 genuine entity scopes, not the first scope expanded
+   * to the other subjects. Every purpose has its own native source context,
+   * all held through ENTER, final Core COMMIT and the same physical egress. */
+  async deliverNativeTogether(scopes:readonly AuthorizedExecutionReadScope[],response:ServerResponse,
+    read:(ticket:HeldNativeReadScopes)=>Promise<Buffer>,validation?:{validateAfterEnter?:()=>Promise<void>;validateBeforeDispatch?:()=>void}):Promise<void>{
+    if(scopes.length<1||scopes.length>4)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+    const captured=[...scopes],states=captured.map(scope=>{assertExecutionReadScope(scope);const state=minted.get(scope)!;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||scope.environment!=="paper"||!state.context||
+        state.requirement.action==="stream.subscribe"||state.requirement.dataset?.window!=null)
+        fail("EXECUTION_READ_CURRENT_ONLY",503);
+      return state;});
+    const first=states[0],scope=captured[0],actor={user_id:first.principal.user.userId,
+      session_id:first.principal.session.sessionId,session_generation:first.principal.session.sessionVersion};
+    const identity=(state:ScopeState)=>({actor:{user_id:state.principal.user.userId,session_id:state.principal.session.sessionId,
+      session_generation:state.principal.session.sessionVersion},role:state.principal.user.role,
+      session_user_id:state.principal.session.userId,workspace:state.principal.workspaceId,
+      viewer_workspace:state.principal.viewerWorkspaceId??state.principal.workspaceId,binding:state.binding,
+      dataset:state.requirement.dataset??null,authority:state.context!.authority_fingerprint});
+    const shared=accessDigest(identity(first));
+    if(states.some(state=>accessDigest(identity(state))!==shared))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    const purposes=states.map(state=>({action:state.requirement.action,resources:[...new Map(
+      [...state.resources,...(state.requirement.resource?[state.requirement.resource]:[])].map(r=>[exactKey(r),r])).values()]}));
+    if(purposes.some(p=>!p.resources.length))fail("EXECUTION_READ_SCOPE_REQUIRED");
+    if(new Set(purposes.map(p=>accessDigest(p))).size!==purposes.length)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const proof=accessDigest({identity:identity(first),purposes:purposes.map((purpose,index)=>({
+      ...purpose,fingerprint:captured[index].fingerprint,requirement:states[index].requirement}))});
+    const check=(contexts:readonly AccessEvaluationContext[])=>{
+      if(contexts.length!==states.length)fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+      for(let index=0;index<states.length;index++){
+        const context=contexts[index],expected=states[index].context!,resources=purposes[index].resources;
+        if(context.principal_id!==actor.user_id||context.workspace_id!==scope.workspaceId||
+          context.authority_fingerprint!==expected.authority_fingerprint||
+          accessDigest(contextProof(context,scope.environment,resources))!==
+          accessDigest(contextProof(expected,scope.environment,resources)))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+        if(!policyReady(context))fail("EXECUTION_READ_POLICY_PENDING",503);
+      }
+    };
+    await this.access.deliverNativeCurrentComposition(actor,scope.workspaceId,purposes,proof,response,
+      async contexts=>{
+        check(contexts);
+        if(!this.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+        const ticket=Object.freeze(Object.create(null)) as HeldNativeReadScopes;
+        const held:HeldNativeReadState={issuer:this,scopes:captured,states,contexts:[...contexts],active:true};
+        heldNativeReads.set(ticket,held);
+        try{return await read(ticket);}finally{held.active=false;heldNativeReads.delete(ticket);}
+      },check,
+      {afterEnter:validation?.validateAfterEnter,beforeDispatch:validation?.validateBeforeDispatch});
+  }
+
+  /** Notice-only V2 bridge; no route/adapter is commissioned by calling this.
+   * Requires BOTH the minted business read scope and exact stream capability. */
+  async deliverRealtime<T>(scope:AuthorizedExecutionReadScope,resource:AccessResource,write:()=>T):Promise<T> {
+    if(this.access.hasNativeCurrentRelations())fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
+    assertExecutionReadScope(scope);const state=minted.get(scope)!;
+    if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!businessReads.has(state.requirement.action)||!state.requirement.dataset)
+      fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
+    if(!state.resources.some(r=>exactKey(r)===exactKey(resource))&&
+      (!state.requirement.resource||exactKey(state.requirement.resource)!==exactKey(resource)))
+      fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const current=await this.authorize(state.principal,state.binding,state.requirement);
+    if(current.fingerprint!==scope.fingerprint)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    const fresh=minted.get(current)!;
+    if(!fresh.context)fail("EXECUTION_SCOPED_STREAM_NOT_COMMISSIONED",503);
+    return this.access.realtimeDeliveryBoundary({user_id:state.principal.user.userId,
+      session_id:state.principal.session.sessionId,session_generation:state.principal.session.sessionVersion},
+      scope.workspaceId,fresh.context,resource,scope.environment,write);
+  }
+}

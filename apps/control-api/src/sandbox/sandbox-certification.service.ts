@@ -1,10 +1,17 @@
+import { FollowingParentReads } from "../governance/following-parent.service";
 import { createHash } from "crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProfileReadService } from "../profile-read/profile-read.service";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
+import { ProfileScreenSource } from "../execution/profile-screen-composer";
+import { profileStageFacts } from "../execution/stage-facts-profile";
+import { sourceFigures } from "../execution/stage-rows";
+import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
+import { attachFollowingIdentity, parseFollowingInclude } from "../governance/following-parent.identity";
 import {
   SANDBOX_CERTIFICATION_STEPS,
   SandboxCertificationCreateRequest,
@@ -14,6 +21,7 @@ import {
   SandboxPromotionPlanRequest,
 } from "./contracts";
 import {
+  SandboxCanaryEnvelopeRef,
   SandboxCertificationDetail,
   SandboxCertificationRepository,
   SandboxStepEvidenceRow,
@@ -54,6 +62,26 @@ function digest(value: unknown): string {
 
 function iso(value: Date | null): string | null {
   return value?.toISOString() ?? null;
+}
+
+/** The latest Canary envelope drafted from a plan; a lookup that was not performed is a typed absence, never "none". */
+export function planEnvelope(
+  envelopes: SandboxCanaryEnvelopeRef[] | undefined,
+  planId: string,
+):
+  | { availability: "AVAILABLE"; value: { envelope_id: string; revision: number; status: "DRAFT" } | null; reason_code: null }
+  | { availability: "NOT_PUBLISHED"; value: null; reason_code: string } {
+  if (envelopes === undefined) {
+    return { availability: "NOT_PUBLISHED", value: null, reason_code: "PLAN_ENVELOPE_LOOKUP_NOT_PERFORMED" };
+  }
+  const latestForPlan = envelopes
+    .filter((item) => item.promotion_plan_id === planId)
+    .sort((a, b) => b.revision - a.revision || b.envelope_id.localeCompare(a.envelope_id))[0];
+  return {
+    availability: "AVAILABLE",
+    value: latestForPlan ? { envelope_id: latestForPlan.envelope_id, revision: latestForPlan.revision, status: "DRAFT" } : null,
+    reason_code: null,
+  };
 }
 
 export interface EffectiveSandboxStep {
@@ -143,11 +171,31 @@ export class SandboxCertificationService {
   constructor(
     @Inject(SandboxCertificationRepository) private readonly repository: SandboxCertificationRepository,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(FollowingParentReads) private readonly followingParents?: FollowingParentReads,
   ) {}
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string,
+    include?: unknown) {
+    const principal = { user, session, workspaceId, viewerWorkspaceId };
+    if(this.followingParents&&await this.followingParents.mode(principal)==="SCOPED_V2"){
+      // BE-P12: opt-in only; the legacy body below already carries the identity.
+      const wanted=parseFollowingInclude(include);
+      const parent=await this.followingParents.detail(principal,"SANDBOX",deploymentId);
+      return wanted.has("identity")?attachFollowingIdentity(parent,
+        await this.profileReads.deploymentIdentity(principal,"sandbox",deploymentId)):parent;
+    }
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
+      throw new GovernanceError("SANDBOX_SCOPED_PARENT_NOT_COMMISSIONED", "Sandbox certification parent field authority is not commissioned.", 503);
+    const result = await this.detailLegacy(user, session, workspaceId, deploymentId, viewerWorkspaceId);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
+  }
+
+  private async detailLegacy(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
     const currentSource = await this.profileReads.snapshot(
-      { user, session, workspaceId },
+      { user, session, workspaceId, viewerWorkspaceId },
       "sandbox",
       "EXECUTION_SANDBOX_CERTIFICATION_SCREEN",
       deploymentId,
@@ -308,6 +356,7 @@ export class SandboxCertificationService {
     const evaluation = evaluateSandboxCertification(detail);
     const readAt = new Date().toISOString();
     const sourceConnected = currentSource !== undefined && currentSource.state !== "unavailable";
+    const stageSource = new ProfileScreenSource(currentSource ?? {}, readAt);
     const currentIndex = evaluation.steps.findIndex((item) => item.evaluationState !== "PASS");
     const sourcePanel = (
       panelId: string,
@@ -367,6 +416,7 @@ export class SandboxCertificationService {
         certification_id: record.certification_id,
         deployment_id: record.deployment_id,
         portfolio_id: record.portfolio_id,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         venue: record.venue,
         environment: "SANDBOX",
         workflow_state: record.workflow_state,
@@ -423,6 +473,9 @@ export class SandboxCertificationService {
         expires_at: iso(item.evidence?.expires_at ?? null),
         blocker_code: item.blockerCode,
       })),
+      // FE-067: typed runtime / reconciliation / sessions from the profile source; additive.
+      stage_facts: profileStageFacts(stageSource, "SANDBOX_SOURCE_UNAVAILABLE"),
+      source_figures: sourceFigures(stageSource, "SANDBOX_SOURCE_UNAVAILABLE"),
       source_panels: [
         sourcePanel("internal", "EXECUTION", ["TIMEBOXED_RUN"]),
         sourcePanel("broker", "BROKER", ["CONNECT", "SYNC", "ORDER_TYPES"]),
@@ -462,6 +515,8 @@ export class SandboxCertificationService {
           as_of: iso(item.as_of),
           resolved_at: iso(item.resolved_at),
           created_at: item.created_at.toISOString(),
+          // FE-072: the Opened column; the instant the Portal recorded the finding.
+          opened_at: item.created_at.toISOString(),
         })),
       },
       timeline: {
@@ -485,6 +540,9 @@ export class SandboxCertificationService {
         blocker_codes: item.blocker_codes,
         source_side_effect_requested: false,
         created_at: item.created_at.toISOString(),
+        // FE-072: who recorded the plan, and the latest Canary envelope drafted from it.
+        author: { user_id: item.actor_user_id },
+        envelope: planEnvelope(detail.canaryEnvelopes, item.plan_id),
       })),
     };
   }
@@ -518,6 +576,7 @@ export class SandboxCertificationService {
         certification_id: `uncommissioned:${deploymentId}`,
         deployment_id: deploymentId,
         portfolio_id: deployment?.portfolio_id ?? null,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         venue: deployment?.venue ?? null,
         environment: "SANDBOX",
         workflow_state: "NOT_COMMISSIONED",
@@ -564,6 +623,9 @@ export class SandboxCertificationService {
         expires_at: null,
         blocker_code: reason,
       })),
+      // FE-067: typed runtime / reconciliation / sessions from the profile source; additive.
+      stage_facts: profileStageFacts(new ProfileScreenSource(currentSource, readAt), "SANDBOX_SOURCE_UNAVAILABLE"),
+      source_figures: sourceFigures(new ProfileScreenSource(currentSource, readAt), "SANDBOX_SOURCE_UNAVAILABLE"),
       source_panels: ["internal", "broker", "difference"].map((panelId) => ({
         panel_id: panelId,
         source_authority: panelId === "internal" ? "EXECUTION" : panelId === "broker" ? "BROKER" : "DERIVED",

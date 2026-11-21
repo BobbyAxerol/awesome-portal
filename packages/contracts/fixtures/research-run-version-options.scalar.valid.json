@@ -1,0 +1,43 @@
+{
+  "schema_version": "research.run-version-options.v1",
+  "scope": "VERSION_BINDING_NOT_DATASET_OR_RUN_AUTHORIZATION",
+  "context": {
+    "workspace_id": "ws_fixture",
+    "alpha_id": "delta-rsi-polynomial-alpha",
+    "alpha_version_id": "av_delta_rsi_polynomial_alpha_1_0_0"
+  },
+  "source_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "recipe_revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "presentation_revision": "research.recipe-presentation.v1",
+  "lifecycle_state": "ACTIVE",
+  "declared_timeframes": [
+    "1h",
+    "4h",
+    "1d"
+  ],
+  "routes": [
+    {
+      "execution_route": "signal_notional",
+      "state": "COMPATIBLE",
+      "reason_code": null,
+      "compatible_timeframes": [
+        "1h"
+      ],
+      "compatible_profile_ids": [
+        "p04.fixed-qualification.v1"
+      ],
+      "compatible_recipe_keys": [
+        "three_window_fixed.signal_notional.three_window_decay.mode_1_decay.global"
+      ]
+    },
+    {
+      "execution_route": "pct_equity",
+      "state": "UNAVAILABLE",
+      "reason_code": "ALPHA_EXECUTOR_MISMATCH",
+      "compatible_timeframes": [],
+      "compatible_profile_ids": [],
+      "compatible_recipe_keys": []
+    }
+  ],
+  "preflight_required": true
+}

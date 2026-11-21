@@ -57,7 +57,7 @@ describe("legacy translation", () => {
 
   it("maps the run library and the new-run bookmark", () => {
     expect(canonicalQuantBTPath("/runs")).toBe(`${QUANTBT_ROOT}/runs`);
-    expect(canonicalQuantBTPath("/", "?new=1")).toBe(`${QUANTBT_ROOT}/new`);
+    expect(canonicalQuantBTPath("/", "?new=1")).toBe(`${QUANTBT_ROOT}/runs/new`);
   });
 
   it("leaves the Command Center root alone when it is not a new-run link", () => {

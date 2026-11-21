@@ -1,0 +1,1250 @@
+{
+ "workbench@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Not published (FE-025). The deployment read takes \"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "0Z to 17 Oct 09:00Z 98,000.00 100,000.00 102,",
+   "t 09:00Z 98,000.00 100,000.00 102,000.00 104,",
+   ",000.00 100,000.00 102,000.00 104,000.00 106,",
+   ",000.00 102,000.00 104,000.00 106,000.00 108,",
+   ",000.00 104,000.00 106,000.00 108,000.00 110,",
+   ",000.00 106,000.00 108,000.00 110,000.00 10 O",
+   ",000.00 108,000.00 110,000.00 10 Oct 00:00Z 1",
+   "16 Oct 21:00Z. Low 100,000.00 USDT at 9 Oct 0",
+   "FIRST 9 Oct 02:00Z 100,000.00 USDT HIGH 16 Oc",
+   "T LOW 9 Oct 02:00Z 100,000.00 USDT LATEST 17 ",
+   "CKED 96,257.29 · 10,600.00 EXECUTION QUALI"
+  ],
+  "dots": [],
+  "headings": [
+   "alpha_btc_trend\nPaper",
+   "LIFECYCLE",
+   "EQUITY VS APPROVED BAND",
+   "EXIT GATE",
+   "RUNTIME HEALTH",
+   "ACCOUNTING",
+   "EXECUTION QUALITY"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "workbench-orders@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Not published (FE-025). The deployment read takes \"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"APPLIED:\"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "44-0036 Buy 0.06 67,450.00 ✓ APPLIED: FI",
+   "44-0032 Buy 0.08 67,400.00 ✓ APPLIED: FI",
+   "044-0028 Buy 0.1 67,350.00 ◔ PENDING: SU",
+   "44-0024 Buy 0.12 67,300.00 ✓ APPLIED: FI",
+   "44-0020 Buy 0.04 67,250.00 ✕ REJECTED Bl",
+   "44-0016 Buy 0.06 67,200.00 ✓ APPLIED: FI",
+   "44-0012 Buy 0.08 67,150.00 ✓ APPLIED: FI",
+   "044-0008 Buy 0.1 67,100.00 ✓ APPLIED: FI",
+   "44-0004 Buy 0.12 67,050.00 ✓ APPLIED: FI",
+   "44-0000 Buy 0.04 67,000.00 ✓ APPLIED: FI"
+  ],
+  "dots": [],
+  "headings": [
+   "alpha_btc_trend\nPaper",
+   "LIFECYCLE"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "workbench-fills@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Not published (FE-025). The deployment read takes \"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "c-0044-0036 0.06 67,450.00 1.62 USDT 17",
+   "c-0044-0032 0.08 67,400.00 2.16 USDT 17",
+   "c-0044-0024 0.12 67,300.00 3.23 USDT 16",
+   "c-0044-0016 0.06 67,200.00 1.61 USDT 16",
+   "c-0044-0012 0.08 67,150.00 2.15 USDT 16",
+   " c-0044-0008 0.1 67,100.00 2.68 USDT 16",
+   "c-0044-0004 0.12 67,050.00 3.22 USDT 16",
+   "c-0044-0000 0.04 67,000.00 1.07 USDT 30"
+  ],
+  "dots": [],
+  "headings": [
+   "alpha_btc_trend\nPaper",
+   "LIFECYCLE"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "workbench-positions@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Not published (FE-025). The deployment read takes \"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   " 0.12 67,420.50 67,500.00 +9.54 ETHUSD",
+   " Not available 152.30 0.00 3 positions N"
+  ],
+  "dots": [],
+  "headings": [
+   "alpha_btc_trend\nPaper",
+   "LIFECYCLE"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "workbench-sessions@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Not published (FE-025). The deployment read takes \"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "alpha_btc_trend\nPaper",
+   "LIFECYCLE",
+   "SESSIONS"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "live@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Live operations reads from activation.\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Live operations",
+   "LIVE NET PNL",
+   "RECONCILIATION",
+   "POSITIONS",
+   "ORDERS",
+   "PROTECTIVE LADDER",
+   "WHAT IS BLOCKING"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "live-continuity@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Live operations reads from activation.\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Live operations",
+   "LIVE NET PNL",
+   "DISPLAY CONTINUITY",
+   "PROTECTIVE LADDER",
+   "WHAT IS BLOCKING"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "live-predecessor@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Live operations reads from activation.\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   " TO LIVE Capital cap 5,000.00 USDT No Gross n",
+   " Gross notional cap 10,000.00 USDT No Daily l",
+   "USDT No Daily loss cap 250.00 USDT No Open t"
+  ],
+  "dots": [],
+  "headings": [
+   "Live operations",
+   "LIVE NET PNL",
+   "CANARY ENVELOPE",
+   "PROTECTIVE LADDER",
+   "WHAT IS BLOCKING"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "live-guard@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"Live operations reads from activation.\"",
+   "span.exec-flag-sr \"OUTCOME UNKNOWN:\"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Live operations",
+   "LIVE NET PNL",
+   "GUARD RULES",
+   "RISK-INCREASING ACTIONS",
+   "PROTECTIVE LADDER",
+   "WHAT IS BLOCKING"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "canary@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"The Canary trial fixes the window.\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "D Capital cap (USDT) 5,000.00 Gross notional ",
+   "notional cap (USDT) 10,000.00 Daily loss cap ",
+   " Daily loss cap (USDT) 250.00 Open orders (ma"
+  ],
+  "dots": [],
+  "headings": [
+   "Canary control room",
+   "LIVE VS PAPER VS BACKTEST",
+   "ENVELOPE",
+   "PROMOTION DECISION",
+   "BEFORE SCALE-UP",
+   "ROLLBACK READINESS"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "canary-po@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"The Canary trial fixes the window.\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Canary control room",
+   "LIVE VS PAPER VS BACKTEST",
+   "POSITIONS",
+   "OPEN ORDERS",
+   "PROMOTION DECISION",
+   "BEFORE SCALE-UP",
+   "ROLLBACK READINESS"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "canary-recon@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"The Canary trial fixes the window.\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Canary control room",
+   "LIVE VS PAPER VS BACKTEST",
+   "RECONCILIATION",
+   "PROMOTION DECISION",
+   "BEFORE SCALE-UP",
+   "ROLLBACK READINESS"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "canary-guard@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"The Canary trial fixes the window.\"",
+   "span.exec-flag-sr \"NEEDS ATTENTION:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Canary control room",
+   "LIVE VS PAPER VS BACKTEST",
+   "GUARD RULE",
+   "PROMOTION DECISION",
+   "BEFORE SCALE-UP",
+   "ROLLBACK READINESS"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "sandbox@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"The certification run fixes the window\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"INFORMATIONAL:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Sandbox certification",
+   "FINDINGS",
+   "EXIT REVIEW",
+   "RECORD REVIEW NOTE"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "sandbox-steps@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"The certification run fixes the window\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Step 1:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Step 2:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Step 3:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Step 4:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Step 5:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Step 6:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-blk-sr \"Step 7:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Sandbox certification",
+   "LINEAGE",
+   "EXIT REVIEW",
+   "RECORD REVIEW NOTE"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "sandbox-plans@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"The certification run fixes the window\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Sandbox certification",
+   "PROMOTION PLANS",
+   "EXIT REVIEW",
+   "RECORD REVIEW NOTE"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "sandbox-timeline@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"The deployment fixes the environment.\"",
+   "span.exec-ctxbar-sr \"The certification run fixes the window\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Sandbox certification",
+   "TIMELINE",
+   "EXIT REVIEW",
+   "RECORD REVIEW NOTE"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "blotter@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"Not published (FE-052). The orders read has no env\"",
+   "span.exec-ctxbar-sr \"Not published (FE-025). The orders read takes no w\"",
+   "p.exec-blt2-sr \"Environment and window come from this read, not fr\"",
+   "span.exec-blt2-sr \"Symbol\"",
+   "span.exec-blt2-sr \"Venue\"",
+   "span.exec-blt2-sr \"Side\"",
+   "span.exec-blk-sr \"(FE-016)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PARTIAL DATA:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "USDT Buy Stop limit 60,890.00 0.0400 ✓ OK: F"
+  ],
+  "dots": [],
+  "headings": [
+   "Blotter",
+   "ORDER FUNNEL",
+   "CONDITIONAL GROUPS"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "admin@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"Not applied here. This screen's read has no enviro\"",
+   "span.exec-ctxbar-sr \"Window applies when the server supports it.\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"OPERATION:\"",
+   "span.exec-flag-sr \"OPERATION:\"",
+   "span.exec-flag-sr \"OPERATION:\"",
+   "span.exec-flag-sr \"OPERATION:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PAUSED:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Admin Actions",
+   "READ",
+   "PORTFOLIO CAPITAL",
+   "DEPLOYMENT RISK",
+   "ACCOUNT",
+   "SYNC AND RECONCILIATION",
+   "EMERGENCY"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "users@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-flag-sr \"AWAITING APPROVAL:\"",
+   "span.exec-usr-sr \"Role\"",
+   "span.exec-usr-sr \"State\"",
+   "span.exec-usr-sr \"Role preset\"",
+   "span.exec-blk-sr \"(FE-015, FE-026, FE-037, FE-038)\"",
+   "span.exec-blk-sr \"(FE-053)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"NEEDS ATTENTION:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"PAUSED:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"NOT APPLICABLE:\"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Users",
+   "ACCOUNTS"
+  ],
+  "axe": [],
+  "errs": []
+ },
+ "access@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"(Not published FE-015, Not published FE-015, Not p\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "space; add ?workspace_id=... to the address t"
+  ],
+  "dots": [],
+  "headings": [
+   "Profile & Access",
+   "WHAT YOU CAN SEE",
+   "WHAT YOU CAN DO",
+   "GRANTED TO YOU"
+  ],
+  "axe": [],
+  "errs": []
+ },
+ "access-manage@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"(Not published FE-015, Not published FE-015, Not p\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "space; add ?workspace_id=... to the address t"
+  ],
+  "dots": [],
+  "headings": [
+   "Profile & Access",
+   "WHAT YOU CAN SEE",
+   "WHAT YOU CAN DO",
+   "GRANTED TO YOU"
+  ],
+  "axe": [],
+  "errs": []
+ },
+ "cockpit@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"Not applied here. This screen's read has no enviro\"",
+   "span.exec-ctxbar-sr \"Window applies when the server supports it.\"",
+   "span.exec-flag-sr \"NEEDS ATTENTION:\"",
+   "span.exec-blk-sr \"(Not published FE-005, Not published FE-006, Not p\"",
+   "span.exec-blk-sr \"Not published (FE-025)\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "Dec 08:00Z 99.00 99.50 100.00 100.50 101.00 1",
+   "UE FIRST 16 Dec 08:00Z 100.00 USDT HIGH 17 De",
+   "ON PNL, NET JPY 22,500,000.00 7,377,550.21 45"
+  ],
+  "dots": [],
+  "headings": [
+   "Overview, bobby",
+   "PERFORMANCE",
+   "NEEDS ATTENTION",
+   "CURRENT BY CURRENCY",
+   "FLEET BY STAGE",
+   "TODAY",
+   "SOURCE HEALTH"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "operations@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"Operations has its own Environment filter below.\"",
+   "span.exec-ctxbar-sr \"Operations has its own Range control below. The se\"",
+   "span.exec-blk-sr \"(Not published FE-043, Not published FE-043, Not p\"",
+   "span.exec-blk-sr \"\"",
+   "span.exec-blk-sr \"(FE-030)\"",
+   "span.exec-blk-sr \"(Not published FE-020, Not published FE-032, Not p\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"NEEDS ATTENTION:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OUTCOME UNKNOWN:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"NEEDS ATTENTION:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"STALE:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OUTCOME UNKNOWN:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"STALE:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"NEEDS ATTENTION:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OUTCOME UNKNOWN:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"NEEDS ATTENTION:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"REJECTED OR FAILED:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"OK:\"",
+   "span.exec-blk-sr \"Not published (FE-042)\"",
+   "span.exec-flag-sr \"NEEDS ATTENTION:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\""
+  ],
+  "dupLabels": [],
+  "rawNums": [],
+  "dots": [],
+  "headings": [
+   "Operations",
+   "Counts by status"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ },
+ "replay@1440": {
+  "overflowX": [],
+  "clipped": [
+   "span.sr-only \"Theme\"",
+   "span.sr-only \"Density\"",
+   "span.exec-ctxbar-sr \"Window applies when the server supports it.\"",
+   "span.exec-flag-sr \"PENDING:\"",
+   "span.exec-blk-sr \"(FE-034)\"",
+   "span.exec-blk-sr \"(FE-020)\"",
+   "span.exec-flag-sr \"OK:\""
+  ],
+  "tiny": [
+   "10px \"Default Workspace\"",
+   "10px \"RESEARCH\"",
+   "10px \"COMMAND\"",
+   "10px \"EXECUTION\"",
+   "10px \"ADMINISTRATION\"",
+   "10px \"RESEARCH\"",
+   "10px \"DATA & OPERATIONS\"",
+   "10px \"PLANNING\"",
+   "10px \"TRADE REPLAY — TRADE LOGS ON C\"",
+   "10px \"acct_binance_02\"",
+   "10px \"BINANCE USDM\"",
+   "10px \"Interval derived from the stra\"",
+   "10px \"25 bars · 1h · 3 fills · 2 leg\"",
+   "10px \"▲\"",
+   "10px \"▽\"",
+   "10px \"▼\"",
+   "10px \"△\"",
+   "10px \"▒\"",
+   "10px \"▒\"",
+   "10px \"TP\"",
+   "10px \"SL\"",
+   "10px \"× rejected (0)\"",
+   "10px \"╌ round trip · ▮ venue candle \"",
+   "10px \"▲ / ▼ ┈ Off-scale levels are p\"",
+   "10px \"TRADE LOG — EVENTS BEHIND THE \"",
+   "10px \"8 events · BTCUSDT · row ↔ mar\"",
+   "10px \"TIME (UTC)\"",
+   "10px \"EVENT\"",
+   "10px \"ORDER\"",
+   "10px \"LEG\"",
+   "10px \"TYPE · SIDE\"",
+   "10px \"QTY\"",
+   "10px \"PRICE / TRIGGER\"",
+   "10px \"FEE\"",
+   "10px \"RESULT\"",
+   "10px \"Submit\"",
+   "10px \"Fill\"",
+   "10px \"Fill\"",
+   "10px \"Submit\"",
+   "10px \"Fill\"",
+   "10px \"Armed\"",
+   "10px \"Armed\"",
+   "10px \"Submit\""
+  ],
+  "dupLabels": [],
+  "rawNums": [
+   "C · reduce only 0.4 66,100.00 (trigger) No fi",
+   "C · reduce only 0.4 68,500.00 (trigger) No fi"
+  ],
+  "dots": [],
+  "headings": [
+   "TEST_ONLY:alpha\n◔\nPENDING:\nNOT SCORED · POLICY NOT SET",
+   "TRADE REPLAY"
+  ],
+  "axe": [],
+  "errs": [
+   "Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ]
+ }
+}

@@ -1,0 +1,408 @@
+import {readFileSync,writeFileSync} from 'node:fs';
+import {dirname,resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {ACCESS_PROBLEM_CODES,PROBLEM_CODE_DESCRIPTION} from './execution-problem-vocabulary.mjs';
+const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const obj=p=>({type:'object',additionalProperties:false,required:Object.keys(p),properties:p});
+const text={type:'string',minLength:1,maxLength:256,pattern:'^[^\\u0000-\\u001f\\u007f]+$'};
+// Input-only safety; leave immutable historical response/selector schemas intact.
+// No trim/normalization. JSON Schema maxLength counts Unicode code points.
+const writeTextPattern='^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])';
+const writeText={...text,pattern:writeTextPattern,description:'New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords.'};
+const rev={type:'string',minLength:1,maxLength:256};
+const ms={type:'integer',minimum:0,maximum:Number.MAX_SAFE_INTEGER};
+const scopedText={...text,pattern:'^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])',
+  description:'Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization.'};
+const nullable=s=>({anyOf:[s,{type:'null'}]});
+const list=(items,maxItems=200,minItems=0)=>({type:'array',items,minItems,maxItems,uniqueItems:true});
+const digest={type:'string',pattern:'^sha256:[0-9a-f]{64}$'};
+const ref=n=>({$ref:`#/components/schemas/${n}`});
+const actions=['administration.users.manage','administration.profile_access.manage',
+  'governance.r1.read','governance.r1.decide','governance.r2.read','governance.r2.decide',
+  'governance.canary.read','governance.canary.decide','governance.live.read','governance.live.decide',
+  'profile.read_self','profile.update_self','users.read','users.create','users.manage_status','sessions.revoke',
+  'access.read','access.preview','access.propose','access.grant','access.revoke','alpha.read','alpha.metadata.edit',
+  'alpha.owner.propose','business.read_all','portfolio.discover_linked','portfolio.read_restricted','portfolio.read',
+  'portfolio.manage','membership.propose','account.read','binding.read','binding.change.propose','capital.preview',
+  'capital.fund','capital.return_capital','capital.initial_grant','capital.top_up','capital.immediate_decrease',
+  'capital.recall_partial','capital.recall_full','capital.adjust_target_budget','capital.set_root_limit',
+  'capital.apply_pending','capital.cancel_remaining','deployment.register',
+  'deployment.activate','deployment.assignment.propose','safety.halt','safety.reducing','safety.resume','audit.read',
+  'report.export','stream.subscribe','maintenance.read','maintenance.execute','development.read','development.execute','owner.recovery'];
+const environment={enum:['paper','sandbox','live']},environments=list(environment,3,1);
+const resourceKind={enum:['ROOT','PORTFOLIO','ALPHA','ALPHA_VERSION','DEPLOYMENT','ACCOUNT','BINDING','USER']};
+const selector={oneOf:[obj({kind:{const:'EXPLICIT_RESOURCE_SET'},resource_kind:resourceKind,ids:list(text,200,1)}),
+  obj({kind:{const:'OWN_ALPHA'}}),obj({kind:{const:'PORTFOLIO_MEMBERSHIP'},portfolio_ids:list(text,200,1)}),
+  obj({kind:{const:'ROOT_SCOPE'},root_id:text})],discriminator:{propertyName:'kind'}};
+const writeSelector={oneOf:[obj({kind:{const:'EXPLICIT_RESOURCE_SET'},resource_kind:resourceKind,ids:list(writeText,200,1)}),
+  obj({kind:{const:'OWN_ALPHA'}}),obj({kind:{const:'PORTFOLIO_MEMBERSHIP'},portfolio_ids:list(writeText,200,1)}),
+  obj({kind:{const:'ROOT_SCOPE'},root_id:writeText})],discriminator:{propertyName:'kind'}};
+const reason={type:'string',minLength:1,maxLength:512,pattern:'^[^\\u0000-\\u001f\\u007f]+$'};
+const writeReason={...reason,pattern:writeTextPattern};
+const change={...obj({subject_user_id:text,action:ref('AccessAction'),effect:{enum:['ALLOW','DENY']},selector:ref('AccessSelector'),
+  environments,valid_from_ms:ms,valid_until_ms:nullable(ms),delegable_actions:list(ref('AccessAction'),actions.length),
+  ceiling_grant_id:text,expected_ceiling_revision:rev,expected_policy_revision:rev,expected_ts_membership_revision:nullable(rev),reason}),
+  description:'End-exclusive interval: valid_until_ms must be greater than valid_from_ms or null. Exact single current parent ceiling; no browser actor/issuer/TS-acceptance fields.',
+  allOf:[{if:{properties:{action:{not:{const:'access.grant'}}},required:['action']},then:{properties:{delegable_actions:{maxItems:0}}}}]};
+const writeChange={...change,properties:{...change.properties,subject_user_id:writeText,
+  selector:ref('AccessWriteSelector'),ceiling_grant_id:writeText,reason:writeReason}};
+const receipt=obj({schema_version:{const:'portal.access-operation.v1'},operation_id:text,proposal_id:nullable(text),grant_id:nullable(text),
+  outcome:{enum:['APP_APPLIED','TS_PENDING','REVOKED','DENIED','TS_APPLIED','TS_REJECTED','TS_UNKNOWN']},
+  http_status:{type:'integer',minimum:200,maximum:599},reason_code:nullable(text),policy_revision:nullable(rev),grant_revision:nullable(rev),
+  decided_at_ms:ms,ts_authority:{enum:['NOT_REQUIRED','PENDING','ACCEPTED','REJECTED','UNKNOWN']}});
+const grant=obj({grant_id:text,action:ref('AccessAction'),effect:{enum:['ALLOW','DENY']},selector:ref('AccessSelector'),environments,
+  valid_from_ms:ms,valid_until_ms:nullable(ms),revision:rev,current:{type:'boolean'},ts_authority:{enum:['NOT_REQUIRED','PENDING','ACCEPTED','REJECTED','UNKNOWN']}});
+const effective=obj({schema_version:{const:'portal.access-effective.v1'},workspace_id:text,user_id:text,policy_revision:nullable(rev),
+  availability:{enum:['AVAILABLE','POLICY_PENDING']},reason_code:nullable(text),grants:{type:'array',maxItems:10000,items:grant},
+  researcher_field_policy:obj({state:{enum:['PENDING','QUALIFIED']},policy_ref:nullable(text)}),
+  owner_recovery:obj({enabled:{const:false},reason_code:{const:'OWNER_RECOVERY_NOT_APPROVED'}})});
+const preview=obj({schema_version:{const:'portal.access-preview.v1'},allowed:{type:'boolean'},reason_code:nullable(text),
+  preview_digest:digest,policy_revision:nullable(rev),app_outcome:{enum:['DENIED','ELIGIBLE']},ts_authority:{enum:['NOT_REQUIRED','PENDING']},
+  effective_business_right:{const:false},change:ref('AccessChange'),effect_preview:obj({
+    before:obj({coverage:{const:'EXACT_SELECTOR_GRANTS_ONLY'},grants:{type:'array',maxItems:10000,items:obj({grant_id:text,revision:rev,effect:{enum:['ALLOW','DENY']}})}}),
+    after:obj({application:{enum:['DENIED','ELIGIBLE_ON_COMMIT']},business:{enum:['PENDING','NOT_REQUIRED']},rights_effective_now:{const:false}})})});
+const eligibilityActions=['alpha.read','portfolio.read','portfolio.read_restricted','portfolio.discover_linked','account.read','binding.read','audit.read',
+  'governance.r1.read','governance.r2.read','governance.canary.read','governance.live.read',
+  'governance.r1.decide','governance.r2.decide','governance.canary.decide','governance.live.decide',
+  'maintenance.read','development.read','capital.fund','capital.initial_grant','capital.top_up','capital.immediate_decrease',
+  'capital.recall_partial','capital.recall_full','capital.adjust_target_budget','capital.set_root_limit',
+  'capital.apply_pending','capital.cancel_remaining','deployment.register'];
+const eligibilityReasons=['FAMILY_CHECK_REQUIRED','NO_CURRENT_PERMISSION','POLICY_PENDING','FIELD_POLICY_PENDING','ACTION_TARGET_UNSUPPORTED'];
+const eligibilityFamilies=['BUSINESS_READ_SCOPE','CURRENT_AUDIT_READ','GOVERNANCE_READER','GOVERNANCE_PLAN','TECHNICAL_READ_SCOPE',
+  'CAPITAL_PREVIEW','PENDING_CONTROL_PREVIEW','INSTANCE_REGISTRATION_PREVIEW'];
+// Exact existing RULES[action] producer facts; these are family prerequisites,
+// never a claim that the family/source/step-up has already been commissioned.
+const eligibilityRules={
+  'alpha.read':['BUSINESS_READ_SCOPE',false],'portfolio.read':['BUSINESS_READ_SCOPE',false],
+  'portfolio.read_restricted':['BUSINESS_READ_SCOPE',false],'portfolio.discover_linked':['BUSINESS_READ_SCOPE',false],
+  'account.read':['BUSINESS_READ_SCOPE',false],'binding.read':['BUSINESS_READ_SCOPE',false],
+  'audit.read':['CURRENT_AUDIT_READ',false],
+  'governance.r1.read':['GOVERNANCE_READER',false],'governance.r2.read':['GOVERNANCE_READER',false],
+  'governance.canary.read':['GOVERNANCE_READER',false],'governance.live.read':['GOVERNANCE_READER',false],
+  'governance.r1.decide':['GOVERNANCE_PLAN',null],'governance.r2.decide':['GOVERNANCE_PLAN',null],
+  'governance.canary.decide':['GOVERNANCE_PLAN',null],'governance.live.decide':['GOVERNANCE_PLAN',null],
+  'maintenance.read':['TECHNICAL_READ_SCOPE',false],'development.read':['TECHNICAL_READ_SCOPE',false],
+  'capital.fund':['CAPITAL_PREVIEW',true],'capital.initial_grant':['CAPITAL_PREVIEW',true],
+  'capital.top_up':['CAPITAL_PREVIEW',true],'capital.immediate_decrease':['CAPITAL_PREVIEW',true],
+  'capital.recall_partial':['CAPITAL_PREVIEW',true],'capital.recall_full':['CAPITAL_PREVIEW',true],
+  'capital.adjust_target_budget':['CAPITAL_PREVIEW',true],'capital.set_root_limit':['CAPITAL_PREVIEW',true],
+  'capital.apply_pending':['PENDING_CONTROL_PREVIEW',true],'capital.cancel_remaining':['PENDING_CONTROL_PREVIEW',true],
+  'deployment.register':['INSTANCE_REGISTRATION_PREVIEW',true],
+};
+// Exact existing RULES[action].kinds from self-eligibility.ts. These are
+// request-target compatibility, never resource existence or a source permit.
+const eligibilityKinds={
+  'alpha.read':['ALPHA','ALPHA_VERSION','DEPLOYMENT'],
+  'portfolio.read':['PORTFOLIO'],'portfolio.read_restricted':['PORTFOLIO'],
+  'portfolio.discover_linked':['PORTFOLIO'],'account.read':['ACCOUNT'],'binding.read':['BINDING'],
+  'audit.read':['ROOT','PORTFOLIO','DEPLOYMENT','ACCOUNT'],
+  ...Object.fromEntries(['governance.r1.read','governance.r2.read','governance.canary.read','governance.live.read',
+    'governance.r1.decide','governance.r2.decide','governance.canary.decide','governance.live.decide']
+    .map(action=>[action,['PORTFOLIO','DEPLOYMENT']])),
+  ...Object.fromEntries(['maintenance.read','development.read'].map(action=>[action,
+    ['ROOT','PORTFOLIO','DEPLOYMENT','ACCOUNT','ALPHA','ALPHA_VERSION','BINDING']])),
+  ...Object.fromEntries(['capital.fund','capital.initial_grant','capital.top_up','capital.immediate_decrease',
+    'capital.recall_partial','capital.recall_full','capital.adjust_target_budget','capital.set_root_limit']
+    .map(action=>[action,['ROOT','PORTFOLIO','DEPLOYMENT']])),
+  'capital.apply_pending':['PORTFOLIO','DEPLOYMENT'],'capital.cancel_remaining':['PORTFOLIO','DEPLOYMENT'],
+  'deployment.register':['PORTFOLIO'],
+};
+const matchingEligibilityAction=(action,properties)=>({properties:{actions:{items:{
+  if:{properties:{action:{const:action}},required:['action']},then:{properties}}}}});
+const eligibilityTargetRules=eligibilityActions.map(action=>({
+  if:{properties:{resource:{properties:{kind:{enum:eligibilityKinds[action]}},required:['kind']}},required:['resource']},
+  then:matchingEligibilityAction(action,{reason_class:{not:{const:'ACTION_TARGET_UNSUPPORTED'}}}),
+  // An unready policy deliberately replaces unsupported-target copy in the
+  // current producer. Keep that closed alternative instead of inventing one
+  // mandatory reason that the server does not always publish.
+  else:matchingEligibilityAction(action,{permission:{const:'UNAVAILABLE'},
+    reason_class:{enum:['ACTION_TARGET_UNSUPPORTED','POLICY_PENDING']}}),
+}));
+const featureIds=['EXECUTION_PORTFOLIOS','EXECUTION_ACCOUNTS_BINDINGS','EXECUTION_OPERATIONS','EXECUTION_BLOTTER'];
+const eligibilityTokens=eligibilityActions.map(action=>action.replaceAll('.','\\.'));
+const eligibilityCsv={type:'string',minLength:1,maxLength:1024,
+  pattern:'^(?:'+eligibilityTokens.join('|')+')(?:,(?:'+eligibilityTokens.join('|')+')){0,15}$(?![\\s\\S])',
+  allOf:eligibilityTokens.map(action=>({not:{pattern:'(?:^|,)'+action+'(?:,[^,]+)*,'+action+'(?:,|$)'}})),
+  description:'One exact CSV string,1–16 unique finite actions. No whitespace normalization, repeated query keys, JSON, wildcards or actor/as-of selectors.'};
+const eligibilityRow={...obj({action:ref('AccessEligibilityAction'),permission:{enum:['ALLOWED','UNAVAILABLE']},
+  reason_class:{enum:eligibilityReasons},public_copy_key:{enum:eligibilityReasons},
+  grant_ref:{...nullable(text),description:'Opaque existing own matched grant ID: canonical accessText, at most 256 Unicode codepoints, not the new caller-selector UTF8 byte limit. Returned unchanged without normalization.'},
+  authority_mode:{enum:['VERSIONED_CURRENT','LEGACY_COMPATIBILITY','APP_ONLY','NOT_ESTABLISHED']},
+  step_up_required:nullable({type:'boolean'}),step_up_freshness:{const:'NOT_CHECKED'},
+  challenge_availability:{const:'NOT_CHECKED'},command_readiness:{const:'NOT_CHECKED'},family_check:{enum:eligibilityFamilies}}),
+  allOf:[
+    ...eligibilityActions.map(action=>({if:{properties:{action:{const:action}},required:['action']},
+      then:{properties:{family_check:{const:eligibilityRules[action][0]},step_up_required:{const:eligibilityRules[action][1]}}}})),
+    ...eligibilityReasons.map(code=>({if:{properties:{reason_class:{const:code}},required:['reason_class']},
+      then:{properties:{public_copy_key:{const:code}}}})),
+    {if:{properties:{permission:{const:'ALLOWED'}},required:['permission']},
+      then:{properties:{reason_class:{const:'FAMILY_CHECK_REQUIRED'},grant_ref:text,
+        authority_mode:{enum:['VERSIONED_CURRENT','LEGACY_COMPATIBILITY','APP_ONLY']}}},
+      else:{properties:{reason_class:{enum:eligibilityReasons.filter(reason=>reason!=='FAMILY_CHECK_REQUIRED')},
+        grant_ref:{type:'null'},authority_mode:{const:'NOT_ESTABLISHED'}}}}
+  ]};
+// FE-068 · bounded multi-resource eligibility with a typed step-up state. Additive sibling: every v1 row/target rule
+// above is reused unchanged; the single-resource schema and route are not modified.
+const stepUpStates=['NOT_REQUIRED','PLAN_DEPENDENT','REQUIRED','ACTIVE'];
+const eligibilityBatchRow={...eligibilityRow,required:[...eligibilityRow.required,'step_up_state'],
+  properties:{...eligibilityRow.properties,step_up_state:{enum:stepUpStates,
+    description:'Rule + this session: NOT_REQUIRED (rule false), PLAN_DEPENDENT (rule null: the plan decides), REQUIRED (rule true, no active session step-up) or ACTIVE (rule true, this session holds an unexpired step-up). A statement about the rule and the session, never a permission and not a refusal; every family recheck still applies.'}},
+  allOf:[...eligibilityRow.allOf,
+    {if:{properties:{step_up_required:{const:false}},required:['step_up_required']},then:{properties:{step_up_state:{const:'NOT_REQUIRED'}}}},
+    {if:{properties:{step_up_required:{type:'null'}},required:['step_up_required']},then:{properties:{step_up_state:{const:'PLAN_DEPENDENT'}}}},
+    {if:{properties:{step_up_required:{const:true}},required:['step_up_required']},then:{properties:{step_up_state:{enum:['REQUIRED','ACTIVE']}}}}]};
+// FE-015/060/068 · step-up proof families. A proof is "this actor re-entered their OWN password in THIS session";
+// it is never a capability. CAPITAL_COMMAND lets a delegated capital actor prove themselves WITHOUT access.grant/revoke.
+const stepUpFamilies=['ACCESS_ADMIN','CAPITAL_COMMAND'];
+const stepUpChallengeOrder=['CAPITAL_COMMAND','ACCESS_ADMIN'];
+const stepUpPreconditions={CAPITAL_COMMAND:'CURRENT_OWN_STEP_UP_ACTION_ALLOW',ACCESS_ADMIN:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW'};
+const stepUpChallenge={...obj({family:{enum:stepUpFamilies},mechanism:{const:'PASSWORD_REAUTH'},
+  route:{const:'/api/admin/profile-access/v2/step-up'},precondition:{enum:Object.values(stepUpPreconditions)},precondition_met:{type:'boolean'}}),
+  allOf:stepUpFamilies.map(family=>({if:{properties:{family:{const:family}},required:['family']},
+    then:{properties:{precondition:{const:stepUpPreconditions[family]}}}}))};
+// FE-057/058/038 · the member's OWN navigation context. Facts the client must otherwise guess; never a permit.
+const selfAccessEntryRoute='/administration/my-access';
+const selfContextCandidate=obj({workspace_id:scopedText,access_basis:{enum:['OWN_CURRENT_GRANT_RECORD','MEMBER_ONLY']}});
+const selfContextDefaultWorkspace={oneOf:[
+  obj({state:{const:'RESOLVED'},workspace_id:scopedText,rule:{enum:['SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD','SOLE_MEMBERSHIP']}}),
+  obj({state:{const:'AMBIGUOUS'},candidates:{type:'array',minItems:2,maxItems:16,items:selfContextCandidate}}),
+  obj({state:{const:'NONE'},reason_class:{const:'NO_WORKSPACE_MEMBERSHIP'}}),
+  obj({state:{const:'UNAVAILABLE'},reason_class:{const:'TOO_MANY_MEMBERSHIPS'}})],
+  description:'The workspace the server resolves for this member, or a typed absence. Never a choice between several: more than one candidate is AMBIGUOUS (sorted by workspace_id, at most 16; more is UNAVAILABLE, never a first-N). A candidate is a workspace the caller is a CURRENT MEMBER of. OWN_CURRENT_GRANT_RECORD says a stored, unrevoked, in-interval ALLOW record of the caller exists under that workspace\'s current reviewed policy revision: a hint for choosing a workspace, NOT proof of an effective right (navigation/eligibility for the chosen workspace evaluate the full graph). No peer, role or other-member fact is ever published.'};
+const selfContextEntry={oneOf:[
+  obj({feature:{const:'PROFILE_ACCESS'},mode:{const:'SELF_ONLY'},permission:{const:'ALLOWED'},route:{const:selfAccessEntryRoute},
+    workspace_scope:{const:'QUERY_workspace_id'},reason_class:{type:'null'},consumer_state:{const:'AWAITING_CONSUMER_ROUTER'}}),
+  obj({feature:{const:'PROFILE_ACCESS'},mode:{const:'SELF_ONLY'},permission:{const:'UNAVAILABLE'},route:{type:'null'},
+    workspace_scope:{type:'null'},reason_class:{const:'NO_WORKSPACE_MEMBERSHIP'},consumer_state:{const:'AWAITING_CONSUMER_ROUTER'}})],
+  description:'A self-only presentation for the member\'s OWN access review, distinct from the owner/admin policy matrix (/administration/profile-access, whose guards are unchanged). It is backed by the existing own effective read only and needs no peer-user selector or administration fetch. AWAITING_CONSUMER_ROUTER: the client must implement this route before navigating to it.'};
+const selfContextAccountOperation=obj({operation:{const:'REVISE_BINDING'},scope:{const:'CREDENTIAL_ONLY'},target_kind:{const:'BINDING'},
+  availability:{const:'NOT_COMMISSIONED'},reason_class:{const:'COMMAND_FAMILY_NOT_COMMISSIONED'},basis:{const:'NONE_PUBLISHED'},step_up_required:{type:'null'}});
+const batchResourceTokenPattern='[A-Z_]{1,16}:(?:[A-Za-z0-9\\-_.!~*\'()]|%[0-9A-F]{2}){1,768}';
+const eligibilityBatchResources={type:'string',minLength:1,maxLength:8192,
+  pattern:'^'+batchResourceTokenPattern+'(?:,'+batchResourceTokenPattern+'){0,7}$(?![\\s\\S])',
+  description:'One exact comma-separated value of 1-8 KIND:<id> tokens. <id> is encodeURIComponent(id) applied once more on top of query encoding, so a comma inside an id can never split a token; only the canonical encoding is accepted (uppercase hex, nothing needlessly escaped). Duplicates are refused.'};
+const eligibilityBatchQuery=obj({workspace_id:scopedText,environment,resources:eligibilityBatchResources,actions:eligibilityCsv});
+const eligibilityBatchItem={...obj({resource:obj({kind:resourceKind,id:scopedText}),
+  actions:{type:'array',minItems:1,maxItems:16,items:ref('AccessEligibilityBatchRow'),
+    allOf:eligibilityActions.map(action=>({contains:{type:'object',properties:{action:{const:action}},required:['action']},minContains:0,maxContains:1}))}}),
+  allOf:eligibilityTargetRules};
+const selfNavigationItem={...obj({feature:{enum:featureIds},state:{enum:['ENTERABLE','HIDDEN']},
+  authority_mode:{enum:['SCOPED_CURRENT','APP_ONLY','NOT_ESTABLISHED']},
+  family_check:{const:'NOT_CHECKED'},source_readiness:{const:'NOT_CHECKED'},field_readiness:{const:'NOT_CHECKED'},command_readiness:{const:'NOT_CHECKED'}}),
+  allOf:[
+    {if:{properties:{state:{const:'HIDDEN'}},required:['state']},
+      then:{properties:{authority_mode:{const:'NOT_ESTABLISHED'}}},
+      else:{properties:{authority_mode:{enum:['SCOPED_CURRENT','APP_ONLY']}}}},
+    {if:{properties:{feature:{const:'EXECUTION_OPERATIONS'}},required:['feature']},
+      then:{properties:{authority_mode:{enum:['SCOPED_CURRENT','NOT_ESTABLISHED']}}}}
+  ]};
+const eligibilityQuery=obj({workspace_id:scopedText,environment,resource_kind:resourceKind,resource_id:scopedText,actions:eligibilityCsv});
+const selfNavigationQuery=obj({workspace_id:scopedText,environment});
+const accessProblemCode={type:'string',enum:[...ACCESS_PROBLEM_CODES],description:PROBLEM_CODE_DESCRIPTION};
+const projectionTimes={
+  observed_at_ms:{...ms,description:'Portal evaluation time in UTC epoch milliseconds; not source observation time.'},
+  valid_until_ms:{...ms,description:'End-exclusive ceiling of this actor\'s current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline.'},
+};
+const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector,AccessChange:change,
+  AccessWriteText:writeText,AccessWriteSelector:writeSelector,AccessWriteChange:writeChange,
+  AccessEligibilityAction:{type:'string',enum:eligibilityActions},
+  AccessEligibilityQuery:eligibilityQuery,AccessSelfNavigationQuery:selfNavigationQuery,
+  AccessEligibilityRow:eligibilityRow,
+  AccessEligibility:{...obj({schema_version:{const:'portal.self-eligibility.v1'},workspace_id:scopedText,environment,
+    resource:obj({kind:resourceKind,id:scopedText}),current_only:{const:true},advisory_only:{const:true},
+    ...projectionTimes,
+    actions:{type:'array',minItems:1,maxItems:16,items:ref('AccessEligibilityRow'),
+      allOf:eligibilityActions.map(action=>({contains:{type:'object',properties:{action:{const:action}},required:['action']},
+        minContains:0,maxContains:1}))}}),
+    allOf:eligibilityTargetRules,
+    description:'Current own application permission facts only; action/target-kind compatibility is checked, but target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Unsupported targets are UNAVAILABLE with ACTION_TARGET_UNSUPPORTED, or POLICY_PENDING when the current producer cannot establish policy. Not a permit or TS activation.'},
+  AccessEligibilityBatchQuery:eligibilityBatchQuery,AccessEligibilityBatchRow:eligibilityBatchRow,
+  AccessEligibilityBatch:{...obj({schema_version:{const:'portal.self-eligibility-batch.v2'},workspace_id:scopedText,environment,
+    current_only:{const:true},advisory_only:{const:true},...projectionTimes,
+    session_step_up:{...obj({state:{enum:['ACTIVE','NOT_ACTIVE']},
+      valid_until_ms:{...nullable(ms),description:'When THIS session\'s step-up ends, never later than valid_until_ms of this projection (the session ceiling) and greater than observed_at_ms; null when NOT_ACTIVE.'},
+      challenges:{type:'array',minItems:2,maxItems:2,items:false,prefixItems:stepUpChallengeOrder.map(family=>({allOf:[
+        stepUpChallenge,{properties:{family:{const:family}},required:['family']}]})),
+        description:'One entry per proof family, fixed order CAPITAL_COMMAND then ACCESS_ADMIN. Each says which precondition POST /step-up enforces for that family (request body field `family`) and whether it holds for the caller now. Either ACTIVE-able proof satisfies the same step-up-requiring rows. Not a promise the password will be accepted.'}}),
+      allOf:[{if:{properties:{state:{const:'ACTIVE'}},required:['state']},then:{properties:{valid_until_ms:ms}},else:{properties:{valid_until_ms:{type:'null'}}}}],
+      description:'This session\'s own step-up fact, the one the capital mutations recheck (a capital-family or an access-admin-family proof, whichever is live), plus, per proof family, whether the step-up route precondition holds for the caller. A capital delegate needs no access.grant/revoke: the CAPITAL_COMMAND precondition is a current own ALLOW of a step-up-requiring action. Not a promise the password will be accepted; no new authentication mechanism and no capability.'},
+    results:{type:'array',minItems:1,maxItems:8,items:eligibilityBatchItem}}),
+    allOf:[{if:{properties:{session_step_up:{properties:{state:{const:'ACTIVE'}},required:['state']}},required:['session_step_up']},
+      then:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','ACTIVE']}}}}}}}}},
+      else:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','REQUIRED']}}}}}}}}}}],
+    description:'FE-068. Up to eight resources x the same 1-16 actions in one current-only self read. Each resource carries exactly the rows of portal.self-eligibility.v1 (same evaluator, same reasons, same target rules) plus a typed step_up_state. Resources are unique (runtime-enforced) and every result carries the same actions in the same order (runtime-enforced: JSON Schema cannot compare sibling arrays). An action unsupported by one resource is a typed per-resource refusal, not a batch failure. Advisory only: no permit, no lease, no target existence, no source/field qualification; per-family checks and the real step-up recheck remain authoritative.'},
+  AccessSelfContext:{...obj({schema_version:{const:'portal.self-context.v1'},current_only:{const:true},advisory_only:{const:true},
+    ...projectionTimes,default_workspace:selfContextDefaultWorkspace,self_entry:selfContextEntry,
+    account_operations:{type:'array',minItems:1,maxItems:1,items:selfContextAccountOperation,
+      description:'The account-management mutation is NOT commissioned: the credential rotation behind the "Rotate credential" control is the PM REVISE_BINDING (credential-only) family, for which Portal has no route (binding.change.propose proposes only) and no qualified source. A typed refusal that holds for every member, never a permission; step_up_required is null (not determined, never false). The identifiers are display names, NOT capability names, and a navigation or menu fact never opens this mutation. A temporary client token such as execution.accounts.manage has no server authority and must not gate it.'}}),
+    allOf:[{if:{properties:{default_workspace:{properties:{state:{const:'NONE'}},required:['state']}},required:['default_workspace']},
+      then:{properties:{self_entry:{properties:{permission:{const:'UNAVAILABLE'}},required:['permission']}}},
+      else:{properties:{self_entry:{properties:{permission:{const:'ALLOWED'}},required:['permission']}}}}],
+    description:'FE-057/058/038. The member\'s own session context, current-only and advisory: the default workspace (or a typed absence), the self-only entry route and the typed no-operation branch for account management. Takes no query. Cross-field producer invariants (valid_until_ms > observed_at_ms, candidates unique and sorted, one access_basis per ambiguity, self-entry route never under the admin matrix route) are runtime-enforced and stated here. Not a permit, not source readiness; every read and command rechecks current authority.'},
+  AccessSelfNavigationItem:selfNavigationItem,
+  AccessSelfNavigation:{...obj({schema_version:{const:'portal.self-navigation.v1'},workspace_id:scopedText,environment,
+    current_only:{const:true},advisory_only:{const:true},
+    ...projectionTimes,
+    current_read_mode:{enum:['LEGACY_COMPATIBILITY','SCOPED_V2','NOT_ESTABLISHED'],
+      description:'Current Core-workspace reader routing metadata only; not a grant, source readiness or command permit.'},
+    features:{type:'array',minItems:4,maxItems:4,items:false,prefixItems:featureIds.map(feature=>({allOf:[
+      ref('AccessSelfNavigationItem'),{properties:{feature:{const:feature}},required:['feature']}]}))},
+    self_entry:obj({feature:{const:'PROFILE_ACCESS'},mode:{const:'SELF_ONLY'},permission:{const:'ALLOWED'},route:{type:'null'},
+      consumer_state:{const:'AWAITING_CONSUMER_ROUTER'}})}),
+    description:'Exactly four ordered own menu facts. APP_ONLY is exact reviewed Portal Manager domain permission, never source/field/economic/native/command readiness and never Operations audit. No target IDs, domain digests, peer grants or synthetic capability aliases.'},
+  AccessPreviewRequest:obj({workspace_id:writeText,change:ref('AccessWriteChange')}),
+  AccessProposalRequest:obj({workspace_id:writeText,change:ref('AccessWriteChange'),preview_digest:digest}),
+  AccessRevokeRequest:obj({workspace_id:writeText,expected_policy_revision:rev,expected_grant_revision:rev,reason:writeReason}),
+  AccessRevokePreview:obj({schema_version:{const:'portal.access-revoke-preview.v1'},preview_digest:digest,policy_revision:rev,
+    before:obj({grant_id:text,grant_revision:rev,action:ref('AccessAction'),effect:{enum:['ALLOW','DENY']},selector:ref('AccessSelector'),environments,revoked_at_ms:nullable(ms)}),
+    after:obj({grant_state:{const:'REVOKED_ON_COMMIT'},effective_access:{const:'CURRENT_POLICY_REEVALUATED'},ts_revocation:{enum:['NOT_CONFIRMED','NOT_REQUIRED']},
+      descendants:{const:'CURRENT_CHAIN_RECHECKED'},committed_obligations:{const:'CONTINUE'}}),
+    step_up_required:{const:true},advisory_only:{const:true}}),
+  AccessStepUpRequest:{...obj({workspace_id:writeText,password:{type:'string',minLength:1,maxLength:256,writeOnly:true},family:{enum:stepUpFamilies,
+    description:'Proof family; omitted means ACCESS_ADMIN (the historical request, unchanged). CAPITAL_COMMAND needs a current own ALLOW of a step-up-requiring capital / pending-control / registration action and never requires access.grant or access.revoke.'}}),
+    required:['workspace_id','password']},
+  AccessReceipt:receipt,AccessResult:obj({schema_version:{const:'portal.access-result.v1'},receipt:ref('AccessReceipt'),replayed:{type:'boolean'}}),
+  AccessEffective:effective,AccessPreview:preview,AccessProposal:obj({schema_version:{const:'portal.access-proposal.v1'},proposal_id:text,
+    state:{enum:['APP_APPLIED','TS_PENDING','TS_APPLIED','TS_REJECTED','TS_UNKNOWN','REVOKED']},change:ref('AccessChange'),
+    submission_receipt:ref('AccessReceipt'),updated_at_ms:ms}),
+  AccessStepUp:obj({schema_version:{const:'portal.access-step-up.v1'},state:{const:'ACTIVE'},family:{enum:stepUpFamilies},expires_at_ms:ms}),
+  AccessAudit:obj({schema_version:{const:'portal.access-audit.v1'},workspace_id:text,subject_user_id:text,
+    items:{type:'array',maxItems:100,items:obj({operation:text,receipt:ref('AccessReceipt'),occurred_at_ms:ms})},
+    next_cursor:nullable({type:'string',maxLength:2048}),max_items:{const:100}}),
+  AccessProblem:obj({error:obj({code:accessProblemCode,message:{type:'string'}}),request_id:{type:'string'}})};
+const response=(s,description)=>({description,content:{'application/json':{schema:ref(s)}}});
+const errors=Object.fromEntries([400,401,403,404,409,500,503].map(s=>[s,response('AccessProblem',s===500
+  ? 'Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.'
+  : 'Typed public refusal; current authority is required even for replay.')]));
+const workspace={name:'workspace_id',in:'query',required:true,schema:text};
+const id={name:'id',in:'path',required:true,schema:text};
+const writeId={...id,schema:writeText};
+const headers=[{name:'x-portal-idempotency-key',in:'header',required:true,schema:{type:'string',pattern:'^[A-Za-z0-9._:-]{8,128}$'}},
+  {name:'x-portal-csrf',in:'header',required:true,schema:text},{name:'Origin',in:'header',required:true,schema:text}];
+const read=(operationId,s,parameters)=>({operationId,security:[{PortalSession:[]}],parameters,
+  responses:{200:response(s,'Private,no-store; Portal application authority, not TS business activation.'),...errors}});
+const write=(operationId,input,output,parameters=[],created=false)=>({operationId,security:[{PortalSession:[]}],parameters:[...headers,...parameters],
+  requestBody:{required:true,content:{'application/json':{schema:ref(input)}}},
+  responses:{[created?201:200]:response(output,'Immutable original receipt, including original status on replay; private,no-store.'),...errors}});
+const selfWorkspace={name:'workspace_id',in:'query',required:true,schema:scopedText};
+const selfEnvironment={name:'environment',in:'query',required:true,schema:environment};
+const privateRead=(operationId,s,parameters)=>{const operation=read(operationId,s,parameters);
+  operation.description='Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit.';
+  for(const response of Object.values(operation.responses))response.headers={'Cache-Control':{required:true,schema:{type:'string',const:'private, no-store'}}};
+  return operation;
+};
+const prefix='/api/admin/profile-access/v2';
+const document={openapi:'3.1.0',info:{title:'Portal scoped access and delegation',version:'1.0.0'},paths:{
+  [prefix+'/effective']:{get:read('portalScopedAccessEffectiveGetV1','AccessEffective',[workspace])},
+  [prefix+'/eligibility']:{get:privateRead('portalScopedAccessEligibilityGetV1','AccessEligibility',[selfWorkspace,selfEnvironment,
+    {name:'resource_kind',in:'query',required:true,schema:resourceKind},
+    {name:'resource_id',in:'query',required:true,schema:scopedText},
+    {name:'actions',in:'query',required:true,style:'form',explode:false,schema:eligibilityCsv}])},
+  [prefix+'/eligibility/batch']:{get:privateRead('portalScopedAccessEligibilityBatchGetV1','AccessEligibilityBatch',[selfWorkspace,selfEnvironment,
+    {name:'resources',in:'query',required:true,style:'form',explode:false,schema:eligibilityBatchResources},
+    {name:'actions',in:'query',required:true,style:'form',explode:false,schema:eligibilityCsv}])},
+  [prefix+'/self-navigation']:{get:privateRead('portalScopedAccessSelfNavigationGetV1','AccessSelfNavigation',[selfWorkspace,selfEnvironment])},
+  [prefix+'/self-context']:{get:privateRead('portalScopedAccessSelfContextGetV1','AccessSelfContext',[])},
+  [`${prefix}/preview`]:{post:write('portalScopedAccessPreviewPostV1','AccessPreviewRequest','AccessPreview')},
+  [`${prefix}/proposals`]:{post:write('portalScopedAccessProposalPostV1','AccessProposalRequest','AccessResult',[],true)},
+  [`${prefix}/proposals/{id}`]:{get:read('portalScopedAccessProposalGetV1','AccessProposal',[workspace,id])},
+  [`${prefix}/grants/{id}/revoke`]:{post:write('portalScopedAccessRevokePostV1','AccessRevokeRequest','AccessResult',[writeId])},
+  [`${prefix}/grants/{id}/preview-revoke`]:{post:write('portalScopedAccessRevokePreviewPostV1','AccessRevokeRequest','AccessRevokePreview',[writeId])},
+  [`${prefix}/step-up`]:{post:write('portalScopedAccessStepUpPostV1','AccessStepUpRequest','AccessStepUp')},
+  [`${prefix}/audit`]:{get:read('portalScopedAccessAuditGetV1','AccessAudit',[workspace,
+    {name:'subject_user_id',in:'query',required:true,schema:text},{name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:100,default:25}},
+    {name:'after',in:'query',required:false,schema:{type:'string',minLength:1,maxLength:2048}}])},
+},components:{securitySchemes:{PortalSession:{type:'apiKey',in:'cookie',name:'__Host-portal_session'}},schemas}};
+const sampleChange={subject_user_id:'usr_TEST_ONLY_researcher',action:'portfolio.read_restricted',effect:'ALLOW',
+  selector:{kind:'EXPLICIT_RESOURCE_SET',resource_kind:'PORTFOLIO',ids:['portfolio_TEST_ONLY']},environments:['paper'],
+  valid_from_ms:1792094400000,valid_until_ms:null,delegable_actions:[],ceiling_grant_id:'ceiling_TEST_ONLY',expected_ceiling_revision:'r1_TEST_ONLY',
+  expected_policy_revision:'p1_TEST_ONLY',expected_ts_membership_revision:null,reason:'Synthetic example, not a granted production policy'};
+const sampleEligibility={schema_version:'portal.self-eligibility.v1',workspace_id:'ws_TEST_ONLY',environment:'paper',
+  resource:{kind:'PORTFOLIO',id:'portfolio_TEST_ONLY'},current_only:true,advisory_only:true,
+  observed_at_ms:1792094400000,valid_until_ms:1792094405000};
+const sampleEligibilityRow={action:'portfolio.read',permission:'ALLOWED',reason_class:'FAMILY_CHECK_REQUIRED',
+  public_copy_key:'FAMILY_CHECK_REQUIRED',grant_ref:'acg_TEST_ONLY_OWN_SYNTHETIC',authority_mode:'VERSIONED_CURRENT',
+  step_up_required:false,step_up_freshness:'NOT_CHECKED',challenge_availability:'NOT_CHECKED',
+  command_readiness:'NOT_CHECKED',family_check:'BUSINESS_READ_SCOPE'};
+const sampleNavigation={schema_version:'portal.self-navigation.v1',workspace_id:'ws_TEST_ONLY',environment:'paper',
+  current_only:true,advisory_only:true,observed_at_ms:1792094400000,valid_until_ms:1792094405000,
+  current_read_mode:'NOT_ESTABLISHED',self_entry:{feature:'PROFILE_ACCESS',mode:'SELF_ONLY',permission:'ALLOWED',route:null,
+    consumer_state:'AWAITING_CONSUMER_ROUTER'}};
+const navigationRows=(appOnly)=>featureIds.map(feature=>{
+  const positive=appOnly&&feature!=='EXECUTION_OPERATIONS';
+  return {feature,state:positive?'ENTERABLE':'HIDDEN',authority_mode:positive?'APP_ONLY':'NOT_ESTABLISHED',
+    family_check:'NOT_CHECKED',source_readiness:'NOT_CHECKED',field_readiness:'NOT_CHECKED',command_readiness:'NOT_CHECKED'};
+});
+const fixtures={lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',cases:[
+  {type:'AccessEligibility',case_name:'POSITIVE_SHAPE_NOT_INSTALLED_AUTHORITY',value:{...sampleEligibility,actions:[sampleEligibilityRow]}},
+  {type:'AccessEligibility',case_name:'ABSENT_PERMISSION',value:{...sampleEligibility,actions:[{...sampleEligibilityRow,
+    permission:'UNAVAILABLE',reason_class:'NO_CURRENT_PERMISSION',public_copy_key:'NO_CURRENT_PERMISSION',grant_ref:null,authority_mode:'NOT_ESTABLISHED'}]}},
+  {type:'AccessSelfNavigation',case_name:'APP_ONLY_NOT_SOURCE_AUTHORITY',value:{...sampleNavigation,features:navigationRows(true)}},
+  {type:'AccessSelfNavigation',case_name:'ABSENT_PERMISSION',value:{...sampleNavigation,features:navigationRows(false)}},
+  ...['LEGACY_COMPATIBILITY','SCOPED_V2'].map(mode=>({type:'AccessSelfNavigation',case_name:`ROUTING_${mode}_NOT_A_GRANT`,
+    value:{...sampleNavigation,current_read_mode:mode,features:navigationRows(false)}})),
+  {type:'AccessEffective',value:{schema_version:'portal.access-effective.v1',workspace_id:'ws_TEST_ONLY',user_id:'usr_TEST_ONLY',policy_revision:null,
+    availability:'POLICY_PENDING',reason_code:'POLICY_PENDING',grants:[],researcher_field_policy:{state:'PENDING',policy_ref:null},
+    owner_recovery:{enabled:false,reason_code:'OWNER_RECOVERY_NOT_APPROVED'}}},
+  {type:'AccessPreviewRequest',value:{workspace_id:'ws_TEST_ONLY',change:sampleChange}},
+  {type:'AccessPreview',value:{schema_version:'portal.access-preview.v1',allowed:false,reason_code:'RESEARCHER_FIELD_POLICY_PENDING',
+    preview_digest:`sha256:${'0'.repeat(64)}`,policy_revision:'p1_TEST_ONLY',app_outcome:'DENIED',ts_authority:'PENDING',effective_business_right:false,change:sampleChange,
+    effect_preview:{before:{coverage:'EXACT_SELECTOR_GRANTS_ONLY',grants:[]},after:{application:'DENIED',business:'PENDING',rights_effective_now:false}}}},
+  ...['ALLOW','DENY'].map(effect=>({type:'AccessRevokePreview',value:{schema_version:'portal.access-revoke-preview.v1',
+    preview_digest:`sha256:${'0'.repeat(64)}`,policy_revision:'p1_TEST_ONLY',
+    before:{grant_id:`acg_TEST_ONLY_${effect}`,grant_revision:'r1_TEST_ONLY',action:'users.read',effect,
+      selector:{kind:'EXPLICIT_RESOURCE_SET',resource_kind:'USER',ids:['usr_TEST_ONLY_target']},environments:['paper'],revoked_at_ms:null},
+    after:{grant_state:'REVOKED_ON_COMMIT',effective_access:'CURRENT_POLICY_REEVALUATED',ts_revocation:'NOT_REQUIRED',
+      descendants:'CURRENT_CHAIN_RECHECKED',committed_obligations:'CONTINUE'},step_up_required:true,advisory_only:true}})),
+  ...['APP_APPLIED','TS_PENDING','TS_APPLIED','TS_REJECTED','TS_UNKNOWN','REVOKED','DENIED'].map(outcome=>({type:'AccessReceipt',value:{
+    schema_version:'portal.access-operation.v1',operation_id:`ace_TEST_ONLY_${outcome}`,proposal_id:'acp_TEST_ONLY',grant_id:'acg_TEST_ONLY',outcome,
+    http_status:outcome==='DENIED'?409:200,reason_code:outcome==='DENIED'?'GRANT_REVISION_CONFLICT':null,policy_revision:'p1_TEST_ONLY',
+    grant_revision:'r1_TEST_ONLY',decided_at_ms:1792094400000,ts_authority:({TS_PENDING:'PENDING',TS_APPLIED:'ACCEPTED',TS_REJECTED:'REJECTED',TS_UNKNOWN:'UNKNOWN'})[outcome]??'NOT_REQUIRED'}})),
+],
+// FE-057/058/038: kept apart from `cases` for the same reason.
+self_context_cases:(()=>{
+  const base={schema_version:'portal.self-context.v1',current_only:true,advisory_only:true,observed_at_ms:1792094400000,valid_until_ms:1792094405000,
+    self_entry:{feature:'PROFILE_ACCESS',mode:'SELF_ONLY',permission:'ALLOWED',route:selfAccessEntryRoute,workspace_scope:'QUERY_workspace_id',
+      reason_class:null,consumer_state:'AWAITING_CONSUMER_ROUTER'},
+    account_operations:[{operation:'REVISE_BINDING',scope:'CREDENTIAL_ONLY',target_kind:'BINDING',availability:'NOT_COMMISSIONED',
+      reason_class:'COMMAND_FAMILY_NOT_COMMISSIONED',basis:'NONE_PUBLISHED',step_up_required:null}]};
+  const none={...base.self_entry,permission:'UNAVAILABLE',route:null,workspace_scope:null,reason_class:'NO_WORKSPACE_MEMBERSHIP'};
+  return [
+    ['RESOLVED_SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD',{...base,default_workspace:{state:'RESOLVED',workspace_id:'ws_TEST_ONLY_shared',rule:'SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD'}}],
+    ['RESOLVED_SOLE_MEMBERSHIP',{...base,default_workspace:{state:'RESOLVED',workspace_id:'ws_TEST_ONLY_personal',rule:'SOLE_MEMBERSHIP'}}],
+    ['AMBIGUOUS_SEVERAL_WITH_GRANT_RECORDS',{...base,default_workspace:{state:'AMBIGUOUS',candidates:[
+      {workspace_id:'ws_TEST_ONLY_a',access_basis:'OWN_CURRENT_GRANT_RECORD'},{workspace_id:'ws_TEST_ONLY_b',access_basis:'OWN_CURRENT_GRANT_RECORD'}]}}],
+    ['AMBIGUOUS_MEMBER_ONLY',{...base,default_workspace:{state:'AMBIGUOUS',candidates:[
+      {workspace_id:'ws_TEST_ONLY_a',access_basis:'MEMBER_ONLY'},{workspace_id:'ws_TEST_ONLY_b',access_basis:'MEMBER_ONLY'}]}}],
+    ['ABSENT_NO_MEMBERSHIP',{...base,default_workspace:{state:'NONE',reason_class:'NO_WORKSPACE_MEMBERSHIP'},self_entry:none}],
+    ['UNAVAILABLE_TOO_MANY_MEMBERSHIPS',{...base,default_workspace:{state:'UNAVAILABLE',reason_class:'TOO_MANY_MEMBERSHIPS'}}],
+  ].map(([case_name,value])=>({type:'AccessSelfContext',case_name,value}));
+})(),
+// FE-068: kept apart from `cases` so the pre-existing fixture contract (and its exact type-set assertions) is untouched.
+batch_cases:[false,true].map(active=>({type:'AccessEligibilityBatch',case_name:active?'STEP_UP_ACTIVE':'STEP_UP_REQUIRED_NOT_ACTIVE',value:{
+  schema_version:'portal.self-eligibility-batch.v2',workspace_id:'ws_TEST_ONLY',environment:'paper',current_only:true,advisory_only:true,
+  observed_at_ms:1792094400000,valid_until_ms:1792094405000,
+  session_step_up:{state:active?'ACTIVE':'NOT_ACTIVE',valid_until_ms:active?1792094403000:null,
+    // Delegated-capital-only actor: the capital challenge is available, the access-admin one is not.
+    challenges:stepUpChallengeOrder.map(family=>({family,mechanism:'PASSWORD_REAUTH',route:'/api/admin/profile-access/v2/step-up',
+      precondition:stepUpPreconditions[family],precondition_met:family==='CAPITAL_COMMAND'}))},
+  results:[
+    {resource:{kind:'PORTFOLIO',id:'portfolio_TEST_ONLY'},actions:[{...sampleEligibilityRow,step_up_state:'NOT_REQUIRED'},
+      {...sampleEligibilityRow,action:'capital.top_up',grant_ref:'acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP',step_up_required:true,
+        family_check:'CAPITAL_PREVIEW',step_up_state:active?'ACTIVE':'REQUIRED'}]},
+    {resource:{kind:'DEPLOYMENT',id:'deployment_TEST_ONLY'},actions:[{...sampleEligibilityRow,permission:'UNAVAILABLE',
+      reason_class:'ACTION_TARGET_UNSUPPORTED',public_copy_key:'ACTION_TARGET_UNSUPPORTED',grant_ref:null,authority_mode:'NOT_ESTABLISHED',
+      step_up_state:'NOT_REQUIRED'},
+      {...sampleEligibilityRow,action:'capital.top_up',grant_ref:'acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP_DEPLOYMENT',step_up_required:true,
+        family_check:'CAPITAL_PREVIEW',step_up_state:active?'ACTIVE':'REQUIRED'}]}]}})),
+};
+// Only the new C3 shapes receive examples; all existing schema/fixture semantics remain unchanged.
+for(const name of ['AccessEligibility','AccessSelfNavigation'])
+  schemas[name].examples=fixtures.cases.filter(entry=>entry.type===name).map(entry=>entry.value);
+schemas.AccessEligibilityBatch.examples=fixtures.batch_cases.map(entry=>entry.value);
+schemas.AccessSelfContext.examples=fixtures.self_context_cases.map(entry=>entry.value);
+for(const [file,value] of Object.entries({'openapi/execution-access.openapi.json':document,'fixtures/execution-access.synthetic.valid.json':fixtures})){
+  const bytes=JSON.stringify(value,null,2)+'\n',target=resolve(root,file);
+  if(process.argv.includes('--check')){if(readFileSync(target,'utf8')!==bytes)throw new Error(`Generated drift: ${file}`);}
+  else writeFileSync(target,bytes);
+}

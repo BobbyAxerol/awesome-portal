@@ -60,7 +60,7 @@
     {
       "id": "n29_acceptance",
       "file": "services/portal-execution-edge-rs/contracts/n29-product-acceptance-v1/product-acceptance.v1.json",
-      "sha256": "sha256:b8640208f0bd301401c153c0a0cead1dbd5f90b41c8ae63bac8e6af2b92fea46"
+      "sha256": "sha256:b8251ab98f79dc356c0a8dbf4ff2b0234066436eef0aea2727787f92ab7a1ed2"
     },
     {
       "id": "n29_debt",
@@ -75,7 +75,7 @@
     {
       "id": "n17a_dr_harness",
       "file": "scripts/execution-n17a-production-dr-test.sh",
-      "sha256": "sha256:66d34c408752bd034c3178e706b89bb985e9b5e44d1f760448d6c8a076600cd4"
+      "sha256": "sha256:2b5671285267759a0ed885265ce97849273c244b78d78966ab85da77fe61c71e"
     },
     {
       "id": "n17b_current_acceptance",
@@ -140,7 +140,7 @@
     {
       "id": "current_source_proxy",
       "file": "apps/control-api/src/execution/current-source.proxy.ts",
-      "sha256": "sha256:267cdab04f3d3f7b85396c9b4acf6f06d43b08367cb9dd80ea30457da886a796"
+      "sha256": "sha256:7aace721ed205c9027966262ff838ec7dab3948dc0808abe75b34f49c44371eb"
     },
     {
       "id": "manager_v2_contract_decoder",
@@ -160,17 +160,17 @@
     {
       "id": "frontend_execution_route",
       "file": "apps/portal/frontend/src/execution/ExecutionPreviewRoute.tsx",
-      "sha256": "sha256:930ac0b0c514aa46a531d35c9a7fd56c2e3eac8df278f294ecb72711482268ed"
+      "sha256": "sha256:50ed786cc695105a9b967b3b7d87cefde71f6aec20711a7a3e7dfb4b2969cd88"
     },
     {
       "id": "frontend_product_boundary",
       "file": "apps/portal/frontend/src/execution/productBoundary.test.ts",
-      "sha256": "sha256:4492a683d7d27d29460e7472737e5881f24c0d6df1dedca941b0ad88f8741795"
+      "sha256": "sha256:21bfb8d31497310a9478a225402990c2eaafaf426f0faa8f4efa1b57dde5701c"
     },
     {
       "id": "subject_activity_bff",
       "file": "apps/control-api/src/execution/subject-activity.service.ts",
-      "sha256": "sha256:011830994cb622709b76bbd633865e68102568349d00f0d110f69dd0b1a1917a"
+      "sha256": "sha256:0f80d9926ee869a3a1600d44ecd08535b83b6db9add0637942e4b656be86216f"
     },
     {
       "id": "subject_activity_ui",
@@ -180,17 +180,17 @@
     {
       "id": "projection_relation_ladder",
       "file": "apps/control-api/src/execution/profile-projection.catalog.ts",
-      "sha256": "sha256:dca663c6d4779c25d13adb3ebf5c37b300f301029bef4f9763f641f8820862c1"
+      "sha256": "sha256:9f332b4aa0a7bfa389c58ba5006ef0d044a4d34119441aca0d64e12aa2909abb"
     },
     {
       "id": "projection_worker",
       "file": "apps/control-api/src/execution/profile-projection.worker.ts",
-      "sha256": "sha256:88673cf4f360d0c49dac76e79f57607d5c657b7a6ca3d60e556fa316916ce28d"
+      "sha256": "sha256:6eca6a4a815cd1f827ec1ae1a619161372964b801e295069d172e2f29fe9bc99"
     },
     {
       "id": "projection_repository",
       "file": "apps/control-api/src/execution/profile-projection.repository.ts",
-      "sha256": "sha256:a8359036bbe213c0d683ba1313d35f620249ef1350ef7dbd7a27328c83f92c14"
+      "sha256": "sha256:3efc352c94fb55be5ee7b2aff4e533a9cb7ca1bf529d35f0c3fc75727a5d5d09"
     },
     {
       "id": "market_context_intake",
@@ -200,7 +200,7 @@
     {
       "id": "market_context_service",
       "file": "apps/control-api/src/execution/market-context.service.ts",
-      "sha256": "sha256:96c7ae70c8a9af9bca7e4f443d18c1d4447eb97ae24ef75287ad4b628b17f95e"
+      "sha256": "sha256:d0aea00a0bf45a49c12b30927f0916017a7f952815ba74b7fd96086387df2fec"
     },
     {
       "id": "market_context_chart_bff",

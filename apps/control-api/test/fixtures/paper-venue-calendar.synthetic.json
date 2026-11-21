@@ -1,0 +1,26 @@
+{
+  "schema_version": "portal.internal.venue-calendar.v1",
+  "workspace_id": "synthetic-workspace",
+  "environment": "paper",
+  "profile_id": "synthetic-paper",
+  "venue": "SYNTHETIC_VN",
+  "market": "VN_EQUITY",
+  "source_ref": "synthetic-edge-calendar",
+  "catalogue_revision": "synthetic-catalogue-1",
+  "source_revision": "synthetic-calendar-1",
+  "source_as_of": "2026-10-25T01:00:00Z",
+  "observed_at_ms": 1792890001000,
+  "expires_at_ms": 1792890600000,
+  "payload": {
+    "timezone": "Asia/Ho_Chi_Minh",
+    "date": "2026-10-25",
+    "is_open": false,
+    "sessions": [
+      { "name": "ATO", "open": "09:00", "close": "09:15" },
+      { "name": "continuous", "open": "09:15", "close": "11:30" },
+      { "name": "afternoon", "open": "13:00", "close": "14:30" },
+      { "name": "ATC", "open": "14:30", "close": "14:45" }
+    ],
+    "holidays": []
+  }
+}

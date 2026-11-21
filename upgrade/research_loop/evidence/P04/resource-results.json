@@ -1,0 +1,46 @@
+{
+  "phase": "P04",
+  "status": "MEASURED_LOCAL_BASELINE",
+  "measurement_scope": "single local Linux Python process; public QuantBT API only; process RSS includes Python and native allocations",
+  "workload": {
+    "route": "signal_notional",
+    "fixture": "protected_delta_rsi_deterministic_500_hourly_bars",
+    "input_bytes": 32000,
+    "kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d"
+  },
+  "units": {
+    "memory": "KiB",
+    "elapsed": "ms"
+  },
+  "profiles": [
+    {
+      "profile": "minimal",
+      "rss_start_kib": 15036,
+      "rss_result_kib": 291428,
+      "rss_delta_kib": 276392,
+      "cold_elapsed_ms": 26.27598587423563,
+      "warm_elapsed_ms": 10.591158177703619
+    },
+    {
+      "profile": "score",
+      "rss_start_kib": 15004,
+      "rss_result_kib": 291564,
+      "rss_delta_kib": 276560,
+      "cold_elapsed_ms": 25.11091297492385,
+      "warm_elapsed_ms": 10.936466977000237
+    },
+    {
+      "profile": "audit",
+      "rss_start_kib": 15032,
+      "rss_result_kib": 291708,
+      "rss_delta_kib": 276676,
+      "cold_elapsed_ms": 23.778848815709352,
+      "warm_elapsed_ms": 9.079304989427328
+    }
+  ],
+  "interpretation": [
+    "This is a local single-process baseline, not production worker capacity certification.",
+    "The retained value is aggregate process RSS; it must not be called a private native-buffer attribution.",
+    "P05 owns durable writer retention, exports, quota and cleanup; P04 activates none of them."
+  ]
+}

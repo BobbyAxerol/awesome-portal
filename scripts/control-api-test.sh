@@ -4,6 +4,26 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_DIR="${ROOT_DIR}/apps/control-api"
+# Optional focused retake, using the identical isolated cell/build/restore gate.
+# No arguments retains the historical full-suite behavior; never accept paths
+# outside this application's tracked test directory or shell expressions.
+for test_file in "$@"; do
+  if [[ ! "${test_file}" =~ ^test/[A-Za-z0-9._-]+\.spec\.ts$ ]] || [[ ! -f "${APP_DIR}/${test_file}" ]]; then
+    printf 'Invalid Control API test path: %s\n' "${test_file}" >&2
+    exit 2
+  fi
+done
+# Optional export of this exact, fully compiled/tested disposable cell. This
+# does not bypass a gate: capture is reached only AFTER both restore checks.
+# The offline exporter compares source bytes against the frozen index tree.
+QUALIFIED_OUTPUT_DIR="${CONTROL_API_QUALIFIED_OUTPUT_DIR:-}"
+QUALIFIED_SOURCE_TREE="${CONTROL_API_QUALIFIED_SOURCE_TREE:-}"
+if [[ -n "${QUALIFIED_OUTPUT_DIR}" || -n "${QUALIFIED_SOURCE_TREE}" ]]; then
+  [[ -n "${QUALIFIED_OUTPUT_DIR}" && "${QUALIFIED_SOURCE_TREE}" =~ ^[a-f0-9]{40}$ ]] || {
+    printf 'Qualified export requires an output directory and frozen tree.\n' >&2; exit 2;
+  }
+  [[ "$(git -C "${ROOT_DIR}" cat-file -t "${QUALIFIED_SOURCE_TREE}")" == tree ]] || exit 2
+fi
 MAXIMUM_DATA_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v1"
 EDS08_SOURCE_CONTINUITY_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1"
 # EDS-11R's checked-in named-operation compiler consumes this immutable
@@ -11,17 +31,24 @@ EDS08_SOURCE_CONTINUITY_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/cont
 # explicitly mounted into the disposable test cell so the provenance test is
 # meaningful in CI as well as from a developer checkout.
 EDS11R_MANAGER_CENSUS_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1"
+# The source-dark Edge Manager consumer spec cross-checks the owner Manager-v2 pack and the Edge service
+# problem table; both are mounted read-only and located through explicit variables.
+EDGE_MANAGER_V2_PACK_DIR="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1"
+EDGE_SERVICE_MAIN_FILE="${ROOT_DIR}/services/portal-execution-edge-rs/crates/edge-service/src/main.rs"
 # Each invocation owns an isolated disposable cell.  The historical fixed
 # names made two concurrent local/CI verification runs collide even though
 # neither touches Portal runtime state.  A caller may still pin all names for
-# diagnostics, but the default process-id suffix makes concurrent runs safe.
-TEST_RUN_SUFFIX="${CONTROL_API_TEST_RUN_SUFFIX:-$$}"
+# diagnostics. Fresh numeric PID/random suffixes also preserve the native
+# suites' strict disposable-PostgreSQL hostname guard.
+DEPS_DIR="$(mktemp -d)"
+trap 'rm -rf -- "${DEPS_DIR}"' EXIT
+TEST_RUN_SUFFIX="${CONTROL_API_TEST_RUN_SUFFIX:-$$${RANDOM}${RANDOM}}"
 NETWORK="${CONTROL_API_TEST_NETWORK:-control-api-test-net-${TEST_RUN_SUFFIX}}"
 PG_CONTAINER="${CONTROL_API_TEST_POSTGRES_CONTAINER:-control-api-test-postgres-${TEST_RUN_SUFFIX}}"
 NODE_CONTAINER="${CONTROL_API_TEST_NODE_CONTAINER:-control-api-test-node-${TEST_RUN_SUFFIX}}"
 NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
 POSTGRES_IMAGE="postgres@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
-DEPS_DIR="$(mktemp -d)"
+
 WORK_DIR="${DEPS_DIR}/work"
 RUN_UID="${HOST_UID:-$(id -u)}"
 RUN_GID="${HOST_GID:-$(id -g)}"
@@ -59,9 +86,21 @@ fi
 
 cleanup() {
   "${DOCKER[@]}" rm -f "${NODE_CONTAINER}" "${PG_CONTAINER}" >/dev/null 2>&1 || true
+  "${DOCKER[@]}" rm -f "${NODE_CONTAINER}-preservation" >/dev/null 2>&1 || true
   "${DOCKER[@]}" network rm "${NETWORK}" >/dev/null 2>&1 || true
   rm -rf -- "${DEPS_DIR}"
 }
+# Reject occupied explicit names before registering resource cleanup.
+for test_container in "${NODE_CONTAINER}" "${NODE_CONTAINER}-preservation" "${PG_CONTAINER}"; do
+  if "${DOCKER[@]}" container inspect "${test_container}" >/dev/null 2>&1; then
+    printf 'Refusing occupied Control API container: %s\n' "${test_container}" >&2
+    exit 1
+  fi
+done
+if "${DOCKER[@]}" network inspect "${NETWORK}" >/dev/null 2>&1; then
+  printf 'Refusing occupied Control API network: %s\n' "${NETWORK}" >&2
+  exit 1
+fi
 trap cleanup EXIT
 
 # Dependency resolution sees package metadata only; the repository source is
@@ -69,7 +108,7 @@ trap cleanup EXIT
 # node_modules tree becomes read-only in the internal test cell below.
 cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
 "${DOCKER[@]}" run --rm --network bridge --read-only \
-  --cpus 2 --memory 1536m --memory-swap 1536m \
+  --cpus 2 --memory 1536m --memory-swap 1536m --pids-limit 512 \
   -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/deps" \
   --tmpfs /tmp:rw,exec,mode=1777,size=256m \
@@ -100,6 +139,7 @@ cp -a \
   "${APP_DIR}/package-lock.json" \
   "${APP_DIR}/tsconfig.build.json" \
   "${APP_DIR}/tsconfig.json" \
+  "${APP_DIR}/tsconfig.cross-loop.json" \
   "${APP_DIR}/vitest.config.mts" \
   "${WORK_DIR}/"
 # A4-D15 · the deployment's own bootstrap input, so a test can assert against
@@ -108,14 +148,39 @@ cp -a \
 mkdir -p "${WORK_DIR}/deploy/control-api"
 cp -a "${ROOT_DIR}/deploy/control-api/bootstrap-users.yaml" "${WORK_DIR}/deploy/control-api/"
 
+# Paper-history qualification deliberately exercises the real pure browser
+# reader/model after the HTTP producer; do not replace that boundary with a
+# hand-written test DTO. Its relative imports resolve next to /cell/work.
+# Copy only this explicit non-secret, framework-free dependency closure after
+# npm preparation, not the frontend workspace, env files or node_modules.
+PAPER_READER_SOURCE="${DEPS_DIR}/portal/frontend/src/execution"
+for paper_reader_file in \
+  api/profileRead.ts api/schemaGuard.ts api/screenV2.ts \
+  screenDataContract.ts unsafeText.ts formatExact.ts stageFacts.ts \
+  v2/boundary.ts v2/charts/decimal.ts v2/charts/model.ts v2/charts/downsample.ts \
+  v2/readers/paperRead.ts v2/readers/stageFactViews.ts \
+  v2/screens/stage/identity.ts v2/screens/workbench/model.ts; do
+  mkdir -p "$(dirname "${PAPER_READER_SOURCE}/${paper_reader_file}")"
+  cp -a "${ROOT_DIR}/apps/portal/frontend/src/execution/${paper_reader_file}" \
+    "${PAPER_READER_SOURCE}/${paper_reader_file}"
+done
+
 ln -s ../node_modules "${WORK_DIR}/node_modules"
+# The restore verifier uses the SAME installed pg dependency and a dedicated
+# read-only transaction, without exposing identity/session/custody rows.
+mkdir -p "${DEPS_DIR}/scripts/execution-v2" "${DEPS_DIR}/apps/control-api"
+cp "${ROOT_DIR}/scripts/execution-v2/migration-preservation.mjs" \
+  "${ROOT_DIR}/scripts/execution-v2/migration-preservation-cli.mjs" \
+  "${DEPS_DIR}/scripts/execution-v2/"
+cp "${APP_DIR}/package.json" "${DEPS_DIR}/apps/control-api/"
+ln -s ../../node_modules "${DEPS_DIR}/apps/control-api/node_modules"
 
 # The test cell can reach only its temporary PostgreSQL container. Source is
 # mounted read-only and all generated/runtime files live in tmpfs.
 "${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null
 
 "${DOCKER[@]}" run -d --rm --name "${PG_CONTAINER}" --network "${NETWORK}" --read-only \
-  --cpus 1 --memory 2048m --memory-swap 2048m \
+  --cpus 1 --memory 2048m --memory-swap 2048m --pids-limit 256 \
   --tmpfs /var/lib/postgresql/data:rw,exec,mode=0700,size=2048m \
   --tmpfs /run/postgresql:rw,exec,mode=1777,size=16m \
   --tmpfs /tmp:rw,exec,mode=1777,size=64m \
@@ -137,14 +202,18 @@ if [[ "${ready}" != true ]]; then
 fi
 
 "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}" --network "${NETWORK}" --read-only \
-  --cpus 1 --memory 1536m --memory-swap 1536m \
+  --cpus 1 --memory 1536m --memory-swap 1536m --pids-limit 512 \
   -u "${CONTAINER_USER}" \
   -v "${DEPS_DIR}:/cell" \
   -v "${ROOT_DIR}/packages/contracts:/contracts:ro" \
   -e PORTAL_CONTRACTS_DIR=/contracts \
+  -v "${ROOT_DIR}/deploy/research-preview/native-core-templates:/core009-templates:ro" \
+  -e PORTAL_CORE009_TEMPLATES_DIR=/core009-templates \
   -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
   -v "${EDS08_SOURCE_CONTINUITY_PACK}:/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1:ro" \
   -v "${EDS11R_MANAGER_CENSUS_PACK}:/services/portal-execution-edge-rs/contracts/manager-surface-census-v1:ro" \
+  -v "${EDGE_MANAGER_V2_PACK_DIR}:/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1:ro" \
+  -v "${EDGE_SERVICE_MAIN_FILE}:/services/portal-execution-edge-rs/crates/edge-service/src/main.rs:ro" \
   --tmpfs /tmp:rw,exec,mode=1777,size=512m \
   -w /cell/work \
   -e HOME=/tmp \
@@ -154,24 +223,94 @@ fi
   -e EDS08_SOURCE_CONTINUITY_PACK="/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1" \
   -e EDS11R_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
   -e EDS11R_CENSUS_PACK="/services/portal-execution-edge-rs/contracts/manager-surface-census-v1" \
+  -e EDGE_MANAGER_V2_PACK="/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1" \
+  -e EDGE_SERVICE_MAIN="/services/portal-execution-edge-rs/crates/edge-service/src/main.rs" \
+  -e CONTROL_API_CAPTURE_QUALIFIED="$([[ -n "${QUALIFIED_OUTPUT_DIR}" ]] && printf 1 || printf 0)" \
   "${NODE_IMAGE}" sh -c '
     set -e
-    npm run build
-    npm test
-  '
+    # Keep the existing 3 GiB container ceiling, while giving the compiler
+    # enough V8 old-space for this workspace. Node otherwise derives a roughly
+    # 1.5 GiB heap and can abort before the bounded container is full.
+    NODE_OPTIONS=--max-old-space-size=2304 npm run build
+    # A focused pure spec may never initialize PostgreSQL itself. Prepare the
+    # same disposable database before tests, never repair their post-test state
+    # before the unchanged restore drill. No-argument full suites are unchanged.
+    if [ "$#" -gt 0 ]; then
+      DATABASE_URL="${TEST_DATABASE_URL:?Disposable test database URL is required}" node dist/cli/migrate.js
+    fi
+    npm test -- "$@"
+    if [ "${CONTROL_API_CAPTURE_QUALIFIED}" = 1 ]; then
+      node -e '\''const fs=require("node:fs"),crypto=require("node:crypto");
+        const hash=p=>crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+        fs.writeFileSync(".qualified-control-api-toolchain.json",JSON.stringify({
+          node_version:process.version,typescript_version:require("typescript/package.json").version,
+          typescript_js_sha256:hash("node_modules/typescript/lib/typescript.js"),
+          typescript_tsc_sha256:hash("node_modules/typescript/lib/tsc.js")
+        }),{flag:"wx",mode:0o600});'\''
+    fi
+  ' sh "$@"
 
 CONTROL_SIGNATURE_SQL="SELECT string_agg(value, ':' ORDER BY ordinal) FROM (VALUES (1, (SELECT count(*)::text FROM pgmigrations)), (2, (SELECT count(*)::text FROM portal_users)), (3, (SELECT count(*)::text FROM governance_approval_requests)), (4, (SELECT count(*)::text FROM governance_approval_known_limitations)), (5, (SELECT count(*)::text FROM governance_r2_lineage)), (6, (SELECT count(*)::text FROM governance_approval_history)), (7, (SELECT count(*)::text FROM governance_paper_exit_reviews)), (8, (SELECT count(*)::text FROM execution_command_plans_f0)), (9, (SELECT count(*)::text FROM execution_command_plans_f0 WHERE payload_json <> '{}'::jsonb)), (10, (SELECT count(*)::text FROM execution_operation_queue_items)), (11, (SELECT count(*)::text FROM execution_operation_queue_items WHERE assigned_to_user_id IS NOT NULL)), (12, (SELECT count(*)::text FROM execution_operation_queue_read WHERE incident_id IS NOT NULL)), (13, (SELECT count(*)::text FROM execution_operation_workflow_events)), (14, (SELECT count(*)::text FROM execution_incidents)), (15, (SELECT count(*)::text FROM execution_incident_operation_links)), (16, (SELECT count(*)::text FROM execution_incident_annotations)), (17, (SELECT count(*)::text FROM execution_incident_evidence)), (18, (SELECT count(*)::text FROM execution_incident_events)), (19, (SELECT count(*)::text FROM governance_sandbox_certifications)), (20, (SELECT count(*)::text FROM governance_sandbox_smoke_plans)), (21, (SELECT count(*)::text FROM governance_sandbox_step_evidence)), (22, (SELECT count(*)::text FROM governance_sandbox_findings)), (23, (SELECT count(*)::text FROM governance_sandbox_certification_events)), (24, (SELECT count(*)::text FROM governance_sandbox_promotion_plans)), (25, (SELECT count(*)::text FROM governance_canary_envelopes)), (26, (SELECT count(*)::text FROM execution_activation_capabilities)), (27, (SELECT count(*)::text FROM execution_activation_capabilities WHERE effective_profile <> 'fixture' OR source_enabled OR runtime_enabled OR NOT kill_switch_engaged)), (28, (SELECT count(*)::text FROM execution_activation_plans)), (29, (SELECT count(*)::text FROM execution_activation_evidence_refs)), (30, (SELECT count(*)::text FROM execution_activation_compatibility_requirements)), (31, (SELECT count(*)::text FROM execution_activation_events)), (32, (SELECT count(*)::text FROM execution_shared_admission_state)), (33, (SELECT count(*)::text FROM execution_shared_admission_leases)), (34, (SELECT count(*)::text FROM execution_shared_read_flights)), (35, (SELECT count(*)::text FROM execution_shared_read_cache)), (36, (SELECT count(*)::text FROM execution_manager_operation_continuations)), (37, (SELECT count(*)::text FROM execution_manager_projection_snapshots)), (38, (SELECT count(*)::text FROM execution_alpha_fleet_projection)), (39, (SELECT count(*)::text FROM execution_binding_projection)), (40, (SELECT count(*)::text FROM execution_profile_projection_leases)), (41, (SELECT count(*)::text FROM execution_profile_projection_snapshots)), (42, (SELECT count(*)::text FROM execution_profile_projection_journal)), (43, (SELECT count(*)::text FROM execution_durable_mirror_batches)), (44, (SELECT count(*)::text FROM execution_durable_mirror_revisions)), (45, (SELECT count(*)::text FROM execution_durable_mirror_observations)), (46, (SELECT count(*)::text FROM execution_durable_mirror_current_entities)), (47, (SELECT count(*)::text FROM execution_durable_mirror_range_rows)), (48, (SELECT count(*)::text FROM execution_durable_mirror_continuations)), (49, (SELECT count(*)::text FROM execution_durable_mirror_gaps)), (50, (SELECT count(*)::text FROM execution_durable_mirror_conflicts)), (51, (SELECT count(*)::text FROM execution_financial_query_cursors)), (52, (SELECT count(*)::text FROM execution_authoritative_event_streams)), (53, (SELECT count(*)::text FROM execution_authoritative_event_entries)), (54, (SELECT count(*)::text FROM execution_authoritative_event_entities)), (55, (SELECT count(*)::text FROM execution_profile_projection_refresh_health)), (56, (SELECT count(*)::text FROM governance_review_captures))) AS signature(ordinal, value);"
+"${DOCKER[@]}" exec -i "${PG_CONTAINER}" psql -U portal -d portal_control_test -v ON_ERROR_STOP=1 \
+  < "${APP_DIR}/test/fixtures/elp2-access-restore.sql"
 source_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc "${CONTROL_SIGNATURE_SQL}")"
+# Restore scoped policy and immutable receipts byte-for-byte as well as the
+# historical table-count signature. jsonb rows have deterministic key order;
+# sorting by the primary key makes this independent of physical heap order.
+ACCESS_SIGNATURE_SQL="SELECT string_agg(name || ':' || rows || ':' || digest, ':' ORDER BY name) FROM (
+  SELECT 'policy' AS name, count(*)::text AS rows, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY workspace_id),'')) AS digest FROM portal_access_policy_state t
+  UNION ALL SELECT 'grants', count(*)::text, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY grant_id),'')) FROM portal_access_grants_v2 t
+  UNION ALL SELECT 'proposals', count(*)::text, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY proposal_id),'')) FROM portal_access_proposals t
+  UNION ALL SELECT 'events', count(*)::text, md5(COALESCE(string_agg(row_to_json(t)::text, chr(10) ORDER BY event_id),'')) FROM portal_access_policy_events t
+) AS access_restore;"
+source_access_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc "${ACCESS_SIGNATURE_SQL}")"
+# A missing/partial native installation is not silently ignored: the selected
+# versioned preservation profile validates every required relation and ledger.
+preservation_profile=PORTAL_V1
+if [[ "$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_test -Atc \
+  "SELECT to_regclass('public.portal_native_review_schema') IS NOT NULL")" == t ]]; then
+  preservation_profile=RESEARCH_CURRENT_HUMAN_V1
+fi
+capture_preservation() {
+  "${DOCKER[@]}" run --rm --name "${NODE_CONTAINER}-preservation" \
+    --network "${NETWORK}" --read-only --cpus 1 --memory 512m --pids-limit 128 \
+    -u "${CONTAINER_USER}" -v "${DEPS_DIR}:/cell" \
+    --tmpfs /tmp:rw,noexec,mode=1777,size=16m \
+    -e PGHOST="${PG_CONTAINER}" -e PGPORT=5432 -e PGUSER=portal -e PGPASSWORD=portal -e PGDATABASE="$1" \
+    "${NODE_IMAGE}" node /cell/scripts/execution-v2/migration-preservation-cli.mjs capture \
+    --profile "${preservation_profile}" --output "/cell/$2"
+}
+capture_preservation portal_control_test source-preservation.json
 "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_dump -U portal -d portal_control_test \
   --format=custom --file=/tmp/portal_control_test.dump
 "${DOCKER[@]}" exec "${PG_CONTAINER}" createdb -U portal portal_control_restore
 "${DOCKER[@]}" exec "${PG_CONTAINER}" pg_restore -U portal -d portal_control_restore \
   --exit-on-error /tmp/portal_control_test.dump
 restore_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_restore -Atc "${CONTROL_SIGNATURE_SQL}")"
+restore_access_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -d portal_control_restore -Atc "${ACCESS_SIGNATURE_SQL}")"
+capture_preservation portal_control_restore restored-preservation.json
+node "${ROOT_DIR}/scripts/execution-v2/migration-preservation-cli.mjs" compare \
+  --source "${DEPS_DIR}/source-preservation.json" --restored "${DEPS_DIR}/restored-preservation.json" \
+  --output "${DEPS_DIR}/preservation-comparison.json"
 [[ "${source_signature}" == "${restore_signature}" ]] || {
   printf 'Control API restore signature mismatch: source=%s restore=%s\n' \
     "${source_signature}" "${restore_signature}" >&2
   exit 1
 }
+[[ "${source_access_signature}" == "${restore_access_signature}" ]] || {
+  printf 'Scoped access restore row-digest mismatch: source=%s restore=%s\n' \
+    "${source_access_signature}" "${restore_access_signature}" >&2
+  exit 1
+}
 
-printf 'Control API security/query/governance tests and PostgreSQL restore drill passed.\n'
+if [[ -n "${QUALIFIED_OUTPUT_DIR}" ]]; then
+  qualified_test_command='npm test --'
+  for test_file in "$@"; do qualified_test_command+=" ${test_file}"; done
+  qualified_script_sha="$(sha256sum "${BASH_SOURCE[0]}" | cut -d ' ' -f 1)"
+  node "${ROOT_DIR}/scripts/execution-v2/qualified-control-api-image.mjs" capture \
+    --source-root "${ROOT_DIR}" --source-tree "${QUALIFIED_SOURCE_TREE}" \
+    --work-dir "${WORK_DIR}" --output-dir "${QUALIFIED_OUTPUT_DIR}" \
+    --gate-script-sha256 "${qualified_script_sha}" --test-command "${qualified_test_command}"
+fi
+
+printf 'Control API tests and PostgreSQL restore drill (legacy counts/access digests plus versioned identity/session/command/custody preservation) passed.\n'

@@ -1,0 +1,788 @@
+/* Alpha Fleet, identity (UXM-07 S1a). Tokens and type roles only; no uppercase,
+ * no raw colour. Every rule that sets both a text and a fill colour uses a pair
+ * already proven by cards.css, dock.css or flag.css. */
+.exec-fleet-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-fleet-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-fleet-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-fleet-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-fleet-fresh {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+/* The freshness chip is a short word: it never wraps letter by letter in a narrow header row. */
+.exec-fleet-fresh .exec-flag {
+  flex: none;
+  white-space: nowrap;
+}
+.exec-fleet-source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+/* One small line under the counts: which population the counts are, and which the table is (dataset source only). */
+.exec-fleet-counts-src {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-fleet-typed {
+  width: 150px;
+}
+/* The banner's flag is a short word: it never wraps letter by letter in a narrow row (390px). */
+.exec-fleet-banner .exec-flag {
+  flex: none;
+  white-space: nowrap;
+}
+.exec-fleet-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+
+/* layout: table beside a docked drawer */
+.exec-fleet-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.exec-fleet-main[data-docked="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-fleet-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.exec-fleet-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* lens tabs */
+.exec-fleet-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-fleet-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px var(--space-4);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.exec-fleet-tab:hover {
+  color: var(--ink);
+}
+.exec-fleet-tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.exec-fleet-tab:focus-visible,
+.exec-fleet-segbtn:focus-visible,
+.exec-fleet-btn:focus-visible,
+.exec-fleet-input:focus-visible,
+.exec-fleet-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-fleet-tab-count {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+
+/* toolbar */
+.exec-fleet-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-fleet-field {
+  display: inline-flex;
+  min-width: 0;
+}
+.exec-fleet-input,
+.exec-fleet-select {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 5px 8px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-input {
+  width: 220px;
+  max-width: 100%;
+}
+.exec-fleet-input::placeholder {
+  color: var(--ink-faint);
+}
+.exec-fleet-input:disabled,
+.exec-fleet-select:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-fleet-btn,
+.exec-fleet-segbtn {
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-fleet-btn:disabled,
+.exec-fleet-segbtn:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-fleet-seg {
+  display: inline-flex;
+}
+.exec-fleet-segbtn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-fleet-grow {
+  flex: 1 1 0;
+}
+
+/* Columns menu: HIFI .pop .menu, a right-aligned list of checkboxes under the button. */
+.exec-fleet-pop {
+  position: relative;
+  display: inline-block;
+}
+.exec-fleet-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  margin-top: 4px;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-menuitem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 0;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.exec-fleet-menuitem[data-disabled="true"] {
+  cursor: not-allowed;
+}
+.exec-fleet-menuitem input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Active filter chips (HIFI #chips): name: value, a clear button, Clear all, and the URL disclosure. */
+.exec-fleet-chiprow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* A real flex box, not `display: contents`: contents drops the list's semantics in several browsers. Same gap, same look. */
+.exec-fleet-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-fleet-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-chipx,
+.exec-fleet-link {
+  padding: 0 6px;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-fleet-link {
+  color: var(--accent);
+}
+/* The cross stays small; its hit area reaches at least 24 x 24 CSS px (WCAG 2.5.8) without growing the chip. */
+.exec-fleet-chipx {
+  position: relative;
+}
+.exec-fleet-chipx::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+.exec-fleet-chipx:focus-visible,
+.exec-fleet-link:focus-visible,
+.exec-fleet-url > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-fleet-url {
+  margin-left: auto;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-fleet-url > summary {
+  cursor: pointer;
+}
+.exec-fleet-urltext {
+  display: block;
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+
+.exec-fleet-unpub {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+
+/* cells */
+.exec-fleet-alpha {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.exec-fleet-name {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-fleet-version,
+.exec-fleet-mono {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-fleet-stagecell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+}
+.exec-fleet-stageline {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-fleet-stage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--exec-font-label);
+  color: var(--ink);
+}
+/* 8x8 stage hue, as the HIFI .sd square: Paper and Sandbox filled, Canary hollow, Live solid red. */
+.exec-fleet-stage::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-stage[data-stage="PAPER"]::before {
+  background: var(--stage-paper);
+  border-color: var(--stage-paper);
+}
+.exec-fleet-stage[data-stage="SANDBOX"]::before {
+  background: var(--env-sandbox);
+  border-color: var(--env-sandbox);
+}
+.exec-fleet-stage[data-stage="CANARY"]::before {
+  border: 2px solid var(--env-canary);
+}
+.exec-fleet-stage[data-stage="LIVE"]::before {
+  background: var(--env-live);
+  border-color: var(--env-live);
+}
+.exec-fleet-also,
+.exec-fleet-reasons,
+.exec-fleet-none,
+.exec-fleet-na,
+.exec-fleet-note {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-fleet-reasons {
+  max-width: 28ch;
+}
+.exec-fleet-deps {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-fleet-np {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+/* footer, empty, not-published panels */
+.exec-fleet-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.exec-fleet-count-line {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-fleet-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  white-space: normal;
+}
+.exec-fleet-empty p {
+  margin: 0;
+}
+.exec-fleet-nppanel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px dashed var(--line-strong);
+}
+.exec-fleet-nppanel p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+/* drawer body */
+.exec-fleet-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.exec-fleet-drawer-flags {
+  display: flex;
+  gap: var(--space-2);
+}
+.exec-fleet-h {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-fleet-list {
+  margin: 0;
+  padding-left: 18px;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-fleet-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+.exec-fleet-fact {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font: var(--exec-font-body);
+}
+.exec-fleet-fact dt {
+  color: var(--ink-faint);
+}
+.exec-fleet-fact dd {
+  margin: 0;
+  color: var(--ink);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.exec-fleet-deptable {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-fleet-deptable th {
+  padding: 4px 4px 4px 0;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+  text-align: left;
+}
+.exec-fleet-deptable td {
+  padding: 4px 4px 4px 0;
+  border-top: 1px solid var(--line-soft);
+}
+a.exec-fleet-open {
+  display: inline-block;
+  text-decoration: none;
+}
+
+.exec-fleet-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 660px) {
+  /* The toolbar wraps and Columns lands at the left edge: the menu opens rightwards from it, not off-screen. */
+  .exec-fleet-menu {
+    right: auto;
+    left: 0;
+  }
+  .exec-fleet-main[data-docked="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .exec-fleet-input {
+    width: 100%;
+  }
+  /* G1: the filter bar waits behind one "Filters" button (it counts the applied filters); closed, the controls leave the page and the tab order. */
+  .exec-fleet-filters-toggle {
+    align-self: stretch;
+    text-align: left;
+  }
+  .exec-fleet-filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  .exec-fleet-filters[hidden] {
+    display: none;
+  }
+}
+
+/* The options behind "Filters and options" at every width, and the Notes line: the controls that used to spread over three rows and five paragraphs.
+ * Closed, they leave the page and the tab order; open, they wrap like the bar always did. */
+.exec-fleet-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+.exec-fleet-filters[hidden],
+.exec-fleet-notes[hidden] {
+  display: none;
+}
+.exec-fleet-notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.exec-fleet-notesline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+
+/* Board (hi-fi modules/board.js): the loaded rows, one lane per stage in spine order. Tokens only. */
+.exec-fleet-board-note {
+  margin: 0;
+}
+/* Lanes share the row: 192px floor (the kit's 220px does not fit five lanes beside two slim gate strips at 1440), growing
+ * with the room. Only when they still do not fit does the board scroll, inside itself. */
+.exec-fleet-board {
+  /* The absolutely positioned screen-reader text of a lane (.exec-fleet-sr) needs this scroller as its containing block: otherwise it
+   * escapes the board's own horizontal scroll and widens the page by the board's overhang (layout audit: fleet-board 1024, 86px). */
+  position: relative;
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+.exec-fleet-lane {
+  display: flex;
+  flex: 1 1 192px;
+  flex-direction: column;
+  min-width: 192px;
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+/* Empty gate lane: a slim strip, title and the "not published" word set vertically. */
+.exec-fleet-lane[data-collapsed="true"] {
+  flex: 0 0 auto;
+  min-width: 0;
+  align-self: stretch;
+  background: var(--paper-sunken);
+  border-style: dashed;
+}
+.exec-fleet-lane[data-collapsed="true"] > .exec-fleet-lane-head {
+  padding: var(--space-2);
+  border-bottom: 0;
+}
+.exec-fleet-lane-strip {
+  margin: 0;
+  padding: 0 var(--space-2) var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-fleet-lane[data-collapsed="true"] .exec-fleet-lane-title,
+.exec-fleet-lane[data-collapsed="true"] .exec-fleet-lane-strip {
+  writing-mode: vertical-rl;
+}
+.exec-fleet-lane-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
+  border-top: 4px solid var(--line-strong);
+}
+.exec-fleet-lane[data-stage="PAPER"] > .exec-fleet-lane-head {
+  border-top-color: var(--stage-paper);
+}
+.exec-fleet-lane[data-stage="SANDBOX"] > .exec-fleet-lane-head {
+  border-top-color: var(--env-sandbox);
+}
+.exec-fleet-lane[data-stage="CANARY"] > .exec-fleet-lane-head {
+  border-top-color: var(--env-canary);
+}
+.exec-fleet-lane[data-stage="LIVE"] > .exec-fleet-lane-head {
+  border-top-color: var(--env-live);
+}
+/* Lane domain (audit A3): the tag says it in words; simulated lanes are hatched, real-funded lanes are framed. */
+.exec-fleet-lane-tag {
+  align-self: flex-start;
+  padding: 0 6px;
+  font: var(--exec-font-label);
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-lane-tag[data-domain="real"] {
+  color: var(--ink);
+  border-color: var(--env-live);
+}
+.exec-fleet-lane[data-domain="simulated"] > .exec-fleet-lane-cards,
+.exec-fleet-lane[data-domain="simulated"] > .exec-fleet-lane-empty {
+  background-image: repeating-linear-gradient(135deg, transparent 0 7px, var(--line) 7px 8px);
+}
+.exec-fleet-lane[data-domain="real"] {
+  border-color: var(--env-live);
+}
+.exec-fleet-lane-title {
+  margin: 0;
+  font: var(--exec-font-label);
+  color: var(--ink);
+}
+.exec-fleet-lane-count,
+.exec-fleet-lane-pub {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-fleet-lane-gap {
+  margin-top: 2px;
+}
+.exec-fleet-lane-empty {
+  margin: 0;
+  padding: var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-fleet-lane-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+}
+.exec-fleet-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  min-width: 0;
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-card:hover {
+  background: var(--surface-2);
+}
+.exec-fleet-card[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* The whole card is the link's hit area; the link's own text stays the accessible name. */
+.exec-fleet-card-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+.exec-fleet-card-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.exec-fleet-card-link:focus-visible {
+  outline: none;
+}
+.exec-fleet-card-link:focus-visible::after {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-fleet-card-owner {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-fleet-card-health {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.exec-fleet-card-ready {
+  white-space: normal;
+}
+
+/* Below 660px (the table's own breakpoint) the lanes stack, one under another. */
+@media (max-width: 660px) {
+  .exec-fleet-board {
+    flex-direction: column;
+    align-items: stretch;
+    overflow-x: visible;
+  }
+  .exec-fleet-lane {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  /* Stacked, a gate strip is one horizontal line. */
+  .exec-fleet-lane[data-collapsed="true"] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    align-self: auto;
+  }
+  .exec-fleet-lane[data-collapsed="true"] .exec-fleet-lane-title,
+  .exec-fleet-lane[data-collapsed="true"] .exec-fleet-lane-strip {
+    writing-mode: horizontal-tb;
+  }
+  .exec-fleet-lane-strip {
+    padding: var(--space-2);
+  }
+}
+
+/* Label-and-number tiles (no notes any more) sit two to a row at phone width instead of five tall rows. */
+@media (max-width: 660px) {
+  .exec-fleet-v2 .exec-blk-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .exec-fleet-v2 .exec-blk-kpi:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* A long list of portfolios wraps inside its cell: it was one 400px nowrap line that pushed Stage, Health and Deployments off a 1024px screen. */
+.exec-fleet-v2 .exec-cards tbody td[data-l="Portfolios"] {
+  min-width: 12rem;
+  max-width: 22rem;
+  white-space: normal;
+}
+
+/* UXM-07 audit A #4: beside the 228px rail a 1024px window leaves the table 712px. Tighter cell padding and a narrower portfolios
+ * floor make the six identity columns fit without an inner scroll; the wrap still scrolls (focusable) if a long name needs more. */
+@media (min-width: 661px) and (max-width: 1279px) {
+  .exec-fleet-v2 .exec-cards thead th,
+  .exec-fleet-v2 .exec-cards tbody td {
+    padding-inline: var(--space-2);
+  }
+  .exec-fleet-v2 .exec-cards tbody td[data-l="Portfolios"] {
+    min-width: 6rem;
+  }
+  /* A health chip is a word, never cut mid-word ("ATTENTIO N"); its detail line may wrap under it. */
+  .exec-fleet-v2 .exec-cards tbody td[data-l="Health"] .exec-flag {
+    white-space: nowrap;
+  }
+}

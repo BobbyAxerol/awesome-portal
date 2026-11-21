@@ -2,6 +2,7 @@ import { createHash } from "crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { PortalUser } from "../domain";
+import { ExecutionReadScopeError, type ReadScopePrincipal } from "../execution-v2/read-scope";
 import {
   ExecutionProfileReadAdapterService,
   ProjectionAdapterError,
@@ -11,6 +12,8 @@ import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProductAuditRepository } from "../repos/outbox";
 import { EXECUTION_COMMAND_CATALOG } from "./catalog.generated";
+import { f0ApplyDecision } from "./f0-apply.contract";
+import { executionCommandPlanResponse } from "./f0-plan.contract";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionCommandCatalogueQuery,
@@ -75,6 +78,8 @@ function response(plan: ExecutionCommandPlanRecord, replayed: boolean) {
     source_side_effect_requested: false,
     payload_storage_policy: "HASH_ONLY_NO_RAW",
     current_primitive: currentPrimitive,
+    // FE-020: no plan carries a cost, fee or impact estimate. A typed absence, never a computed value.
+    cost_impact: { state: "NOT_PUBLISHED" as const, reason: "NO_COST_OR_IMPACT_SOURCE" as const },
     replayed,
   };
 }
@@ -100,7 +105,19 @@ export class ExecutionOperationsService {
       : EXECUTION_COMMAND_CATALOG.entries.filter((entry) => entry.risk_tier === scope.risk_tier);
     const entries = selectedEntries.map((entry) => {
       const accepted = n16bCatalogueEntry(entry);
-      return { ...accepted, classification: catalogueEntryClassification(accepted) };
+      const classification = catalogueEntryClassification(accepted);
+      // catalogue_revision 2 publishes `capability_state: "DISABLED"` and
+      // `portal_reachable: false` as constants. A CONNECTED entry would be a
+      // sendable claim the served schema cannot express, so refuse it here
+      // instead of computing a PARTIAL scope the contract does not describe.
+      if (classification.state === "CONNECTED") {
+        throw new GovernanceError(
+          "COMMAND_CATALOGUE_SENDABLE_CLAIM",
+          "The command catalogue cannot be served.",
+          503,
+        );
+      }
+      return { ...accepted, classification };
     });
     return {
       ...EXECUTION_COMMAND_CATALOG,
@@ -113,9 +130,7 @@ export class ExecutionOperationsService {
           ? null
           : { type: scope.target_type, id: scope.target_id! },
         requested_risk_tier: scope.risk_tier ?? null,
-        capability_state: entries.some((entry) => entry.classification.state === "CONNECTED")
-          ? ("PARTIAL" as const)
-          : ("DISABLED" as const),
+        capability_state: "DISABLED" as const,
         freshness_state: "UNAVAILABLE" as const,
         policy_revision: "execution.command-catalogue.f0.v2" as const,
       },
@@ -148,10 +163,13 @@ export class ExecutionOperationsService {
     // this type says so rather than leaving every use to guess.
     input: OperatorTaskRunRequest & { workspace_id: string },
     requestId: string,
+    trustedPrincipal?: ReadScopePrincipal,
   ) {
     if (user.role !== "ADMIN") {
       throw new GovernanceError("ADMIN_ROLE_REQUIRED", "Access denied.", 403);
     }
+    if (trustedPrincipal && (trustedPrincipal.user.userId !== user.userId || trustedPrincipal.workspaceId !== input.workspace_id))
+      throw new GovernanceError("WORKSPACE_NOT_FOUND", "The requested workspace is not available.", 404);
     const task = this.validatedTask(taskId, input.params);
     if (task.mode !== "READ") {
       throw new GovernanceError("COMMAND_RUN_READ_ONLY", "Run is available only for R0 tasks.", 409);
@@ -161,7 +179,7 @@ export class ExecutionOperationsService {
     if (classification.state === "CONNECTED" && adapter !== null) {
       const environment = localTaskEnvironment(task.taskId, input.params);
       try {
-        const result = await this.localReads.read(input.workspace_id, environment, adapter, input.params);
+        const complete = async (result: unknown) => {
         const resultDigest = digest(result);
         await this.audit.record({
           eventId: newUlid("audit"),
@@ -192,9 +210,12 @@ export class ExecutionOperationsService {
           response_digest: resultDigest,
           result,
         };
+        };
+        return await (trustedPrincipal ? this.localReads.readTaskAuthorized(trustedPrincipal, environment, adapter, input.params, complete)
+          : complete(await this.localReads.read(input.workspace_id, environment, adapter, input.params)));
       } catch (error) {
-        const code = error instanceof ProjectionAdapterError ? error.code : "PHASE2_LOCAL_TASK_FAILED";
-        const status = error instanceof ProjectionAdapterError ? error.status : 503;
+        const code = error instanceof ProjectionAdapterError || error instanceof ExecutionReadScopeError ? error.code : "PHASE2_LOCAL_TASK_FAILED";
+        const status = error instanceof ProjectionAdapterError || error instanceof ExecutionReadScopeError ? error.status : 503;
         await this.audit.record({
           eventId: newUlid("audit"), eventType: "execution.command.local_read_failed",
           actorUserId: user.userId, workspaceId: input.workspace_id, requestId,
@@ -375,36 +396,92 @@ export class ExecutionOperationsService {
         409,
       );
     }
-    return response(created.record, !created.created);
+    // The wire is validated against the same parser the published schema mirrors.
+    return executionCommandPlanResponse.parse(response(created.record, !created.created));
   }
 
+  /**
+   * F0 apply is DENIED-only (see f0-apply.contract.ts): there is no branch that returns. The key
+   * makes the denial replayable (same key + same operation => the same typed answer, `replayed`
+   * true) and conflict-detectable (same key + a different operation => 409
+   * REQUEST_KEY_PAYLOAD_CONFLICT, nothing recorded). The plan lookup is creator-scoped, so a key
+   * can only ever be bound to an operation its own actor planned.
+   */
   async apply(
     user: PortalUser,
     workspaceId: string,
     operationId: string,
+    requestKey: string,
     requestId: string,
   ): Promise<never> {
     const plan = await this.repository.find(workspaceId, user.userId, operationId);
     if (!plan) throw new GovernanceError("OPERATION_NOT_FOUND", "Operation not found.", 404);
-    await this.audit.record({
-      eventId: newUlid("audit"),
-      eventType: "execution.command.apply_rejected",
-      actorUserId: user.userId,
-      workspaceId,
-      requestId,
-      idempotencyKey: `apply:${operationId}`,
-      aggregateType: "execution_command",
-      aggregateId: operationId,
-      aggregateVersion: 1,
-      result: "DENIED",
-      reasonCode: "COMMAND_RELAY_DISABLED",
-      metadata: { source_request_sent: false, retry_allowed: false },
+    const intentHash = digest({
+      command_type: "EXECUTION_COMMAND",
+      operation_id: operationId,
+      workspace_id: workspaceId,
     });
+    const recorded = await this.repository.recordApplyAttempt({
+      workspaceId,
+      actorUserId: user.userId,
+      requestKey,
+      operationId,
+      intentHash,
+      requestId,
+      auditEventId: newUlid("audit"),
+    });
+    if (recorded.record.intentHash !== intentHash) {
+      await this.audit.record({
+        eventId: newUlid("audit"),
+        eventType: "execution.command.apply_rejected",
+        actorUserId: user.userId,
+        workspaceId,
+        requestId,
+        idempotencyKey: requestKey,
+        aggregateType: "execution_command",
+        aggregateId: operationId,
+        aggregateVersion: 1,
+        result: "CONFLICT",
+        reasonCode: "REQUEST_KEY_PAYLOAD_CONFLICT",
+        metadata: { source_request_sent: false },
+      });
+      throw new GovernanceError(
+        "REQUEST_KEY_PAYLOAD_CONFLICT",
+        "Request key was already used for another intent.",
+        409,
+        { request_key: requestKey, source_request_sent: false },
+      );
+    }
+    if (!recorded.created) {
+      await this.audit.record({
+        eventId: newUlid("audit"),
+        eventType: "execution.command.apply_rejected",
+        actorUserId: user.userId,
+        workspaceId,
+        requestId,
+        idempotencyKey: requestKey,
+        aggregateType: "execution_command",
+        aggregateId: operationId,
+        aggregateVersion: 1,
+        result: "DENIED",
+        reasonCode: "COMMAND_RELAY_DISABLED",
+        metadata: { source_request_sent: false, retry_allowed: false, replayed: true },
+      });
+    }
     throw new GovernanceError(
       "COMMAND_RELAY_DISABLED",
       "Execution command relay is disabled in EX-BE-05b/F0.",
       409,
-      { operation_id: operationId, source_request_sent: false, retry_allowed: false },
+      f0ApplyDecision.parse({
+        schema_version: "execution.command-relay-decision.v1",
+        operation_id: operationId,
+        decision: "DENIED",
+        reason: "COMMAND_RELAY_DISABLED",
+        retry_allowed: false,
+        source_request_sent: false,
+        request_key: requestKey,
+        replayed: !recorded.created,
+      }),
     );
   }
 

@@ -1,5 +1,9 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
+import { ExecutionReadScopes } from "../execution-v2/read-scope";
+import { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
+import { ScopedManagerReader } from "./scoped-manager.reader";
 import { freshnessPolicies } from "../execution/environment-parity";
+import { retainedReview } from "../execution/retained-read-profile";
 import { AuthSession, PortalUser } from "../domain";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { ExecutionProductReadSource } from "../execution/product-read-source";
@@ -12,7 +16,11 @@ import {
   AlphaFleetEnvironment, AlphaFleetQuery, BindingItem, BindingsQuery,
   MANAGER_LIST_ENVIRONMENTS, ManagerListEnvironment, PortfolioListItem, PortfolioListQuery,
   alphaFleetResource, bindingsRawQuery, bindingsResource, fleetRawQuery,
+  mapBindingRow,
 } from "./contracts";
+import { BINDING_FINANCIAL_BATCH_SOURCE, BINDING_FINANCIAL_REFRESH_SOURCE, bindingFinancialRequest,
+  bindingFinancialRefreshRequest, readBindingFinancialBatch, readBindingFinancialRefresh,
+  type BindingFinancialBatchSource, type BindingFinancialRefreshSource, type BindingFinancialRefreshPage } from "./binding-financial-batch";
 import {
   AlphaProjectionRecord, BindingProjectionRecord, ManagerListsRepository,
   ProjectionKind, ProjectionSnapshot,
@@ -22,11 +30,15 @@ export interface ManagerListPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  viewerWorkspaceId?: string;
 }
 
 const MAX_SOURCE_PAGES = 10;
 const SOURCE_PAGE_LIMIT = 200;
 const SNAPSHOT_MAX_AGE_MS = 5_000;
+// FE-049: match the public Decimal bound after canonical normalization,
+// including a minus sign/decimal point and any carry produced by aggregation.
+const MAX_EXACT_DECIMAL_LENGTH = 128;
 // BR-EX-76 bounds the portfolio population; a larger real population is
 // served capped and labeled truncated/PARTIAL, never silently trimmed.
 const PORTFOLIO_LIST_MAX_ITEMS = 100;
@@ -86,6 +98,10 @@ export class ManagerListsService {
     @Inject(ManagerListsRepository) private readonly repository: ManagerListsRepository,
     @Inject(ExecutionProductReadSource) private readonly source: ExecutionProductReadSource,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(ExecutionProfileProjectionRepository) private readonly profiles?: ExecutionProfileProjectionRepository,
+    @Optional() @Inject(BINDING_FINANCIAL_BATCH_SOURCE) private readonly bindingFinancialSource?: BindingFinancialBatchSource,
+    @Optional() @Inject(BINDING_FINANCIAL_REFRESH_SOURCE) private readonly bindingFinancialRefreshSource?: BindingFinancialRefreshSource,
   ) {
     this.query = new ControlPlaneQueryService(
       repository.pool,
@@ -98,6 +114,12 @@ export class ManagerListsService {
   }
 
   async fleet(principal: ManagerListPrincipal, query: AlphaFleetQuery) {
+    if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
+      .read(principal, "ALPHA_FLEET", query, () => this.legacyFleet(principal, query));
+    return this.legacyFleet(principal, query);
+  }
+
+  private async legacyFleet(principal: ManagerListPrincipal, query: AlphaFleetQuery) {
     const snapshot = await this.ensureSnapshot(principal, query.environment, "ALPHA_FLEET", !query.after && !query.before);
     const page = await this.query.list(
       alphaFleetResource(),
@@ -111,16 +133,45 @@ export class ManagerListsService {
   }
 
   async bindings(principal: ManagerListPrincipal, query: BindingsQuery) {
-    const snapshot = await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
-    const page = await this.query.list(
-      bindingsResource(),
+    if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
+      .read(principal, "BINDINGS", query, () => this.legacyBindings(principal, query));
+    return this.legacyBindings(principal, query);
+  }
+
+  private async legacyBindings(principal: ManagerListPrincipal, query: BindingsQuery) {
+    await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
+    const { page, snapshot: retained } = await this.query.listWithSnapshot(
+      { ...bindingsResource(), ...(this.bindingFinancialSource ? { selectColumns: [...bindingsResource().selectColumns,
+        "source_as_of", "projection_refreshed_at"] } : {}) },
       { actorId: principal.user.userId, workspaceId: scope(principal.workspaceId, query.environment), role: principal.user.role },
       bindingsRawQuery(query),
+      async reader => {
+        const retained = await this.repository.bindingListSnapshot(reader, principal.workspaceId, query.environment);
+        if (!retained) return null;
+        if (!this.bindingFinancialSource) return { ...retained, figures: undefined };
+        try {
+          const request = bindingFinancialRequest({ workspaceId: principal.workspaceId, environment: query.environment,
+            userId: principal.user.userId, sessionId: principal.session.sessionId, sessionGeneration: principal.session.sessionVersion,
+            snapshot: retained.snapshot, rows: reader.rows.map(mapBindingRow) });
+          const figures = await readBindingFinancialBatch(this.bindingFinancialSource, request, reader);
+          return { ...retained, figures };
+        } catch { throw new ManagerListsError("BR72_BINDING_FINANCIAL_BATCH_INVALID", 503); }
+      },
     );
-    return envelope("execution.bindings-list.v1", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config));
+    if (!retained) throw new ManagerListsError("BR72_BINDINGS_SNAPSHOT_NOT_RECORDED", 503);
+    const enriched = retained.figures ? { ...page,
+      rows: page.rows.map(row => retained.figures!.has(row.binding_id) ? { ...row, figures: retained.figures!.get(row.binding_id) } : row) } : page;
+    return { ...envelope("execution.bindings-list.v1", principal, query.environment, retained.snapshot, enriched,
+      projectionFreshnessBudget(this.config)), ...(retained.counts ? { counts: retained.counts } : {}) };
   }
 
   async binding(principal: ManagerListPrincipal, environment: ManagerListEnvironment, bindingId: string) {
+    if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
+      .read(principal, "BINDING_DETAIL", { environment }, () => this.legacyBinding(principal, environment, bindingId), bindingId);
+    return this.legacyBinding(principal, environment, bindingId);
+  }
+
+  private async legacyBinding(principal: ManagerListPrincipal, environment: ManagerListEnvironment, bindingId: string) {
     const snapshot = await this.ensureSnapshot(principal, environment, "BINDINGS", true);
     const item = await this.repository.binding(scope(principal.workspaceId, environment), bindingId);
     if (!item) throw new ManagerListsError("BR72_BINDING_NOT_FOUND", 404);
@@ -165,6 +216,17 @@ export class ManagerListsService {
    * worker cadence, never browser refreshes.
    */
   async portfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
+    // Reuse the existing authorized search path: its name-field check precedes
+    // matching/counts/page selection and its cursor binds the complete query.
+    // Capture strings before I/O so a caller cannot mutate q during the read.
+    const captured = { ...query };
+    const scopedQuery = captured.q === undefined ? captured : { ...captured, search: captured.q };
+    if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
+      .read(principal, "PORTFOLIOS", scopedQuery, () => this.legacyPortfolios(principal, captured));
+    return this.legacyPortfolios(principal, captured);
+  }
+
+  private async legacyPortfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
     const snapshot = await this.ensureSnapshot(principal, query.environment, "PORTFOLIOS", true);
     const scope = `${principal.workspaceId}:${query.environment}`;
     const rows = await this.repository.portfolioRows(scope);
@@ -175,6 +237,11 @@ export class ManagerListsService {
       page_freshness?: ManagerPage["freshness"];
     };
     const budget = projectionFreshnessBudget(this.config);
+    // Keep projection/cache population unfiltered and shared exactly as before.
+    // With policy routing this callback executes INSIDE the current authority
+    // fence; legacy authorization is profile-wide, never inferred from q.
+    const matched = query.q === undefined ? rows : rows.filter(row =>
+      row.name.toLocaleLowerCase().includes(query.q!.toLocaleLowerCase()));
     return {
       schema_version: "execution.portfolio-list.v1",
       record_authority: "PORTAL_PROJECTION",
@@ -196,7 +263,10 @@ export class ManagerListsService {
       environments: summary.branches ?? {},
       total_portfolios: summary.total_portfolios ?? rows.length,
       truncated: summary.truncated ?? false,
-      items: rows.map((row) => ({
+      // Exact retained matches only, not a global census when truncated=true.
+      // Keep the no-q compatibility response unchanged.
+      ...(query.q === undefined ? {} : { matching_portfolios: matched.length }),
+      items: matched.map((row) => ({
         portfolio_id: row.portfolioId,
         name: row.name,
         owner: row.owner,
@@ -339,6 +409,10 @@ export class ManagerListsService {
     refreshAllowed: boolean,
   ): Promise<ProjectionSnapshot> {
     const existing = await this.repository.snapshot(principal.workspaceId, environment, kind);
+    if (retainedReview(this.config)) {
+      if (existing) return existing;
+      throw new ManagerListsError("UDB_RETAINED_LIST_NOT_IMPORTED", 503);
+    }
     if (!refreshAllowed || (existing && Date.now() - existing.refreshedAt.valueOf() <= SNAPSHOT_MAX_AGE_MS)) {
       if (existing) return existing;
       throw new ManagerListsError("BR72_PROJECTION_NOT_AVAILABLE", 503);
@@ -446,17 +520,29 @@ export class ManagerListsService {
     const sourceAsOf = oldestDate(...pages.map((page) => page.asOf));
     await this.repository.replaceAlphaFleet({
       workspaceId: principal.workspaceId, environment, sourceAsOf,
-      completeness: completeness(...pages), rows, summary: fleetSummary(rows),
+      completeness: completeness(...pages), rows,
+      // A stage is a stated 0 only for an environment whose strategies and deployments were both read COMPLETE (FE-048).
+      summary: fleetSummary(rows, sourceEnvironments.filter((_, index) =>
+        reads[index]!.strategies.completeness === "COMPLETE" && reads[index]!.deployments.completeness === "COMPLETE")),
     });
     return requiredSnapshot(this.repository, principal.workspaceId, environment, "ALPHA_FLEET");
   }
 
   private async refreshBindings(principal: ManagerListPrincipal, environment: ManagerListEnvironment) {
+    // Capture identity before the first source await. The optional owning
+    // ingress must answer this exact actor/session and original refresh, not
+    // reselect a profile-wide population after the source pages were read.
+    const refreshPrincipal = Object.freeze({ ...principal, user: Object.freeze({ ...principal.user }), session: Object.freeze({ ...principal.session }) });
+    const originalPages: BindingFinancialRefreshPage[] = [];
+    const capture = (relation: BindingFinancialRefreshPage["relation"]) =>
+      (page: ManagerPage, pageIndex: number, inputCursor: string | null) => {
+        if (this.bindingFinancialRefreshSource) originalPages.push({ relation, page_index: pageIndex, input_cursor: inputCursor, page: structuredClone(page) });
+      };
     const context = readContext(environment);
     const [accounts, venueAccounts, brokerSync] = await Promise.all([
-      this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "accounts", ACCOUNT_FIELDS, context),
-      this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, context),
-      this.drain(principal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, context),
+      this.drain(refreshPrincipal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "accounts", ACCOUNT_FIELDS, context, capture("accounts")),
+      this.drain(refreshPrincipal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT_FIELDS, context, capture("venue_accounts")),
+      this.drain(refreshPrincipal, environment, "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC_FIELDS, context, capture("broker_account_sync_effective")),
     ]);
     const isolated = enforceProfileLineage([
       lineage("accounts", accounts), lineage("venue_accounts", venueAccounts),
@@ -469,11 +555,24 @@ export class ManagerListsService {
       page("broker_sync").items,
     );
     const sourceAsOf = oldestDate(accounts.asOf, venueAccounts.asOf, brokerSync.asOf);
+    const financialCutUsable = sourceAsOf && !Number.isNaN(sourceAsOf.valueOf()) && originalPages.every(original =>
+      original.page.asOf !== null && Number.isFinite(Date.parse(original.page.asOf)));
+    if (this.bindingFinancialRefreshSource && rows.length && financialCutUsable) {
+      try {
+        const request = bindingFinancialRefreshRequest({ workspaceId: refreshPrincipal.workspaceId, environment,
+          userId: refreshPrincipal.user.userId, sessionId: refreshPrincipal.session.sessionId,
+          sessionGeneration: refreshPrincipal.session.sessionVersion, sourceAsOf: sourceAsOf!, pages: originalPages,
+          rows: rows.map(row => ({ binding_id: row.bindingId, account_id: row.accountId, venue: row.venue })) });
+        const figures = await readBindingFinancialRefresh(this.bindingFinancialRefreshSource, request,
+          { timeout_ms: this.config.EXECUTION_EDGE_CURRENT_SOURCE_REQUEST_TIMEOUT_MS });
+        if (figures) for (const row of rows) if (figures.has(row.bindingId)) row.listFigures = figures.get(row.bindingId);
+      } catch { throw new ManagerListsError("BR72_BINDING_FINANCIAL_BATCH_INVALID", 503); }
+    }
     await this.repository.replaceBindings({
-      workspaceId: principal.workspaceId, environment, sourceAsOf,
+      workspaceId: refreshPrincipal.workspaceId, environment, sourceAsOf,
       completeness: completeness(accounts, venueAccounts, brokerSync), rows,
     });
-    return requiredSnapshot(this.repository, principal.workspaceId, environment, "BINDINGS");
+    return requiredSnapshot(this.repository, refreshPrincipal.workspaceId, environment, "BINDINGS");
   }
 
   private async drain(
@@ -484,6 +583,7 @@ export class ManagerListsService {
     relation: string,
     fields: readonly string[],
     context: ManagerReadContext,
+    capturePage?: (page: ManagerPage, pageIndex: number, inputCursor: string | null) => void,
   ): Promise<ManagerPage> {
     const items: ManagerPage["items"] = [];
     const cursors = new Set<string>();
@@ -497,6 +597,7 @@ export class ManagerListsService {
         { limit: SOURCE_PAGE_LIMIT, ...(cursor ? { cursor } : {}) },
       );
       const page = managerPage(response, relation, fields, context);
+      capturePage?.(page, index, cursor ?? null);
       items.push(...page.items);
       // Paired with `worstFreshness` below: the oldest page, not the newest.
       asOf = oldestString(asOf, page.asOf);
@@ -718,7 +819,32 @@ function emptyPage(): ManagerPage {
   return { items: [], nextCursor: null, asOf: null, freshness: "FRESH", completeness: "COMPLETE" };
 }
 
-function fleetSummary(rows: readonly AlphaProjectionRecord[]): Record<string, unknown> {
+/**
+ * The stages a source environment can hold, in the order of `stageRank`. The real-funded domain (`live`) holds both Canary and
+ * Live; Paper and Sandbox hold their own. This is the FE's own mapping (`PATH_ENV`: canary and live both belong to `live`).
+ */
+export const ENVIRONMENT_STAGES: Readonly<Record<ManagerListEnvironment, readonly string[]>> = {
+  paper: ["PAPER"], sandbox: ["SANDBOX"], live: ["CANARY", "LIVE"],
+};
+
+/**
+ * `summary.stage_counts` and what an absent stage means (FE-048, DEBT-UXM07-004).
+ *
+ * A key is present with its exact count (including 0) for every stage of a source environment whose strategies AND deployments were
+ * read COMPLETE: that read could have found an alpha at the stage and found none, so 0 is a fact. A stage of an environment that was
+ * not read, or read PARTIAL, is ABSENT: the snapshot states nothing about it, and an absent stage is never zero. A stage that is
+ * outside the table above (a source `mode` this Portal does not know) appears only when an alpha holds it. `RESEARCH` appears only
+ * when an alpha holds no deployment. The schema allows every shape here (`additionalProperties` integer >= 0).
+ */
+export function fleetStageCounts(
+  rows: readonly Pick<AlphaProjectionRecord, "stages">[],
+  completeEnvironments: readonly ManagerListEnvironment[],
+): Record<string, number> {
+  const known = new Set([...rows.flatMap((row) => row.stages), ...completeEnvironments.flatMap((environment) => ENVIRONMENT_STAGES[environment])]);
+  return Object.fromEntries([...known].sort().map((stage) => [stage, rows.filter((row) => row.stages.includes(stage)).length]));
+}
+
+function fleetSummary(rows: readonly AlphaProjectionRecord[], completeEnvironments: readonly ManagerListEnvironment[]): Record<string, unknown> {
   const deployments = rows.flatMap((row) => row.deployments);
   const portfolios = new Set(rows.flatMap((row) => row.portfolios.map((item) => item.portfolio_id)));
   return {
@@ -727,8 +853,7 @@ function fleetSummary(rows: readonly AlphaProjectionRecord[]): Record<string, un
     portfolio_count: portfolios.size,
     needs_attention_count: rows.filter((row) => row.health === "ATTENTION").length,
     research_only_count: rows.filter((row) => row.health === "RESEARCH_ONLY").length,
-    stage_counts: Object.fromEntries([...new Set(rows.flatMap((row) => row.stages))].sort()
-      .map((stage) => [stage, rows.filter((row) => row.stages.includes(stage)).length])),
+    stage_counts: fleetStageCounts(rows, completeEnvironments),
     allocation_by_currency: aggregateCurrencyValues(rows.flatMap((row) => row.allocations)),
     exposure_by_currency: aggregateCurrencyValues(rows.flatMap((row) => row.exposure)),
     current_position_pnl_by_currency: aggregateCurrencyPnl(rows.flatMap((row) => row.positionPnl)),
@@ -794,7 +919,11 @@ function normalizeExact(value: string): string {
   const integer = integerRaw.replace(/^0+(?=\d)/, "") || "0";
   const fraction = fractionRaw.replace(/0+$/, "");
   const zero = integer === "0" && fraction === "";
-  return `${negative && !zero ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
+  const normalized = `${negative && !zero ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
+  // Leading/trailing zeroes do not enlarge the published exact value. Check
+  // here rather than on raw input so the same bound also covers summed output.
+  if (normalized.length > MAX_EXACT_DECIMAL_LENGTH) throw new ManagerListsError("BR72_SOURCE_DECIMAL_INVALID", 502);
+  return normalized;
 }
 
 function sumExact(values: readonly string[]): string {
@@ -894,6 +1023,7 @@ function bindingRows(
   }).sort((a, b) => a.bindingId.localeCompare(b.bindingId));
 }
 
+
 function completeness(...pages: ManagerPage[]): ProjectionSnapshot["sourceCompleteness"] {
   return pages.some((page) => page.completeness === "PARTIAL") ? "PARTIAL"
     : pages.some((page) => page.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
@@ -984,7 +1114,8 @@ function freshness(snapshot: ProjectionSnapshot, budget: FreshnessBudgetMs): "FR
 }
 function bindingItem(item: BindingProjectionRecord): BindingItem {
   return { binding_id: item.bindingId, account_id: item.accountId, venue: item.venue,
-    state: item.state, credential_state: item.credentialState, updated_at: item.updatedAt.toISOString() };
+    state: item.state, credential_state: item.credentialState, updated_at: item.updatedAt.toISOString(),
+    ...(item.listFigures ? { figures: item.listFigures } : {}) };
 }
 function envelope(
   schemaVersion: string, principal: ManagerListPrincipal, environment: AlphaFleetEnvironment,

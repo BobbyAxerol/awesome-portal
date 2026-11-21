@@ -53,6 +53,11 @@ export interface ReplayFill {
 }
 
 export const str = (v: unknown): string | null => (typeof v === "string" && v.length > 0 ? v : typeof v === "number" && Number.isFinite(v) ? String(v) : null);
+/**
+ * An exact decimal the source sent as TEXT. A JSON number is not accepted: it has already lost digits in transit and
+ * `String(0.1 + 0.2)` would print a precision the source never promised. A number is unreadable (null), not coerced (DEBT-UXM07-013).
+ */
+export const decimalText = (v: unknown): string | null => (typeof v === "string" && /^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(v.trim()) ? v.trim() : null);
 export const num = (v: string | null | undefined): number | null => {
   if (v === null || v === undefined) return null;
   const n = Number(v);
@@ -79,9 +84,9 @@ export function readReplayOrders(rows: readonly Record<string, unknown>[]): Repl
       side: str(row.side),
       type: str(row.order_type),
       status: str(row.status),
-      price: str(row.price),
-      trigger: str(row.trigger_price) ?? str(row.stop_price),
-      qty: str(row.quantity),
+      price: decimalText(row.price),
+      trigger: decimalText(row.trigger_price) ?? decimalText(row.stop_price),
+      qty: decimalText(row.quantity),
       submittedAt: str(row.submitted_at) ?? str(row.created_at) ?? str(row.updated_at),
       updatedAt: str(row.updated_at),
       reduceOnly: row.reduce_only === true,
@@ -100,7 +105,7 @@ export function readReplayFills(rows: readonly Record<string, unknown>[]): Repla
   const seen = new Set<string>();
   return rows.flatMap((row) => {
     const fillId = str(row.fill_id);
-    const price = str(row.price);
+    const price = decimalText(row.price);
     const tradeTime = str(row.trade_time) ?? str(row.updated_at);
     if (!fillId || !price || !tradeTime || seen.has(fillId)) return [];
     seen.add(fillId);
@@ -111,10 +116,10 @@ export function readReplayFills(rows: readonly Record<string, unknown>[]): Repla
       symbol: symbolOf(row),
       side: str(row.side),
       price,
-      qty: str(row.quantity),
+      qty: decimalText(row.quantity),
       tradeTime,
-      realizedPnl: str(row.realized_pnl),
-      commission: str(row.commission),
+      realizedPnl: decimalText(row.realized_pnl),
+      commission: decimalText(row.commission),
       commissionCurrency: str(row.commission_currency),
       liquidity: str(row.liquidity_side),
       tradeId: str(row.trade_id),
@@ -224,6 +229,23 @@ export interface LogRow {
   fee: string | null;
   note: string;
   noteTone: "good" | "bad" | "warn" | "mute" | null;
+  /**
+   * The raw facts behind the words, kept so a plain-language view (see
+   * `tradeReplayWords`) can map them without parsing `note`: the order the row
+   * belongs to, its status and type codes, the leg it plays, and the figures
+   * the note prints.
+   */
+  orderId: string;
+  status: string | null;
+  typeCode: string | null;
+  flags: string[];
+  role: LegRole;
+  /** Round-trip kind of an exit fill. */
+  exitKind: RoundTrip["kind"] | null;
+  /** The exit fill's realized_pnl, formatted. */
+  realized: string | null;
+  /** `error_code · error_message` as the source sent them. */
+  errorText: string | null;
 }
 
 export const money = (v: string | null | undefined) => (v ? formatExact(v, "money").display : "not published");
@@ -251,6 +273,8 @@ export function buildLog(orders: readonly ReplayOrder[], fills: readonly ReplayF
     rows.push({
       t, time: "", event: "FILL", eventTone: tone,
       ref: f.fillId, tail: o ? ` · ord ${o.orderId}${role !== "OTHER" ? `.${role}` : ""}` : null,
+      orderId: o?.orderId ?? f.clientOrderId ?? f.fillId, status: null, typeCode: o?.type ?? null, flags: [], role, exitKind: trip ? trip.kind : null,
+      realized: trip ? money(trip.pnl) : null, errorText: null,
       type: o?.type ?? "FILL", side: f.side, qty: qtyFmt(f.qty), price: money(f.price),
       fee: f.commission ? `${formatExact(f.commission, "money").display} · ${(f.liquidity ?? "").toLowerCase() || "fee"}` : null,
       note: trip ? `${trip.kind} exit · realized ${money(trip.pnl)}${f.tradeId ? ` · trade ${f.tradeId.slice(0, 18)}` : ""}` : `${role === "ENTRY" ? "entry" : "fill"}${f.tradeId ? ` · trade ${f.tradeId.slice(0, 18)}` : ""}`,
@@ -276,6 +300,8 @@ export function buildLog(orders: readonly ReplayOrder[], fills: readonly ReplayF
     const flags = [o.timeInForce, o.postOnly ? "POST-ONLY" : null, o.reduceOnly ? "reduce_only" : null].filter(Boolean).join(" ");
     rows.push({
       t, time: "", event, eventTone,
+      orderId: o.orderId, status: status || null, typeCode: o.type, flags: [o.timeInForce, o.postOnly ? "POST-ONLY" : null, o.reduceOnly ? "reduce_only" : null].filter((x): x is string => Boolean(x)),
+      role, exitKind: null, realized: null, errorText: [o.errorCode, o.errorMessage].filter(Boolean).join(" · ") || null,
       ref: o.orderId, tail: role !== "OTHER" ? ` · ${role}` : null,
       type: `${o.type ?? "ORDER"}${flags ? ` ${flags}` : ""}`, side: o.side, qty: qtyFmt(o.qty),
       price: o.trigger ? `${money(o.trigger)} (trigger)` : o.price ? money(o.price) : "market",

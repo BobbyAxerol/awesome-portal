@@ -1,0 +1,22 @@
+{
+  "schema_version": "research.w1-selected-trial-presentation-fixture.v1",
+  "purpose": "Contract examples only, not an engine or product receipt",
+  "global": {
+    "selected_trial_id": "350",
+    "selected_trial_ordinal": 351,
+    "selected_trial_ordinal_scope": "RUN_GLOBAL",
+    "selected_trial_ordinal_reason_code": null
+  },
+  "causal": {
+    "selected_trial_id": "study_2.trial_1",
+    "selected_trial_ordinal": 2,
+    "selected_trial_ordinal_scope": "STUDY_LOCAL",
+    "selected_trial_ordinal_reason_code": null
+  },
+  "unmapped": {
+    "selected_trial_id": "opaque-trial",
+    "selected_trial_ordinal": null,
+    "selected_trial_ordinal_scope": null,
+    "selected_trial_ordinal_reason_code": "SOURCE_TRIAL_NUMBER_NOT_PUBLISHED"
+  }
+}

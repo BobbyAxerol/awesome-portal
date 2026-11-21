@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool } from "pg";
 import { ControlApiConfig } from "../config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { MaximumDataEnvironment } from "./maximum-data-intake";
 
 const CONTINUATION_PREFIX = "mdc1.";
@@ -12,6 +12,8 @@ const PROFILE_ID = /^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$/;
 const CATALOGUE_SHA256 = /^sha256:[0-9a-f]{64}$/;
 
 export interface MaximumDataContinuationScope {
+  /** Server-only correlation; opaque mdc1 remains no authority grant. */
+  readonly nativeEpochDigest?: string;
   operationId: string;
   workspaceId: string;
   principalId: string;
@@ -37,7 +39,7 @@ export class MaximumDataContinuationError extends Error {
 @Injectable()
 export class MaximumDataContinuationRepository {
   constructor(
-    @Inject(CONTROL_API_POOL) private readonly pool: Pool,
+    @Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
@@ -45,7 +47,7 @@ export class MaximumDataContinuationRepository {
     validateScope(scope);
     if (!validCursor(sourceCursor)) throw invalidContinuation();
     const continuationId = randomUUID();
-    const principalDigest = digest(scope.principalId, scope.principalRole);
+    const principalDigest = digest(scope.principalId, scope.principalRole, scope.nativeEpochDigest);
     await this.pool.query(
       `WITH expired AS (
          DELETE FROM execution_manager_operation_continuations
@@ -97,7 +99,7 @@ export class MaximumDataContinuationRepository {
         continuationId,
         scope.operationId,
         scope.workspaceId,
-        digest(scope.principalId, scope.principalRole),
+        digest(scope.principalId, scope.principalRole, scope.nativeEpochDigest),
         scope.environment,
         scope.profileId,
         scope.sourceContractRevision,
@@ -120,6 +122,7 @@ function validateScope(scope: MaximumDataContinuationScope): void {
     !["paper", "sandbox", "live"].includes(scope.environment) ||
     !PROFILE_ID.test(scope.profileId) ||
     !CATALOGUE_SHA256.test(scope.sourceCatalogueSha256) ||
+    (scope.nativeEpochDigest !== undefined && (typeof scope.nativeEpochDigest !== "string" || scope.nativeEpochDigest.length !== 71 || !/^sha256:[a-f0-9]{64}$/.test(scope.nativeEpochDigest))) ||
     scope.sourceContractRevision.length < 1 ||
     scope.sourceContractRevision.length > 190
   ) throw new Error("EDS01 continuation scope is invalid");
@@ -136,9 +139,10 @@ function parseOpaqueCursor(value: string): string {
   return continuationId;
 }
 
-function digest(principalId: string, principalRole: string): string {
+function digest(principalId: string, principalRole: string, nativeEpochDigest?: string): string {
   return `sha256:${createHash("sha256")
-    .update(`${principalId}\0${principalRole}`, "utf8")
+    .update(nativeEpochDigest === undefined ? `${principalId}\0${principalRole}`
+      : `NATIVE_MANAGER_CURSOR_V1\0${principalId}\0${principalRole}\0${nativeEpochDigest}`, "utf8")
     .digest("hex")}`;
 }
 

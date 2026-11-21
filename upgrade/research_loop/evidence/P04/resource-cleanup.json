@@ -1,0 +1,22 @@
+{
+  "phase": "P04",
+  "status": "CLEAN",
+  "actions": [
+    {
+      "resource": "temporary direct-worker compatibility artifacts",
+      "location_class": "self-removing temporary directory",
+      "result": "removed by test process"
+    },
+    {
+      "resource": "approved HMD reader wheel",
+      "location_class": "isolated Research virtual environment dependency",
+      "result": "retained because it is required for repeatable read-only P04 evidence; no vendor copy or runtime install was made"
+    }
+  ],
+  "not_performed": [
+    "Docker/image/container prune",
+    "runtime cache deletion",
+    "HMD storage write or cleanup",
+    "Execution/Trading System resource operation"
+  ]
+}

@@ -1,0 +1,662 @@
+{
+  "schema_version": "research.window-execution-page.v1",
+  "run_id": "rrun_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "window": "HOLDOUT",
+  "fold_id": null,
+  "descriptor": {
+    "window": "HOLDOUT",
+    "fold_id": null,
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "start_utc_ms": 1780272000000,
+    "end_exclusive_utc_ms": 1780444800000,
+    "observation_count": 48,
+    "authority": "FROZEN_PARAMETER_POST_SELECTION_ACCOUNT"
+  },
+  "counts": {
+    "matching": 1,
+    "returned": 1
+  },
+  "rows": [
+    {
+      "kind": "ANALYTICS",
+      "window": "HOLDOUT",
+      "fold_id": null,
+      "at_utc_ms": null,
+      "payload": {
+        "schema_version": "research.window-analytics.v1",
+        "window": "HOLDOUT",
+        "fold_id": null,
+        "basis": "ALL_TIME",
+        "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+        "observation_count": 48,
+        "start_utc_ms": 1780272000000,
+        "end_exclusive_utc_ms": 1780444800000,
+        "first_observed_utc_ms": 1780272000000,
+        "last_observed_utc_ms": 1780441200000,
+        "metrics": {
+          "sharpe": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P13_OOS_RETURN_SAMPLE_BELOW_TWO",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "sortino": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P13_OOS_HAS_NO_DOWNSIDE_RETURNS",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "cagr_fraction": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "value": "0.5492730221156037",
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "profit_factor": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P13_OOS_HAS_NO_LOSING_RETURNS",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "long_hit_rate_fraction": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P13_OOS_HAS_NO_LONG_EXPOSURE_BARS",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "short_hit_rate_fraction": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "P13_OOS_HAS_NO_SHORT_EXPOSURE_BARS",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "volatility_fraction": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_TOO_FEW_DAILY_RETURNS",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "skew": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_TOO_FEW_OR_ZERO_VARIANCE_DAILY_RETURNS",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "excess_kurtosis": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_TOO_FEW_OR_ZERO_VARIANCE_DAILY_RETURNS",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "beta": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_BENCHMARK_SAMPLE_INSUFFICIENT",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "correlation": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_BENCHMARK_SAMPLE_INSUFFICIENT",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "benchmark_return_fraction": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "value": "-0.013527775199729919",
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "max_drawdown_duration_days": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "value": "0",
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "sharpe_decay": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_IS_OR_OOS_SHARPE_UNAVAILABLE",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "exposure_long_fraction": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "value": "0",
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "exposure_short_fraction": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "value": "0",
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "exposure_flat_fraction": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "value": "1",
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "win_rate": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_NO_CLOSED_POSITION_EPISODES",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "payoff_ratio": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_NO_CLOSED_POSITION_EPISODES",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "average_hold_seconds": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_NO_CLOSED_POSITION_EPISODES",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "max_consecutive_losses": {
+            "state": "NOT_APPLICABLE",
+            "reason_code": "PORTAL_ANALYTICS_NO_CLOSED_POSITION_EPISODES",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "turnover_notional": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "PORTAL_ANALYTICS_TURNOVER_NOT_PUBLISHED",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "return_fraction": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "value": "0.0023500000000000743",
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "max_drawdown_fraction": {
+            "state": "AVAILABLE",
+            "reason_code": null,
+            "value": "0",
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          },
+          "trade_count": {
+            "state": "NOT_PUBLISHED",
+            "reason_code": "RETAINED_ACCOUNT_NOT_AN_AUDITED_TRADE_LEDGER",
+            "value": null,
+            "origin": "PORTAL_DERIVED",
+            "scope": "HOLDOUT",
+            "input_digest": "7ab9b2e8d00f75a16ff58119dca3c381adcedd86ced8bd417103f7298d111707",
+            "source_ref": "FULL_RETAINED_WINDOW_ACCOUNT_V1"
+          }
+        },
+        "curves": {
+          "sampling": {
+            "source_observation_count": 48,
+            "emitted_point_count": 32,
+            "method": "EXTREMA_BUCKET_V1"
+          },
+          "strategy_rebased_100": [
+            {
+              "at_utc_ms": 1780272000000,
+              "value": "100"
+            },
+            {
+              "at_utc_ms": 1780275600000,
+              "value": "100.00500000000001"
+            },
+            {
+              "at_utc_ms": 1780282800000,
+              "value": "100.01500000000001"
+            },
+            {
+              "at_utc_ms": 1780286400000,
+              "value": "100.02"
+            },
+            {
+              "at_utc_ms": 1780293600000,
+              "value": "100.03"
+            },
+            {
+              "at_utc_ms": 1780297200000,
+              "value": "100.03500000000001"
+            },
+            {
+              "at_utc_ms": 1780304400000,
+              "value": "100.045"
+            },
+            {
+              "at_utc_ms": 1780308000000,
+              "value": "100.05"
+            },
+            {
+              "at_utc_ms": 1780315200000,
+              "value": "100.05999999999999"
+            },
+            {
+              "at_utc_ms": 1780318800000,
+              "value": "100.065"
+            },
+            {
+              "at_utc_ms": 1780326000000,
+              "value": "100.075"
+            },
+            {
+              "at_utc_ms": 1780329600000,
+              "value": "100.07999999999998"
+            },
+            {
+              "at_utc_ms": 1780336800000,
+              "value": "100.08999999999999"
+            },
+            {
+              "at_utc_ms": 1780340400000,
+              "value": "100.095"
+            },
+            {
+              "at_utc_ms": 1780347600000,
+              "value": "100.105"
+            },
+            {
+              "at_utc_ms": 1780351200000,
+              "value": "100.11000000000001"
+            },
+            {
+              "at_utc_ms": 1780358400000,
+              "value": "100.12"
+            },
+            {
+              "at_utc_ms": 1780362000000,
+              "value": "100.125"
+            },
+            {
+              "at_utc_ms": 1780369200000,
+              "value": "100.13499999999999"
+            },
+            {
+              "at_utc_ms": 1780372800000,
+              "value": "100.14"
+            },
+            {
+              "at_utc_ms": 1780380000000,
+              "value": "100.15"
+            },
+            {
+              "at_utc_ms": 1780383600000,
+              "value": "100.155"
+            },
+            {
+              "at_utc_ms": 1780390800000,
+              "value": "100.16499999999999"
+            },
+            {
+              "at_utc_ms": 1780394400000,
+              "value": "100.17"
+            },
+            {
+              "at_utc_ms": 1780401600000,
+              "value": "100.18"
+            },
+            {
+              "at_utc_ms": 1780405200000,
+              "value": "100.18499999999999"
+            },
+            {
+              "at_utc_ms": 1780412400000,
+              "value": "100.195"
+            },
+            {
+              "at_utc_ms": 1780416000000,
+              "value": "100.2"
+            },
+            {
+              "at_utc_ms": 1780423200000,
+              "value": "100.21"
+            },
+            {
+              "at_utc_ms": 1780426800000,
+              "value": "100.215"
+            },
+            {
+              "at_utc_ms": 1780437600000,
+              "value": "100.22999999999999"
+            },
+            {
+              "at_utc_ms": 1780441200000,
+              "value": "100.23500000000001"
+            }
+          ],
+          "benchmark_rebased_100": [
+            {
+              "at_utc_ms": 1780272000000,
+              "value": "100"
+            },
+            {
+              "at_utc_ms": 1780275600000,
+              "value": "100.5036989335409"
+            },
+            {
+              "at_utc_ms": 1780282800000,
+              "value": "101.48009011634417"
+            },
+            {
+              "at_utc_ms": 1780286400000,
+              "value": "101.93770215441683"
+            },
+            {
+              "at_utc_ms": 1780293600000,
+              "value": "102.75655504009333"
+            },
+            {
+              "at_utc_ms": 1780297200000,
+              "value": "103.1051740089441"
+            },
+            {
+              "at_utc_ms": 1780304400000,
+              "value": "103.65407037639638"
+            },
+            {
+              "at_utc_ms": 1780308000000,
+              "value": "103.84593847742234"
+            },
+            {
+              "at_utc_ms": 1780315200000,
+              "value": "104.0499799464162"
+            },
+            {
+              "at_utc_ms": 1780318800000,
+              "value": "104.0591253621593"
+            },
+            {
+              "at_utc_ms": 1780326000000,
+              "value": "103.89134312643877"
+            },
+            {
+              "at_utc_ms": 1780329600000,
+              "value": "103.71718970730272"
+            },
+            {
+              "at_utc_ms": 1780336800000,
+              "value": "103.20229278755168"
+            },
+            {
+              "at_utc_ms": 1780340400000,
+              "value": "102.86974012781309"
+            },
+            {
+              "at_utc_ms": 1780347600000,
+              "value": "102.08068119444036"
+            },
+            {
+              "at_utc_ms": 1780351200000,
+              "value": "101.63664396820933"
+            },
+            {
+              "at_utc_ms": 1780358400000,
+              "value": "100.68448003223949"
+            },
+            {
+              "at_utc_ms": 1780362000000,
+              "value": "100.19136756891737"
+            },
+            {
+              "at_utc_ms": 1780369200000,
+              "value": "99.20982475039192"
+            },
+            {
+              "at_utc_ms": 1780372800000,
+              "value": "98.73686708924153"
+            },
+            {
+              "at_utc_ms": 1780380000000,
+              "value": "97.86375472503063"
+            },
+            {
+              "at_utc_ms": 1780383600000,
+              "value": "97.47738069504906"
+            },
+            {
+              "at_utc_ms": 1780390800000,
+              "value": "96.83543794176806"
+            },
+            {
+              "at_utc_ms": 1780394400000,
+              "value": "96.59004256708566"
+            },
+            {
+              "at_utc_ms": 1780401600000,
+              "value": "96.26987952933962"
+            },
+            {
+              "at_utc_ms": 1780408800000,
+              "value": "96.19282884409849"
+            },
+            {
+              "at_utc_ms": 1780412400000,
+              "value": "96.24776825714223"
+            },
+            {
+              "at_utc_ms": 1780416000000,
+              "value": "96.36430290134744"
+            },
+            {
+              "at_utc_ms": 1780423200000,
+              "value": "96.77426202629363"
+            },
+            {
+              "at_utc_ms": 1780426800000,
+              "value": "97.06144527865962"
+            },
+            {
+              "at_utc_ms": 1780437600000,
+              "value": "98.19688369000298"
+            },
+            {
+              "at_utc_ms": 1780441200000,
+              "value": "98.64722248002701"
+            }
+          ],
+          "drawdown_fraction": [
+            {
+              "at_utc_ms": 1780272000000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780275600000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780286400000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780297200000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780308000000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780318800000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780329600000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780340400000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780351200000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780362000000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780372800000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780383600000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780394400000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780405200000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780416000000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780426800000,
+              "value": "0"
+            },
+            {
+              "at_utc_ms": 1780441200000,
+              "value": "0"
+            }
+          ]
+        },
+        "monthly_returns": {
+          "state": "AVAILABLE",
+          "reason_code": null,
+          "origin": "PORTAL_DERIVED",
+          "includes_partial_months": true,
+          "values": [
+            {
+              "month_start_utc_ms": 1780272000000,
+              "return_fraction": "0.00235",
+              "partial": true,
+              "observation_count": 48,
+              "basis": "FIRST_WINDOW_CLOSE",
+              "base_at_utc_ms": 1780272000000,
+              "close_at_utc_ms": 1780441200000,
+              "expected_observation_count": 720
+            }
+          ],
+          "sampling": "FULL",
+          "total_period_count": 1,
+          "omitted_transport_period_count": 0,
+          "definition_id": "WINDOW_MONTH_CLOSE_OVER_FIRST_WINDOW_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"
+        },
+        "return_distribution": {
+          "state": "NOT_APPLICABLE",
+          "reason_code": "PORTAL_DAILY_RETURN_DISTRIBUTION_TOO_FEW_OBSERVATIONS",
+          "origin": "PORTAL_DERIVED",
+          "sampling": "UTC_DAY",
+          "observation_count": 1,
+          "bucket_basis": "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1",
+          "statistics_policy": {
+            "quantile_method": "LINEAR_TYPE_7",
+            "probability": "0.95",
+            "risk_variable": "LOSS_FRACTION_NEGATIVE_RETURN",
+            "risk_sign": "SIGNED_LOSS_FRACTION",
+            "tail": "LOSS_GTE_VAR_INCLUSIVE",
+            "minimum_observations": 2
+          },
+          "buckets": []
+        },
+        "drawdown_episodes": {
+          "state": "AVAILABLE",
+          "reason_code": null,
+          "origin": "PORTAL_DERIVED",
+          "total": 0,
+          "open_episode_present": false,
+          "longest_open": false,
+          "values": []
+        }
+      },
+      "source_ordinal": 48
+    }
+  ],
+  "next_cursor": null,
+  "authority": "COMPLETED_RETAINED_ACCOUNT_AND_ENGINE_AUDIT_NOT_BROKER_HISTORY"
+}

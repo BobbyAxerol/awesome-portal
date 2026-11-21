@@ -23,6 +23,7 @@ function principal() {
       createdAt: now,
       updatedAt: now,
       disabledAt: null,
+      accountRevision: 1, archivedAt: null,
     },
     session: {
       sessionId: "ses_bobby",
@@ -141,10 +142,48 @@ describe("EDS-11R rich-screen named warm-up", () => {
     await expect(scoped.instance.relation(
       principal(), "paper", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.orders", "orders",
       { limit: 1, status: "FILLED" },
-    )).rejects.toMatchObject<Partial<CurrentSourceProxyError>>({
+    )).rejects.toMatchObject({
       code: "PHASE2_LOCAL_QUERY_REQUIRED",
     });
     expect(scoped.relationPage).not.toHaveBeenCalled();
+  });
+
+  it("never serves the BINANCE-bound warm-up as another Paper profile's page", async () => {
+    const okx = {
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+      EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.internal",
+      EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+      EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper-okx",
+    };
+    // Projection enabled, first snapshot missing: the usual warm-up read-through
+    // must now stay "not ready" rather than answer with BINANCE rows.
+    const missing = source({
+      ...okx,
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "true",
+      EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: "ws_projection",
+    });
+    await expect(missing.instance.relation(
+      principal(), "paper", "PAPER_TRADING_SCREEN", "manager.sessions", "execution_sessions", { limit: 1 },
+    )).rejects.toMatchObject<Partial<CurrentSourceProxyError>>({ code: "N31_PROJECTION_NOT_READY" });
+    expect(missing.relationPage).not.toHaveBeenCalled();
+
+    // Projection disabled: the named operation is the whole path, and it is BINANCE-bound.
+    const off = source({ ...okx, FEATURE_EXECUTION_LOCAL_PROJECTION: "false" });
+    await expect(off.instance.relation(
+      principal(), "paper", "PAPER_TRADING_SCREEN", "manager.sessions", "execution_sessions", { limit: 1 },
+    )).rejects.toMatchObject<Partial<CurrentSourceProxyError>>({ code: "EDS11R_PANEL_REQUIRES_PROJECTION" });
+    expect(off.relationPage).not.toHaveBeenCalled();
+
+    // Explicitly back on BINANCE: the warm-up serves as before.
+    const back = source({
+      ...okx,
+      EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_BINANCE_USDM",
+      FEATURE_EXECUTION_LOCAL_PROJECTION: "false",
+    });
+    await back.instance.relation(
+      principal(), "paper", "PAPER_TRADING_SCREEN", "manager.sessions", "execution_sessions", { limit: 1 },
+    );
+    expect(back.relationPage).toHaveBeenCalledTimes(1);
   });
 
   it("keeps non-screen-bound projection inputs typed instead of falling back to a generic relation read", async () => {
@@ -152,7 +191,7 @@ describe("EDS-11R rich-screen named warm-up", () => {
 
     await expect(instance.relation(
       principal(), "paper", "PAPER_TRADING_SCREEN", "manager.performance", "performance_snapshots", { limit: 1 },
-    )).rejects.toMatchObject<Partial<CurrentSourceProxyError>>({
+    )).rejects.toMatchObject({
       code: "EDS11R_PANEL_REQUIRES_PROJECTION",
     });
     expect(relationPage).not.toHaveBeenCalled();

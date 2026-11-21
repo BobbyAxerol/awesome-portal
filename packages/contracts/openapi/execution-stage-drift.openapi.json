@@ -1,0 +1,102 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution exact stage daily-close read",
+    "version": "2.0.0",
+    "description": "Explicit numeric_format=DECIMAL_STRING on the existing session/workspace-authorized route. Omitting it retains legacy V1 number wire; this document describes only the opt-in successor. No additional source stream or grant. Currency missing/invalid/mixed is typed absence, not guessed from environment. Current read authority is rechecked before delivery."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
+  "paths": {
+    "/api/v1/execution/alphas/{alphaId}/stage-drift": {
+      "get": {
+        "operationId": "executionAlphaStageDriftExactV2",
+        "parameters": [
+          {
+            "name": "alphaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 192,
+              "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "numeric_format",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "DECIMAL_STRING"
+              ]
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 365
+            },
+            "description": "Omitted: all retained history, subject to explicit row/byte refusal bounds. No silent truncation."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Calendar strictly increasing; all stage series/reason arrays have calendar length. Non-null point iff point reason null; requires deployed, non-null currency, null stage reason. Null point always has typed reason. No forward fill, FX conversion or totals across environments. These array-position/length constraints are enforced by producer Zod and consumer contract tests, not standard JSON Schema. A valid string is not financial certification. Bound: 20000 source account/day rows per stage, 20000 calendar days and 1MiB serialized response. Overflow refuses whole read with 503, never truncates.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-alpha-stage-drift.v2.schema.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "502": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    }
+  }
+}

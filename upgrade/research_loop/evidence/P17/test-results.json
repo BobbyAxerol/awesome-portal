@@ -1,0 +1,17 @@
+{
+  "schema_version": "research.phase-test-results.v1",
+  "phase": "P17",
+  "date_utc": "2026-09-22",
+  "status": "BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE",
+  "results": [
+    {"name": "p17-control-units", "status": "PASS", "tests": 25, "files": 4},
+    {"name": "p17-generated-contract", "status": "PASS", "tests": 3, "files": 1},
+    {"name": "p17-disposable-postgres", "status": "PASS", "tests": 1, "cleanup": "one focused P10→P13→P17 scenario in a named tmpfs container; trap removes it"},
+    {"name": "control-api-build", "status": "PASS"},
+    {"name": "generated-contract-snapshot-verifier", "status": "PASS", "tests": 164, "files": 11},
+    {"name": "r2-route-ledger", "status": "PASS", "tests": 22},
+    {"name": "screen08-browser-hifi", "status": "PENDING_FRONTEND_OWNER"},
+    {"name": "runtime-deployment-real-run", "status": "NOT_CLAIMED_FEATURE_DARK"},
+    {"name": "generic-execution-replay", "status": "SOURCE_CAPABILITY_BLOCKED_NOT_WAIVED"}
+  ]
+}

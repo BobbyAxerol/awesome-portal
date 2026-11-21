@@ -1,0 +1,282 @@
+{
+  "schema_version": "research.p24-fe-candidate-pin.v1",
+  "recorded_date_utc": "2026-10-04",
+  "recorded_by": "agent AC (docs only, read-only probes)",
+  "status": "UNSIGNED_NOT_READY_FOR_FULL_P24_FE_CANDIDATE_IS_TWO_BRANCHES_NOT_ONE_SHA",
+  "extends": "current-source-candidate-manifest.v5.json (be-gaps) / v2.json (this tree); this file adds the frontend/product pin only and rewrites nothing",
+  "git": {
+    "fe_lane": {
+      "path": "/home/bobby/portal-research-fe",
+      "branch": "claude/fe-parity",
+      "head": "d0569d49b6b6102b927f0663b789fce24832086a",
+      "head_is_docs_only_over": "2f4cb81a7600eeeb8efa2bf61dee743ea1ddbb52",
+      "last_frontend_code_commit": "2f4cb81a7600eeeb8efa2bf61dee743ea1ddbb52",
+      "last_frontend_code_commit_tree": "65720614cd27fd927441bdd51c64a127bb4891bc",
+      "note_tree": "FE-W1-W5/thanhvuong-test-results.json records tree d49144200ff3... which matches neither 2f4cb81a^{tree} nor its pre-rebase twin e9b170ad^{tree}=d98c5a0c...; use the tree above",
+      "base": "b2098a81",
+      "commits_since_base": 43,
+      "frontend_numstat_b2098a81_to_head": {
+        "command": "git diff --numstat b2098a81..HEAD -- apps/portal/frontend (awk-summed; 'tail -1' prints only the last file row)",
+        "files_total": 342,
+        "files_text": 215,
+        "binary_files_baseline_png": 127,
+        "additions": 9313,
+        "deletions": 5684
+      },
+      "whole_tree_shortstat_b2098a81_to_head": "569 files changed, 36833 insertions(+), 6473 deletions(-) (includes merged Codex backend commits)"
+    },
+    "shared_backend_tip": {
+      "branches": ["codex/be-gaps", "docs/research-loop-plan"],
+      "worktrees": ["/home/bobby/portal-research-be", "/home/bobby/portal-research"],
+      "head": "0df6030fc7065cf4a8789ea2c8d5702581337ff2",
+      "merge_base_with_fe_lane": "2f4cb81a7600eeeb8efa2bf61dee743ea1ddbb52",
+      "commits_ahead_of_merge_base": 8,
+      "fe_lane_commits_not_on_tip": ["d0569d49 (docs-only closure packet edits)"],
+      "frontend_code_on_tip_beyond_lane": "7d18fe4e fix(research): bind workspace and consume linked audit custody (11 FE files, +442/-52 in apps/portal/frontend)",
+      "trial_merge": "git merge-tree base HEAD codex/be-gaps shows no conflict markers (docs/FE touch disjoint files)"
+    },
+    "single_candidate_sha": null,
+    "single_candidate_sha_reason": "No commit contains both the lane docs/gate packet (d0569d49) and Codex 7d18fe4e consumer slice. The FE candidate must be a merge of the two heads; every FE-sensitive receipt below is pinned to a bundle, not to the merge."
+  },
+  "preview_identity_json": {
+    "file": "~/.config/portal-research-preview/identity.json (image ids and commit copied, no secrets)",
+    "project": "portal-research-preview",
+    "recorded_at_utc": "2026-10-03T18:15:07Z",
+    "git_commit": "4c443cec13ab5dce56f8980b1f4a6f5c60903f75",
+    "git_commit_vs_lane": "NOT an ancestor of lane HEAD; same subject as 59d76862 (pre-rebase twin, 17:12 UTC). Frontend diff 4c443cec..HEAD = 4 files +88/-6 (FoldSelectionPanel, RunProgress, SplitDetail, researchScreen.css = the 360px causal fix 2f4cb81a)",
+    "images": {
+      "portal-web": "sha256:c13cb04cd8d217216c4753b922bd9808f4b3a99a726bfe5bcec32e7aa727b064",
+      "control-api": "sha256:776f3982c352bdc0c91d25ac5b8d0d03f999dc24d3577599b8507ed42bba0bb3",
+      "portal-api": "sha256:30b43f62099080ca9962e28207a707b6cf038e973e1f02919bbbed8839295671",
+      "quant-worker-py": "sha256:30b43f62099080ca9962e28207a707b6cf038e973e1f02919bbbed8839295671",
+      "roadmap-task-board-api": "sha256:007b375c113d4c2ba0e3b7e12340369a56bfd9190fc2057438df99b93f8e09eb"
+    },
+    "migrations_head_recorded": "1723680000093_research-run-library-label-insert-consistency.sql",
+    "unverified_conflicts": [
+      "identity.json was written 18:15:07Z, BEFORE 576a32fe (18:24, adds migration 094 + final-audit routes) and before the 2f4cb81a bundle; served bundle (below) is the 2f4cb81a bundle, so portal-web image id c13cb04c cannot be tied to the served bundle by this file alone.",
+      "identity.json has no bundle field and migrations head 093 while repo head is 094: the :8095 preview Control API probably predates the pinned-final-audit routes. Needs `docker inspect` (daemon socket permission denied for agent AC) to confirm running image ids vs these tags."
+    ]
+  },
+  "frontend_bundle_served_8095": {
+    "index_bundle": "index-C41KmM2A.js",
+    "probe": "curl http://localhost:8095/ | grep -o 'index-[A-Za-z0-9_-]*\\.js' at 2026-10-04",
+    "bundle_sha256": "215b10a6ee9c90832b0b61f2531d07cc2efdb2a15d2913709a9a06fd7203ad28",
+    "equals_bundle_in_FE_W1_W5_test_results": true,
+    "contains_code_of": "2f4cb81a (lane)",
+    "does_not_contain": "7d18fe4e (Codex workspace + linked-audit consumer)",
+    "other_known_bundles": {
+      "index-CloiB-zT.js": "Codex :8096 web image sha256:1191dde6e869e41d80670ffddc43d829027853b41314c0d149c065a5838d6146, built from ef218408 + dirty consumer slice (v4 manifest); sha256 of bundle 76b40df4...1c1e4",
+      "index-DOdkCJHY.js / index-DKkYLzA8.js / index-C6w4OUAn.js": "superseded intermediate bundles named in older FE packet text"
+    }
+  },
+  "contracts": {
+    "snapshot_file": "packages/contracts/contracts-snapshot.json",
+    "sha256": "740e5a210efa20d6dfaa48bf09375be4d20552a36c99f5e10b4267603406b315",
+    "schema_version": 21,
+    "file_digest_entries": 287,
+    "generated_dir_files": 43,
+    "identical_on_fe_lane_and_be_gaps_tip": true
+  },
+  "migrations": {
+    "repo_head_both_branches": "1723680000094_research-pinned-final-audit-v1.sql",
+    "migration_files": 92,
+    "preview_identity_head": "1723680000093_research-run-library-label-insert-consistency.sql",
+    "gap": "094 landed after identity.json was recorded"
+  },
+  "engine": {
+    "portal_accepted_release": "QuantBT 1.1.1 (native 0.4.2)",
+    "published_inventory": "PyPI latest 1.1.1 (published-engine-inventory-20261003, v2 manifest)",
+    "qualified_second_wheel_bare": "1.1.0 (native 0.4.1) fixed-route qualification, equity/trade diff 0/0 (v5 manifest, receipt b6668139...)",
+    "portal_gateway_accepts_1_1_0": false,
+    "actual_second_portal_qualified_engine": false
+  },
+  "config_keys_names_only": {
+    "source": "~/.config/portal-research-preview/preview.env (values and secret-bearing keys omitted)",
+    "feature_flags_control_api": [
+      "CONTROL_API_FEATURE_RESEARCH_ARTIFACT_BYTE_VERIFY", "CONTROL_API_FEATURE_RESEARCH_COMPARE", "CONTROL_API_FEATURE_RESEARCH_CURRENT_SOURCE",
+      "CONTROL_API_FEATURE_RESEARCH_EVIDENCE", "CONTROL_API_FEATURE_RESEARCH_FREEZE", "CONTROL_API_FEATURE_RESEARCH_IMPORTED_EXECUTION",
+      "CONTROL_API_FEATURE_RESEARCH_LINEAGE", "CONTROL_API_FEATURE_RESEARCH_PREVIEW_LONG_WFO", "CONTROL_API_FEATURE_RESEARCH_PROGRESS",
+      "CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATES", "CONTROL_API_FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION", "CONTROL_API_FEATURE_RESEARCH_REPLAY",
+      "CONTROL_API_FEATURE_RESEARCH_REPORTS", "CONTROL_API_FEATURE_RESEARCH_RETAINED_ARTIFACTS", "CONTROL_API_FEATURE_RESEARCH_RUN_LIBRARY",
+      "CONTROL_API_FEATURE_RESEARCH_RUN_PRODUCER", "CONTROL_API_FEATURE_RESEARCH_SEARCH", "CONTROL_API_FEATURE_RESEARCH_SPLIT",
+      "CONTROL_API_FEATURE_RESEARCH_WFO_PROFILE", "CONTROL_API_FEATURE_RESEARCH_WHATIF"
+    ],
+    "feature_flags_portal_python": [
+      "PORTAL_FEATURE_RESEARCH_IMPORTED_EXECUTION", "PORTAL_FEATURE_RESEARCH_PREVIEW_LONG_WFO", "PORTAL_FEATURE_RESEARCH_PROGRESS",
+      "PORTAL_FEATURE_RESEARCH_RETAINED_ARTIFACTS", "PORTAL_FEATURE_RESEARCH_RUN_PRODUCER", "PORTAL_FEATURE_RESEARCH_WFO_PROFILE", "PORTAL_FEATURE_RESEARCH_WHATIF"
+    ],
+    "other_config_keys": [
+      "CONTROL_API_AUTH_MODE", "PORTAL_ENV", "PORTAL_HISTORICAL_DATA_MODE", "PORTAL_HTTP_PORT", "PORTAL_IMAGE_PREFIX", "PORTAL_IMAGE_TAG",
+      "PORTAL_PUBLIC_ORIGIN", "PORTAL_RESEARCH_PROGRESS_RELAY_TIMEOUT_SECONDS", "PORTAL_STACK_NAME", "PREVIEW_AUTO_LOGIN_USERNAME"
+    ],
+    "frontend_flags_note": "FE W1-W7 added no flag (FE-W1-W5/thanhvuong-rollback.md); the FE flag surface is the Control API feature set above via compose."
+  },
+  "visual_specs": {
+    "research_loop_visual": {"dir": "apps/portal/frontend/e2e/research-loop.visual.spec.ts-snapshots", "png_baselines": 28, "packet_cells": 28, "match": true},
+    "legacy_visual": {"dir": "apps/portal/frontend/e2e/visual.spec.ts-snapshots", "png_baselines": 100, "packet_cells": 101, "match": false, "note": "packet says 101 cells recorded; 100 PNG files on disk. Unexplained by any retained text; confirm (a cell with no file, or a count in the packet that includes one skipped)."},
+    "execution_specs_present_not_part_of_FE_gate": ["execution-fixtures.spec.ts-snapshots", "execution-journeys.spec.ts-snapshots"],
+    "baseline_recording_rule": "Bobby runs the CLI; --update is not run by agents"
+  },
+  "receipts": [
+    {
+      "id": "FE-lane-real-api-105",
+      "path": "upgrade/research_loop/evidence/FE-W1-W5/thanhvuong-test-results.json (gates.preview_real_api_lane)",
+      "dependency": "bundle index-C41KmM2A.js (lane code 2f4cb81a) + preview images in identity.json (control-api 776f3982, migration 093)",
+      "still_valid": true,
+      "valid_for": "bundle index-C41KmM2A.js only",
+      "action": "RE_RUN_ON_MERGED_CANDIDATE",
+      "reason": "bundle changes when 7d18fe4e is merged; also S09/S11 routes now call workspace-scoped and linked-audit GETs"
+    },
+    {
+      "id": "FE-w5-gate-123",
+      "path": "FE-W1-W5/thanhvuong-test-results.json (gates.w5_gate; spec apps/portal/frontend/e2e/_preview-research-w5.spec.ts)",
+      "dependency": "bundle index-C41KmM2A.js; real runs R-WFO-023, R-WFO-027, R-P04-022 on :8095",
+      "still_valid": true,
+      "valid_for": "bundle index-C41KmM2A.js only",
+      "action": "RE_RUN_ON_MERGED_CANDIDATE",
+      "reason": "S09 and S11 cells (axe, overflow, tab stops) depend on files changed by 7d18fe4e (ReportDetail, ReleaseCandidateDetail, routes, runLinks)"
+    },
+    {
+      "id": "FE-combined-228",
+      "path": "FE-W1-W5/thanhvuong-test-results.json (gates.lane_plus_gate_combined, passed 228/228)",
+      "dependency": "index-C41KmM2A.js; one S06 mobile real-read cell failed once under load then passed 3/3 alone (recorded)",
+      "still_valid": true,
+      "valid_for": "index-C41KmM2A.js only",
+      "action": "RE_RUN_ON_MERGED_CANDIDATE",
+      "reason": "same as above; this is the headline FE gate"
+    },
+    {
+      "id": "FE-vitest-5892",
+      "path": "FE-W1-W5/thanhvuong-test-results.json (gates.vitest_full, 5892 passed, 1 skipped, 338 files)",
+      "dependency": "lane tree 2f4cb81a",
+      "still_valid": true,
+      "valid_for": "lane 2f4cb81a",
+      "action": "RE_RUN_ON_MERGED_CANDIDATE",
+      "reason": "merge adds 11 files and a 181-line workspaceAudit.test.tsx; Codex ran only 285 affected tests at ef218408+dirty, not the full suite on the merge"
+    },
+    {
+      "id": "FE-visual-research-28",
+      "path": "FE-W1-W5/thanhvuong-test-results.json (gates.visual_research; 28 baselines on disk)",
+      "dependency": "lane 2f4cb81a CSS/tokens; Bobby-recorded baselines",
+      "still_valid": true,
+      "valid_for": "lane 2f4cb81a",
+      "action": "RE_RUN_VERIFY_MODE_ON_MERGED_CANDIDATE",
+      "reason": "7d18fe4e adds a no-print audit custody area to S09/S11 and said no baseline re-record; a verify-mode run (not --update) must prove the 28 cells unchanged. Visual lane only compares correctly through ./scripts/portal-web-visual.sh"
+    },
+    {
+      "id": "FE-visual-legacy-101",
+      "path": "FE-W1-W5/thanhvuong-test-results.json (gates.visual_legacy)",
+      "dependency": "lane tokens + export button (f0346ef8, c5795c71); apps/portal/frontend legacy specs",
+      "still_valid": true,
+      "valid_for": "lane 2f4cb81a; 7d18fe4e touches only research/ files",
+      "action": "REUSED",
+      "reason": "no legacy surface changed by the consumer slice; baseline file count 100 vs packet 101 is an open discrepancy"
+    },
+    {
+      "id": "FE-browser-print-QA-W6",
+      "path": "/home/bobby/portal-research-qa-2026-10-03/REPORT.md (private, not in repo)",
+      "dependency": "bundle at W6 time (before defect fixes D1-D11, W7)",
+      "still_valid": false,
+      "action": "REUSED_AS_DEFECT_LIST_ONLY",
+      "reason": "findings were fixed and re-gated; not an acceptance receipt for the candidate"
+    },
+    {
+      "id": "FE-P22-publish-R-WFO-027",
+      "path": "FE-W1-W5/thanhvuong-test-results.json (p22_publish) rc_06GG2K1TN6QQNJJN3RJ5AS5XC1, apr_06GG2K4A9Q3AHFVK0WV5GXNCY2",
+      "dependency": "preview data on :8095 (DB rows), not code",
+      "still_valid": true,
+      "action": "REUSED",
+      "reason": "immutable DB facts; reading them again via the merged bundle is part of the re-run, but the publish itself is not repeated"
+    },
+    {
+      "id": "BE-S09-S11-workspace-linked-audit-4of4",
+      "path": "upgrade/research_loop/evidence/P23/WORKSPACE_AND_LINKED_AUDIT_CONSUMER_2026-10-04.md (be-gaps only; manifest v4)",
+      "dependency": "web image 1191dde6 (bundle index-CloiB-zT.js, src base ef218408 + dirty), control 128276d7 image 629d9bef, restored proof run rrun_3258a4c450816129d2d285f25b801061",
+      "still_valid": true,
+      "valid_for": "bundle index-CloiB-zT.js + control 629d9bef",
+      "action": "REUSED_FOR_BACKEND_AND_CONSUMER_LOGIC; RE_RUN_4_CELLS_ON_MERGED_BUNDLE",
+      "reason": "tip source = 7d18fe4e but the browser run was on a pre-commit dirty build; one cheap restored-proof S09/S11 1280/660 read on the merged bundle ties them. Not present on the FE lane copy"
+    },
+    {
+      "id": "BE-v2-mixed-load-120of120",
+      "path": "P23/MIXED_LOAD_AND_HISTORICAL_MANIFEST_EXCEPTION_2026-10-03.md#6; manifest v2 p23-tuned-clean-workload.json sha256 4ee71a1a...",
+      "dependency": "clean b90a36a9, control edd22298, python 66cfd8cf",
+      "still_valid": true,
+      "valid_for": "Library 499 / Progress 403 ms on those images",
+      "action": "REUSED_WITH_RISK",
+      "reason": "control image later replaced by 629d9bef and 576a32fe touched progress-ingress.controller.ts; Codex asserted unaffected modules and did not retake Library/Progress"
+    },
+    {
+      "id": "BE-affected-Report-RC-377-487",
+      "path": "P23/CURRENT_CANDIDATE_CLOSEOUT_AMENDMENT_2026-10-03.md (be-gaps), manifest v3/v4",
+      "dependency": "control 128276d7 (image 629d9bef)",
+      "still_valid": true,
+      "action": "REUSED",
+      "reason": "control unchanged since (v4 reused_control); 7d18fe4e/0df6030f are FE and test scripts"
+    },
+    {
+      "id": "BE-wfo-direct-engine",
+      "path": "P23/WFO_DIRECT_ENGINE_RECOMPUTATION_2026-10-03.md",
+      "dependency": "engine 1.1.1 + run rrun_c3bc2113...; not frontend",
+      "still_valid": true,
+      "action": "REUSED",
+      "reason": "no producer/engine change"
+    },
+    {
+      "id": "BE-producer-rollback-20of20",
+      "path": "P24/V1_ACCEPTANCE.md delivered item 2; manifest v2 producer-rollback-compatible-readers.json",
+      "dependency": "python 66cfd8cf -> 1e454b12, control edd22298 reader",
+      "still_valid": true,
+      "valid_for": "those two image pairs",
+      "action": "REUSED_SCOPED",
+      "reason": "control reader now 629d9bef with migration 094; the 'never downgrade reader' rule stands; a rollback rehearsal on the new reader is not proved"
+    },
+    {
+      "id": "BE-restore-30of30-and-28-GET",
+      "path": "P23/CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md (be-gaps)",
+      "dependency": "restored DB + migration 094 + web bundle at that time",
+      "still_valid": true,
+      "valid_for": "restore of the pre-new-proof snapshot",
+      "action": "REUSED_SCOPED",
+      "reason": "it is a browser read on an older web image; FE Research UI changed since (W7 360px, consumer slice)"
+    },
+    {
+      "id": "BE-F5-JSON-502-and-S14",
+      "path": "P23/CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md (be-gaps)",
+      "dependency": "S14 UI at that candidate; Control 502 mapper",
+      "still_valid": true,
+      "action": "REUSED_SCOPED",
+      "reason": "Codex says do not repeat the real negative; S14 presentation 1280/660 is covered again by the merged-bundle W5 gate cell S14"
+    },
+    {
+      "id": "OWNER-three-manifests-exception",
+      "path": "P23/SECOND_ENGINE_UPGRADE_AND_HISTORICAL_SCOPE_2026-10-04.md; manifest v5 owner_scope_exception",
+      "dependency": "Bobby approval 2026-10-04, exactly three run ids / three artifact ids",
+      "still_valid": true,
+      "action": "OWNER_RECORDED",
+      "reason": "strict integrity stays 83/86; no bytes recovered"
+    },
+    {
+      "id": "BE-second-engine-1.1.0-vs-1.1.1",
+      "path": "same SECOND_ENGINE doc; receipt b6668139...",
+      "dependency": "scripts/research-p23 harness at 7d18fe4e + dirty; wheels 1.1.0/1.1.1",
+      "still_valid": true,
+      "valid_for": "bare fixed-route compatibility only",
+      "action": "REUSED_NOT_PORTAL_PASS",
+      "reason": "Portal gateway/profile refuse 1.1.0; T05/T07/T13 stay open"
+    }
+  ],
+  "must_rerun_because_dependency_changed": [
+    "FE merged-candidate build (lane 2f4cb81a + 7d18fe4e) and its bundle name",
+    "full vitest + tsc on the merge",
+    "W5 gate and real-API lane (228 cells) on the merged bundle, S09/S11 cells first",
+    "visual verify mode (research 28, legacy 100/101) via ./scripts/portal-web-visual.sh",
+    "restored-proof S09/S11 1280/660 read on the merged bundle (4 cells)",
+    "docker inspect of running :8095 images against identity.json; re-write identity.json for the new build (adds bundle, commit, migration 094)"
+  ],
+  "owner_gates": [
+    "Bobby by-eye FE review (NOT_VERIFIED)",
+    "second qualified Portal engine / 1.1.0 profile binding decision",
+    "signed release, SBOM, provenance (not dispatched)"
+  ]
+}

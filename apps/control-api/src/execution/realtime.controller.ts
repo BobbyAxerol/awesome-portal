@@ -8,6 +8,7 @@ import {
   Req,
   Res,
   UseGuards,
+  Optional,
 } from "@nestjs/common";
 import { pipeline } from "node:stream/promises";
 import { constants } from "node:http2";
@@ -30,11 +31,19 @@ import {
 } from "./realtime.proxy";
 import { ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import { ExecutionLocalReadAuthority } from "./local-read-authority";
+import { retainedReview, localProfileReadable } from "./retained-read-profile";
+import { ExecutionReadScopes, ExecutionReadScopeError, type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
+import { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
+import { nativeResearchReview } from "./native-review-profile";
+import { ScopedReplayError } from "../execution-v2/scoped-replay-cursor";
+import { MaximumDataOperationError } from "./maximum-data-operation.service";
+import { technicalDiagnosticsSchema } from "../execution-v2/technical-read.contract";
 
 interface RealtimeRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
   portalSession: AuthSession;
+  portalViewerWorkspaceId?: string;
 }
 
 @UseGuards(SessionGuard)
@@ -48,7 +57,21 @@ export class ExecutionRealtimeController {
     @Inject(ExecutionProfileProjectionRepository) private readonly projectionRepository: ExecutionProfileProjectionRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionLocalReadAuthority) private readonly readAuthority: ExecutionLocalReadAuthority,
+    @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
+    @Optional() @Inject(NativeManagerReadConsumer) private readonly nativeManager?: NativeManagerReadConsumer,
   ) {}
+
+  private async legacyStream(request: RealtimeRequest, workspaceId=request.portalWorkspaceId) {
+    if (this.scopes) await this.scopes.assertLegacyStream({user:request.portalUser,session:request.portalSession,
+      workspaceId,viewerWorkspaceId:request.portalWorkspaceId});
+  }
+
+  private nativeProfileAvailable(environment: ProjectionEnvironment): void {
+    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true")
+      throw new LocalRealtimeError("EXECUTION_LOCAL_READ_DISABLED", 404);
+    if (!localProfileReadable(this.config, environment))
+      throw new LocalRealtimeError("EXECUTION_PROFILE_READ_DISABLED", 404);
+  }
 
   /**
    * BE-R2-5 restricted operational telemetry.  This is deliberately an
@@ -58,6 +81,34 @@ export class ExecutionRealtimeController {
    */
   @Get("/realtime/diagnostics")
   async realtimeDiagnostics(@Req() request: RealtimeRequest) {
+    const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? request.portalWorkspaceId;
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
+    if (this.scopes && await this.scopes.selectionMode(principal) === "SCOPED_V2") {
+      // Technical permission is independent of the legacy ADMIN role and
+      // business read-all. Every configured profile authorizes independently.
+      const bindings = diagnosticProfiles(this.config).filter(({ environment }) => this.readAuthority.profileEnabled(environment));
+      if (!bindings.length) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+      const scopes: AuthorizedExecutionReadScope[] = [];
+      for (const binding of bindings) scopes.push(await this.scopes.authorizeTechnicalProfile(principal, binding));
+      const read = async () => {
+        const profiles = [];
+        for (const scope of scopes) {
+          const metadata = await this.projectionRepository.snapshotMetadata(workspaceId, scope.environment, scope.profileId);
+          const health = await this.projectionRepository.refreshHealth(workspaceId, scope.environment, scope.profileId);
+          profiles.push({ environment: scope.environment, profile_id: scope.profileId, component: "LOCAL_PROJECTION",
+            state: health.state, health: metadata ? "OBSERVED" : "NOT_PUBLISHED",
+            lag_ms: metadata ? Math.max(0, Date.now() - metadata.lastSuccessfulRefreshAt.valueOf()) : null,
+            last_error_code: health.reasonCode });
+        }
+        const parsed = technicalDiagnosticsSchema.safeParse({ schema_version: "portal.execution.technical-diagnostics.v1", read_scope: "TECHNICAL_AUTHORIZED", profiles });
+        if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+        return parsed.data;
+      };
+      const fenced = (index: number): Promise<Awaited<ReturnType<typeof read>>> => index === scopes.length
+        ? read() : this.scopes!.deliver(scopes[index], () => fenced(index + 1));
+      return fenced(0);
+    }
     if (request.portalUser.role !== "ADMIN") {
       throw new LocalRealtimeError("N31_REALTIME_DIAGNOSTICS_FORBIDDEN", 403);
     }
@@ -65,7 +116,6 @@ export class ExecutionRealtimeController {
     if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true") {
       await this.readAuthority.authorize(request);
     }
-    const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     const profiles = workspaceId && this.config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true"
       ? await Promise.all(diagnosticProfiles(this.config).filter(({ environment }) => this.readAuthority.profileEnabled(environment)).map(async ({ environment, profileId }) => {
         const [snapshot, health] = await Promise.all([
@@ -100,7 +150,7 @@ export class ExecutionRealtimeController {
         };
       }))
       : [];
-    return {
+    const result = {
       schema_version: "portal.execution.realtime-diagnostics.v1",
       authority: "PORTAL_CONTROL_API",
       read_at: readAt.toISOString(),
@@ -115,16 +165,40 @@ export class ExecutionRealtimeController {
       source_admission: await this.currentSource.diagnostics(),
       browser_to_edge_or_source: "FORBIDDEN",
     };
+    if (this.scopes && await this.scopes.selectionMode(principal) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
   }
 
   @Get("/profiles/:environment/realtime-snapshot")
   async profileSnapshot(
     @Req() request: RealtimeRequest,
     @Param("environment") rawEnvironment: string,
+    @Res({ passthrough: true }) reply?: FastifyReply,
   ) {
     const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
     await this.readAuthority.authorize(request, environment);
+    if (this.nativeManager && !retainedReview(this.config)) {
+      if (!reply) throw new LocalRealtimeError("N31_NATIVE_REPLY_REQUIRED", 503);
+      try {
+        this.nativeProfileAvailable(environment);
+        if (await this.nativeManager.serveProfileSnapshot({user:request.portalUser,session:request.portalSession,
+          workspaceId,viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
+          environment,profileId,this.localRealtime,reply)) return;
+      } catch (error) { throw localHttpError(error); }
+    }
+    if (nativeResearchReview(this.config)) throw new LocalRealtimeError("NATIVE_MANAGER_READ_DENIED",403);
+    if (retainedReview(this.config)) {
+      // No resumable cursor exists in this profile. A 204 is intentional
+      // absence, not a successful heartbeat or an upstream error. Older
+      // consumers stop here; the typed review context tells newer consumers
+      // not to start the realtime bootstrap at all.
+      reply?.code(204).header("Cache-Control", "private, no-store")
+        .header("X-Portal-Realtime-State", "UDB_RETAINED_STREAM_DISABLED");
+      return;
+    }
     try {
+      await this.legacyStream(request, workspaceId);
       return await this.localRealtime.snapshot(workspaceId, environment, profileId);
     } catch (error) {
       throw localHttpError(error);
@@ -138,11 +212,23 @@ export class ExecutionRealtimeController {
     @Param("environment") rawEnvironment: string,
     @Query("cursor") rawCursor?: unknown,
   ): Promise<void> {
+    if (retainedReview(this.config)) throw new HttpException({code:"UDB_RETAINED_STREAM_DISABLED",message:"Streaming is disabled in retained review."},404);
     let cleanup = () => undefined as void;
     try {
       const { environment, profileId, workspaceId } = localScope(this.config, rawEnvironment);
       await this.readAuthority.authorize(request, environment);
       const cursor = singleHeader(request.headers["last-event-id"]) ?? singleValue(rawCursor);
+      if (this.nativeManager) this.nativeProfileAvailable(environment);
+      if (this.nativeManager && await this.nativeManager.serveProfileStream(
+        {user:request.portalUser,session:request.portalSession,workspaceId,
+          viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
+        environment,profileId,cursor,reply)) {
+        try { this.localRealtime.startNativePolling(); }
+        catch { reply.raw.destroy(); }
+        return;
+      }
+      if (nativeResearchReview(this.config)) throw new LocalRealtimeError("NATIVE_MANAGER_READ_DENIED",403);
+      await this.legacyStream(request, workspaceId);
       reply.hijack();
       reply.raw.writeHead(200, {
         "content-type": "text/event-stream; charset=utf-8",
@@ -192,7 +278,11 @@ export class ExecutionRealtimeController {
           request.portalSession.userId,
           request.portalSession.sessionVersion,
           new Date(),
-        ).then(async (active) => active && await this.readAuthority.remainsAuthorized(request, environment)).then((active) => {
+        ).then(async (active) => {
+          if (!active || !await this.readAuthority.remainsAuthorized(request, environment)) return false;
+          await this.legacyStream(request, workspaceId);
+          return true;
+        }).then((active) => {
           if (active || closed) return;
           send(this.localRealtime.authExpired(workspaceId, environment, profileId));
         }).catch(() => {
@@ -215,6 +305,7 @@ export class ExecutionRealtimeController {
       if (closed) unsubscribe();
     } catch (error) {
       cleanup();
+      if (reply.raw.destroyed || reply.raw.writableEnded) return;
       if (!reply.raw.headersSent) void reply.status(localStatus(error)).send(localErrorBody(error));
       else reply.raw.end();
     }
@@ -226,7 +317,9 @@ export class ExecutionRealtimeController {
     @Res() reply: FastifyReply,
     @Query("cursor") rawSnapshotCursor?: unknown,
   ): Promise<void> {
+    if (retainedReview(this.config)) throw new HttpException({code:"UDB_RETAINED_STREAM_DISABLED",message:"Streaming is disabled in retained review."},404);
     try {
+      await this.legacyStream(request);
       const snapshotCursor = singleValue(rawSnapshotCursor);
       const upstream = await this.proxy.open({
         user: request.portalUser,
@@ -245,16 +338,19 @@ export class ExecutionRealtimeController {
       bindRealtimeLifecycle(
         reply.raw,
         upstream.stream,
-        () => this.auth.sessions.isActiveLease(
+        async () => {
+          await this.legacyStream(request);
+          return this.auth.sessions.isActiveLease(
           request.portalSession.sessionId,
           request.portalSession.userId,
           request.portalSession.sessionVersion,
           new Date(),
-        ),
+          );
+        },
       );
       await pipeline(upstream.stream, reply.raw).catch(() => undefined);
     } catch (error) {
-      if (error instanceof RealtimeProxyError) {
+      if (error instanceof RealtimeProxyError || error instanceof ExecutionReadScopeError) {
         void reply.status(error.status).send({
           error: { code: error.code, message: "Execution realtime stream is unavailable." },
         });
@@ -267,15 +363,20 @@ export class ExecutionRealtimeController {
   }
 
   @Get("/command-center/realtime-snapshot")
-  async commandCenterSnapshot(@Req() request: RealtimeRequest) {
+  async commandCenterSnapshot(@Req() request: RealtimeRequest, @Res({passthrough:true}) reply?: FastifyReply) {
+    if (retainedReview(this.config)) {
+      reply?.code(204).header("Cache-Control","private, no-store").header("X-Portal-Realtime-State","UDB_RETAINED_STREAM_DISABLED");
+      return;
+    }
     try {
+      await this.legacyStream(request);
       return await this.proxy.snapshot({
         user: request.portalUser,
         session: request.portalSession,
         workspaceId: request.portalWorkspaceId,
       });
     } catch (error) {
-      if (error instanceof RealtimeProxyError) {
+      if (error instanceof RealtimeProxyError || error instanceof ExecutionReadScopeError) {
         throw new HttpException({
           error: { code: error.code, message: "Execution realtime snapshot is unavailable." },
         }, error.status);
@@ -388,20 +489,26 @@ function sse(event: LocalRealtimeEnvelope): string {
 }
 
 function localStatus(error: unknown): number {
-  return error instanceof HttpException ? error.getStatus() : error instanceof LocalRealtimeError ? error.status : 500;
+  if (error instanceof ScopedReplayError) return error.code === "RECONNECT_LIMIT" ? 429 :
+    ["SOURCE_UNAVAILABLE", "STOPPED"].includes(error.code) ? 503 : 409;
+  return error instanceof HttpException ? error.getStatus() :
+    error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
+      error instanceof MaximumDataOperationError ? error.status : 500;
 }
 
 function localErrorBody(error: unknown) {
   if (error instanceof HttpException) return error.getResponse();
   return {
     error: {
-      code: error instanceof LocalRealtimeError ? error.code : "N31_LOCAL_REALTIME_FAILED",
+      code: error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
+        error instanceof MaximumDataOperationError || error instanceof ScopedReplayError ? error.code : "N31_LOCAL_REALTIME_FAILED",
       message: "Local execution realtime is unavailable.",
     },
   };
 }
 
 function localHttpError(error: unknown): Error {
-  if (error instanceof LocalRealtimeError) return error;
+  if (error instanceof LocalRealtimeError || error instanceof ExecutionReadScopeError ||
+    error instanceof MaximumDataOperationError) return error;
   return new HttpException(localErrorBody(error), localStatus(error));
 }

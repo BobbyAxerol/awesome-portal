@@ -1,0 +1,333 @@
+/* Access self-view V2 (hi-fi v2 access, S1e). Layout and type only: colour
+ * through carbon tokens, one foreground and one background per rule so the
+ * pair gate can read it, type only through the --exec-font-* roles, no
+ * uppercase. Tables are CardsTable (cards at 660px and below). */
+
+.exec-acc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+
+.exec-acc-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-acc-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+/* Tables in this page keep to their panel (QA1 I-29): tighter cell padding, so the Why and Trading system columns are not pushed out of it. */
+.exec-acc-panel .exec-cards thead th,
+.exec-acc-panel .exec-cards tbody td {
+  padding-inline: var(--space-2);
+}
+/* Where a table is still wider than its panel (the Granted table at 1024px), the grant's name stays put while the rest scrolls under the fade. */
+@media (min-width: 661px) {
+  .exec-acc-panel .exec-cards tbody td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--paper-raised);
+  }
+  .exec-acc-panel .exec-cards thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+}
+.exec-acc-flags {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.exec-acc-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-acc-manage {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-acc-manage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-acc-manage-title {
+  margin: 0;
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+}
+.exec-acc-manage-line {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-acc-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-acc-chip {
+  padding: 0 var(--space-2);
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+.exec-acc-btn {
+  padding: 4px 12px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-acc-btn:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  cursor: not-allowed;
+}
+.exec-acc-btn:focus-visible,
+.exec-acc-tab:focus-visible,
+.exec-acc-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---- tabs (owners only) ------------------------------------------------- */
+
+.exec-acc-tabs {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-strong);
+}
+/* Underline tabs (hi-fi .tabs button): no box, a 2px accent line under the selected one. */
+.exec-acc-tab {
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.exec-acc-tab:hover {
+  color: var(--ink);
+}
+.exec-acc-tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* ---- identity strip ------------------------------------------------------ */
+
+.exec-acc-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.exec-acc-kpi {
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.exec-acc-kpi dt {
+  font: var(--exec-font-th);
+  color: var(--ink-soft);
+}
+.exec-acc-kpi dd {
+  margin: 0;
+}
+.exec-acc-kpi-value {
+  font: var(--exec-font-kpi);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+/* A long id (a username like principal-visual-baseline) keeps the id role; a stated absence is prose. */
+.exec-acc-kpi-value[data-form="id"] {
+  font: var(--exec-font-id);
+}
+.exec-acc-kpi-value[data-form="absent"] {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-acc-kpi-note {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+/* The user id is one 36-character token: when it must wrap, it wraps into two even lines, not 35 characters and an orphan. */
+.exec-acc-kpi-note.exec-acc-code {
+  word-break: break-all;
+  text-wrap: balance;
+}
+
+/* ---- banners and states --------------------------------------------------- */
+
+.exec-acc-banner {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn);
+}
+.exec-acc-banner[data-tone="denied"],
+.exec-acc-banner[data-tone="unavailable"] {
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px dashed var(--warn);
+}
+.exec-acc-state {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-acc-state strong {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-acc-code {
+  font: var(--exec-font-id);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ---- panels ---------------------------------------------------------------- */
+
+.exec-acc-two {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--space-4);
+  /* Stretch: the two panels are one pair of equal height, not a short table beside a long one (QA2 R3-17). */
+  align-items: stretch;
+}
+@media (max-width: 1100px) {
+  .exec-acc-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.exec-acc-panel {
+  min-width: 0;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+}
+.exec-acc-foot {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+}
+.exec-acc-caption {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+}
+
+.exec-acc-np-word {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+
+/* ---- cells ------------------------------------------------------------------- */
+
+.exec-acc-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+}
+.exec-acc-id {
+  font: var(--exec-font-id);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+/* A capability key is one token: it never breaks mid-word (alpha.metadata.e / dit); the column grows instead. */
+.exec-acc-cell > .exec-acc-id {
+  min-width: 14ch;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+.exec-acc-meta {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-acc-effect {
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+}
+.exec-acc-effect[data-effect="DENY"] {
+  color: var(--ink);
+}
+.exec-acc-why {
+  white-space: normal;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-acc-link {
+  color: var(--accent);
+}
+
+/* ---- policy facts -------------------------------------------------------------- */
+
+.exec-acc-facts {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  font: var(--exec-font-body);
+}
+.exec-acc-facts dt {
+  color: var(--ink-soft);
+}
+.exec-acc-facts dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 660px) {
+  .exec-acc-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.exec-acc-dict {
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+}
+.exec-acc-dict > summary {
+  cursor: pointer;
+  font: var(--exec-font-control);
+  color: var(--ink);
+}

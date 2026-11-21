@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -20,6 +21,7 @@ import {
   LifecycleDeniedError,
   LifecycleRequest,
 } from "./account-lifecycle.service";
+import { isPagedRoster, RosterQueryError } from "./account-roster-page";
 import { OwnerAccessGuard } from "./owner-access.guard";
 
 /**
@@ -120,14 +122,33 @@ export class AccountLifecycleController {
 
   // -------------------------------------------------------------- reads
 
+  /**
+   * No query: the whole roster, as before (the transition for the V1 screen).
+   * Any of `limit`, `cursor`, `q`, `role`, `state`: one keyset page (BE-P23),
+   * the same body plus `page` and `counts`.
+   */
   @Header("Cache-Control", "no-store")
   @Get()
-  async roster() {
-    return {
-      schema_version: "portal.account-roster.v1",
-      record_authority: "PORTAL_CONTROL",
-      accounts: await this.lifecycle.roster(),
-    };
+  async roster(@Req() request: OwnerRequest, @Query() query: unknown) {
+    if (!isPagedRoster(query)) {
+      return {
+        schema_version: "portal.account-roster.v1",
+        record_authority: "PORTAL_CONTROL",
+        accounts: await this.lifecycle.roster(),
+      };
+    }
+    try {
+      return {
+        schema_version: "portal.account-roster.v1",
+        record_authority: "PORTAL_CONTROL",
+        ...(await this.lifecycle.rosterPage(request.portalUser.userId, query)),
+      };
+    } catch (error) {
+      if (error instanceof RosterQueryError) {
+        throw new AuthError(error.reasonCode, error.message, error.status);
+      }
+      throw lifecycleFailure(error);
+    }
   }
 
   @Header("Cache-Control", "no-store")

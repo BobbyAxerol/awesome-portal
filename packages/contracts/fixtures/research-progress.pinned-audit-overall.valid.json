@@ -1,0 +1,9 @@
+{
+  "pct": 85,
+  "elapsed_s": 8,
+  "eta_s": null,
+  "rate_trials_per_s": null,
+  "trials_done": 0,
+  "trials_declared": 0,
+  "tqdm_line": "Frozen-selection evaluation completed; zero optimizer trials."
+}

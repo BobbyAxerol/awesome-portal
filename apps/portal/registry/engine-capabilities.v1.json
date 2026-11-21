@@ -1,12 +1,12 @@
 {
   "schema_version": "engine-capabilities.v1",
-  "manifest_revision": 1,
+  "manifest_revision": 2,
   "engine_releases": [
     {
-      "release_id": "er_quantbt_108",
+      "release_id": "er_quantbt_111",
       "package": "quantbt-engine",
-      "version": "1.0.8",
-      "dist_info_record_sha256": "0963c05b3f68aaf875c0ec95f71db551cc22a3b39538ffe8ac072028405173c9"
+      "version": "1.1.1",
+      "dist_info_record_sha256": "6087fef28710d6d4e5d442a36a57a9e2b0ba8e78f657358563911b86845c835d"
     }
   ],
   "capabilities": [
@@ -14,7 +14,7 @@
       "capability_id": "CAP_THREE_WINDOW_DECAY",
       "protocol": "three_window_decay",
       "endpoint_id": "walk_forward",
-      "engine_release_id": "er_quantbt_108",
+      "engine_release_id": "er_quantbt_111",
       "certified": true,
       "requirements": {
         "backend": "python",
@@ -30,7 +30,7 @@
       "capability_id": "CAP_ADVANCED_WALK_FORWARD",
       "protocol": "advanced_walk_forward",
       "endpoint_id": "walk_forward",
-      "engine_release_id": "er_quantbt_108",
+      "engine_release_id": "er_quantbt_111",
       "certified": true,
       "requirements": {
         "backend": "python",

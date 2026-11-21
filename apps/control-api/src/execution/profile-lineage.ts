@@ -44,8 +44,9 @@ export interface LineageRelationResult<TSpec extends { key: string } = { key: st
  * Discarding a row that belongs to another profile is the filter doing its job
  * and the relation is COMPLETE for this profile. Discarding one whose parent
  * relation is itself PARTIAL is different: the parent page was cut short, so
- * we genuinely cannot tell whether that row belonged here. Only the second is
- * incompleteness, and the parent's own `completeness` tells the two apart.
+ * we genuinely cannot tell whether that row belonged here. An unavailable
+ * requested parent, a partial scope, or a continuation also leaves that
+ * population unproved, even if the returned page itself says COMPLETE.
  */
 export function enforceProfileLineage<TSpec extends { key: string }>(
   relations: readonly LineageRelationResult<TSpec>[],
@@ -87,7 +88,7 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
     { class: "group", field: "group_id", accepted: groupIds, present: rootsPresent.group, trusted: complete("conditional_groups") },
   ] as const;
 
-  return relations.map((relation) => {
+  const scoped: Array<LineageRelationResult<TSpec>> = relations.map((relation) => {
     if (!relation.page) return relation;
     const rejects: Record<string, number> = {};
     const scopedOut: Record<string, number> = {};
@@ -111,7 +112,7 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
       return {
         ...relation,
         page: { ...relation.page, items: accepted },
-        state: accepted.length === 0 ? "EMPTY" as const : relation.state,
+        state: accepted.length === 0 && relation.state === "AVAILABLE" ? "EMPTY" as const : relation.state,
         lineageScopedOut: scopedOut,
       };
     }
@@ -124,26 +125,64 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
       ...(counted(scopedOut) ? { lineageScopedOut: scopedOut } : {}),
     };
   });
+  // Bracket legs publish no mode/account of their own. Use only the accepted
+  // same-cycle parent population AFTER the existing profile-lineage pass,
+  // never raw pre-filter bracket IDs or an older committed snapshot.
+  const bracketParents = scoped.filter(relation => relation.spec.key === "brackets");
+  const parent = bracketParents.length === 1 ? bracketParents[0].page : null;
+  if ((parent?.items.length ?? 0) > 2_000)
+    throw new Error(errorPrefix + "_PROFILE_LINEAGE_ROW_BOUND");
+  const bracketCounts = new Map<string, number>();
+  for (const row of parent?.items ?? []) {
+    const id = row.bracket_group_id;
+    if (typeof id === "string" && id.length > 0)
+      bracketCounts.set(id, (bracketCounts.get(id) ?? 0) + 1);
+  }
+  const completeParent = bracketParents.length === 1 && parentsComplete(bracketParents, ["brackets"]);
+  return scoped.map(relation => {
+    if (relation.spec.key !== "bracket_legs" || !relation.page) return relation;
+    if (relation.page.items.length > 2_000)
+      throw new Error(errorPrefix + "_PROFILE_LINEAGE_ROW_BOUND");
+    // A partial parent census cannot establish that the apparent parent ID
+    // is unique: another page may contain a conflicting parent. Hold those
+    // legs, rather than attaching them to the first parent we happened to see.
+    const accepted = relation.page.items.filter(row => completeParent && typeof row.bracket_group_id === "string" &&
+      bracketCounts.get(row.bracket_group_id) === 1);
+    const dropped = relation.page.items.length - accepted.length;
+    if (completeParent && dropped === 0) return relation;
+    // Unknown/unavailable/capped parent is never an empty COMPLETE fact.
+    // Preserve the upstream UNKNOWN distinction, and never promote a
+    // partial page merely because some of its children's parents were found.
+    const completeness = relation.page.completeness === "UNKNOWN" || parent?.completeness === "UNKNOWN"
+      ? "UNKNOWN" as const : "PARTIAL" as const;
+    return { ...relation, page: { ...relation.page, items: accepted, completeness },
+      state: "PARTIAL" as const,
+      reasonCode: relation.reasonCode ?? errorPrefix + "_BRACKET_PARENT_CENSUS_UNQUALIFIED",
+      ...(dropped ? { lineageRejects: { ...relation.lineageRejects, bracket: dropped } } : {}) };
+  });
 }
 
 /**
  * True when every parent relation that is present for a class came back
- * COMPLETE. A missing relation is not a doubt — `acceptedReference` already
- * waives the check when its parent relation was never read.
+ * COMPLETE, without a continuation, previous page, or partial scope. A
+ * relation not requested by this screen is not a doubt; a requested but
+ * unavailable one is.
  */
 function parentsComplete<TSpec extends { key: string }>(
   relations: readonly LineageRelationResult<TSpec>[],
   keys: readonly string[],
 ): boolean {
-  const present = relations.filter((item) => keys.includes(item.spec.key) && item.page !== null);
-  return present.every((item) => item.page!.completeness === "COMPLETE");
+  const requested = relations.filter((item) => keys.includes(item.spec.key));
+  return requested.every((item) => item.page !== null && (item.state === "AVAILABLE" || item.state === "EMPTY") &&
+    item.page.completeness === "COMPLETE" && item.page.nextCursor === null &&
+    item.page.previousCursor == null && item.page.scope?.state !== "PARTIAL");
 }
 
 function hasAny<TSpec extends { key: string }>(
   relations: readonly LineageRelationResult<TSpec>[],
   ...keys: string[]
 ): boolean {
-  return relations.some((item) => keys.includes(item.spec.key) && item.page !== null);
+  return relations.some((item) => keys.includes(item.spec.key));
 }
 
 function values(

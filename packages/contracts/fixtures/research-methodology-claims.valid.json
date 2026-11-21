@@ -1,0 +1,23 @@
+{
+  "forecast": [
+    { "kind": "VALIDATION", "state": "FORECAST", "text": "walk_forward_oos", "reason_code": null, "source": "ATLAS_MODE_SCHEDULE" },
+    { "kind": "CHRONOLOGY", "state": "FORECAST", "text": "not_causal_multi_fold_global_calibration", "reason_code": null, "source": "ATLAS_MODE_SCHEDULE" },
+    { "kind": "CAUSALITY", "state": "FORECAST", "text": "retrospective_global_calibration", "reason_code": null, "source": "ATLAS_MODE_SCHEDULE" },
+    { "kind": "OOS_SELECTION", "state": "FORECAST", "text": "USED", "reason_code": null, "source": "ATLAS_MODE_SCHEDULE" }
+  ],
+  "issued": [
+    { "kind": "VALIDATION", "state": "ISSUED", "text": "walk_forward_oos", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" },
+    { "kind": "CHRONOLOGY", "state": "ISSUED", "text": "not_causal_multi_fold_global_calibration", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" },
+    { "kind": "CAUSALITY", "state": "ISSUED", "text": "retrospective_global_calibration", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" },
+    { "kind": "OOS_SELECTION", "state": "ISSUED", "text": "USED", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" }
+  ],
+  "evidence": [
+    { "kind": "VALIDATION", "state": "ISSUED", "text": "walk_forward_oos", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" },
+    { "kind": "CHRONOLOGY", "state": "ISSUED", "text": "not_causal_multi_fold_global_calibration", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" },
+    { "kind": "OOS_SELECTION", "state": "ISSUED", "text": "USED", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" },
+    { "kind": "HOLDOUT_STATE", "state": "NOT_APPLICABLE", "text": null, "reason_code": "P10_DELTA_WFO_PROFILE_HAS_NO_HOLDOUT_SEGMENT", "source": null },
+    { "kind": "CAUSALITY", "state": "ISSUED", "text": "retrospective_global_calibration", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" },
+    { "kind": "EXECUTION_CONTRACT", "state": "ISSUED", "text": "close_target_v2", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" },
+    { "kind": "RUNTIME_AUTHORITY", "state": "ISSUED", "text": "native_vectorized", "reason_code": null, "source": "SEALED_QUANTBT_CLAIM" }
+  ]
+}

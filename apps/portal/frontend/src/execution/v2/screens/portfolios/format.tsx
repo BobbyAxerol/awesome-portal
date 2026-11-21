@@ -1,0 +1,128 @@
+/**
+ * Cell-level words shared by Portfolios, Portfolio 360 and Compare.
+ *
+ * - `Np` is the one `Not published (FE-xxx)` cell;
+ * - `Money` prints a published decimal string through the boundary reader (the
+ *   digits are `formatExact` of the original, the original rides on `title`),
+ *   or says why there is nothing to print;
+ * - `MoneyList` prints one line per currency. Currencies are never added, so
+ *   the list is the whole answer: there is no total beside it.
+ */
+import { Fragment, type ReactNode } from "react";
+
+import type { CurrencyValue } from "../../../api/profileRead";
+import { readDecimal } from "../../boundary";
+import { ticketFree } from "../../ticketText";
+import { GapWhy, NaWhy, gapTitle } from "../../blocks";
+import type { FlagKind } from "../../flagKinds";
+import { NOT_PUBLISHED_WORD, type Unpublished } from "./fe";
+
+import "../../css/portfolios.css";
+
+export function Np({ fact, children }: { fact: Unpublished; children?: ReactNode }) {
+  return (
+    <span className="exec-pf-np" title={fact.fe}>
+      <GapWhy gap={fact.fe} text={NOT_PUBLISHED_WORD} name="Not published, reason" rows={[gapTitle(fact.fe, fact.what)]} />
+      {children ? <> {children}</> : null}
+    </span>
+  );
+}
+
+/** A value the source did not send. It is a statement, never an empty cell. */
+export function Absent({ reason, what }: { reason?: string; /** The fact that is missing: it names the disclosure, the visible word stays the short `Not published` (G1: a column that repeats a phrase per cell crowds the figures). */ what?: string }) {
+  // The reason sits behind a disclosure (RV-06) and stays in hidden text for assistive tech and copy; the visible word is "Not available",
+  // or "Not published" when the cell names the fact (the fact and the full reason are in the disclosure and the title, never dropped).
+  if (what !== undefined) {
+    const why = reason ? ticketFree(reason) : null;
+    const rows = [why === `Not published: ${what}` ? `${what}: Not published` : `${what}: ${why !== null && why.startsWith("Not published") ? why : `Not published${why ? ` \u00b7 ${why}` : ""}`}`];
+    return (
+      <span className="exec-pf-na" data-absent={what} title={rows[0]}>
+        <GapWhy className="" text="Not published" name={`Not published: ${what}, reason`} rows={rows} />
+        {/* The fact and the reason stay in hidden text for assistive tech and copy, as before; only the visible words got shorter. */}
+        <span className="exec-blk-sr"> {rows[0]}</span>
+      </span>
+    );
+  }
+  return (
+    <span className="exec-pf-na">
+      <NaWhy reason={reason} className="" />
+      {reason ? <span className="exec-blk-sr"> · {ticketFree(reason)}</span> : null}
+    </span>
+  );
+}
+
+export interface MoneyProps {
+  /** A decimal STRING. Anything else is unreadable, not zero. */
+  value: unknown;
+  currency?: string | null;
+  /** Tone by published sign; only for a signed change (position PnL). */
+  signed?: boolean;
+  /** What to say when there is no value at all. */
+  absent?: ReactNode;
+}
+
+export function Money({ value, currency, signed = false, absent, omitCurrency = false }: MoneyProps & { omitCurrency?: boolean }) {
+  if (value === null || value === undefined) return <>{absent ?? <Absent />}</>;
+  const decimal = readDecimal(value, { unit: "money" });
+  if (decimal === null) return <Absent reason="unreadable value" />;
+  return (
+    <span className="exec-pf-money">
+      <span className="exec-pf-num" data-full={decimal.full} data-tone={signed && decimal.tone !== "neutral" ? decimal.tone : undefined} title={omitCurrency && currency ? `${decimal.full} ${currency}` : decimal.full}>
+        {decimal.display}
+      </span>
+      {currency && !omitCurrency ? <small className="exec-pf-unit"> {currency}</small> : null}
+    </span>
+  );
+}
+
+export function MoneyList({ entries, empty, signed = false, omitUnit = null }: { entries: readonly CurrencyValue[]; empty?: ReactNode; signed?: boolean; omitUnit?: string | null }) {
+  if (entries.length === 0) return <>{empty ?? <Absent />}</>;
+  return (
+    <span className="exec-pf-ccylist">
+      {entries.map((entry, index) => (
+        // Two lines for one currency are both shown, as published; the index keeps their keys apart (DEBT-UXM07-013).
+        <Fragment key={`${entry.currency}#${index}`}>
+          <Money value={entry.value} currency={entry.currency} signed={signed} omitCurrency={omitUnit !== null && entry.currency === omitUnit} />
+        </Fragment>
+      ))}
+    </span>
+  );
+}
+
+/** `SOURCE_LATEST_WINDOW` becomes `Source latest window`; the code stays on the title. */
+export function humanize(code: string): string {
+  const words = code.trim().toLowerCase().replace(/[_\s]+/g, " ");
+  return words.length === 0 ? code : words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** Environment word -> domain word. `live` is the only Real-funded environment (decision G2). */
+export type Domain = "real" | "simulated" | "mixed" | "unknown";
+
+export function domainOf(environments: readonly string[]): Domain {
+  const real = environments.some((env) => env.toLowerCase() === "live");
+  const simulated = environments.some((env) => ["paper", "sandbox"].includes(env.toLowerCase()));
+  if (real && simulated) return "mixed";
+  if (real) return "real";
+  if (simulated) return "simulated";
+  return "unknown";
+}
+
+export const DOMAIN_LABEL: Readonly<Record<Domain, string>> = {
+  real: "Real-funded",
+  simulated: "Simulated",
+  mixed: "Real-funded and Simulated",
+  unknown: "Domain not published",
+};
+
+const ENV_WORD: Readonly<Record<string, string>> = { live: "Live", paper: "Paper", sandbox: "Sandbox" };
+export const envWord = (env: string): string => ENV_WORD[env.toLowerCase()] ?? humanize(env);
+
+/** The freshness tier of a read, as a flag. Unknown words stay unknown; nothing becomes green by default. */
+export function freshnessFlag(freshness: string | null): { kind: FlagKind; label: string } {
+  switch ((freshness ?? "").toUpperCase()) {
+    case "FRESH": return { kind: "ok", label: "Fresh" };
+    case "AGING": return { kind: "stale", label: "Aging" };
+    case "STALE": return { kind: "stale", label: "Stale" };
+    default: return { kind: "unknown", label: freshness ? humanize(freshness) : "Freshness not published" };
+  }
+}

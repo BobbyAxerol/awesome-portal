@@ -1,6 +1,8 @@
 import { QueryResultRow } from "pg";
 import { z } from "zod";
 import { PostgresListResource, RawKeysetQuery } from "../query";
+import { managerSearchText } from "../execution-v2/manager-query-p1.contract";
+import { mapBindingFigures, type BindingFigures } from "./binding-figures";
 
 export const MANAGER_LIST_ENVIRONMENTS = ["paper", "sandbox", "live"] as const;
 export type ManagerListEnvironment = (typeof MANAGER_LIST_ENVIRONMENTS)[number];
@@ -43,7 +45,13 @@ export type BindingsQuery = z.infer<typeof BindingsQuerySchema>;
 export const PortfolioListQuerySchema = z.object({
   workspace_id: z.string().min(1).max(128).optional(),
   environment: z.enum(ALPHA_FLEET_ENVIRONMENTS).default("all"),
-}).strict();
+  // Same finite name-search grammar as Manager P1: literal, case-insensitive
+  // substring; no trimming, wildcard expansion or Unicode normalization.
+  q: managerSearchText.optional(),
+  after: z.string().min(1).max(4096).optional(),
+  before: z.string().min(1).max(4096).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+}).strict().superRefine(assertCursorDirection);
 export type PortfolioListQuery = z.infer<typeof PortfolioListQuerySchema>;
 
 export interface PortfolioListItem {
@@ -57,6 +65,20 @@ export interface PortfolioListItem {
   deployment_count: number;
   allocated_by_currency: readonly { currency: string; value: string }[];
   updated_at: string;
+  /** WP-K slice 6 (N3), OPTIONAL: no owning source exists yet, so the control-api omits it. See `PortfolioHealth` in the published schema. */
+  health?: PortfolioHealth;
+  /** WP-K (GAP-17 / GAP-19), OPTIONAL: no owning source exists yet, so the control-api omits them. */
+  root_id?: string;
+  owner_user_id?: string | null;
+}
+
+export interface PortfolioHealth {
+  state: "PUBLISHED" | "NOT_PUBLISHED";
+  value: "HEALTHY" | "ATTENTION" | "DEGRADED" | "HALTED" | null;
+  basis: "WORST_OF_DEPLOYMENT_HEALTH" | null;
+  deployments_by_health: { HEALTHY: number; ATTENTION: number; DEGRADED: number; HALTED: number } | null;
+  as_of: string | null;
+  reason_code: string | null;
 }
 
 export interface AlphaFleetRow extends QueryResultRow {
@@ -96,6 +118,11 @@ export interface BindingRow extends QueryResultRow {
   state: string;
   credential_state: string;
   updated_at: Date;
+  /**
+   * FE-CAT-4. Owning-source figures committed atomically with the binding snapshot.
+   * Legacy snapshots retain SQL NULL and therefore preserve their fallback.
+   */
+  list_figures?: unknown;
 }
 
 export interface AlphaFleetItem {
@@ -124,6 +151,8 @@ export interface BindingItem {
   state: string;
   credential_state: string;
   updated_at: string;
+  /** Optional, additive (FE-CAT-4). Omitted when the projection row carries no figures. */
+  figures?: BindingFigures;
 }
 
 export function alphaFleetResource(): PostgresListResource<AlphaFleetRow, AlphaFleetItem> {
@@ -175,11 +204,24 @@ export function alphaFleetResource(): PostgresListResource<AlphaFleetRow, AlphaF
   };
 }
 
+export function mapBindingRow(row: BindingRow): BindingItem {
+  const figures = mapBindingFigures(row.list_figures);
+  return {
+    binding_id: row.binding_id,
+    account_id: row.account_id,
+    venue: row.venue,
+    state: row.state,
+    credential_state: row.credential_state,
+    updated_at: row.updated_at.toISOString(),
+    ...(figures ? { figures } : {}),
+  };
+}
+
 export function bindingsResource(): PostgresListResource<BindingRow, BindingItem> {
   return {
     resourceId: "execution.bindings-list.v1",
     table: "execution_binding_projection",
-    selectColumns: ["scope_id", "binding_id", "account_id", "venue", "state", "credential_state", "updated_at"],
+    selectColumns: ["scope_id", "binding_id", "account_id", "venue", "state", "credential_state", "updated_at", "list_figures"],
     workspaceColumn: "scope_id",
     idSortField: "binding_id",
     filters: {
@@ -196,14 +238,7 @@ export function bindingsResource(): PostgresListResource<BindingRow, BindingItem
     defaultSort: [{ field: "updated_at", direction: "desc" }],
     allowedRoles: ["ADMIN", "USER"],
     statementTimeoutMs: 2_000,
-    mapRow: (row) => ({
-      binding_id: row.binding_id,
-      account_id: row.account_id,
-      venue: row.venue,
-      state: row.state,
-      credential_state: row.credential_state,
-      updated_at: row.updated_at.toISOString(),
-    }),
+    mapRow: mapBindingRow,
   };
 }
 

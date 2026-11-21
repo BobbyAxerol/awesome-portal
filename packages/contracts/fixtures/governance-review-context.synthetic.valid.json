@@ -1,0 +1,99 @@
+{
+  "lane": "SYNTHETIC_CONTRACT_EXAMPLE_NOT_PRODUCT_RECEIPT",
+  "r1": {
+    "workspace_id": "ws_example",
+    "approval_id": "apr_example",
+    "expected_approval_version": 2,
+    "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_side_effect_requested": false,
+    "gate": "R1",
+    "evidence_hashes": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "command_type": "GOVERNANCE_R1_DECISION",
+    "request_schema_version": "governance.r1-decision-plan-request.v1",
+    "plan_path": "/api/v1/execution/commands/plans",
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "r2": {
+    "workspace_id": "ws_example",
+    "approval_id": "apr_example",
+    "expected_approval_version": 2,
+    "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_side_effect_requested": false,
+    "gate": "R2",
+    "evidence_hashes": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "command_type": "GOVERNANCE_R2_DECISION",
+    "request_schema_version": "governance.r2-decision-plan-request.v1",
+    "plan_path": "/api/v1/execution/commands/plans",
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "live": {
+    "workspace_id": "ws_example",
+    "approval_id": "apr_example",
+    "expected_approval_version": 2,
+    "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_side_effect_requested": false,
+    "gate": "LIVE_GATE",
+    "evidence_hashes": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    ],
+    "command_type": "GOVERNANCE_LIVE_DECISION",
+    "request_schema_version": "governance.live-decision-plan-request.v1",
+    "plan_path": "/api/v1/execution/commands/plans",
+    "availability": {
+      "state": "BLOCKED",
+      "reason_code": "LIVE_PARENT_NOT_PUBLISHED"
+    }
+  },
+  "paper_exit": {
+    "gate": "PAPER_EXIT",
+    "workspace_id": "ws_example",
+    "review_id": "exit_example",
+    "expected_review_version": 3,
+    "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source_snapshot_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "evidence_hashes": [
+      "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    ],
+    "command_type": "GOVERNANCE_PAPER_EXIT_DECISION",
+    "request_schema_version": "governance.paper-exit-decision-plan-request.v1",
+    "plan_path": "/api/v1/execution/commands/plans",
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "source_side_effect_requested": false
+  },
+  "capture": {
+    "action": "R2_CREATE",
+    "workspace_id": "ws_example",
+    "parent_approval_id": "apr_example",
+    "expected_parent_version": 2,
+    "expected_projection_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    },
+    "candidates": [
+      {
+        "deployment_id": "dep_example",
+        "portfolio_id": "pf_example",
+        "risk_grant_id": "risk_example",
+        "currency": null
+      }
+    ],
+    "candidates_truncated": false,
+    "currency_semantics": "REVIEWER_REQUESTED_NOT_FX_CONVERSION",
+    "source_side_effect_requested": false
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-portfolio-members.published.synthetic.valid.json",
+    "empty": "execution-portfolio-members.empty.synthetic.valid.json",
+    "no-source": "execution-portfolio-members.no-source.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "state-unknown",
+      "base": "published",
+      "rule": "member states are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "members",
+            0,
+            "state"
+          ],
+          "value": "MAYBE"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "no-user",
+      "base": "published",
+      "rule": "a membership names its user",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "members",
+            0,
+            "user_id"
+          ]
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "role-empty",
+      "base": "published",
+      "rule": "a role label is text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "members",
+            0,
+            "role_label"
+          ],
+          "value": ""
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

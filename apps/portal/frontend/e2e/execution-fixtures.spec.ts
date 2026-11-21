@@ -25,6 +25,9 @@
 import { expect, test } from "@playwright/test";
 
 import { BREAKPOINTS, freezeClock, settle, stubPortalApi, usePreferences } from "./fixtures";
+import { assertPinnedVisualHost } from "./visualHost";
+
+assertPinnedVisualHost();
 
 const ROUTE = "/execution/_fixtures";
 /** Groups whose baseline includes ECharts canvases — see the tolerance note at the screenshot call. */

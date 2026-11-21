@@ -1,0 +1,40 @@
+{
+  "schema_version": "research.linked-final-audit.v1",
+  "parent_run_id": "rrun_synthetic_parent",
+  "state": "VERIFIED",
+  "target_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "profile_id": "p23.delta-pinned-final-audit.v1",
+  "profile_digest": "457267c54edd02fcea53eceb92a81cdec9fdaefc8b9231638540b51a85b92491",
+  "may_create": false,
+  "child_run_id": "rrun_synthetic_child",
+  "progress_href": "/research/quantbt/runs/rrun_synthetic_child/progress",
+  "verification": {
+    "child_run_id": "rrun_synthetic_child",
+    "child_attempt_id": "ratt_synthetic_child",
+    "artifact_id": "rart_synthetic_child",
+    "artifact_revision": 1,
+    "manifest_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "result_digest": "4dc4d3ae4794f8412663cb2e12397b75e42614d47147c3d9c7132ff4b21c1b64",
+    "verified_at_utc_ms": 1791036000000,
+    "result": {
+      "schema_version": "research.pinned-selection-audit-result.v1",
+      "run_id": "rrun_synthetic_child",
+      "parent_run_id": "rrun_synthetic_parent",
+      "target_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parameters_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "engine_release_id": "er_quantbt_111",
+      "engine_version": "1.1.1",
+      "snapshot_id": "dss_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "snapshot_content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source_selection_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source_selection_kind": "P05_SELECTION_PARAMETERS_JSON",
+      "source_selection_part_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source_config_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "audit_target_kind": "SINGLE_PARAMETER_SET",
+      "optimizer_reinvoked": false,
+      "optimizer_trials": 0,
+      "n_folds": 2,
+      "bars": 500
+    }
+  }
+}

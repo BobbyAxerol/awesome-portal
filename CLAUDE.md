@@ -1,5 +1,44 @@
 # CLAUDE.md — Frontend Lead / UIUX Agent Guide
 
+> **Execution Loop V2 directive — Bobby, 2026-10-15:** for this new campaign,
+> read [Unified §14](upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#execution-loop-v2),
+> [guide index](upgrade/execution_loop/README.md) and
+> [shared rules / Claude handoff](upgrade/execution_loop/AGENT_WORKING_RULES.md).
+> You own manager-first UI/UX refinement and approved new-screen design, not
+> a literal copy of old HiFi. Reuse accepted components, simplify wording,
+> improve selectors/navigation/density/accessibility and preserve deep links;
+> never change economic grain, authority, missing-data semantics or source
+> truth for appearance. Design approval precedes implementation. Browser/HiFi
+> comparison is mandatory; disclose absent lowfi inputs and fixture-only proof.
+> This scoped directive supersedes the dated scope/copy/upgrade-doc edit ban
+> and duplicate tracker instructions below for assigned V2 work only. Claude
+> may write V2 design, request and phase packets and the matching Unified index;
+> do not silently rewrite source guides or accepted backend contracts. Keep
+> Research/Planning and shared visual tokens protected unless separately assigned.
+> Read the latest backend handoff before each phase; missing contracts become
+> explicit requests, not invented client facts. No self-deploy, push, live
+> action or HK mutation authority is granted by receiving this bundle.
+
+> **V2 workflow addendum — Bobby, 2026-10-16:** follow shared rules §§7–8 and
+> [phase packet template](upgrade/execution_loop/PHASE_PACKET_TEMPLATE.md).
+> Read new backend requests/handoffs before every phase; acknowledge delivered
+> contracts with ACCEPTED or CHANGES_REQUESTED and evidence. End every phase
+> with backend next/debt, frontend next, bidirectional requests and approval
+> state. Delegate independent approved tasks only, one writer per file; primary
+> coordinates shared contracts/docs, tests/resources and integration review.
+> Fixture success is not real-API acceptance; no auto-start of unapproved phases.
+
+> **Research Loop override — Bobby, 2026-09-19:** for a Research assignment,
+> start at [Unified Plan §13](upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#research-loop-v11)
+> and [Research working rules](upgrade/research_loop/CLAUDE-FOR-thanhvuong.md#research-working-rules).
+> The Execution-only/frontend-only scope below is historical for that campaign,
+> not a ban on the assigned Research backend work. Claude is frontend-first,
+> Codex backend-first; either may work both sides within an explicit assignment.
+> Do not change the other agent's accepted UI, logic, contract or baseline
+> without the specific approval/handoff recorded in the Research plan.
+> Preserve contributor restrictions and protected Execution surfaces. Research
+> phase tracking lives only in Unified §13, not Execution's trackers.
+
 Bạn (Claude) là **frontend lead kiêm UIUX** của Portal monorepo. Đội hình:
 
 | Vai trò | Agent | Trách nhiệm |
@@ -318,6 +357,66 @@ không tự chọn mô tả tiện lợi.
    Khi đọc xong một gói, ghi vào `PHASE_TRACKER.md` là **đã đọc** — không phải
    là đã làm. Hai trạng thái đó khác nhau, và gộp chúng là cách một gói biến
    mất khỏi tầm mắt.
+
+9. **Đọc lại handoff và Unified plan của các phase ĐÃ làm, trước mỗi lần bắt
+   đầu việc mới** (Bobby chốt 2026-09-22). Không chỉ đọc handoff của phase sắp
+   làm — đọc lại cả những phase mình đã đóng, vì backend vá tiếp vào đó:
+
+   ```bash
+   # 1. packet/handoff nào vừa đổi trong các phase mình đã làm
+   git log --since="7 days ago" --name-only --pretty=format: -- \
+     upgrade/research_loop/evidence/*/README.md \
+     upgrade/research_loop/evidence/*/*handoff* \
+     upgrade/research_loop/evidence/*/*amendment* | sort -u
+
+   # 2. dòng board của các phase đó trong Unified §13 có gì mới
+   git log -p --since="7 days ago" -- upgrade/UNIFIED_IMPLEMENTATION_PLAN.md | grep "^+| \[P"
+
+   # 3. contract nào vừa regenerate
+   git log --since="7 days ago" --name-only --pretty=format: -- packages/contracts/generated | sort -u
+   ```
+
+   **Vì sao có luật này.** Ngày 2026-09-22, ngay sau khi tôi đóng P13 và gửi hai
+   request `CG-P13-01`/`CG-P13-02`, codex publish
+   `contract-amendment-run-identity-fold-navigation.md` và sửa thẳng
+   `evidence/P13/README.md`. Nếu tôi chỉ đọc handoff của phase kế tiếp thì màn 04
+   sẽ đứng yên với hai ô "not published" trong khi server đã trả lời rồi — và
+   một ô "not published" sai là một lời nói dối, đúng loại mà §3.3 cấm.
+
+   Một amendment đến sau **thắng** handoff gốc của phase đó, nhưng **không** xoá
+   critique/addendum cũ (A13.1). Khi đọc xong, ghi vào receipt của phase là đã
+   đọc bản nào — không phải "đã đọc handoff", mà đúng tên file và commit.
+
+10. **Mỗi phase đóng phải có đủ gói hồ sơ, commit và push lên remote**
+    (Vuong chốt 2026-09-23). Không được chỉ gửi tin nhắn cho Bobby. Phase chưa
+    được coi là xong khi thiếu bất kỳ mục nào dưới đây trong
+    `upgrade/research_loop/evidence/PXX/`:
+
+    | # | File | Phải có |
+    |---|---|---|
+    | 1 | `thanhvuong-frontend-receipt.md` | bảng đã đọc file@commit (§7.9); mapping hi-fi → component → field → state → assertion; so hi-fi; discrepancy; commit + numstat |
+    | 2 | `thanhvuong-backend-requests.md` | mỗi request theo mẫu §5, kèm locator / actual / expected / đề xuất nhỏ nhất / test khi có / fallback đang chạy; **ngày kiểm lại + commit baseline** (§7.6); hàng source-capability giữ đúng tên matrix; mục Bobby quyết riêng; bảng trạng thái |
+    | 3 | `thanhvuong-test-results.json` | tree SHA; mỗi gate có lệnh, exit code, số pass/fail/skip; mục `not_run` có lý do; SHA-256 của ảnh/log **không** commit |
+    | 4 | `thanhvuong-debt-register.json` | nợ còn mở, nợ đã đóng kèm commit, backend request, downstream gate |
+    | 5 | `thanhvuong-rollback.md` | revert theo từng commit, ảnh hưởng, cờ feature |
+
+    Thêm vào Unified plan:
+
+    - Dòng §13 của phase: head commit, số file / numstat, trạng thái push, link
+      tới cả năm file.
+    - **Implementation note** dưới `#rl-pXX`, đặt trước audit, theo mẫu note
+      RF-02. Note gồm: trạng thái, Đọc chi tiết, đã giao, evidence, lỗi đã sửa,
+      backend request, việc Bobby quyết, exit gate còn lại, rollback/handoff.
+
+    Chạy hook bằng tay rồi mới commit docs. Push nhánh lên `primus-origin`,
+    không force, rồi đối chiếu SHA trên remote. Tin nhắn cho Bobby chỉ **trỏ
+    tới** gói hồ sơ này.
+
+    **Vì sao có luật này.** Ở P17 (2026-09-23), tin nhắn cho Bobby đã có test
+    và request, nhưng repo chỉ có receipt. Backend request, test results và
+    rollback nằm ngoài repo, còn Unified plan không có note nào. Người đọc
+    plan không thể biết phase đang ở đâu, và codex không có file nào để trả
+    lời request.
 
 ## 8. Scale refine — bắt buộc cho mỗi màn Execution Loop
 

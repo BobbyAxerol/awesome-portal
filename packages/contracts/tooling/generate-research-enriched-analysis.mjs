@@ -1,0 +1,162 @@
+/** B6 canonical schema + additive references. Preserve unrelated OpenAPI bytes. */
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { replaceComponent } from "./generate-research-progress-truth.mjs";
+const root = new URL("../", import.meta.url), check = process.argv.includes("--check");
+const v2 = JSON.parse(readFileSync(new URL("schemas/research-retained-analytics.v2.schema.json", root)));
+const ref = name => ({ $ref: `#/$defs/${name}` });
+const nullable = value => ({ anyOf: [value, { type: "null" }] });
+const array = (items, maxItems) => ({ type: "array", items, maxItems });
+const object = properties => ({ type: "object", additionalProperties: false, required: Object.keys(properties), properties });
+const withOptional = (required, optional) => ({ ...object(required), properties: { ...required, ...optional } });
+const count = ref("Count"), ms = ref("UtcMs"), decimal = ref("Decimal"), digest = ref("Digest");
+const head = { state: { enum: ["AVAILABLE", "NOT_PUBLISHED", "NOT_APPLICABLE"] }, reason_code: nullable(ref("Reason")) };
+const derived = { ...head, origin: { const: "PORTAL_DERIVED" } };
+const windowHead = withOptional(head, { start_ms: ms, end_ms: ms, source_locator: ref("Locator"),
+  bounds_semantics: { const: "START_INCLUSIVE_END_EXCLUSIVE" } });
+windowHead.dependentRequired = Object.fromEntries(["start_ms", "end_ms", "source_locator", "bounds_semantics"]
+  .map(key => [key, ["start_ms", "end_ms", "source_locator", "bounds_semantics"].filter(other => other !== key)]));
+const statistics = { statistics_policy: object({ quantile_method: { const: "LINEAR_TYPE_7" }, probability: { const: "0.95" },
+  risk_variable: { const: "LOSS_FRACTION_NEGATIVE_RETURN" }, risk_sign: { const: "SIGNED_LOSS_FRACTION" },
+  tail: { const: "LOSS_GTE_VAR_INCLUSIVE" }, minimum_observations: { const: 2 } }),
+  mean: ref("Fact"), median: ref("Fact"), var_95: ref("Fact"), cvar_95: ref("Fact") };
+const coverage = { enum: ["FULL_RETAINED_OOS", "SAMPLED_RETAINED_EQUITY", "FULL_RETAINED_FULL_SAMPLE"] };
+const curve = { ...v2.$defs.Curve, maxItems: 64 };
+const defs = { ...v2.$defs, Curve: curve,
+  LibrarySummary: withOptional({ ...head, label: { const: "all time" }, basis: { const: "ALL_TIME" }, sparkline: ref("Curve"),
+    sampling: { const: "EXTREMA_BUCKET_V1" }, source_observation_count: count, coverage, return_fraction: nullable(decimal),
+    sharpe: ref("Fact"), max_drawdown_fraction: nullable(decimal), input_digest: digest }, {
+      return_basis: object({ definition_id: { enum: ["FIRST_LAST_RETAINED_OOS_EQUITY_V1", "FIRST_LAST_RETAINED_FULL_SAMPLE_EQUITY_V1"] },
+        scope: { enum: ["RETAINED_OOS_OBSERVATIONS", "RETAINED_FULL_SAMPLE_OBSERVATIONS"] }, first_at_utc_ms: ms, last_at_utc_ms: ms,
+        start_equity: decimal, end_equity: decimal, source_locator: ref("Locator") }),
+    }),
+};
+defs.ISFact = { ...v2.$defs.Fact, properties: { ...v2.$defs.Fact.properties, scope: { const: "IS" } } };
+const isFact = origin => ({ allOf: [ref("ISFact"), { type: "object", properties: { origin: { const: origin } } }] });
+defs.ISPayload = object({ state: { const: "AVAILABLE" }, reason_code: { type: "null" }, basis: { const: "ALL_TIME" },
+  scope: object({ window: { const: "IS" }, coverage: { const: "FULL_SOURCE_IS" }, start_ms: ms, end_ms: ms,
+    source_locator: ref("Locator"), bounds_semantics: { const: "START_INCLUSIVE_END_EXCLUSIVE" },
+    first_at_utc_ms: ms, last_at_utc_ms: ms, observation_count: { type: "integer", minimum: 2, maximum: 2_000_000 },
+    source_table: { const: "OBSERVATION_IS" }, locator: ref("Locator") }),
+  facts: object({ metrics: object({ sharpe: isFact("ENGINE_DIRECT"), return_fraction: isFact("PORTAL_DERIVED"),
+    max_drawdown_fraction: isFact("ENGINE_DIRECT") }) }),
+  return_basis: object({ definition_id: { const: "FIRST_LAST_DECLARED_IS_EQUITY_V1" }, start_equity: decimal,
+    end_equity: decimal, first_at_utc_ms: ms, last_at_utc_ms: ms, source_locator: ref("Locator") }),
+  benchmark: object({ ...head, definition_id: { const: "DECLARED_IS_SOURCE_CLOSE_REBASED_100_V1" },
+    source_locator: ref("Locator"), input_digest: digest }),
+  curves: object({ sampling: object({ source_observation_count: { type: "integer", minimum: 2, maximum: 2_000_000 },
+    emitted_point_count: { type: "integer", minimum: 2, maximum: 24 }, method: { const: "EXTREMA_BUCKET_V1" } }),
+    strategy_rebased_100: { ...curve, minItems: 2, maxItems: 24 }, benchmark_rebased_100: { ...curve, maxItems: 24 },
+    drawdown_fraction: { ...curve, minItems: 2, maxItems: 24 } }),
+  return_distribution: object({ ...derived, sampling: { const: "UTC_DAY" }, observation_count: count,
+    bucket_basis: { const: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1" }, statistics_policy: statistics.statistics_policy,
+    mean: isFact("PORTAL_DERIVED"), median: isFact("PORTAL_DERIVED"), var_95: isFact("PORTAL_DERIVED"), cvar_95: isFact("PORTAL_DERIVED"),
+    buckets: array(object({ lower_inclusive: decimal, upper: decimal, upper_inclusive: { enum: ["true", "false"] }, count }), 12) }),
+});
+const schema = { $schema: "https://json-schema.org/draft/2020-12/schema", $id: "research.enriched-analysis.v1", ...object({
+  schema_version: { const: "research.enriched-analysis.v1" }, service: { const: "enrich_analysis" }, basis: { const: "ALL_TIME" },
+  lane: { enum: ["FIXED", "WFO"] }, run_id: { type: "string", pattern: "^rrun_[a-f0-9]{32}$" }, input_digest: digest,
+  source_tables: { ...array(object({ name: { type: "string", pattern: "^[A-Z0-9_]{1,64}$" }, row_count: count, digest }), 8), minItems: 1 },
+  scope: object({ window: { enum: ["OOS", "FULL_SAMPLE"] }, first_at_utc_ms: ms, last_at_utc_ms: ms, observation_count: { type: "integer", minimum: 2, maximum: 2_000_000 },
+    fold_count: { type: "integer", minimum: 1, maximum: 32 }, locator: ref("Locator"), benchmark_locator: ref("Locator"), coverage, source_observation_count: { type: "integer", minimum: 2, maximum: 2_000_000 } }),
+  windows: withOptional({ is: windowHead, oos: windowHead, holdout: windowHead }, { full_sample: windowHead }),
+  facts: object({ metrics: v2.properties.metrics, behaviour: v2.properties.behaviour }),
+  curves: object({ sampling: object({ source_observation_count: count, emitted_point_count: { type: "integer", minimum: 0, maximum: 64 }, method: { const: "EXTREMA_BUCKET_V1" } }),
+    strategy_rebased_100: ref("Curve"), benchmark_rebased_100: ref("Curve"), drawdown_fraction: ref("Curve") }),
+  monthly_returns: object({ ...derived, includes_partial_months: { const: true }, sampling: { enum: ["FULL", "TAIL_WINDOW_V1"] },
+    total_period_count: count, omitted_transport_period_count: count,
+    definition_id: { enum: ["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1", "FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"] },
+    values: array(object({ month_start_utc_ms: ms, return_fraction: decimal, observation_count: count, expected_observation_count: count,
+      partial: { type: "boolean" }, basis: { enum: ["FIRST_OOS_CLOSE", "FIRST_FULL_SAMPLE_CLOSE", "PREVIOUS_OBSERVED_MONTH_CLOSE"] }, base_at_utc_ms: ms, close_at_utc_ms: ms }), 120) }),
+  return_distribution: withOptional({ ...derived, sampling: { const: "UTC_DAY" }, observation_count: count,
+    bucket_basis: { const: "ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1" },
+    buckets: array(object({ lower_inclusive: decimal, upper: decimal, upper_inclusive: { enum: ["true", "false"] }, count }), 12) }, statistics),
+  drawdown_episodes: object({ ...derived, total: count, open_episode_present: { type: "boolean" }, longest_open: { type: "boolean" },
+    values: array(withOptional({ start_utc_ms: ms, trough_utc_ms: ms, recovery_utc_ms: nullable(ms), depth_fraction: decimal, duration_seconds: ms },
+      { label: { type: "string", minLength: 1, maxLength: 96 }, regime: object({ state: { const: "NOT_PUBLISHED" },
+        reason_code: { const: "SOURCE_DID_NOT_PUBLISH_MARKET_REGIME" }, value: { type: "null" },
+        source_locator: ref("Locator"), input_digest: digest }) }), 10) }),
+  library_summary: ref("LibrarySummary"), rolling: { type: "null" },
+}), $defs: defs };
+schema.properties.by_window = object({ is: ref("ISPayload") });
+const isSourceTable = { type: "object", properties: { name: { const: "OBSERVATION_IS" } }, required: ["name"] };
+schema.allOf = [{
+  if: { properties: { by_window: {} }, required: ["by_window"] },
+  then: { properties: { lane: { const: "FIXED" }, scope: { type: "object", properties: { coverage: { const: "FULL_RETAINED_OOS" } } },
+    windows: { type: "object", properties: { is: { type: "object", required: ["start_ms", "end_ms", "source_locator", "bounds_semantics"],
+      properties: { state: { const: "AVAILABLE" }, reason_code: { type: "null" }, start_ms: ms, end_ms: ms,
+        source_locator: ref("Locator"), bounds_semantics: { const: "START_INCLUSIVE_END_EXCLUSIVE" } } } } },
+    source_tables: { type: "array", contains: isSourceTable, minContains: 1, maxContains: 1 } } },
+  else: { properties: { windows: { type: "object", properties: { is: { type: "object", properties: { state: { enum: ["NOT_PUBLISHED", "NOT_APPLICABLE"] } } } } },
+    source_tables: { type: "array", not: { contains: isSourceTable } } } },
+}];
+schema.properties.windows.properties.holdout = { ...windowHead,
+  properties: { ...windowHead.properties, state: { enum: ["NOT_PUBLISHED", "NOT_APPLICABLE"] } } };
+schema.properties.return_distribution.dependentRequired = Object.fromEntries(Object.keys(statistics)
+  .map(key => [key, Object.keys(statistics).filter(other => other !== key)]));
+schema.allOf.push({
+  if: {type:"object",properties:{scope:{type:"object",properties:{window:{const:"FULL_SAMPLE"}},required:["window"]}},required:["scope"]},
+  then: {type:"object",properties:{windows:{type:"object",required:["full_sample"],properties:{
+    full_sample:{type:"object",required:["start_ms","end_ms","source_locator","bounds_semantics"],properties:{...windowHead.properties,state:{const:"AVAILABLE"},reason_code:{type:"null"}}},
+    oos:{type:"object",properties:{state:{const:"NOT_APPLICABLE"},reason_code:{const:"FULL_SAMPLE_CALIBRATION_HAS_NO_UNTOUCHED_OOS"}}},
+  }}}},
+  else: {type:"object",properties:{windows:{type:"object",properties:{full_sample:false}}}},
+});
+function emit(path, text) {
+  const url = new URL(path, root); let old = ""; try { old = readFileSync(url, "utf8"); } catch {}
+  if (old === text) return;
+  if (check) throw new Error(`Enrichment generated drift: ${path}`);
+  writeFileSync(url, text);
+}
+// Importing the pure schema does not generate or overwrite any artifact.
+export const enrichedAnalysisSchema = schema;
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv.includes("--schema-only")) process.stdout.write(JSON.stringify(schema));
+else {
+emit("schemas/research-enriched-analysis.v1.schema.json", JSON.stringify(schema, null, 2) + "\n");
+const local = value => JSON.parse(JSON.stringify(value).replaceAll("#/$defs/", "#/components/schemas/EnrichedAnalysis"));
+const { $schema, $id, $defs, ...body } = schema;
+const components = { EnrichedAnalysis: local(body), ...Object.fromEntries(Object.entries(defs).map(([name, value]) => [`EnrichedAnalysis${name}`, local(value)])) };
+components.EnrichedAnalysisAvailability = { oneOf: [
+  object({ state: { const: "AVAILABLE" }, reason_code: { type: "null" } }),
+  object({ state: { const: "NOT_PUBLISHED" }, reason_code: {
+    enum: ["SEALED_ENRICHMENT_NOT_COMPUTED", "SOURCE_EVIDENCE_NOT_SEALED"],
+  } }),
+] };
+for (const [file, dto, property, definition] of [
+  ["research-current-source", "Evidence", "enriched_analysis", "EnrichedAnalysis"],
+  ["research-evidence", "EvidenceHub", "enriched_analysis", "EnrichedAnalysis"],
+  ["research-run-library", "RunLibraryItem", "analytics_all_time", "EnrichedAnalysisLibrarySummary"],
+  ["research-report", "ReportDetail", "enriched_analysis", "EnrichedAnalysis"],
+]) {
+  const path = `openapi/${file}.openapi.json`, old = readFileSync(new URL(path, root), "utf8");
+  // Additive amendments may have formatted an existing component across
+  // multiple lines. Replacing its complete JSON member avoids leaving an
+  // orphaned body or deleting unrelated reviewed schema content.
+  let next = old;
+  const previous=JSON.parse(old).components.schemas;
+  for(const[key,value]of Object.entries(components))next=previous[key]
+    ?replaceComponent(next,key,value,next.indexOf('"schemas": {'))
+    :next.replace('"schemas": {\n',`"schemas": {\n      "${key}": ${JSON.stringify(value)},\n`);
+  // Amend complete JSON members, not one-line references: earlier additive
+  // generators can legitimately format a field across several lines.
+  const existing = JSON.parse(next).components.schemas[dto];
+  const properties = existing?.properties ?? existing?.allOf?.find(x => x.properties)?.properties;
+  if (!properties) throw new Error(`Missing enrichment DTO: ${dto}`);
+  properties[property] = { $ref: `#/components/schemas/${definition}` };
+  properties.enriched_analysis_availability = { $ref: "#/components/schemas/EnrichedAnalysisAvailability" };
+  next = replaceComponent(next, dto, existing, next.indexOf('"schemas": {'));
+  if (file === "research-evidence") {
+    const disclosure = structuredClone(JSON.parse(next).components.schemas.WindowDisclosure);
+    disclosure.properties.holdout_bars = { oneOf: [
+      object({ state: { const: "AVAILABLE" }, reason_code: { type: "null" }, value: { type: "integer", minimum: 1, maximum: 100_000 } }),
+      object({ state: { enum: ["DENIED", "NOT_APPLICABLE", "NOT_PUBLISHED"] }, reason_code: { type: "string", pattern: "^[A-Z][A-Z0-9_]{2,159}$" }, value: { type: "null" } }),
+    ] };
+    next = replaceComponent(next, "WindowDisclosure", disclosure, next.indexOf('"schemas": {'));
+  }
+  emit(path, next);
+}
+process.stdout.write(`Enrichment components ${check ? "verified" : "generated"}.\n`);
+}
+}

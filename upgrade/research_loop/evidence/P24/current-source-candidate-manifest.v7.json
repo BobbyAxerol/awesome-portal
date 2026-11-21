@@ -1,0 +1,225 @@
+{
+  "schema_version": "research.p24-unsigned-source-candidate.v7",
+  "recorded_date_utc": "2026-10-04",
+  "status": "CINEMA_DECLARATIONS_AND_24_CURRENT_SOURCE_SCENARIO_DISPOSITIONS_READY_FOR_BOBBY_REVIEW",
+  "portal_release_target": "2.0.0",
+  "normal_quantbt_engine": "1.1.1",
+  "signed_release": false,
+  "inherits": {
+    "file": "current-source-candidate-manifest.v6.json",
+    "sha256": "ff14f57925db799c90fd1fb440bbaecf40881cb87eb5a7727e8ffc4ab691f2b2",
+    "rule": "Preserve prior receipts/failures and exact image scopes; supersede only explicitly retaken or dispositioned branches."
+  },
+  "source": {
+    "base_commit": "de424fad36a0758d139ab2010027a599245ac7b6",
+    "claude_preserved_commits": [
+      "5115b34e",
+      "1c65ff71",
+      "de424fad"
+    ],
+    "dirty_at_build": true,
+    "before_public_reference_hardening": {
+      "changed_source_and_contract_count": 45,
+      "changed_source_and_contract_sha256": "3f5597f424a959ba3dd619a223198ee8ded86952d69084182104e43f75533ab1",
+      "exact_build_inputs_sha256": "86eafe02dc1ce6d9f136387c90f5424ba90045be0b1ccf8e1e5abc2f3c2ba074",
+      "post_build_change": "EOF_AND_DESCRIPTION_ONLY_FOUR_SCHEMA_FIELDS_AND_TYPES_UNCHANGED"
+    },
+    "changed_source_and_contract_count": 47,
+    "changed_source_and_contract_sha256": "857ed041e3667d2d5f3aefc3ecb528ddd3061557edee550e85332c2c61adaf49",
+    "hash_scope": "ALL_CHANGED_APPS_AND_PACKAGES_PATHS_INCLUDING_TESTS_AND_CONTRACT_SNAPSHOT",
+    "hash_algorithm": "SHA256_OF_SORTED_PATH_TAB_FILE_SHA256_LF_ROWS",
+    "landing_branch": "docs/research-loop-plan",
+    "remote_push_authorized": false,
+    "normal_commit_gate": "REQUIRED_NO_BYPASS_ONE_GROUPED_COMMIT"
+  },
+  "final_owned_candidate": {
+    "project": "portal-research-p23-ol12",
+    "port": 8096,
+    "control_image": "sha256:25f483fc9b3787cca82d027945ae188177a191d1903d69d6e3f40dd753641909",
+    "web_image": "sha256:7575bf9b270a6e595b0938cd9ac176c4d41f1219e59767a6f7de1e7d47c644b1",
+    "python_and_worker_image": "sha256:c939a7b5639a9a17419af60ae40269546340af9a9ea0d712b4b58766c52e2738",
+    "bundle": "/assets/index-DtqzzCsd.js",
+    "bundle_sha256": "77c6399454c265a0881f2afbe4525194f1ed430c7e7abf451a7c40fec3eac7c2",
+    "previous_web_scope": "sha256:a42885f209ddc2f16ce7732bf4ccb36d0ada115521c7df89d70ccb15a11e86d6: unchanged real paging/declaration/sampler/audit scopes; final Web-only centroid correction retaken separately."
+  },
+  "post_gate_public_reference_hardening": {
+    "public_field": "source_ref",
+    "public_refs": [
+      "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1",
+      "IMMUTABLE_RUN_REQUESTED_OPTIMIZER_CONFIG_V1",
+      "QUANTBT_1_1_1_RETAINED_NATIVE_WFO_RESULT_V2",
+      "SEALED_RETAINED_TRIAL_LEDGER_V1"
+    ],
+    "internal_source_locator_exposed": false,
+    "arbitrary_path_or_url_accepted": false,
+    "rs03_assertions_weakened": false,
+    "targeted_postgres_tests": "11_PASS_0_SKIP",
+    "targeted_postgres_log_sha256": "a2decf37449a243ec04bb26fc76f4a82bb2bf6b0992cfde58e0a6911e2f80d17",
+    "affected_fe_tests": "9_PASS",
+    "contract_tests": "7_PASS",
+    "control_image": "sha256:eedf1b777dbedefdbd8cfbd024549a85bfbd2c8cb3ba3dba162668998fc7f283",
+    "web_image": "sha256:2ce5e5039d61cd7bfa8932e24e9789e475a7aeef915cdffc650ab919387d9bc6",
+    "bundle": "/assets/index-6XSWvz41.js",
+    "bundle_sha256": "612e8e81e70577f10b200c96800a695f65df6ce481189d3145fdfbf39fdabf06",
+    "prior_owned_receipts_retained_at_exact_old_image_and_wire_scope": true,
+    "preview_smoke": "NORMAL_HELPER_AFTER_CLEAN_FF_READ_ONLY_NEW_PUBLIC_REF_WIRE_RECEIPT"
+  },
+  "delivered": {
+    "actual_selected_trial_id": "350",
+    "actual_source_population": 400,
+    "bounded_selected_trial_pages": 4,
+    "fixture_selected_trial_id": "342",
+    "declaration_owning_screens": [
+      "S03",
+      "S04",
+      "S05"
+    ],
+    "declaration_sha256": "cbff8248b1ff6b870c74e8da1cf767c1235ed53ee13ded67654ace980cccb8c6",
+    "sampler_configuration_scope": "RUN_REQUESTED_SPEC",
+    "sampler_observation_scope": "RETAINED_SOURCE_TRIAL_ROWS_NOT_SAMPLER_INTERNAL_TRACE",
+    "sampler_internal_trace": "NOT_PUBLISHED",
+    "sampler_internal_trace_reason": "QUANTBT_WALK_FORWARD_DID_NOT_PUBLISH_SAMPLER_INTERNAL_TRACE",
+    "import_sample": "CLAUDE_ILLUSTRATIVE_EXAMPLE_PRESERVED_NOT_BOBBY_CANONICAL",
+    "centroid": "SOURCE_PARAMETERS_WITH_NO_INVENTED_TRIAL_OR_DIGEST"
+  },
+  "actual_new_audit": {
+    "failed_child": "rrun_529acb9966b568e3c93f125340f26b9a",
+    "failure": "WORKER_STARTED_AFTER_ORDINARY_LEASE_EXPIRED_NO_ENGINE_CHILD",
+    "recovery": "NEW_NORMAL_GUI_INTENT_SAME_TARGET_WORKER_READY_NO_RAW_LEASE_OR_STATE_RESET",
+    "verified_child": "rrun_6e80fa33eea630cc0600cec8e7a26973",
+    "target_digest": "3a5ae58b456d1495f940127dea8ea34a471ec152773daa44fa7cf4bd6e2aa681",
+    "folds": 9,
+    "bars": 2508,
+    "optimizer_trials": 0,
+    "optimizer_reinvoked": false,
+    "manifest_digest": "25f7a96f7b747f6963914a8e43382309745d91d0ca3647f183a483ff20d537b5",
+    "result_digest": "25cede0bc2f140abf5e38aac1d526f3095c1fbb9fce28b5915d02e00b1ed9912"
+  },
+  "verification": {
+    "focused_fe_aggregate": 439,
+    "focused_fe_reused_passing_cases_not_repeated": true,
+    "backend_helpers": 8,
+    "backend_regression": 22,
+    "contract_checks": 20,
+    "latest_harness_guards": 10,
+    "qa_campaign_guards": 2,
+    "typecheck": "PASS",
+    "control_build": "PASS",
+    "web_build": "PASS",
+    "new_preflights": 6,
+    "refused_scratch_create": 1,
+    "new_audit_jobs": 2,
+    "original_source_custody": "UNCHANGED"
+  },
+  "private_receipts": [
+    {
+      "file": "remaining-read-r01/remaining-scenarios-receipt.json",
+      "sha256": "b9f23b7b290e9f50d3b16d304d979910afc254b8ac0bdb2287c3d5598f98103c",
+      "scope": "11 passing exact cells;7 retained harness failures; blank-input shallow PASS superseded"
+    },
+    {
+      "file": "remaining-read-r02/remaining-scenarios-receipt.json",
+      "sha256": "7ff7cdc2dbffecc98a690125282c855f6151daa7c305ce2a8ee69466ab9a6e2a",
+      "scope": "7 passing cells,2 RC fixture ordinal-enum failures retained"
+    },
+    {
+      "file": "remaining-final-read-r03/remaining-scenarios-receipt.json",
+      "sha256": "20f6a74223ba96a7ff5645d55a406d87a995e2d8e9aac7e716fc8f8a494e09e3",
+      "scope": "Actual sampler read PASS; conditional centroid scope PASS; None wrong-element oracle failure retained"
+    },
+    {
+      "file": "remaining-absence-r04/remaining-scenarios-receipt.json",
+      "sha256": "d2e6f1375860f766b515337e187d8ade525a51cb999326668168df125492cbb6",
+      "scope": "2/2 coherent None/centroid four-screen consumers, final Web, zero writes"
+    },
+    {
+      "file": "audit-allocate-r01/remaining-scenarios-receipt.json",
+      "sha256": "75116a99bb36ba7f738c5849e202072cbb1eae89daab466fe58cf19e5b0d2d2e",
+      "scope": "First actual GUI allocation only; later lease expiry preserved"
+    },
+    {
+      "file": "audit-retry-r02/remaining-scenarios-receipt.json",
+      "sha256": "c93c156b948af27726470eff48342d12a0c7083f0bfde7690e8c9ebe9f0df554",
+      "scope": "One ordinary confirmed GUI retry, same immutable target"
+    },
+    {
+      "file": "audit-verify-r02/remaining-scenarios-receipt.json",
+      "sha256": "9f61f5a704f242511cb375ebbc50f059557b926d21f7f0fc3e2745f4edb5e0f0",
+      "scope": "Actual retained VERIFIED audit rendered through Report, zero writes"
+    },
+    {
+      "file": "immutable-bound-and-audit-verified.json",
+      "sha256": "cd7ee306ead9bd8bfe8f242e3d87c9da2729ad3434f5653347e8c53809ab4f83",
+      "scope": "Actual historical declaration rsi_l high30 confirms earlier pin31 outside declaration; full owning audit response"
+    },
+    {
+      "file": "p24-edge-cleanup-1791129448377.json",
+      "sha256": "45a5b6451fca40d2ecd51de18fe362d7709a64dcb991eaa73034769bfd3e7c12",
+      "scope": "Exact4temporaryQA disabled/session0/privatepasswordsremoved beforedeadline"
+    },
+    {
+      "file": "pre-c4-custody.json",
+      "sha256": "328f9e0ef800a906dd1b21dbb94cd23f07b72d31c5389b96ba0cf5a578bebaba",
+      "scope": "Protected fixture stillPENDING/QUEUED/unclaimed; workerOFF"
+    },
+    {
+      "file": "final-c4-custody.json",
+      "sha256": "c1061528c16d28bf068dbf2890feab8c75b17fc1dedea52d7a2bdfb73799d778",
+      "scope": "Ownedcontainers/network0, ports8096/8097free, exact4volumes retained"
+    }
+  ],
+  "mandatory_scenarios": {
+    "denominator": 24,
+    "dispositions_recorded": 24,
+    "ledger": "P24_REMAINING_SCENARIO_ACCEPTANCE_2026-10-04.md",
+    "current_source_consumer_scope": "CLOSED_WITH_EXPLICIT_REAL_TECHNICAL_REUSED_REFUSAL_DISPOSITIONS",
+    "all_24_real_engine_executions": false,
+    "unsupported_profile_execution_not_claimed": [
+      "scratch",
+      "early_stopping",
+      "new_route_without_mapper"
+    ],
+    "technical_source_variants_not_claimed": [
+      "selected_none",
+      "centroid",
+      "undefined_ratios",
+      "post_approval_corruption",
+      "new_route_catalogue_entry"
+    ],
+    "historical_scope_reused_not_repeated": true
+  },
+  "integrity": {
+    "strict_verified_historical_manifests": 83,
+    "strict_required_historical_manifests": 86,
+    "owner_exact_three_test_exception_approved": true,
+    "synthetic_byte_recovery": false
+  },
+  "cleanup": {
+    "temporary_qa_disabled": 4,
+    "active_qa_sessions": 0,
+    "private_password_copies_removed": true,
+    "owned_containers_remaining": 0,
+    "owned_networks_remaining": 0,
+    "ports_free": [
+      8096,
+      8097
+    ],
+    "retained_volume_count": 4,
+    "broad_prune": false
+  },
+  "review_preview": {
+    "planned_project": "portal-research-preview",
+    "port": 8095,
+    "operation": "NORMAL_HELPER_UP_AFTER_CLEAN_LOCAL_FF_REUSE_EXACT_TESTED_CONTROL_WEB",
+    "existing_data_accounts_flags_preserved": true,
+    "not_production_release": true,
+    "completion_receipt": "HOST_PRIVATE_IDENTITY_AND_PREVIEW_READ_SMOKE_AFTER_LANDING"
+  },
+  "owner_visual_accepted": false,
+  "release_sbom_provenance_dispatched": false,
+  "protected_execution_planning_design_changed": false,
+  "open_release_gates": [
+    "BOBBY_VISUAL_REVIEW",
+    "AUTHORIZED_PROTECTED_MERGE_AND_SIGNED_PORTAL_2_0_0_RELEASE"
+  ]
+}

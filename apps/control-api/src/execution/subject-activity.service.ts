@@ -1,5 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import { ControlApiConfig, querySigningKeys } from "../config";
+import { localProfileReadable, projectionExpired, retainedReview } from "./retained-read-profile";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -11,6 +12,14 @@ import {
 } from "./profile-projection.repository";
 import { ExecutionDurableMirrorRepository } from "./durable-mirror.repository";
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
+import { profileProjectionCatalog } from "./profile-projection.catalog";
+import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, scopeAllowsDetailField, scopeReadPopulation, type AuthorizedExecutionReadScope, type ReadScopePrincipal } from "../execution-v2/read-scope";
+import { isRecordDetailReadField } from "../execution-v2/read-fields";
+import { addRecordDetail, epochMsFrom } from "../execution-v2/record-detail";
+import { scopedRetainedRows, fenceRetainedSnapshot } from "./retained-operation-page";
+import { accessDigest } from "../execution-v2/access-policy";
+import {scopedSubjectActivitySchema} from "../execution-v2/subject-activity.contract";
+import {scopedAdapterFieldsSchema} from "./profile-read-adapter.service";
 
 const SUBJECT_ID = /^[A-Za-z0-9._:@-]{1,191}$/;
 /**
@@ -24,6 +33,24 @@ const SUBJECT_ID = /^[A-Za-z0-9._:@-]{1,191}$/;
 const MAXIMUM_PAGE_ROWS = 500;
 const DEFAULT_PAGE_ROWS = 200;
 const TIMEFRAMES = new Set(["1m", "5m", "15m", "30m", "1h", "4h", "1d"]);
+
+/**
+ * RV-11 R-5c: why a record has no order/trade instant. The instant is submitted_at_ms (orders) or occurred_at_ms (fills);
+ * when it is not in `values` the page says which of three honest reasons applies instead of staying silent.
+ * Returns undefined when the instant is present.
+ */
+function recordTimeReason(scope: AuthorizedExecutionReadScope, relation: SubjectActivityRelation,
+  fields: Readonly<Record<string, unknown>>, values: Readonly<Record<string, unknown>>):
+  "SUBMITTED_AT_NOT_IN_POLICY" | "OCCURRED_AT_NOT_IN_POLICY" | "SOURCE_TIME_NOT_PUBLISHED" | "SOURCE_TIME_UNPARSEABLE" | undefined {
+  const orders = relation === "orders";
+  const member = orders ? "submitted_at_ms" : "occurred_at_ms", column = orders ? "submitted_at" : "trade_time";
+  if (typeof values[member] === "number") return undefined;
+  if (!(orders ? scopeAllowsDetailField(scope, member) : scopeAllowsField(scope, member)))
+    return orders ? "SUBMITTED_AT_NOT_IN_POLICY" : "OCCURRED_AT_NOT_IN_POLICY";
+  const raw = fields[column];
+  if (raw === undefined || raw === null) return "SOURCE_TIME_NOT_PUBLISHED";
+  return epochMsFrom(raw) === undefined ? "SOURCE_TIME_UNPARSEABLE" : undefined;
+}
 
 export type SubjectActivityKind = "alpha" | "account";
 export type SubjectActivityRelation = "orders" | "fills";
@@ -72,11 +99,89 @@ export class ExecutionSubjectActivityService {
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(ExecutionProfileProjectionRepository) private readonly repository: ExecutionProfileProjectionRepository,
     @Inject(ExecutionDurableMirrorRepository) private readonly mirror: ExecutionDurableMirrorRepository,
+    @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
   ) {
     this.cursors = new KeysetCursorCodec({
       activeKeyId: config.QUERY_CURSOR_ACTIVE_KEY_ID,
       keys: querySigningKeys(config),
       ttlSeconds: config.QUERY_CURSOR_TTL_SECONDS,
+    });
+  }
+
+  /** Product HTTP entry: full principal and qualified current lineage survive
+   * through the SQL page/count and final response fence. Legacy read remains
+   * separate; a denied V2 capability never falls back to the old resolver. */
+  async readAuthorized(principal:ReadScopePrincipal,request:SubjectActivityRequest) {
+    if(!this.scopes)throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    validateRequest(request);this.assertEnabled(request.environment);
+    if(principal.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID)
+      throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE",404);
+    const profileId=profileIdFor(this.config,request.environment);
+    if(!profileId)throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const metadata=await this.repository.snapshotMetadata(principal.workspaceId,request.environment,profileId);
+    const key=relationKey(request.relation);
+    const scope=await this.scopes.authorize(principal,{environment:request.environment,profileId},{
+      action:request.subjectKind==="alpha"?"alpha.read":"account.read",
+      resource:{kind:request.subjectKind==="alpha"?"ALPHA":"ACCOUNT",id:request.subjectId},
+      dataset:{dataset_id:`subject-activity:${key}`,source_revision:metadata?.payloadDigest??"NOT_RECORDED",
+        projection_generation:metadata?.projectionEpoch??"NOT_RECORDED",catalogue_revision:metadata?.sourceCatalogueSha256??null,window:null}});
+    if(scope.mode==="LEGACY_COMPATIBILITY")return this.scopes.deliver(scope,()=>this.read({workspaceId:principal.workspaceId,userId:principal.user.userId},request));
+    if(!scopeAllowsField(scope,"timestamp_ms"))throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING",503);
+    return this.scopes.deliver(scope,async()=>{
+      const snapshot=await this.repository.rawSnapshot(principal.workspaceId,request.environment,profileId);
+      if(!snapshot||snapshot.payloadDigest!==metadata?.payloadDigest||snapshot.projectionEpoch!==metadata.projectionEpoch||snapshot.sourceCatalogueSha256!==metadata.sourceCatalogueSha256)
+        throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED",409);
+      const relation=relationSnapshot(snapshot,request.relation);
+      if(!relation||relation.availability!=="AVAILABLE")throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_PROJECTION_NOT_READY",503);
+      // Alpha identity comes from the publication, never equality with a
+      // strategy label. Multiple qualified strategy IDs remain in the SQL
+      // tuple predicate rather than picking an arbitrary first strategy.
+      const population=scopeReadPopulation(scope);
+      if(request.subjectKind==="alpha"&&!population.strategyPairs.some(pair=>pair.alpha_id===request.subjectId))
+        throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+      const limit=request.limit??DEFAULT_PAGE_ROWS,resourceId=`subject-scoped:${request.subjectKind}:${request.subjectId}:${key}`;
+      const fingerprint=accessDigest([scope.fingerprint,limit]);
+      let after:{ts:string;rowId:string}|null=null;
+      if(request.after){
+        const [ts,rowId]=this.cursors.decode(request.after,{resourceId,workspaceId:principal.workspaceId,direction:"after",queryFingerprint:fingerprint,boundarySize:2});
+        if(typeof ts!=="string"||epochMsFrom(ts)===undefined||typeof rowId!=="string")throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_CURSOR_INVALID",400);
+        after={ts,rowId};
+      }
+      const {page,coverage}=await this.mirror.scopedSubjectRead({workspaceId:principal.workspaceId,environment:request.environment,profileId},key,
+        {entity:request.subjectKind==="account"?{field:"account_id",value:request.subjectId}:null,after,limit,authorizedScope:scope});
+      const last=page.rows.at(-1),next=page.hasMore&&last?this.cursors.encode({resource_id:resourceId,workspace_id:principal.workspaceId,
+        direction:"after",query_fingerprint:fingerprint,boundary:[last.ts,last.rowId]}):null;
+      const result={schema_version:"portal.execution.subject-records.v2",time_unit:"UTC_EPOCH_MS",
+        observed_at_basis:request.relation==="orders"?"ORDER_UPDATED_AT":"FILL_TRADE_TIME",logical_operation_id:operationId(request.subjectKind,request.relation),
+        authority:"PORTAL_SGP_RETAINED_CURRENT_WINDOW",source_authority:"TRADING_SYSTEM_CURRENT_SOURCE",
+        history_semantics:"RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",environment:request.environment,profile_id:profileId,
+        resource:{kind:request.subjectKind,id:request.subjectId},read_scope:{visibility:"SCOPED",coverage:"AUTHORIZED_ONLY",policy_revision:scope.policyRevision},
+        state:coverage.rowCount===0?"EMPTY":"PARTIAL",reason_code:"SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY",
+        coverage:{retained_row_count:coverage.rowCount,oldest_observed_at_ms:epochMs(coverage.oldestTs),newest_observed_at_ms:epochMs(coverage.newestTs)},
+        page:{limit,maximum_page_rows:MAXIMUM_PAGE_ROWS,returned_count:page.rows.length,has_more:page.hasMore,next_cursor:next},
+        records:scopedRetainedRows(scope,page.rows,{detail:true}).map(row=>{
+          const source:Record<string,unknown>={...row.fields};
+          for(const [from,to] of Object.entries({signed_qty:"quantity",position_qty:"quantity",symbol:"instrument_id",trade_time:"occurred_at_ms",ts:"timestamp_ms"}))
+            if(source[from]!==undefined&&scopeAllowsField(scope,to))source[to]=source[from];
+          for(const key of ["created_at","updated_at","timestamp_ms","occurred_at_ms"])
+            if(typeof source[key]==="string"){
+              const parsed=epochMsFrom(source[key]);
+              // An unreadable source instant is omitted and named (time_reason_code); it never fails the page nor becomes a guess.
+              if(parsed!==undefined)source[key]=parsed;else delete source[key];
+            }
+          // Record detail is sanitised member by member below; the generic filter must not let a raw column of the same name through.
+          const values:Record<string,unknown>=Object.fromEntries(Object.entries(source).filter(([key])=>
+            Object.hasOwn(scopedAdapterFieldsSchema.shape,key)&&!isRecordDetailReadField(key)));
+          addRecordDetail(scope,row.fields,values,{submitted_at_ms:"submitted_at"});
+          const time=recordTimeReason(scope,request.relation,row.fields,values);
+          return {record_id:row.rowId,observed_at_ms:Date.parse(row.ts),values,...(time?{time_reason_code:time}:{})};
+        })};
+      if(result.records.length!==page.rows.length||Buffer.byteLength(JSON.stringify(result))>1024*1024)
+        throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT",503);
+      await fenceRetainedSnapshot(this.repository,principal.workspaceId,request.environment,profileId,snapshot);
+      const parsed=scopedSubjectActivitySchema.safeParse(result);
+      if(!parsed.success)throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+      return parsed.data;
     });
   }
 
@@ -94,7 +199,7 @@ export class ExecutionSubjectActivityService {
     if (!profileId) throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_PROFILE_NOT_CONFIGURED", 503);
     const snapshot = await this.repository.snapshot(workspaceId, request.environment, profileId);
     if (!snapshot) throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_PROJECTION_NOT_READY", 503);
-    if (Date.now() - snapshot.lastSuccessfulRefreshAt.valueOf() > this.config.EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS) {
+    if (projectionExpired(this.config, snapshot.lastSuccessfulRefreshAt)) {
       throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_PROJECTION_STALE", 503);
     }
 
@@ -122,7 +227,7 @@ export class ExecutionSubjectActivityService {
     const nextCursor = page.hasMore && last
       ? this.encodeCursor(principal, request, snapshot, profileId, limit, last.ts, last.rowId)
       : null;
-    const state = coverage.rowCount === 0
+    const state = coverage.rowCount === 0 && !retainedReview(this.config)
       ? "AUTHORITATIVE_EMPTY"
       : relation.completeness === "COMPLETE" ? "AVAILABLE" : "PARTIAL";
 
@@ -156,7 +261,8 @@ export class ExecutionSubjectActivityService {
         has_more: page.hasMore,
         next_cursor: nextCursor,
       },
-      records: page.rows.map((row) => ({ record_id: row.rowId, values: row.fields })),
+      records: page.rows.map((row) => ({ record_id: row.rowId, values: retainedReview(this.config)
+        ? retainedPublicFields(relationKey(request.relation), row.fields) : row.fields })),
       projection: projectionMetadata(snapshot),
     };
   }
@@ -164,7 +270,7 @@ export class ExecutionSubjectActivityService {
   private assertEnabled(environment: ProjectionEnvironment): void {
     if (
       this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" ||
-      !durableMirrorReadEnabled(this.config) ||
+      (!durableMirrorReadEnabled(this.config) && !retainedReview(this.config)) ||
       !profileEnabled(this.config, environment)
     ) {
       throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED", 404);
@@ -239,9 +345,7 @@ function profileIdFor(config: ControlApiConfig, environment: ProjectionEnvironme
 }
 
 function profileEnabled(config: ControlApiConfig, environment: ProjectionEnvironment): boolean {
-  return environment === "paper" ? config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER === "true"
-    : environment === "sandbox" ? config.FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX === "true"
-      : config.FEATURE_EXECUTION_CURRENT_SOURCE_LIVE === "true";
+  return localProfileReadable(config, environment);
 }
 
 function relationKey(relation: SubjectActivityRelation): string {
@@ -376,8 +480,7 @@ function unavailableResponse(
 
 function epochMs(value: string | null): number | null {
   if (!value) return null;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return epochMsFrom(value) ?? null;
 }
 
 function cursorResourceId(principal: SubjectActivityPrincipal, request: SubjectActivityRequest, profileId: string): string {
@@ -391,4 +494,14 @@ function cursorFingerprint(resourceId: string, limit: number): string {
     filters: [{ field: "subject", op: "eq", value: resourceId, values: [resourceId] }],
     sort: [{ field: "observed_at", direction: "desc" }, { field: "record_id", direction: "desc" }],
   });
+}
+
+const retainedFields = new Map<string, Set<string>>();
+for (const binding of (["paper", "sandbox", "live"] as const).flatMap(env => profileProjectionCatalog(env))) {
+  const key = `${binding.sourceId}:${binding.relation}`, fields = retainedFields.get(key) ?? new Set<string>();
+  binding.fields.forEach(field => fields.add(field)); retainedFields.set(key, fields);
+}
+function retainedPublicFields(key: string, fields: Record<string, ProjectionScalar>) {
+  const allowed = retainedFields.get(key);
+  return Object.fromEntries(Object.entries(fields).filter(([field]) => allowed?.has(field)));
 }

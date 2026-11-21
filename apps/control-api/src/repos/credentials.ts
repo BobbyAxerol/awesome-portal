@@ -41,9 +41,9 @@ interface ActivationRow {
 export class CredentialsRepository {
   constructor(private readonly pool: Pool | PoolClient) {}
 
-  async findPassword(userId: string): Promise<PasswordCredential | null> {
+  async findPassword(userId: string, lock = false): Promise<PasswordCredential | null> {
     const result = await this.pool.query<PasswordRow>(
-      `SELECT * FROM password_credentials WHERE user_id = $1`,
+      `SELECT * FROM password_credentials WHERE user_id = $1${lock ? " FOR UPDATE" : ""}`,
       [userId],
     );
     const row = result.rows[0];
@@ -158,12 +158,12 @@ export class CredentialsRepository {
   ): Promise<ActivationCredential | null> {
     const result = await this.pool.query<ActivationRow>(
       `UPDATE activation_credentials
-          SET used_at = now()
+          SET used_at = clock_timestamp()
         WHERE activation_id = (
           SELECT activation_id
             FROM activation_credentials
            WHERE user_id = $1 AND token_hash = $2
-             AND used_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+             AND used_at IS NULL AND revoked_at IS NULL AND expires_at > clock_timestamp()
            ORDER BY expires_at DESC
            LIMIT 1
            FOR UPDATE SKIP LOCKED

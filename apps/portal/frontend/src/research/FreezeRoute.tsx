@@ -1,0 +1,60 @@
+/**
+ * Screen 07 on its product route (P16).
+ *
+ * `/research/quantbt/runs/:runId/freeze`, on the shared cursor. The cursor's
+ * fold travels as the contract's bounded inspection request; this source has
+ * no fold selection artifact, and the screen renders that answer rather than
+ * hiding the question.
+ */
+
+import { useRunNative } from "./useRunNative";
+import { useParams, useSearchParams } from "react-router-dom";
+
+import { FreezeScreen } from "./FreezeDetail";
+import { RouteCursorNotice } from "./CursorNotice";
+import { useEvidenceCursor } from "./evidenceCursor";
+import { useFreeze } from "./useFreeze";
+import { useRunIdentity } from "./retainedLane";
+import { StageDenied } from "./StageDenied";
+
+export function FreezeRoute({ embedded = false }: { embedded?: boolean } = {}) {
+  const { runId = "" } = useParams<{ runId: string }>();
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id") || undefined;
+  return <FreezeRouteBody key={`${workspaceId ?? ""}|${runId}`} runId={runId} workspaceId={workspaceId} embedded={embedded} />;
+}
+
+function FreezeRouteBody({ runId, workspaceId, embedded }: { runId: string; workspaceId?: string; embedded: boolean }) {
+  const { cursor, problems } = useEvidenceCursor({ stage: "freeze" });
+  /* §55: a natively searched run is one study with no fold; its Freeze read must not carry one. */
+  const native = useRunNative(runId, workspaceId);
+  const freeze = useFreeze(runId, native === true ? null : cursor.fold, workspaceId, native !== null);
+  /* W3b: the run identity (schedule, folds, readiness) a retained answer is read against. */
+  const identity = useRunIdentity(runId, workspaceId, freeze.laneRetained);
+
+  /* E2 (X8): a refused run gets the shared "run not available" page, not the stage chrome. */
+  if (freeze.state.state === "denied" && freeze.detail === null) {
+    return <StageDenied runId={runId} stage="Stage 3 · Freeze" screen="freeze-detail" />;
+  }
+  return (
+    <>
+      {embedded ? null : <RouteCursorNotice problems={problems} />}
+      <FreezeScreen
+        runId={runId}
+        workspaceId={workspaceId}
+        detail={freeze.detail}
+        state={freeze.state}
+        cursor={cursor}
+        verify={freeze.verify}
+        onVerify={freeze.runVerify}
+        retained={freeze.retained}
+        ensureRetained={freeze.ensureRetained}
+        onReread={freeze.reread}
+        identity={identity}
+        whatIfEvaluate={freeze.evaluate}
+        onWhatIfEvaluate={freeze.runEvaluate}
+        embedded={embedded}
+      />
+    </>
+  );
+}

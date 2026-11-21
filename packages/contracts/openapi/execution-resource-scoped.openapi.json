@@ -1,0 +1,277 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution Resource360 Scoped V2",
+    "version": "2.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/resources/alphas/{resource_id}": {
+      "get": {
+        "operationId": "executionScopedAlphaResourceGetV2",
+        "description": "SCOPED_V2 representation of the existing operation, selected only by durable server policy; no browser flag can select or downgrade authority. Legacy v1 remains unchanged and is not represented by this dedicated V2 document. private, no-store.",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:@-]{1,160}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized Resource360 V2 response or explicit byte-bound shell; no total-NAV claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-resource-scoped.v2.schema.json#/$defs/AlphaScopedResourceWireResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "401": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "403": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "404": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "409": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "503": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          }
+        }
+      }
+    },
+    "/api/v1/execution/resources/portfolios/{resource_id}": {
+      "get": {
+        "operationId": "executionScopedPortfolioResourceGetV2",
+        "description": "SCOPED_V2 representation of the existing operation, selected only by durable server policy; no browser flag can select or downgrade authority. Legacy v1 remains unchanged and is not represented by this dedicated V2 document. private, no-store.",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:@-]{1,160}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized Resource360 V2 response or explicit byte-bound shell; no total-NAV claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-resource-scoped.v2.schema.json#/$defs/PortfolioScopedResourceWireResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "401": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "403": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "404": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "409": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "503": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          }
+        }
+      }
+    },
+    "/api/v1/execution/resources/accounts/{resource_id}": {
+      "get": {
+        "operationId": "executionScopedAccountResourceGetV2",
+        "description": "SCOPED_V2 representation of the existing operation, selected only by durable server policy; no browser flag can select or downgrade authority. Legacy v1 remains unchanged and is not represented by this dedicated V2 document. private, no-store.",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:@-]{1,160}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized Resource360 V2 response or explicit byte-bound shell; no total-NAV claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-resource-scoped.v2.schema.json#/$defs/AccountScopedResourceWireResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "401": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "403": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "404": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "409": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "503": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          }
+        }
+      }
+    },
+    "/api/v1/execution/resources/bindings/{resource_id}": {
+      "get": {
+        "operationId": "executionScopedBindingResourceGetV2",
+        "description": "SCOPED_V2 representation of the existing operation, selected only by durable server policy; no browser flag can select or downgrade authority. Legacy v1 remains unchanged and is not represented by this dedicated V2 document. private, no-store.",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:@-]{1,160}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized Resource360 V2 response or explicit byte-bound shell; no total-NAV claim.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-resource-scoped.v2.schema.json#/$defs/BindingScopedResourceWireResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "401": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "403": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "404": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "409": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          },
+          "503": {
+            "description": "Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed."
+          }
+        }
+      }
+    }
+  }
+}

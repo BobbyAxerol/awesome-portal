@@ -1,0 +1,1236 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-manager-series.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.manager-series.v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "paper",
+        "sandbox",
+        "live"
+      ]
+    },
+    "record_authority": {
+      "const": "PORTAL_PROJECTION"
+    },
+    "source_authority": {
+      "const": "TRADING_SYSTEM"
+    },
+    "metric": {
+      "type": "string",
+      "enum": [
+        "NAV",
+        "NET_PNL",
+        "RETURN",
+        "DRAWDOWN"
+      ]
+    },
+    "selected_window": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requested": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "7D",
+                "30D",
+                "90D",
+                "ALL"
+              ]
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "from_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "to_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "from_ms",
+                "to_ms"
+              ]
+            }
+          ]
+        },
+        "resolved": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "from_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "to_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "from_ms",
+                "to_ms"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "selection_basis": {
+          "const": "EXACT_PUBLISHED_METRIC_WINDOW_ONLY"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "const": "ALL_HISTORY_WINDOW_NOT_PUBLISHED"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "requested",
+        "resolved",
+        "selection_basis",
+        "reason_code"
+      ]
+    },
+    "series_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "PUBLISHED",
+            "NOT_PUBLISHED"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "const": "FINANCIAL_NORMALIZED_SERIES_SOURCE_NOT_PUBLISHED"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason_code"
+      ]
+    },
+    "as_of_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "recorded_through_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "completeness": {
+          "type": "string",
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNRESOLVED"
+          ]
+        },
+        "freshness": {
+          "type": "string",
+          "enum": [
+            "FRESH",
+            "STALE",
+            "UNKNOWN"
+          ]
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "maxItems": 32
+        }
+      },
+      "required": [
+        "completeness",
+        "freshness",
+        "reasons"
+      ]
+    },
+    "series": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subject": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "subject_type": {
+                "type": "string",
+                "enum": [
+                  "FUND",
+                  "PORTFOLIO",
+                  "ALPHA"
+                ]
+              },
+              "subject_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "subject_type",
+              "subject_id"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "EMPTY",
+              "UNAVAILABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "SERIES_SOURCE_NOT_PUBLISHED",
+                  "EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+                  "ALL_HISTORY_WINDOW_NOT_PUBLISHED",
+                  "ECONOMIC_PARTITION_REQUIRED",
+                  "SERIES_SCOPE_NOT_AUTHORIZED",
+                  "SOURCE_NOT_QUALIFIED",
+                  "AMBIGUOUS_SERIES_PUBLICATION",
+                  "SUBJECT_HAS_NO_ACTIVE_MEMBERS",
+                  "RATIO_SCALE_NOT_PUBLISHED",
+                  "NO_POINTS_PUBLISHED_IN_WINDOW"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "partition": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "economic_domain": {
+                    "type": "string",
+                    "enum": [
+                      "ACTUAL",
+                      "PAPER",
+                      "SANDBOX"
+                    ]
+                  },
+                  "currency": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "basis": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "native_profile_ref": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "domain_proof_ref": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "economic_domain",
+                  "currency",
+                  "basis",
+                  "native_profile_ref",
+                  "domain_proof_ref"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "MONEY",
+                  "RATIO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ratio_scale": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "FRACTION",
+                  "PERCENT"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "methodology_ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "to_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "from_ms",
+                  "to_ms"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "ts_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "value": {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                  "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
+                }
+              },
+              "required": [
+                "ts_ms",
+                "value"
+              ]
+            },
+            "maxItems": 2000
+          },
+          "gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "from_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "to_ms": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "SOURCE_GAP",
+                    "RETENTION",
+                    "SESSION_CLOSED",
+                    "PROJECTION_DISCONTINUITY"
+                  ]
+                }
+              },
+              "required": [
+                "from_ms",
+                "to_ms",
+                "reason"
+              ]
+            },
+            "maxItems": 256
+          },
+          "quality": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "completeness": {
+                "type": "string",
+                "enum": [
+                  "COMPLETE",
+                  "PARTIAL",
+                  "UNRESOLVED"
+                ]
+              },
+              "freshness": {
+                "type": "string",
+                "enum": [
+                  "FRESH",
+                  "STALE",
+                  "UNKNOWN"
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "maxItems": 32
+              }
+            },
+            "required": [
+              "completeness",
+              "freshness",
+              "reasons"
+            ]
+          },
+          "source_confidence": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "PROVISIONAL",
+              "UNKNOWN"
+            ]
+          },
+          "provenance_refs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "minItems": 1,
+            "maxItems": 32
+          },
+          "calculation_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "policy_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "subject",
+          "state",
+          "reason_code",
+          "partition",
+          "unit",
+          "currency",
+          "ratio_scale",
+          "basis",
+          "methodology_ref",
+          "window",
+          "points",
+          "gaps",
+          "quality",
+          "source_confidence",
+          "provenance_refs",
+          "calculation_revision",
+          "policy_revision"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "const": "UNAVAILABLE"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "reason_code": {
+                  "type": "string",
+                  "not": {
+                    "const": "NO_POINTS_PUBLISHED_IN_WINDOW"
+                  }
+                },
+                "currency": {
+                  "type": "null"
+                },
+                "points": {
+                  "type": "array",
+                  "maxItems": 0
+                },
+                "gaps": {
+                  "type": "array",
+                  "maxItems": 0
+                },
+                "quality": {
+                  "type": "object",
+                  "properties": {
+                    "completeness": {
+                      "const": "UNRESOLVED"
+                    }
+                  }
+                },
+                "ratio_scale": {
+                  "type": "null"
+                },
+                "partition": {
+                  "type": "null"
+                },
+                "unit": {
+                  "type": "null"
+                },
+                "basis": {
+                  "type": "null"
+                },
+                "methodology_ref": {
+                  "type": "null"
+                },
+                "window": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "const": "AVAILABLE"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "reason_code": {
+                  "type": "null"
+                },
+                "points": {
+                  "type": "array",
+                  "minItems": 1
+                },
+                "partition": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "unit": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "basis": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "methodology_ref": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "window": {
+                  "not": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "const": "EMPTY"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "reason_code": {
+                  "const": "NO_POINTS_PUBLISHED_IN_WINDOW"
+                },
+                "points": {
+                  "type": "array",
+                  "maxItems": 0
+                },
+                "partition": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "unit": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "basis": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "methodology_ref": {
+                  "not": {
+                    "type": "null"
+                  }
+                },
+                "window": {
+                  "not": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "unit": {
+                  "const": "MONEY"
+                }
+              },
+              "required": [
+                "unit"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "currency": {
+                  "type": "string"
+                },
+                "ratio_scale": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "unit": {
+                  "const": "RATIO"
+                }
+              },
+              "required": [
+                "unit"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "currency": {
+                  "type": "null"
+                },
+                "ratio_scale": {
+                  "not": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 4,
+      "uniqueItems": false
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "SINGLE_SUBJECT",
+            "ALIGNED",
+            "INCOMPARABLE",
+            "UNAVAILABLE"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "CURRENCY_MIXED",
+                "ECONOMIC_PARTITION_MIXED",
+                "BASIS_MIXED",
+                "UNIT_MIXED",
+                "RATIO_SCALE_MIXED",
+                "METHODOLOGY_MIXED",
+                "WINDOW_MISMATCH",
+                "SUBJECT_SERIES_UNAVAILABLE"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "transform": {
+          "const": "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM"
+        },
+        "common": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "economic_domain": {
+                  "type": "string",
+                  "enum": [
+                    "ACTUAL",
+                    "PAPER",
+                    "SANDBOX"
+                  ]
+                },
+                "native_profile_ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "currency": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "basis": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "MONEY",
+                    "RATIO"
+                  ]
+                },
+                "ratio_scale": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "FRACTION",
+                        "PERCENT"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "methodology_ref": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "window": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "from_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "to_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "from_ms",
+                    "to_ms"
+                  ]
+                }
+              },
+              "required": [
+                "economic_domain",
+                "native_profile_ref",
+                "currency",
+                "basis",
+                "unit",
+                "ratio_scale",
+                "methodology_ref",
+                "window"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "axis_ms": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "maxItems": 8000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "state",
+        "reason_code",
+        "transform",
+        "common",
+        "axis_ms"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "ALIGNED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "type": "null"
+              },
+              "common": {
+                "type": "object"
+              },
+              "axis_ms": {
+                "type": "array"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "SINGLE_SUBJECT"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "type": "null"
+              },
+              "axis_ms": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "INCOMPARABLE"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "enum": [
+                  "CURRENCY_MIXED",
+                  "ECONOMIC_PARTITION_MIXED",
+                  "BASIS_MIXED",
+                  "UNIT_MIXED",
+                  "RATIO_SCALE_MIXED",
+                  "METHODOLOGY_MIXED",
+                  "WINDOW_MISMATCH"
+                ]
+              },
+              "common": {
+                "type": "null"
+              },
+              "axis_ms": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "UNAVAILABLE"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "const": "SUBJECT_SERIES_UNAVAILABLE"
+              },
+              "common": {
+                "type": "null"
+              },
+              "axis_ms": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reducer_revision": {
+          "const": "manager-series.v1"
+        },
+        "source_set_ref": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        },
+        "revision": {
+          "type": "string",
+          "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+        }
+      },
+      "required": [
+        "reducer_revision",
+        "source_set_ref",
+        "revision"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "environment",
+    "record_authority",
+    "source_authority",
+    "metric",
+    "selected_window",
+    "series_source",
+    "as_of_ms",
+    "recorded_through_ms",
+    "quality",
+    "series",
+    "comparison",
+    "lineage"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "enum": [
+              "RETURN",
+              "DRAWDOWN"
+            ]
+          }
+        },
+        "required": [
+          "metric"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "unit": {
+                  "enum": [
+                    "RATIO",
+                    null
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "unit": {
+                  "enum": [
+                    "MONEY",
+                    null
+                  ]
+                },
+                "reason_code": {
+                  "not": {
+                    "const": "RATIO_SCALE_NOT_PUBLISHED"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "const": "DRAWDOWN"
+          }
+        },
+        "required": [
+          "metric"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "points": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string",
+                        "pattern": "^(?:0(?:\\.0+)?|-(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$(?![\\s\\S])"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "series_source": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "const": "NOT_PUBLISHED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          }
+        },
+        "required": [
+          "series_source"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "series_source": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "const": "FINANCIAL_NORMALIZED_SERIES_SOURCE_NOT_PUBLISHED"
+              }
+            },
+            "required": [
+              "reason_code"
+            ]
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "const": "UNAVAILABLE"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "series_source": {
+            "type": "object",
+            "properties": {
+              "reason_code": {
+                "type": "null"
+              }
+            },
+            "required": [
+              "reason_code"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

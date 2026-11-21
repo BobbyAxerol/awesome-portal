@@ -1,0 +1,51 @@
+{
+  "absence_authority": false,
+  "candidate_field_policy_sha256": "14ea7e455ebad34cda3c0076aa4ca90c22faa7296e6f2c90cdf3e43eaf3e05c9",
+  "candidate_profile_sha256": "f3ba94bd7647ade7aa665da45141d89aca4be4e00488603b02cb59121d9b664f",
+  "catalogue_semantic_seal_sha256": "6d4c4a6505c02f58d32f0be70a3a80c7073dfbd5666ce9a5490fba645c049142",
+  "environment": "paper",
+  "feed_metadata_bindings": 13,
+  "files": {
+    "catalogue-candidate.json": {
+      "bytes": 142771,
+      "sha256": "ab347c301eeb2559e511b90f1d726c0726a44388d84f6c618631d925db0f586e"
+    },
+    "compose.m0-release.r3.yaml": {
+      "bytes": 1940,
+      "sha256": "bc0a864490900be81dcb3072708811018cf44b7d1e7834bf1a3e0cde278e3aa1"
+    },
+    "manager-catalogue-release.json": {
+      "bytes": 1606,
+      "sha256": "feeed8bc77ce5ce8d06728fb29d2d3e457c643b86a3ace68017be8bda7216d85"
+    },
+    "relation-catalogue.json": {
+      "bytes": 120441,
+      "sha256": "c17c343c8886d6994b50f6fc569912a25e5e9ac01923ce3236150577500b76ff"
+    },
+    "serving-policy.json": {
+      "bytes": 10872,
+      "sha256": "14ea7e455ebad34cda3c0076aa4ca90c22faa7296e6f2c90cdf3e43eaf3e05c9"
+    }
+  },
+  "images": {
+    "edge_rust": "sha256:2b929dff6d31036b6dd94fa8b5d6f941e4e7f662d94c4882921a334009db13d6",
+    "manager": "sha256:263db8dd8c940a32833fee1127f72c56675eeb1d2c6b29d5a0215bcec56204ec"
+  },
+  "m1": "OFF",
+  "note": "Public pins copied from Edge's public return and recomputed by Core on HK on 2026-11-12. Not a lock in force; becomes one only after installed Edge READY and an owner-approved lock. No secret.",
+  "predecessor_epoch_uuid": "01a05c70-81ec-7380-801d-45c706f937c0",
+  "profile_id": "PAPER_BINANCE_USDM",
+  "r2_contract_sha256": null,
+  "r2_contract_sha256_missing_reason": "Edge cites only the prefix 81a3c328; Core will not guess the full value (request N13)",
+  "relations": 49,
+  "rendered_config": {
+    "edge": "8600b9f4670c92e5c009f8aabed3c429faee2bfc6a759822fb284e0cb28b3cda",
+    "manager": "cf826a6e50b1e4f08139d4cc9727acf2d03a614da2ed7daa7ba9e6638a187462"
+  },
+  "schema_version": "portal.core.m0-r2-pack-lock-candidate.v1",
+  "source_database_target": "trading_system",
+  "source_incarnation": "sha256:f976491370b16026b2f8fc38368ceb9c1e58abfcf33cfeefab85c186ed208a9e",
+  "status": "CANDIDATE_NOT_INSTALLED_NOT_OWNER_APPROVED",
+  "stream": "NOT_GRANTED",
+  "venue": "BINANCE"
+}

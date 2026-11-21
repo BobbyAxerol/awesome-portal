@@ -1,0 +1,59 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-3",
+  "sub": "c realtime on a real stream",
+  "title": "Transport drop, slow consumer, gap, resync storm, epoch rebuild, READ-only / STREAM-only / both revoke, consumer restart, hidden tab 1 h",
+  "status": "BLOCKED",
+  "lane": "NOT_RUN",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 11.58,
+    "loadavg_5m_at_capture": 11.14
+  },
+  "started_at": null,
+  "ended_at": null,
+  "started_at_ms": null,
+  "ended_at_ms": null,
+  "duration_ms": null,
+  "workload": {
+    "target_lane": "REAL_READ_QUALIFIED"
+  },
+  "resource_limits": null,
+  "stop_conditions": [],
+  "results": {
+    "reason": "BLOCKED on three things that do not exist yet.",
+    "unmet": [
+      "no published stream operation for alpha_fleet_overview in OpenAPI (UXM08-A, REQUESTS_FOR_SOURCE_OWNERS SRC-A)",
+      "upgrade/execution_loop/evidence/ELP2-10/CORE009_INTEGRATION_RETURN_2026-10-21.md section 2: integration prepared; hook, image build and runtime readback PENDING; installed image sha256:7b2c7f34... is NOT Core009",
+      "stream is dark until a stream.subscribe grant on the single ROOT whole-fleet viewer (BOBBY_DECISIONS 2026-10-21 item 2)"
+    ],
+    "ready_for_the_day": "component invariants (M-3 receipt) and the revoker from BE-P10; a stream driver is not written because writing it against an unpublished contract would invent the contract",
+    "window_request": "upgrade/execution_loop/evidence/ELP2-10/measurements/WINDOW_REQUESTS_2026-10-21.md section 4 (M-3c, request only after the three items close)"
+  },
+  "resources": null,
+  "cleanup": null,
+  "limitations": [
+    "Revocation-to-stream-close latency is record-only: no threshold exists (NO BASIS, needs Edge/Bobby)."
+  ],
+  "notes": [],
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:c0eb5d2b694bd18f8a02dd40ab219f6cc315436d4b0d7c637ee77ea5cf415ab9"
+}

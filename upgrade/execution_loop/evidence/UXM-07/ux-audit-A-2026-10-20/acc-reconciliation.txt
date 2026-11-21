@@ -1,0 +1,154 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+← Accounts
+Binance-02 sleeve
+pf_core · USDT · Real-funded
+Sleeve
+Physical binding
+Currency
+USDC
+USDT
+◷
+STALE:
+STALE 14 MIN
+As of 17 Oct 09:00Z
+✓
+APPLIED:
+BROKER SYNC: SYNCED
+✓
+OK:
+ACTIVE
+Refresh
+Shared by 3 sleeves
+LOGICAL SLEEVE
+Internal
+Name
+Binance-02 sleeve
+Portfolio
+pf_core
+Domain
+Real-funded · USDT
+Deployments
+dep_btc_live
+Provenance
+PHYSICAL BINDING
+Native
+Venue
+BINANCE
+Native account
+Withheld
+Product
+Not published
+(A360-4)
+Margin mode
+CROSS
+Environment
+Real-funded
+Credential
+✓
+OK:
+SYNCED
+Open physical binding view
+OVERVIEW
+POSITIONS
+ALLOCATIONS
+FEES & FUNDING
+RECONCILIATION
+ACTIVITY
+INTERNAL · BROKER · DIFFERENCE
+INTERNAL
+Virtual ledger · 17 Oct 09:00Z
+FREE CASH / BUYING POWER
+80,000.00
+USDT
+ACCOUNT BALANCE
+88,200.00
+USDT
+CASH LOCKED
+8,200.00
+USDT
+INITIAL MARGIN
+4,100.00
+USDT
+MAINTENANCE
+2,050.00
+USDT
+POSITIONS
+2
+BROKER
+Venue report · 17 Oct 09:00Z
+FREE CASH / BUYING POWER
+Not computed · SHARED_BINDING
+ACCOUNT BALANCE
+Not computed · SHARED_BINDING
+CASH LOCKED
+Not available
+INITIAL MARGIN
+Not computed · SHARED_BINDING
+MAINTENANCE
+Not computed · SHARED_BINDING
+POSITIONS
+Not available
+DIFFERENCE
+Derived · matching scopes only
+FREE CASH / BUYING POWER
+Not computed · SHARED_BINDING
+ACCOUNT BALANCE
+Not computed · SHARED_BINDING
+CASH LOCKED
+Not available
+INITIAL MARGIN
+Not computed · SHARED_BINDING
+MAINTENANCE
+Not computed · SHARED_BINDING
+POSITIONS
+Not available
+Published verdict (USDT) 
+?
+OUTCOME UNKNOWN:
+NO VERDICT Shared binding: the balance difference is not computed.
+◐
+PARTIAL Binding population partial
+SYNC HISTORY
+7 of 7
+WHEN (UTC)	SOURCE	RESULT	BUYING POWER
+17 Oct 09:00Z	EXECUTION	
+✓
+APPLIED:
+SYNCED	Not available
+17 Oct 09:00Z	BROKER	
+✓
+APPLIED:
+SYNCED	
+301,100.00
+17 Oct 08:30Z	BROKER	
+◔
+PENDING:
+RECONCILING	
+300,980.40
+17 Oct 08:00Z	BROKER	
+✓
+APPLIED:
+SYNCED	
+300,112.10
+17 Oct 02:00Z	BROKER	
+◷
+STALE:
+DELAYED	
+298,450.00
+16 Oct 08:00Z	BROKER	
+✕
+REJECTED OR FAILED:
+FAILED	Not available · NOT_PUBLISHED
+Not available	BROKER	
+✓
+APPLIED:
+SYNCED	Not available · NOT_PUBLISHED

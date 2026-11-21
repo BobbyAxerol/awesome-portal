@@ -90,6 +90,11 @@ export class ProfileScreenSource {
     };
   }
 
+  /** The profile's own state for one relation (`source.<key>`); `UNAVAILABLE` when the profile states none. */
+  relationState(key: string): { state: string; reasonCode: string | null } {
+    return this.capability(key);
+  }
+
   collection(panelId: string, authority: "EXECUTION" | "BROKER", key: string) {
     const rows = this.rows(key).slice(0, 200);
     return {
@@ -131,8 +136,10 @@ export function decimalSum(rows: readonly ScreenRecord[], fields: readonly strin
 }
 
 /**
- * An exact-decimal total is publishable only when every included source value
- * carries one explicit currency and that currency is uniform. Callers that
+ * An exact-decimal total is publishable only when every requested value is
+ * present and valid, and carries one explicit, uniform currency. Skipping an
+ * absent or malformed row would silently turn a partial sum into a total.
+ * Callers that
  * also need mark provenance must impose that additional rule themselves; the
  * current Manager position page intentionally does not publish it.
  */
@@ -140,13 +147,16 @@ export function exactCurrencySum(
   rows: readonly ScreenRecord[],
   fields: readonly string[],
 ): { value: string | null; currency: string | null; reasonCode: string | null } {
-  const values = rows.flatMap((row) => fields.flatMap((field) => {
+  if (rows.length === 0 || fields.length === 0) return { value: null, currency: null, reasonCode: null };
+  const values: { currency: string | null }[] = [];
+  for (const row of rows) for (const field of fields) {
     const value = row[field];
-    return typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value)
-      ? [{ currency: typeof row.currency === "string" && row.currency.length > 0 ? row.currency : null }]
-      : [];
-  }));
-  if (values.length === 0) return { value: null, currency: null, reasonCode: null };
+    if (value === null || value === undefined)
+      return { value: null, currency: null, reasonCode: "EXACT_DECIMAL_SOURCE_VALUE_NOT_PUBLISHED" };
+    if (typeof value !== "string" || !/^-?\d+(?:\.\d+)?$(?![\s\S])/.test(value))
+      return { value: null, currency: null, reasonCode: "EXACT_DECIMAL_SOURCE_VALUE_INVALID" };
+    values.push({ currency: typeof row.currency === "string" && row.currency.length > 0 ? row.currency : null });
+  }
   if (values.some((entry) => entry.currency === null)) {
     return { value: null, currency: null, reasonCode: "EXACT_DECIMAL_VALUES_REQUIRE_EXPLICIT_CURRENCY" };
   }

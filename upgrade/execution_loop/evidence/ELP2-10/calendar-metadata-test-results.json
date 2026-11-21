@@ -1,0 +1,57 @@
+{
+  "schema_version": "portal.execution.calendar-metadata-verification.v1",
+  "date": "2026-10-25",
+  "tier": "R1",
+  "status": "AFFECTED_SOURCE_TESTS_PASSED_NOT_LANDED",
+  "base_commit": "0e5614bd6",
+  "code_commits": [
+    "dc3c9015bea86f29b5e064ed48fb76f9e31a8a14",
+    "42c64cd74212382a76b74fa15f248a9963d4549d"
+  ],
+  "source_tree": "773f086588de8a1ea5048969dfba25c64dc28ff7",
+  "source_diff": { "files": 8, "insertions": 372, "deletions": 10 },
+  "focused_batch": {
+    "exit_code": 0,
+    "specs": [
+      "test/venue-calendar-source.spec.ts",
+      "test/venue-calendar.spec.ts",
+      "test/paper-read.spec.ts",
+      "test/manager-current-accounts.spec.ts",
+      "test/manager-current-publication.spec.ts"
+    ],
+    "passed": 147,
+    "failed": 0,
+    "seconds": 6.67,
+    "maximum_workers": 2
+  },
+  "canonical_round_trip_retake": {
+    "exit_code": 0,
+    "spec": "test/venue-calendar-source.spec.ts",
+    "passed": 30,
+    "failed": 0,
+    "seconds": 0.83,
+    "reason": "One additional test proves existing frontend canonical fixture matches actual factory output; no production code changed."
+  },
+  "compatible_affected_union": { "unique_tests": 148, "single_execution": false, "duplicates_summed": false },
+  "production_source_typecheck": { "command": "tsc --noEmit -p tsconfig.build.json", "exit_code": 0 },
+  "original_source_differential": {
+    "default_calendar_byte_identical_controls_passed": 2,
+    "unchanged_account_composition_control_passed": 1,
+    "malformed_date_tests_expected_failures": 4,
+    "unselected_tests_skipped": 25,
+    "baseline_process_exit_code": 1,
+    "disposition": "EXPECTED_RED_ON_OLD_SOURCE; candidate regressions all pass",
+    "temporary_probe_files_removed": 4
+  },
+  "integrity_check": "PASS_UNCHANGED_NO_AUTHORITY_CHANGE",
+  "tracking_check": "PASS",
+  "public_contract_change": false,
+  "frontend_change": false,
+  "source_provider_installed": false,
+  "source_qualification": "NOT_MET",
+  "connected_browser_acceptance": "NOT_RUN",
+  "full_integration_hook": "NOT_RUN_R2_LANDING_PENDING",
+  "docker_pg_image_load_tests": "NOT_RUN_UNAFFECTED",
+  "remote_runtime_change": false,
+  "push": false
+}

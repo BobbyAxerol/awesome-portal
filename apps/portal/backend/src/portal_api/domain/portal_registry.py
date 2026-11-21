@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
 
 
 FeatureGroupId = Literal[
@@ -72,11 +72,37 @@ class FeatureGroupDefinition(RegistryModel):
     order: int
 
 
+class ScopedV2NavigationReplacement(RegistryModel):
+    """Presentation metadata only; never an entitlement or policy selector.
+
+    Consumers may suppress the old entry only when the V2 shell is enabled,
+    the replacement is visible, and the server has selected SCOPED_V2 for the
+    same current Core workspace. Unknown mode preserves legacy navigation.
+    Existing routes remain addressable and retain their own authorization.
+    """
+
+    read_mode: Literal["SCOPED_V2"]
+    feature_id: Literal["EXECUTION_APPROVALS"]
+
+
 class NavigationDefinition(RegistryModel):
     order: int
     icon_key: str
     show_in_sidebar: bool
     show_in_command_palette: bool
+    scoped_v2_replacement: ScopedV2NavigationReplacement | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_preserving_authored_shape(
+        self, handler: SerializerFunctionWrapHandler
+    ):
+        # Digests are computed before domain serialization. Do not introduce
+        # default nulls into old registry documents or change their ETags.
+        # An explicitly authored null remains explicit; absence stays absent.
+        result = handler(self)
+        if "scoped_v2_replacement" not in self.model_fields_set:
+            result.pop("scoped_v2_replacement", None)
+        return result
 
 
 class PortalFeatureDefinition(RegistryModel):

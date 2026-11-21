@@ -1,0 +1,43 @@
+{
+  "schema_version": "research.rs01-test-results.v1",
+  "phase": "RS-01",
+  "status": "PASS",
+  "feature_state": "DARK",
+  "runs": [
+    {
+      "name": "python_r2_numerical_and_receipt_oracle",
+      "result": "PASS",
+      "tests": 8
+    },
+    {
+      "name": "control_api_affected_contract_service_controller_and_admission",
+      "result": "PASS",
+      "files": 19,
+      "tests": 59
+    },
+    {
+      "name": "control_api_production_build",
+      "result": "PASS"
+    },
+    {
+      "name": "fresh_disposable_postgresql_rs01_schema_and_grants",
+      "result": "PASS",
+      "tests": 1
+    },
+    {
+      "name": "p11_disposable_postgresql_durable_retry_restart",
+      "result": "PASS",
+      "tests": 8
+    },
+    {
+      "name": "legacy_migration_ledger_recovery",
+      "result": "PASS",
+      "tests": 2
+    }
+  ],
+  "not_claimed": [
+    "RS-02 current-source adapter/read-model completion",
+    "RS-03 browser/product acceptance",
+    "runtime activation or deployment"
+  ]
+}

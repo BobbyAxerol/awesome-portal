@@ -1,0 +1,19 @@
+{
+  "schema_version": "udb.phase-debt-register.v1",
+  "phase": "UDB-01",
+  "status": "PASS_PREVIEW_STORAGE_BASELINE",
+  "known_open_in_scope": [],
+  "closed": [
+    {"id": "UDB01-PG-PROFILE", "resolution": "Preview/P23 overrides;common1GiB buffers never applied to900MB P23 cgroup"},
+    {"id": "UDB01-LEGACY-129", "resolution": "Append-only130 repairs historical no-op129;ledger and identity unchanged"},
+    {"id": "UDB01-CACHE-PRESSURE", "resolution": "Physical-pressure reservation;quota/fresh-hit/lease/fencing preserved;real-PG negatives passed"},
+    {"id": "UDB01-QUALIFICATION", "resolution": "Bobby-approved bounded qualification passed every predicate;24h wait replaced,not fabricated"},
+    {"id": "UDB01-C4", "resolution": "Owned test teardown complete;private evidence/backup/rollback retention30days"}
+  ],
+  "historical_attempts": [
+    {"lane": "soak", "disposition": "SUPERSEDED_NOT_24H_PASS", "writer_stop_exit": 137, "oom_killed": false},
+    {"lane": "qualification-serial-attempt", "disposition": "UNDERLOADED_HARNESS_NOT_PASS", "reason": "Sequential10.37rps underloaded the15rps target;dispatcher fixed without app/budget changes", "writer_stop_exit": 137, "oom_killed": false}
+  ],
+  "not_in_scope": ["UDB-02 store separation/hydration", "UDB-03 resource-access/FE integration", "UDB-04 cross-loop/product qualification", "dev/stable deployment", "unmanaged probe cleanup"],
+  "receipt": "phase-report.md"
+}

@@ -1,0 +1,40 @@
+{
+  "schema_version": "portal.account-roster.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "accounts": [
+    {
+      "user_id": "usr_TEST_ONLY_0001",
+      "username": "TEST_ONLY-alice",
+      "display_name": "TEST_ONLY Alice",
+      "role": "ADMIN",
+      "account_state": "ACTIVE",
+      "must_change_password": false,
+      "account_revision": 3,
+      "locked": false
+    },
+    {
+      "user_id": "usr_TEST_ONLY_0002",
+      "username": "TEST_ONLY-bao",
+      "display_name": "TEST_ONLY Bao",
+      "role": "USER",
+      "account_state": "INVITED",
+      "must_change_password": true,
+      "account_revision": 1,
+      "locked": false
+    }
+  ],
+  "page": {
+    "limit": 2,
+    "returned_count": 2,
+    "has_more": true,
+    "next_cursor": "kc1.TEST_ONLY.synthetic-cursor.synthetic-signature"
+  },
+  "counts": {
+    "total": 5,
+    "matching": 5,
+    "by_state": { "INVITED": 1, "ACTIVE": 2, "DISABLED": 1, "ARCHIVED": 1 },
+    "by_role": { "ADMIN": 1, "USER": 4 },
+    "locked": 1,
+    "awaiting_first_password": 1
+  }
+}

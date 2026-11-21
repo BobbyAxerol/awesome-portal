@@ -22,7 +22,7 @@ from portal_api.services.engine_capabilities import (
 
 PORTAL_ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_ROOT = PORTAL_ROOT / "registry"
-PINNED_RECORD_SHA256 = "0963c05b3f68aaf875c0ec95f71db551cc22a3b39538ffe8ac072028405173c9"
+PINNED_RECORD_SHA256 = "6087fef28710d6d4e5d442a36a57a9e2b0ba8e78f657358563911b86845c835d"
 
 
 def _load_json(path: Path) -> dict[str, object]:
@@ -60,7 +60,7 @@ def test_manifest_loads_with_pinned_release_and_capabilities() -> None:
     assert len(manifest.engine_releases) == 1
     release = manifest.engine_releases[0]
     assert release.package == "quantbt-engine"
-    assert release.version == "1.0.8"
+    assert release.version == "1.1.1"
     assert release.dist_info_record_sha256 == PINNED_RECORD_SHA256
     assert [capability.protocol for capability in manifest.capabilities] == [
         "three_window_decay",
@@ -70,10 +70,10 @@ def test_manifest_loads_with_pinned_release_and_capabilities() -> None:
 
 
 def test_installed_engine_matches_pinned_dist_info_record() -> None:
-    assert importlib.metadata.version("quantbt-engine") == "1.0.8"
+    assert importlib.metadata.version("quantbt-engine") == "1.1.1"
     assert installed_dist_info_record_hash("quantbt-engine") == PINNED_RECORD_SHA256
     results = _service().verify_installed()
-    assert results["er_quantbt_108"]["ok"] is True
+    assert results["er_quantbt_111"]["ok"] is True
 
 
 def test_record_fingerprint_is_installer_independent_and_payload_sensitive(
@@ -82,22 +82,22 @@ def test_record_fingerprint_is_installer_independent_and_payload_sensitive(
     wheel_rows = [
         "quantbt/__init__.py,sha256=payload-a,12",
         "quantbt/core.py,sha256=payload-b,34",
-        "quantbt_engine-1.0.8.dist-info/METADATA,sha256=metadata,56",
-        "quantbt_engine-1.0.8.dist-info/RECORD,,",
+        "quantbt_engine-1.1.1.dist-info/METADATA,sha256=metadata,56",
+        "quantbt_engine-1.1.1.dist-info/RECORD,,",
     ]
-    uv_record = tmp_path / "uv" / "quantbt_engine-1.0.8.dist-info" / "RECORD"
-    pip_record = tmp_path / "pip" / "quantbt_engine-1.0.8.dist-info" / "RECORD"
+    uv_record = tmp_path / "uv" / "quantbt_engine-1.1.1.dist-info" / "RECORD"
+    pip_record = tmp_path / "pip" / "quantbt_engine-1.1.1.dist-info" / "RECORD"
     uv_record.parent.mkdir(parents=True)
     pip_record.parent.mkdir(parents=True)
     uv_record.write_text(
         "\n".join(reversed(wheel_rows))
-        + "\nquantbt_engine-1.0.8.dist-info/INSTALLER,sha256=uv,2\n",
+        + "\nquantbt_engine-1.1.1.dist-info/INSTALLER,sha256=uv,2\n",
         encoding="utf-8",
     )
     pip_record.write_text(
         "quantbt/__pycache__/__init__.cpython-312.pyc,,\n"
         + "\n".join(wheel_rows)
-        + "\nquantbt_engine-1.0.8.dist-info/REQUESTED,sha256=empty,0\n",
+        + "\nquantbt_engine-1.1.1.dist-info/REQUESTED,sha256=empty,0\n",
         encoding="utf-8",
     )
 
@@ -221,7 +221,7 @@ def test_synthetic_certified_capability_passes_preflight_without_code_change(
                 "capability_id": "CAP_SYNTHETIC_PROTOCOL",
                 "protocol": "synthetic_protocol",
                 "endpoint_id": "walk_forward",
-                "engine_release_id": "er_quantbt_108",
+                "engine_release_id": "er_quantbt_111",
                 "certified": True,
                 "requirements": {
                     "backend": "python",
@@ -261,7 +261,7 @@ async def test_capabilities_endpoint_is_read_only_and_safe() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["schema_version"] == "engine-capabilities.v1"
-    assert payload["installed"]["er_quantbt_108"]["ok"] is True
+    assert payload["installed"]["er_quantbt_111"]["ok"] is True
     assert [item["certified"] for item in payload["capabilities"]] == [True, True]
     encoded = json.dumps(payload)
     assert "dist_info_record_sha256" not in encoded  # digest hidden from public doc

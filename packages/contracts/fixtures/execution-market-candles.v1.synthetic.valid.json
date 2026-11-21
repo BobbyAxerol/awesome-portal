@@ -1,0 +1,409 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "producer_run": true,
+  "cases": [
+    {
+      "name": "venue_public_ready",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "VENUE_PUBLIC_MARKET_DATA",
+        "source": {
+          "kind": "venue_public",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "https://fapi.binance.com/fapi/v1/klines",
+          "instrument": "BTCUSDT",
+          "note": "Public venue klines fetched by the Portal (no credential). Market context only — not the Trading System kline shard (BR-EX-50 pending)."
+        },
+        "symbol": "BTCUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "READY",
+        "reason_code": null,
+        "retryable": false,
+        "fetched_at_ms": 1792238641000,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792235039999,
+          "requested_limit": 500,
+          "returned_count": 2,
+          "truncated": false,
+          "pages": 1
+        },
+        "last_candle_closed": true,
+        "candles": [
+          {
+            "t": 1792227840000,
+            "o": "67200.50",
+            "h": "67410.00",
+            "l": "67100.00",
+            "c": "67364.21",
+            "v": "12.5",
+            "close_t": 1792231439999,
+            "trades": 42
+          },
+          {
+            "t": 1792231440000,
+            "o": "67364.21",
+            "h": "67500.00",
+            "l": "67300.00",
+            "c": "67410.55",
+            "v": "12.5",
+            "close_t": 1792235039999,
+            "trades": 42
+          }
+        ]
+      }
+    },
+    {
+      "name": "venue_public_empty_window",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "VENUE_PUBLIC_MARKET_DATA",
+        "source": {
+          "kind": "venue_public",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "https://fapi.binance.com/fapi/v1/klines",
+          "instrument": "BTCUSDT",
+          "note": "Public venue klines fetched by the Portal (no credential). Market context only — not the Trading System kline shard (BR-EX-50 pending)."
+        },
+        "symbol": "BTCUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "EMPTY",
+        "reason_code": "MARKET_CANDLES_NONE_IN_WINDOW",
+        "retryable": false,
+        "fetched_at_ms": 1792238641000,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792238640000,
+          "requested_limit": 500,
+          "returned_count": 0,
+          "truncated": false,
+          "pages": 1
+        },
+        "last_candle_closed": null,
+        "candles": []
+      }
+    },
+    {
+      "name": "venue_public_symbol_unknown",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "VENUE_PUBLIC_MARKET_DATA",
+        "source": {
+          "kind": "venue_public",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "https://fapi.binance.com/fapi/v1/klines",
+          "instrument": "NOPEUSDT",
+          "note": "Public venue klines fetched by the Portal (no credential). Market context only — not the Trading System kline shard (BR-EX-50 pending)."
+        },
+        "symbol": "NOPEUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "EMPTY",
+        "reason_code": "MARKET_CANDLES_SYMBOL_UNKNOWN",
+        "retryable": false,
+        "fetched_at_ms": 1792238641000,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792238640000,
+          "requested_limit": 500,
+          "returned_count": 0,
+          "truncated": false,
+          "pages": 1
+        },
+        "last_candle_closed": null,
+        "candles": []
+      }
+    },
+    {
+      "name": "venue_public_rate_limited",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "VENUE_PUBLIC_MARKET_DATA",
+        "source": {
+          "kind": "venue_public",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "https://fapi.binance.com/fapi/v1/klines",
+          "instrument": "BTCUSDT",
+          "note": "Public venue klines fetched by the Portal (no credential). Market context only — not the Trading System kline shard (BR-EX-50 pending)."
+        },
+        "symbol": "BTCUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "UNAVAILABLE",
+        "reason_code": "MARKET_CANDLES_VENUE_RATE_LIMITED",
+        "retryable": true,
+        "fetched_at_ms": 1792238641000,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792238640000,
+          "requested_limit": 500,
+          "returned_count": 0,
+          "truncated": false,
+          "pages": 1
+        },
+        "last_candle_closed": null,
+        "candles": []
+      }
+    },
+    {
+      "name": "venue_public_malformed",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "VENUE_PUBLIC_MARKET_DATA",
+        "source": {
+          "kind": "venue_public",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "https://fapi.binance.com/fapi/v1/klines",
+          "instrument": "BTCUSDT",
+          "note": "Public venue klines fetched by the Portal (no credential). Market context only — not the Trading System kline shard (BR-EX-50 pending)."
+        },
+        "symbol": "BTCUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "UNAVAILABLE",
+        "reason_code": "MARKET_CANDLES_VENUE_MALFORMED",
+        "retryable": true,
+        "fetched_at_ms": 1792238641000,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792238640000,
+          "requested_limit": 500,
+          "returned_count": 0,
+          "truncated": false,
+          "pages": 1
+        },
+        "last_candle_closed": null,
+        "candles": []
+      }
+    },
+    {
+      "name": "okx_swap_ready",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "VENUE_PUBLIC_MARKET_DATA",
+        "source": {
+          "kind": "venue_public",
+          "venue": "OKX",
+          "market": "SWAP",
+          "endpoint": "https://www.okx.com/api/v5/market/history-candles",
+          "instrument": "ETH-USDT-SWAP",
+          "note": "Public venue klines fetched by the Portal (no credential). Market context only — not the Trading System kline shard (BR-EX-50 pending)."
+        },
+        "symbol": "ETHUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "READY",
+        "reason_code": null,
+        "retryable": false,
+        "fetched_at_ms": 1792238641000,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792235039999,
+          "requested_limit": 100,
+          "returned_count": 2,
+          "truncated": false,
+          "pages": 1
+        },
+        "last_candle_closed": true,
+        "candles": [
+          {
+            "t": 1792227840000,
+            "o": "0.9",
+            "h": "1.0",
+            "l": "0.8",
+            "c": "1.0",
+            "v": "10",
+            "close_t": 1792231439999,
+            "trades": null
+          },
+          {
+            "t": 1792231440000,
+            "o": "1.0",
+            "h": "1.2",
+            "l": "0.9",
+            "c": "1.1",
+            "v": "10",
+            "close_t": 1792235039999,
+            "trades": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "feature_disabled",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "VENUE_PUBLIC_MARKET_DATA",
+        "source": {
+          "kind": "venue_public",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "https://fapi.binance.com/fapi/v1/klines",
+          "instrument": "BTCUSDT",
+          "note": "Public venue klines fetched by the Portal (no credential). Market context only — not the Trading System kline shard (BR-EX-50 pending)."
+        },
+        "symbol": "BTCUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "UNAVAILABLE",
+        "reason_code": "MARKET_CANDLES_FEATURE_DISABLED",
+        "retryable": false,
+        "fetched_at_ms": null,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792238640000,
+          "requested_limit": 500,
+          "returned_count": 0,
+          "truncated": false,
+          "pages": 0
+        },
+        "last_candle_closed": null,
+        "candles": []
+      }
+    },
+    {
+      "name": "data_layer_source_not_wired",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM_DATA_LAYER",
+        "source": {
+          "kind": "data_layer",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "edge:/v1/binance/futures/klines/{symbol}",
+          "instrument": "BTCUSDT",
+          "note": "Trading System data_layer klines behind the execution edge — not wired yet (BR-EX-50); no candle is fabricated in its place."
+        },
+        "symbol": "BTCUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "UNAVAILABLE",
+        "reason_code": "MARKET_CANDLES_SOURCE_NOT_WIRED",
+        "retryable": false,
+        "fetched_at_ms": null,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792238640000,
+          "requested_limit": 500,
+          "returned_count": 0,
+          "truncated": false,
+          "pages": 0
+        },
+        "last_candle_closed": null,
+        "candles": []
+      }
+    },
+    {
+      "name": "data_layer_via_market_context_ready",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM_DATA_LAYER",
+        "source": {
+          "kind": "data_layer",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "portal-execution-edge:/internal/v2/manager/market/candles",
+          "instrument": "BTCUSDT",
+          "note": "Trading System Data Layer candles through the Portal mTLS Manager adapter; bounded provider series, not lifecycle replay."
+        },
+        "symbol": "BTCUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "READY",
+        "reason_code": null,
+        "retryable": false,
+        "fetched_at_ms": 1792238640000,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": 1792227840000,
+          "to_ms": 1792231439999,
+          "requested_limit": 500,
+          "returned_count": 1,
+          "truncated": false,
+          "pages": 1
+        },
+        "last_candle_closed": true,
+        "candles": [
+          {
+            "t": 1792227840000,
+            "o": "67200.50",
+            "h": "67410.00",
+            "l": "67100.00",
+            "c": "67364.21",
+            "v": "12.5",
+            "close_t": 1792231439999,
+            "trades": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "data_layer_range_required",
+      "value": {
+        "schema_version": "portal.execution.market-candles.v1",
+        "logical_operation_id": "executionMarketCandlesV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM_DATA_LAYER",
+        "source": {
+          "kind": "data_layer",
+          "venue": "BINANCE",
+          "market": "USDM",
+          "endpoint": "portal-execution-edge:/internal/v2/manager/market/candles",
+          "instrument": "BTCUSDT",
+          "note": "Trading System Data Layer is selected; no public-venue fallback is made for this request."
+        },
+        "symbol": "BTCUSDT",
+        "interval": "1h",
+        "interval_ms": 3600000,
+        "state": "UNAVAILABLE",
+        "reason_code": "MARKET_CONTEXT_RANGE_REQUIRED",
+        "retryable": false,
+        "fetched_at_ms": null,
+        "read_at_ms": 1792238641000,
+        "coverage": {
+          "from_ms": null,
+          "to_ms": null,
+          "requested_limit": 500,
+          "returned_count": 0,
+          "truncated": false,
+          "pages": 0
+        },
+        "last_candle_closed": null,
+        "candles": []
+      }
+    }
+  ]
+}

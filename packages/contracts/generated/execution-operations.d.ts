@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/v1/execution/operations/f0": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Explicit F0 blocked intents ONLY, not the mixed operation queue. Current exact TS-accepted audit.read is required BEFORE the five-predicate SQL census and again after the last await for success and contextual errors. Full DENY and delegation graph remains effective. Creator is an additional disclosure ceiling, not permission; no ADMIN/read_all bypass, source call, mutation or historical planning-expiry filter. Cursor binds actor/session, exact query/current authority and visible own intents; hidden other-creator/target/environment rows never influence it. Keyset tokens are signed, not encrypted; no private actor/session bytes are embedded in their boundary. */
+        get: operations["executionF0BlockedOperationsListV2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/operations/f0/{operation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Explicit F0 family only; creator is an extra lookup ceiling, not permission. Requires current TS-accepted audit.read for the exact original ACCOUNT/PORTFOLIO/DEPLOYMENT target and paper/sandbox/live environment. No owner/ADMIN/read_all override, target-kind alias, generic-family fallback, source call or mutation. Original planning expiry does not expire historical read. Private no-store with final current Core/receipt fence. */
+        get: operations["executionF0BlockedOperationGetV2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/commands/catalog": {
         parameters: {
             query?: never;
@@ -96,7 +130,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description ADMIN-only Portal-owned queue with exact counts and opaque bidirectional keysets. Source integration remains unavailable in F1a. */
+        /** @description Sticky current Core mode is selected before strict parsing. Legacy v1 remains separate. V2 requires complete current TS-accepted audit tuples ACCOUNT/PORTFOLIO/DEPLOYMENT per environment BEFORE SQL counts/page; USER/ADMIN are not grants. Source journal unavailable, no mutation. assigned_to is unsupported in V2 (400), not ignored. Existing limit1..250 and both cursor directions preserved; optional target_id narrows the query. Additive and optional in the V2 body: rows[].incident_links (FE-042, at most 3 authorized links per operation, both ends independently authorized) and page.status_counts (FE-043, triage_state/verification_result/source_status/severity counted over the same snapshot, scope and filters as the page, each dimension ignoring its own filter). SUCCEEDED in the queue is not financial APPLIED, projection convergence or venue success. */
         get: operations["listExecutionOperationsQueue"];
         put?: never;
         post?: never;
@@ -113,6 +147,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Named operation detail. Exact ecm_ intents retain current exact audit authority and finite CommandStatus. SCOPED_V2 uses positive stored family identity: F0 keeps immutable queue/intent provenance and exact target audit; selected R2/Paper plans require BOTH current PAPER deployment/portfolio audit anchors, ROOT plus exact DECISION_OPERATION field purpose and the actual gate/member requirement. Unknown, unsupported or ambiguous identity never tries another family. No creator/ADMIN/read_all permission substitute. Legacy decision readers remain separate. Historical expiry/expected versions do not expire today's authorized read or assert current apply eligibility. GET never dispatches/reconciles; stored Portal APPLIED is not TS acceptance/FILLED. HTTP private, no-store. */
         get: operations["getExecutionCommandOperationF0"];
         put?: never;
         post?: never;
@@ -180,7 +215,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description ADMIN-only bounded incident detail. Findings, alerts, dead letters and trace-order panels remain explicitly unavailable. */
+        /** @description Legacy detail remains separate. SCOPED_V2 publishes only current finite Portal root under current exact audit; original children are NOT_PUBLISHED. No title/prose/actors/evidence hashes/counts loaded. No mutation or source side effects. */
         get: operations["getExecutionIncidentDetail"];
         put?: never;
         post?: never;
@@ -307,6 +342,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/operations/f0/{operation_id}/apply-attempts/{request_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description BE-P13 (ROUTE ADDED). Read-only recovery of an F0 apply answer by request_key after a lost response: NONE / FOUND / CONFLICT. Keyed by the session actor. The named operation's exact ACCOUNT/PORTFOLIO/DEPLOYMENT target needs current TS-accepted audit.read BEFORE the attempt row is read and again after the last await, so a revoked reader learns nothing (not even NONE). No owner/ADMIN/read_all override, source call or write. CONFLICT never names the other operation. */
+        get: operations["executionF0ApplyAttemptGetV2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/operations/{operation_id}/apply": {
         parameters: {
             query?: never;
@@ -316,7 +368,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Always denied in F0 before any relay/source call. */
+        /** @description DENIED-ONLY (BE-P13). Applying an F0 plan can never succeed: every F0 plan is stored BLOCKED with the relay DISABLED, and the service has no branch that returns, so this operation has NO 2xx response by design and no success fixture exists. The only answers are the typed refusals below. request_key makes the denial replayable (the same key for the same operation returns the same 409 with details.replayed true) and conflict-detectable (the same key for another operation is REQUEST_KEY_PAYLOAD_CONFLICT). If the response is lost, read GET /api/v1/execution/operations/f0/{operation_id}/apply-attempts/{request_key}. Nothing is ever sent to a source: details.source_request_sent and retry_allowed are constants false. */
         post: operations["applyExecutionCommandF0"];
         delete?: never;
         options?: never;
@@ -328,8 +380,540 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        Hash: string;
+        /** @description The only answer F0 apply gives once the plan is visible to its creator: 409 with this body. Exactly what the shared error filter sends (no public_copy_key/safe_next_action). */
+        F0ApplyDeniedProblem: {
+            error: {
+                /** @constant */
+                code: "COMMAND_RELAY_DISABLED";
+                message: string;
+            };
+            request_id: string;
+            details: components["schemas"]["F0ApplyDecision"];
+        };
+        /** @description 409 when request_key was first used for a different operation of the same actor. Nothing is recorded and nothing is sent; the other operation is not named. */
+        F0ApplyKeyConflictProblem: {
+            error: {
+                /** @constant */
+                code: "REQUEST_KEY_PAYLOAD_CONFLICT";
+                message: string;
+            };
+            request_id: string;
+            details: {
+                request_key: string;
+                /** @constant */
+                source_request_sent: false;
+            };
+        };
+        /** @description Read-only recovery of an F0 apply answer by request_key, for a client that lost the response. Keyed by the session actor; the named operation's exact target needs current TS-accepted audit.read BEFORE the attempt is read and again after. NONE: this actor never recorded that key in this workspace. FOUND: the key was recorded for THIS operation; relay_decision is what a replay returns. CONFLICT: the key is bound to a different operation of the same actor, which is deliberately not named. */
+        F0ApplyAttemptLookup: {
+            /** @constant */
+            schema_version: "portal.execution.f0-apply-attempt.v1";
+            operation_id: components["schemas"]["Identifier"];
+            request_key: string;
+            /** @constant */
+            state: "NONE";
+            relay_decision: null;
+            first_recorded_at: null;
+        } | {
+            /** @constant */
+            schema_version: "portal.execution.f0-apply-attempt.v1";
+            operation_id: components["schemas"]["Identifier"];
+            request_key: string;
+            /** @constant */
+            state: "FOUND";
+            relay_decision: components["schemas"]["RelayDenied"];
+            first_recorded_at: components["schemas"]["DateTime"];
+        } | {
+            /** @constant */
+            schema_version: "portal.execution.f0-apply-attempt.v1";
+            operation_id: components["schemas"]["Identifier"];
+            request_key: string;
+            /** @constant */
+            state: "CONFLICT";
+            relay_decision: null;
+            first_recorded_at: null;
+        };
+        /**
+         * Finite current-authorized F0 blocked intent
+         * @description Same twelve-field execution.command-operation.v1 body, no source status or dispatch. Stored target is requested intent, not TS attestation. created_at and updated_at are Portal timestamps, not source freshness. Runtime additionally enforces nonnegative finite epochs and updated_at >= created_at.
+         */
+        F0BlockedOperationRead: components["schemas"]["ExecutionCommandOperation"] & {
+            /** @enum {string} */
+            command_key?: "account/policy" | "account/reconcile-open-orders" | "account/reconcile-positions" | "account/seed-paper" | "account/state" | "account/sync" | "allocation/<root>" | "alpha/inspect" | "alpha/register" | "authority/create" | "authority/list" | "bracket-audit/<root>" | "broker/bindings" | "broker/exposure" | "broker/reconcile-open-orders" | "broker/reconcile-positions" | "broker/state" | "capital/history" | "config/apply" | "config/plan" | "copy/policies" | "copy/policy" | "deployment/state" | "health/<root>" | "ops/alerts" | "ops/alpha-activity" | "ops/command-journal" | "ops/dead-letters" | "ops/emergency-close" | "ops/emergency-close-verify" | "ops/findings" | "ops/redis-retention" | "ops/streams" | "ops/trace-order" | "order-group/list" | "order-group/show" | "performance/account" | "performance/account-history" | "performance/dashboard" | "performance/instrument" | "performance/portfolio" | "performance/portfolio-history" | "portfolio/create" | "portfolio/list" | "portfolio/state" | "redis/alpha-auth" | "redis/get" | "redis/scan" | "redis/stream" | "redis/trading-state" | "replay/compare" | "replay/create" | "replay/events" | "replay/export" | "replay/jobs" | "replay/lifecycle" | "replay/quantbt-diff" | "replay/run" | "replay/show" | "risk/profile" | "risk/state" | "sizing/decision" | "sizing/history" | "sizing/summary";
+            blockers?: ("COMMAND_RELAY_DISABLED" | "GENERIC_REDIS_ACCESS_PROHIBITED" | "N16B_CURRENT_PRIMITIVE_PLAN_INVALID" | "N16B_RUNTIME_ACTIVATION_PENDING" | "N16B_TARGET_SCOPE_UNSUPPORTED" | "OWNER_REVIEW_REQUIRED" | "SOURCE_ROUTE_MAPPING_AMBIGUOUS" | "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" | "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED")[];
+            warnings?: unknown[];
+        };
+        /** @description Finite current-actor F0 intent history for one exact resource/environment. At most1024 matching own intents are censused;1025 refuses explicitly. Pages sort created_at descending then operation_id ASCII ascending. Runtime additionally enforces returned_count===items.length, items.length<=limit, unique ids and has_more iff next_cursor is nonnull. No global count, source status, relay or dispatch. Portal timestamps are not source freshness. */
+        F0CommandCollection: {
+            /** @constant */
+            schema_version: "portal.execution.f0-command-collection.v1";
+            /** @constant */
+            family: "F0_BLOCKED_INTENTS_ONLY";
+            /** @constant */
+            coverage: "CURRENT_ACTOR_EXACT_RESOURCE_ONLY";
+            resource: {
+                /** @enum {string} */
+                kind: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            items: components["schemas"]["F0BlockedOperationRead"][];
+            page: {
+                limit: number;
+                returned_count: number;
+                has_more: boolean;
+                next_cursor: string | null;
+            };
+        };
+        /** @description Finite immutable Portal labels plus current local triage, not TS execution. Runtime additionally enforces nonnegative finite dates, updated>=created and the existing triage/timestamp shape. SQL retains six fractional UTC digits for exact keyset boundaries. */
+        OperationalQueueItemV2: {
+            operation_id: string;
+            /** @constant */
+            operation_kind: "EXECUTION_COMMAND";
+            command_key: string;
+            target: {
+                /** @enum {string} */
+                type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            /** @enum {string} */
+            risk_tier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {string} */
+            source_authority: "PORTAL" | "EXECUTION" | "BROKER";
+            /** @enum {string} */
+            source_status: "BLOCKED" | "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "UNCERTAIN";
+            /** @enum {string} */
+            verification_result: "NOT_STARTED" | "PENDING" | "SUCCEEDED" | "FAILED" | "PARTIAL" | "UNCERTAIN" | "DENIED" | "EXPIRED";
+            /** @enum {string} */
+            triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+            workflow_version: number;
+            acknowledged_at: string | null;
+            resolved_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        /** @description Counts are scoped BEFORE filters/page/sort/edge probes to current supported audit tuples. Nonzero authority with zero rows is EMPTY; no authority is404. Runtime additionally enforces total>=filtered>=page rows, exact read_truth, and has_more/previous iff their opaque cursor is nonnull. Bound1MiB. No ADMIN/read_all/creator bypass or actor/prose/source journal disclosure. Optional additive amendment (FE-042/FE-043): rows may carry incident_links and page may carry status_counts, both read in the same repeatable-read snapshot; see OperationalIncidentLinksV2 and OperationalStatusCountsV2. Queue SUCCEEDED is a Portal queue-record state, not financial APPLIED, projection convergence or venue success. */
+        OperationalQueueV2: {
+            /** @constant */
+            schema_version: "portal.execution.operational-queue.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            record_basis: "PORTAL_CURRENT_OPERATIONAL_WORKFLOW";
+            /** @constant */
+            coverage: "AUTHORIZED_SUPPORTED_TARGETS_ONLY";
+            supported_target_types: [
+                "ACCOUNT",
+                "PORTFOLIO",
+                "DEPLOYMENT"
+            ];
+            /** @constant */
+            source_integration_state: "UNAVAILABLE";
+            /** @constant */
+            source_side_effect_requested: false;
+            source_as_of_ms: null;
+            observed_at_ms: number;
+            read_truth: {
+                /** @enum {string} */
+                state: "AVAILABLE" | "EMPTY";
+                reason_code: string | null;
+                /** @constant */
+                scope: "REQUEST";
+            };
+            page: {
+                rows: components["schemas"]["OperationalQueueRowV2"][];
+                total_count: number;
+                filtered_count: number;
+                next_cursor: string | null;
+                prev_cursor: string | null;
+                has_more: boolean;
+                has_previous: boolean;
+                applied_filters: {
+                    field: string;
+                    /** @constant */
+                    op: "eq";
+                    value: string;
+                }[];
+                applied_sort: {
+                    /** @enum {string} */
+                    field: "created_at" | "operation_id";
+                    /** @enum {string} */
+                    direction: "asc" | "desc";
+                }[];
+                status_counts?: components["schemas"]["OperationalStatusCountsV2"];
+                health?: components["schemas"]["OperationalQueueHealthV2"];
+            };
+        };
+        /** @description Actual immutable workspace/id/key/target/environment/source queue-F0 join, not inferred family. provenance_basis distinguishes exact SQL timestamp copy from the existing writer's historical JS Date millisecond truncation (not arbitrary tolerance); historical bytes are not rewritten. Different author with full exact current audit is allowed; explicit F0 routes retain their own-author ceiling. Runtime additionally enforces operation ids equal; original planning expiry is not read expiry. */
+        OperationalWorkflowV2: {
+            /** @constant */
+            schema_version: "portal.execution.operational-workflow.v2";
+            /** @constant */
+            family: "F0_BACKED_PORTAL_WORKFLOW";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @enum {string} */
+            provenance_basis: "SQL_EXACT_SOURCE_TIMESTAMP" | "LEGACY_DATE_MILLISECOND_COPY";
+            observed_at_ms: number;
+            operation: components["schemas"]["OperationalQueueItemV2"];
+            intent: components["schemas"]["F0BlockedOperationRead"];
+        };
+        /** @description Current Portal root only; target/env/version rechecked before final authority. Forward target guard never attests old annotations/evidence/links/actors or counts. MITIGATED/RESOLVED are local triage, not broker safety. Runtime additionally enforces finite ordered dates and lifecycle timestamp shape. */
+        OperationalIncidentCurrentV2: {
+            /** @constant */
+            schema_version: "portal.execution.incident-current-root.v2";
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            record_basis: "CURRENT_ROOT_NOT_HISTORICAL_LINEAGE";
+            incident_id: string;
+            workspace_id: string;
+            target: {
+                /** @enum {string} */
+                type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {string} */
+            workflow_state: "OPEN" | "MITIGATED" | "RESOLVED";
+            workflow_version: number;
+            acknowledged_at: string | null;
+            mitigated_at: string | null;
+            resolved_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            observed_at_ms: number;
+            /** @constant */
+            source_integration_state: "UNAVAILABLE";
+            /** @constant */
+            source_side_effect_requested: false;
+            /** @constant */
+            deployment_resume_requested: false;
+            historical_children: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED";
+            };
+        };
+        OperationalQueueCompositionV2: {
+            /** @constant */
+            schema_version: "execution.operational-composition.v1";
+            /** @constant */
+            logical_operation_id: "executionOperationalOperationsQueueV1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "PORTAL_CONTROL_ONLY";
+            workspace_id: string;
+            read_at_ms: number;
+            /** Format: date-time */
+            read_at: string;
+            composite_revision: string;
+            source_health: {
+                input_digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            redacted_command_journal: {
+                digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            canary_twin_comparison: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            command_authority: {
+                /** @constant */
+                state: "UNCHANGED_FAIL_CLOSED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            lineage: {
+                source_health_input_digest: string;
+                command_journal_digest: string;
+                workflow_digest: string;
+                /** @constant */
+                formula_version: "execution.operational-composition.v1";
+            };
+            data: {
+                operations_queue: components["schemas"]["OperationalQueueV2"];
+            };
+        };
+        OperationalIncidentCompositionV2: {
+            /** @constant */
+            schema_version: "execution.operational-composition.v1";
+            /** @constant */
+            logical_operation_id: "executionOperationalIncidentDetailV1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            source_authority: "PORTAL_CONTROL_ONLY";
+            workspace_id: string;
+            read_at_ms: number;
+            /** Format: date-time */
+            read_at: string;
+            composite_revision: string;
+            source_health: {
+                input_digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            redacted_command_journal: {
+                digest: string;
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "CURRENT_AUDIT_SOURCE_PURPOSE_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            canary_twin_comparison: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            command_authority: {
+                /** @constant */
+                state: "UNCHANGED_FAIL_CLOSED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            lineage: {
+                source_health_input_digest: string;
+                command_journal_digest: string;
+                workflow_digest: string;
+                /** @constant */
+                formula_version: "execution.operational-composition.v1";
+            };
+            data: {
+                incident: components["schemas"]["OperationalIncidentCurrentV2"];
+            };
+        };
+        /** @description One current many-to-many link row (execution_incident_operation_links) to an incident whose OWN target tuple the caller is independently authorized for. LINKED publishes only incident id, relationship, link time and a minimal current-root summary (target, environment, severity, workflow_state); never title, prose, actors, evidence or counts. link_history is always the typed NOT_PUBLISHED / ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED absence: the link is a current pointer and does NOT attest the incident's target when the link was written. NOT_ATTESTED keeps the slot and the count for an authorized link whose id or time cannot be represented exactly; it is never dropped. */
+        OperationalIncidentLinkV2: {
+            /** @constant */
+            state: "LINKED";
+            incident_id: string;
+            /** @enum {string} */
+            relationship: "TRIGGERED_BY" | "MITIGATES" | "RELATED";
+            /** Format: date-time */
+            linked_at: string;
+            incident: {
+                target: {
+                    /** @enum {string} */
+                    type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                    id: string;
+                };
+                /** @enum {string} */
+                environment: "PAPER" | "SANDBOX" | "LIVE";
+                /** @enum {string} */
+                severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+                /** @enum {string} */
+                workflow_state: "OPEN" | "MITIGATED" | "RESOLVED";
+            };
+            link_history: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED";
+            };
+        } | {
+            /** @constant */
+            state: "NOT_ATTESTED";
+            /** @constant */
+            reason_code: "INCIDENT_LINK_IDENTITY_NOT_REPRESENTABLE";
+            link_history: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED";
+            };
+        };
+        /** @description FE-042. Per operation, at most 3 links, newest link first (link time descending, then incident id descending in byte order). BOTH ends must be authorized for the caller: the operation row is inside the minted audit scope AND the incident's own target/environment tuple is inside the SAME minted scope; operation access never implies incident access and no incident is picked as 'the' incident. Links to incidents outside the scope are omitted AND not counted, so an empty or short list never proves that no other incident exists; authorized_link_count counts only authorized links and truncated is true exactly when it exceeds items.length. Incident target types outside ACCOUNT/PORTFOLIO/DEPLOYMENT are never authorizable here. Read in the same repeatable-read snapshot as the page. Runtime additionally enforces items.length==min(authorized_link_count,3), truncated, and unique incident ids. */
+        OperationalIncidentLinksV2: {
+            /** @constant */
+            basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY";
+            /** @constant */
+            bound: 3;
+            authorized_link_count: number;
+            truncated: boolean;
+            items: components["schemas"]["OperationalIncidentLinkV2"][];
+        };
+        /** @description FE-043. Server-counted status distribution over the SAME repeatable-read snapshot, minted audit scope and applied filters as total_count, filtered_count and the page rows; not page rows and not separate status calls. Supported dimensions are exactly triage_state, verification_result, source_status and severity, each zero-filled over its closed domain. Each dimension counts the authorized set under every applied filter EXCEPT its own (own filter ignored so a selected KPI tile still shows its siblings); own_filter_applied says whether such a filter was dropped. Therefore: with no own filter, total equals filtered_count; with one, counts[selected value] (zero for a value outside the closed domain) equals filtered_count and total>=filtered_count; always total<=total_count and sum(counts)==total. Counts ignore cursor, limit and sort. 'SUCCEEDED' (source_status or verification_result) is the Portal queue record's state only (succeeded_means): it is NOT financial APPLIED, NOT projection convergence and NOT venue success; no source, projection or venue claim is made. environment, target_type, target_id and command_key are filters but not count dimensions. Runtime additionally enforces these arithmetic invariants. */
+        OperationalStatusCountsV2: {
+            /** @constant */
+            basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION";
+            /** @constant */
+            succeeded_means: "PORTAL_QUEUE_RECORD_STATE_ONLY";
+            dimensions: {
+                triage_state: {
+                    own_filter_applied: boolean;
+                    total: number;
+                    counts: {
+                        UNACKNOWLEDGED: number;
+                        ACKNOWLEDGED: number;
+                        RESOLVED: number;
+                    };
+                };
+                verification_result: {
+                    own_filter_applied: boolean;
+                    total: number;
+                    counts: {
+                        NOT_STARTED: number;
+                        PENDING: number;
+                        SUCCEEDED: number;
+                        FAILED: number;
+                        PARTIAL: number;
+                        UNCERTAIN: number;
+                        DENIED: number;
+                        EXPIRED: number;
+                    };
+                };
+                source_status: {
+                    own_filter_applied: boolean;
+                    total: number;
+                    counts: {
+                        BLOCKED: number;
+                        PENDING: number;
+                        RUNNING: number;
+                        SUCCEEDED: number;
+                        FAILED: number;
+                        EXPIRED: number;
+                        UNCERTAIN: number;
+                    };
+                };
+                severity: {
+                    own_filter_applied: boolean;
+                    total: number;
+                    counts: {
+                        INFO: number;
+                        WARNING: number;
+                        ERROR: number;
+                        CRITICAL: number;
+                    };
+                };
+            };
+        };
+        /** @description OperationalQueueItemV2 plus the OPTIONAL additive FE-042 incident_links and FE-CAT-2 delivery_state / display_state axes (each nullable: null = the owning source did not report it; omitted = this producer has no owning source); absent on a server that predates them. A current server always sends it (possibly with zero authorized links). The workflow detail keeps the unextended item. */
+        OperationalQueueRowV2: {
+            operation_id: string;
+            /** @constant */
+            operation_kind: "EXECUTION_COMMAND";
+            command_key: string;
+            target: {
+                /** @enum {string} */
+                type: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "PAPER" | "SANDBOX" | "LIVE";
+            /** @enum {string} */
+            risk_tier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
+            /** @enum {string} */
+            severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+            /** @enum {string} */
+            source_authority: "PORTAL" | "EXECUTION" | "BROKER";
+            /** @enum {string} */
+            source_status: "BLOCKED" | "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "UNCERTAIN";
+            /** @enum {string} */
+            verification_result: "NOT_STARTED" | "PENDING" | "SUCCEEDED" | "FAILED" | "PARTIAL" | "UNCERTAIN" | "DENIED" | "EXPIRED";
+            /** @enum {string} */
+            triage_state: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+            workflow_version: number;
+            acknowledged_at: string | null;
+            resolved_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            incident_links?: components["schemas"]["OperationalIncidentLinksV2"];
+            delivery_state?: ("NOT_APPLICABLE" | "AWAITING_RECEIPT" | "RECEIPT_CONFIRMED" | "RECEIPT_FAILED") | null;
+            display_state?: ("CURRENT" | "CATCHING_UP" | "STALE") | null;
+        };
+        /** @description FE-CAT-2. One health count with its own observation time and coverage. count is an integer or null: null means the owning source did not report it (not computable), 0 is a counted zero. count null requires observed_at null and coverage UNKNOWN; a number requires observed_at and coverage COMPLETE or PARTIAL. PARTIAL means some authorized filtered rows did not report the axis, so the number is a floor, never a total. observed_at is when the Portal counted it inside the page snapshot, not a source clock. Runtime additionally enforces that the two row-derived counts are <= page.filtered_count. */
+        OperationalHealthCountV2: {
+            count: number | null;
+            observed_at: string | null;
+            /** @enum {string} */
+            coverage: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+        };
+        /** @description FE-CAT-2. OPTIONAL additive queue health, counted inside the SAME repeatable-read snapshot, minted audit scope and applied filters as total_count, filtered_count and the page rows (the whole authorized filtered set, never the loaded rows; rows the caller may not see are never counted). A key that is OMITTED means this producer has no owning source for it (the reader prints 'Not published', never 0). pending_receipt_count = rows whose delivery_state is AWAITING_RECEIPT; display_lag_count = rows whose display_state is CATCHING_UP; open_exception_count = open exceptions the owning source counts for the same authorized scope. Absent on a server that predates it. */
+        OperationalQueueHealthV2: {
+            /** @constant */
+            basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS";
+            pending_receipt_count?: components["schemas"]["OperationalHealthCountV2"];
+            display_lag_count?: components["schemas"]["OperationalHealthCountV2"];
+            open_exception_count?: components["schemas"]["OperationalHealthCountV2"];
+        };
         Identifier: string;
+        /** Format: date-time */
+        DateTime: string;
+        ExecutionCommandOperation: {
+            /** @constant */
+            schema_version: "execution.command-operation.v1";
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            command_type: "EXECUTION_COMMAND";
+            command_key: string;
+            /** @constant */
+            status: "BLOCKED";
+            /** @constant */
+            verification_result: "NOT_STARTED";
+            blockers: string[];
+            warnings: string[];
+            relay_receipt: null;
+            /** @constant */
+            source_side_effect_requested: false;
+            created_at: components["schemas"]["DateTime"];
+            updated_at: components["schemas"]["DateTime"];
+        };
+        CommandProblem: {
+            error: {
+                code: string;
+                message: string;
+            };
+            request_id: string;
+            public_copy_key?: string;
+            /** @enum {string} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
+        };
+        Hash: string;
         /** @enum {unknown} */
         RiskTier: "R0_READ" | "R1_PAPER_MUTATION" | "R2_SANDBOX" | "R3_LIVE_PROTECTIVE" | "R4_LIVE_RISK_INCREASING" | "UNCLASSIFIED" | "BLOCKED";
         CommandCatalogueScope: {
@@ -345,7 +929,10 @@ export interface components {
                 id: components["schemas"]["Identifier"];
             };
             requested_risk_tier: components["schemas"]["RiskTier"] | null;
-            /** @constant */
+            /**
+             * @description Constant under catalogue_revision 2. The service used to compute PARTIAL when any entry classified CONNECTED; that branch was unreachable (every entry is portal_reachable false) and contradicted this constant, so it was removed rather than published. A transport activation needs catalogue_revision 3, not a widened constant.
+             * @constant
+             */
             capability_state: "DISABLED";
             /** @constant */
             freshness_state: "UNAVAILABLE";
@@ -366,19 +953,31 @@ export interface components {
             verify_required: boolean;
             /** @constant */
             portal_reachable: false;
-            /** @enum {unknown} */
-            source_route_state: "OBSERVED" | "AMBIGUOUS" | "UNPUBLISHED" | "DIRECT_ACCESS_PROHIBITED";
+            /**
+             * @description CURRENT_PRIMITIVE_CONFIRMED is emitted for exactly ops/emergency-close (N16B: the one source-as-is protective primitive accepted for compatibility). It is not an activation: portal_reachable stays false and runtime_active is false.
+             * @enum {unknown}
+             */
+            source_route_state: "OBSERVED" | "AMBIGUOUS" | "UNPUBLISHED" | "DIRECT_ACCESS_PROHIBITED" | "CURRENT_PRIMITIVE_CONFIRMED";
             /** @enum {string|null} */
             http_method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | null;
             http_path: string | null;
             /** @enum {unknown} */
-            blocked_reason: "COMMAND_RELAY_DISABLED" | "SOURCE_ROUTE_MAPPING_AMBIGUOUS" | "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" | "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED" | "GENERIC_REDIS_ACCESS_PROHIBITED" | "DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED";
+            blocked_reason: "COMMAND_RELAY_DISABLED" | "SOURCE_ROUTE_MAPPING_AMBIGUOUS" | "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" | "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED" | "GENERIC_REDIS_ACCESS_PROHIBITED" | "DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED" | "N16B_RUNTIME_ACTIVATION_PENDING";
             source_reference: string;
+            /** @description Optional here only because the pinned extract fixture predates it (execution-command-catalog.valid.json is immutable evidence in the N16B acceptance record). ServedCommandCatalogue, the 200 body of the route, requires it on every entry. CONNECTED is not a member: every F0 entry has portal_reachable false, and the service refuses to emit a CONNECTED classification rather than publish a sendable claim under catalogue_revision 2. */
             classification?: {
                 /** @enum {unknown} */
-                state: "CONNECTED" | "SUPPORTED_BUT_INACTIVE" | "SEMANTICALLY_INCOMPATIBLE";
+                state: "SUPPORTED_BUT_INACTIVE" | "SEMANTICALLY_INCOMPATIBLE";
                 reason_code: string;
             };
+            /** @constant */
+            current_primitive_state?: "ACCEPTED_CURRENT_PRIMITIVE";
+            /** @constant */
+            current_capability_id?: "live.emergency-close";
+            accepted_environments?: "LIVE"[];
+            accepted_target_types?: "ACCOUNT"[];
+            /** @constant */
+            runtime_active?: false;
         };
         CommandCatalogue: {
             /** @constant */
@@ -405,6 +1004,12 @@ export interface components {
             total_entries: 64;
             returned_entries: number;
             entries: components["schemas"]["CommandCatalogueEntry"][];
+        };
+        /** @description What GET /api/v1/execution/commands/catalog serves: CommandCatalogue where every entry carries `classification`. Canonical example: fixtures/execution-command-catalog.served.valid.json, generated by the same function the service applies to the same extract (apps/control-api/test/be-p13-catalogue.spec.ts compares them entry by entry). */
+        ServedCommandCatalogue: components["schemas"]["CommandCatalogue"] & {
+            entries?: {
+                classification: unknown;
+            }[];
         };
         OperatorParams: {
             [key: string]: string | number | boolean | null;
@@ -448,6 +1053,12 @@ export interface components {
             scope: string;
             cli_forms: string[];
             meta: string;
+            /** @description FE-056: short operator-facing name. Optional, additive; absent means the consumer falls back to task_title. No control or bidirectional-format characters. */
+            display_name?: string;
+            /** @description FE-056: one sentence saying what the task is for. Optional, additive; it never states that the Portal can run the task (see state/reason_code). No control or bidirectional-format characters. */
+            description?: string;
+            /** @description FE-056: display label for scope (same target kinds, title-cased). Optional, additive. No control or bidirectional-format characters. */
+            scope_label?: string;
             params: components["schemas"]["Param"][];
             typed_confirm_word: string | null;
             authority: components["schemas"]["Authority"];
@@ -603,6 +1214,12 @@ export interface components {
                     scope: string;
                     cli_forms: string[];
                     meta: string;
+                    /** @description FE-056: short operator-facing name. Optional, additive; absent means the consumer falls back to task_title. No control or bidirectional-format characters. */
+                    display_name?: string;
+                    /** @description FE-056: one sentence saying what the task is for. Optional, additive; it never states that the Portal can run the task (see state/reason_code). No control or bidirectional-format characters. */
+                    description?: string;
+                    /** @description FE-056: display label for scope (same target kinds, title-cased). Optional, additive. No control or bidirectional-format characters. */
+                    scope_label?: string;
                     params: components["schemas"]["Param"][];
                     typed_confirm_word: string | null;
                     authority: components["schemas"]["Authority"];
@@ -671,8 +1288,13 @@ export interface components {
             params: components["schemas"]["OperatorParams"];
             conditions: Record<string, never>[];
         };
-        /** Format: date-time */
-        DateTime: string;
+        /** @description FE-020. No plan or preview carries a cost, fee or impact estimate, so the only value is this typed absence. The client never computes one. A real estimate would need a source that publishes it and arrive as a new, versioned branch. */
+        CostImpactAbsence: {
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            /** @constant */
+            reason: "NO_COST_OR_IMPACT_SOURCE";
+        };
         ExecutionCommandPlan: {
             /** @constant */
             schema_version: "execution.command-plan.v1";
@@ -697,6 +1319,19 @@ export interface components {
             relay_capability: "DISABLED";
             /** @constant */
             source_side_effect_requested: false;
+            /** @description null for every command except ops/emergency-close (N16B), whose accepted-but-DARK current primitive is described here. runtime_active and source_side_effect_requested are constants false. The served plan always carried this key; it was missing from the schema (BE-P13). */
+            current_primitive: null | {
+                /** @constant */
+                id: "live.emergency-close";
+                /** @constant */
+                source_environment: "LIVE_FULL";
+                target_types: "ACCOUNT"[];
+                /** @constant */
+                runtime_active: false;
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            cost_impact: components["schemas"]["CostImpactAbsence"];
             replayed: boolean;
         };
         /** Format: date */
@@ -806,25 +1441,348 @@ export interface components {
                 applied_sort: Record<string, never>[];
             };
         };
-        ExecutionCommandOperation: {
+        R1DecisionOperation: {
             /** @constant */
-            schema_version: "execution.command-operation.v1";
-            operation_id: components["schemas"]["Identifier"];
+            schema_version: "governance.r1-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
             /** @constant */
-            command_type: "EXECUTION_COMMAND";
-            command_key: string;
+            command_type: "GOVERNANCE_R1_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+        };
+        R2DecisionOperation: {
             /** @constant */
-            status: "BLOCKED";
+            schema_version: "governance.r2-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
             /** @constant */
-            verification_result: "NOT_STARTED";
-            blockers: string[];
-            warnings: string[];
-            relay_receipt: null;
+            command_type: "GOVERNANCE_R2_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
             /** @constant */
             source_side_effect_requested: false;
-            created_at: components["schemas"]["DateTime"];
-            updated_at: components["schemas"]["DateTime"];
         };
+        LiveDecisionOperation: {
+            /** @constant */
+            schema_version: "governance.live-decision-operation.v1";
+            operation_id: string;
+            approval_id: string;
+            /** @constant */
+            command_type: "GOVERNANCE_LIVE_DECISION";
+            /** @enum {unknown} */
+            status: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            /** @enum {unknown} */
+            verification_result: "SUCCEEDED" | "EXPIRED" | "PENDING";
+            blockers: {
+                code: string;
+            }[];
+            warnings: {
+                code: string;
+            }[];
+            expected_approval_version: number;
+            evidence_set_hash: string;
+            /** Format: date-time */
+            planned_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            applied_at: string | null;
+            receipt: {
+                [key: string]: unknown;
+            } | null;
+            /** @constant */
+            decision_authority: "PORTAL_ONLY";
+            /** @constant */
+            source_side_effect_requested: false;
+        };
+        "$defs-Identifier": string;
+        Code: {
+            code: string;
+        };
+        NullableDateTime: components["schemas"]["DateTime"] | null;
+        DecisionReceipt: {
+            operation_id: components["schemas"]["$defs-Identifier"];
+            receipt_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            status: "SUCCEEDED";
+            review_id: components["schemas"]["$defs-Identifier"];
+            /** @enum {unknown} */
+            review_state: "EXTENDED" | "REJECTED_TO_PAPER_HELD" | "PROMOTION_AUTHORIZED";
+            review_version: number;
+            /** @enum {unknown} */
+            decision: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+            /** @enum {integer|null} */
+            extension_days: 14 | null;
+            extended_until: components["schemas"]["NullableDateTime"];
+            promotion_grant_id: components["schemas"]["$defs-Identifier"] | null;
+            /** @enum {unknown} */
+            next_eligible_action: "PLAN_SANDBOX_PROMOTION" | "RETURN_TO_PAPER_HELD" | "CONTINUE_PAPER_OBSERVATION";
+            /** @constant */
+            external_side_effect_requested: false;
+            decided_at: components["schemas"]["DateTime"];
+        };
+        PaperExitDecisionOperation: {
+            /** @constant */
+            schema_version: "governance.paper-exit-decision-operation.v1";
+            operation_id: components["schemas"]["$defs-Identifier"];
+            review_id: components["schemas"]["$defs-Identifier"];
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @enum {unknown} */
+            status: "PENDING" | "SUCCEEDED" | "EXPIRED";
+            /** @enum {unknown} */
+            verification_result: "PENDING" | "SUCCEEDED" | "EXPIRED";
+            blockers: components["schemas"]["Code"][];
+            warnings: components["schemas"]["Code"][];
+            expected_review_version: number;
+            evidence_set_hash: components["schemas"]["Hash"];
+            source_snapshot_hash: components["schemas"]["Hash"];
+            /** @enum {unknown} */
+            evaluation_state: "MET" | "UNMET" | "PARTIAL" | "STALE" | "UNAVAILABLE";
+            planned_at: components["schemas"]["DateTime"];
+            expires_at: components["schemas"]["DateTime"];
+            applied_at: components["schemas"]["NullableDateTime"];
+            receipt: components["schemas"]["DecisionReceipt"] | null;
+            /** @constant */
+            external_side_effect_requested: false;
+        };
+        /** @description Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema. */
+        CommandStatus: {
+            /** @constant */
+            schema_version: "portal.execution.command-status.v1";
+            command_id: string;
+            /** @enum {string} */
+            operation: "FUND" | "INITIAL_GRANT" | "TOP_UP" | "IMMEDIATE_DECREASE" | "RECALL_PARTIAL" | "RECALL_FULL" | "ADJUST_TARGET_BUDGET" | "SET_ROOT_LIMIT";
+            resource: {
+                /** @enum {string} */
+                kind: "ROOT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            profile_ref: string;
+            /** @enum {string} */
+            delivery: "PREPARED" | "SENDING" | "ACKNOWLEDGED" | "DELIVERY_UNKNOWN" | "FAILED_BEFORE_SEND";
+            business: {
+                /** @enum {string} */
+                state: "UNKNOWN" | "APPLIED" | "PARTIALLY_APPLIED" | "WAITING_ENCUMBRANCE" | "CANCELLED" | "PARTIALLY_APPLIED_CANCELLED" | "REJECTED";
+                receipt_ref: string | null;
+                source_event_ref: string | null;
+                revision: string | null;
+                amounts: {
+                    requested: string;
+                    applied: string;
+                    pending: string;
+                    cancelled: string;
+                    rejected: string;
+                } | null;
+            };
+            /** @enum {string} */
+            projection: "UNKNOWN" | "CURRENT" | "CATCHING_UP" | "STALE" | "UNAVAILABLE";
+            /** @enum {string} */
+            venue: "NOT_APPLICABLE" | "UNKNOWN" | "PENDING" | "ACKNOWLEDGED" | "FILLED" | "REJECTED";
+            /** @enum {string} */
+            next_action: "REVIEW_PREVIEW" | "QUERY_SAME_INTENT" | "REVIEW_RECEIPT" | "REVIEW_BLOCKER";
+            created_at_ms: number;
+            updated_at_ms: number;
+            /** @enum {string} */
+            authority: "OWNER_VERIFIED" | "TEST_ONLY";
+            currency: string;
+            source_rejection: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON";
+            };
+            venue_fill: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+                quantities: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES";
+                quantities: null;
+            };
+        };
+        /** @description Exact selected Portal plan with current-authorized ROOT metadata. APPLIED is stored Portal state, NOT TS acceptance/settlement/verification. Original expiry is historical metadata, not current read TTL; no status rewrite. Runtime additionally checks expires_at_ms>=created_at_ms and nonnull applied_at_ms>=created_at_ms, plus ROOT timestamp relations. Public millisecond equality is valid for a strictly positive sub-ms stored interval. No private intent, actor, token, response, receipt, prose or optional parent section. R2 captured parent pins are all-null or all-present; they are NOT today's R1 version or current permission. */
+        R2ParentOperationReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.governance-parent-operation.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "R2";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            operation_id: string;
+            /** @constant */
+            command_version: 1;
+            expected_version: number;
+            /** @enum {string} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            parent_approval_id: string | null;
+            parent_approval_version: number | null;
+            parent_evidence_set_hash: string | null;
+            created_at_ms: number;
+            expires_at_ms: number;
+            applied_at_ms: number | null;
+            /** @constant */
+            family: "R2";
+            /** @constant */
+            command_type: "GOVERNANCE_R2_DECISION";
+            /** @enum {string} */
+            decision: "APPROVE" | "APPROVE_WITH_CONDITION" | "DENY";
+        } & (unknown & ({
+            parent_approval_id?: null;
+            parent_approval_version?: null;
+            parent_evidence_set_hash?: null;
+        } | {
+            parent_approval_id?: string;
+            parent_approval_version?: number;
+            parent_evidence_set_hash?: string;
+        }));
+        /** @description Exact selected Portal plan with current-authorized ROOT metadata. APPLIED is stored Portal state, NOT TS acceptance/settlement/verification. Original expiry is historical metadata, not current read TTL; no status rewrite. Runtime additionally checks expires_at_ms>=created_at_ms and nonnull applied_at_ms>=created_at_ms, plus ROOT timestamp relations. Public millisecond equality is valid for a strictly positive sub-ms stored interval. No private intent, actor, token, response, receipt, prose or optional parent section. Paper plans do not capture parent_approval_*; all three fields must remain null. expected_version is the captured review version. */
+        PaperExitParentOperationReadV2: {
+            /** @constant */
+            schema_version: "portal.execution.governance-parent-operation.v2";
+            workspace_id: string;
+            /** @constant */
+            record_authority: "PORTAL";
+            /** @constant */
+            provenance_basis: "CURRENT_CORE_BASELINE";
+            /** @constant */
+            field_contract_revision: "portal.execution.parent-fields.v1";
+            observed_at_ms: number;
+            source: {
+                /** @constant */
+                authority: "PORTAL";
+                /** @constant */
+                source_verdict: "NOT_ASSERTED";
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            anchors: {
+                deployment_id: string;
+                portfolio_id: string;
+                /** @constant */
+                environment: "PAPER";
+            };
+            /** @description Portal timestamps, not source freshness. Runtime additionally checks updated/expires/SLA/nonnull decided >= created. Historical planning expiry does not expire current-authorized read. */
+            approval: {
+                approval_id: string;
+                /** @constant */
+                gate: "PAPER_EXIT";
+                /** @enum {string} */
+                status: "PENDING" | "APPROVED" | "APPROVED_WITH_CONDITION" | "DENIED" | "CHANGES_REQUESTED" | "EXPIRED";
+                approval_version: number;
+                policy_version: string;
+                quorum_required: number;
+                quorum_met: number;
+                evidence_complete: boolean;
+                created_at_ms: number;
+                updated_at_ms: number;
+                sla_due_at_ms: number;
+                expires_at_ms: number;
+                decided_at_ms: number | null;
+            };
+            operation_id: string;
+            /** @constant */
+            command_version: 1;
+            expected_version: number;
+            /** @enum {string} */
+            status: "PLANNED" | "APPLIED" | "EXPIRED";
+            parent_approval_id: null;
+            parent_approval_version: null;
+            parent_evidence_set_hash: null;
+            created_at_ms: number;
+            expires_at_ms: number;
+            applied_at_ms: number | null;
+            /** @constant */
+            family: "PAPER_EXIT";
+            /** @constant */
+            command_type: "GOVERNANCE_PAPER_EXIT_DECISION";
+            /** @enum {string} */
+            decision: "PROMOTE" | "EXTEND_OBSERVATION" | "REJECT";
+        } & unknown;
         OperationAcknowledgeRequest: {
             /** @constant */
             schema_version: "execution.operation-acknowledge-request.v1";
@@ -1123,12 +2081,43 @@ export interface components {
             reason: string;
             clean_dry_run_evidence_hash: components["schemas"]["Hash"];
         };
+        RelayDenied: {
+            /** @constant */
+            schema_version: "execution.command-relay-decision.v1";
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            decision: "DENIED";
+            /** @constant */
+            reason: "COMMAND_RELAY_DISABLED";
+            /** @constant */
+            retry_allowed: false;
+            /** @constant */
+            source_request_sent: false;
+        };
+        /** @description F0 apply is DENIED-only: no body of this request can reach ACCEPTED, SUCCEEDED or a source request, so no success schema exists. request_key (BE-P13) makes the denial replayable and recoverable (same key + same operation => the same typed answer with replayed true; same key + another operation => REQUEST_KEY_PAYLOAD_CONFLICT). It is not a dedupe key for an effect: there is none. */
         ExecutionCommandApplyRequest: {
             /** @constant */
             schema_version: "execution.command-apply-request.v1";
             workspace_id: string;
+            request_key: string;
             /** @constant */
             command_type: "EXECUTION_COMMAND";
+        };
+        /** @description details of the 409 COMMAND_RELAY_DISABLED body: the six RelayDenied fields (unchanged) plus the key and whether this answer is the stored one repeated. retry_allowed and source_request_sent are constants false: the denial happens before any relay or source call. */
+        F0ApplyDecision: {
+            /** @constant */
+            schema_version: "execution.command-relay-decision.v1";
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            decision: "DENIED";
+            /** @constant */
+            reason: "COMMAND_RELAY_DISABLED";
+            /** @constant */
+            retry_allowed: false;
+            /** @constant */
+            source_request_sent: false;
+            request_key: string;
+            replayed: boolean;
         };
     };
     responses: never;
@@ -1139,6 +2128,179 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    executionF0BlockedOperationsListV2: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                resource_kind: "ACCOUNT" | "PORTFOLIO" | "DEPLOYMENT";
+                resource_id: string;
+                environment: "paper" | "sandbox" | "live";
+                limit?: number;
+                after?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Exact current audit authority and creator ceiling; complete bounded F0-only cohort. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["F0CommandCollection"];
+                };
+            };
+            /** @description COMMAND_INPUT_INVALID or COMMAND_COLLECTION_CURSOR_INVALID; strict scalar query or invalid/expired cursor. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authenticated Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description CURRENT_ACTOR_AUTHORITY_REQUIRED; no page or cursor disclosed after current session expiry. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RESOURCE_NOT_FOUND; unauthorized and unknown scopes have one safe envelope. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED or COMMAND_COLLECTION_CURSOR_CHANGED; refresh instead of falling back. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed COMMAND_COLLECTION_OVERFLOW/RESPONSE_BOUND/NOT_CONFIGURED, COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE. No false empty, silent truncation or raw provider text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+        };
+    };
+    executionF0BlockedOperationGetV2: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path: {
+                operation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current exact audit authority; finite retained BLOCKED intent only. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["F0BlockedOperationRead"];
+                };
+            };
+            /** @description COMMAND_INPUT_INVALID: explicit workspace and one compatible opaque operation id required; no extra or duplicate query keys. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session lifecycle refused; no record disclosed. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RESOURCE_NOT_FOUND: unknown, other creator/workspace/family, unsupported target and hidden intents have the same safe envelope. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED: current authority changed during read; no legacy or family fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE; no raw stored/provider/validation text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+        };
+    };
     executionCommandCatalog: {
         parameters: {
             query?: {
@@ -1162,7 +2324,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommandCatalogue"];
+                    "application/json": components["schemas"]["ServedCommandCatalogue"];
                 };
             };
             /** @description ADMIN_ROLE_REQUIRED */
@@ -1322,6 +2484,7 @@ export interface operations {
                 target_type?: "ACCOUNT" | "BROKER_BINDING" | "DEPLOYMENT" | "ORDER" | "PORTFOLIO" | "SYSTEM";
                 command_key?: string;
                 sort?: "created_at:asc" | "created_at:desc";
+                target_id?: string;
             };
             header?: never;
             path?: never;
@@ -1329,21 +2492,75 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded Portal operations queue */
+            /** @description Legacy Portal queue OR finite current-audit V2 cohort, never a global/source completeness claim. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OperationQueueResponse"];
+                    "application/json": components["schemas"]["OperationQueueResponse"] | components["schemas"]["OperationalQueueV2"];
                 };
             };
-            /** @description ADMIN or query policy required */
-            403: {
+            /** @description Strict input/cursor invalid or unsupported assigned_to filter; contextual refusal fenced after current authority. */
+            400: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session/authority required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session/authority required. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform missing/hidden operational record or no usable current audit authority. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authority/cursor/incident root changed; refresh without legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed unqualified/not-configured/integrity/byte/census unavailable; never raw provider/SQL/prose or false empty. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
             };
         };
     };
@@ -1360,13 +2577,74 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Blocked operation with no relay receipt */
+            /** @description Authorized concrete operation; finite workflow and selected R2/Paper plan variants are additive, not source receipts. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ExecutionCommandOperation"];
+                    "application/json": components["schemas"]["ExecutionCommandOperation"] | components["schemas"]["R1DecisionOperation"] | components["schemas"]["R2DecisionOperation"] | components["schemas"]["LiveDecisionOperation"] | components["schemas"]["PaperExitDecisionOperation"] | components["schemas"]["CommandStatus"] | components["schemas"]["OperationalWorkflowV2"] | components["schemas"]["R2ParentOperationReadV2"] | components["schemas"]["PaperExitParentOperationReadV2"];
+                };
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Unknown and hidden commands have the same safe envelope. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Typed current-authority refusal; no upstream or legacy fallback. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
         };
@@ -1460,13 +2738,74 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Portal-owned incident detail */
+            /** @description Legacy incident OR finite authorized current root. */
             200: {
                 headers: {
+                    "Cache-Control"?: "private, no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IncidentDetail"];
+                    "application/json": components["schemas"]["IncidentDetail"] | components["schemas"]["OperationalIncidentCurrentV2"];
+                };
+            };
+            /** @description Strict input/cursor invalid or unsupported assigned_to filter; contextual refusal fenced after current authority. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session/authority required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session/authority required. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Uniform missing/hidden operational record or no usable current audit authority. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current authority/cursor/incident root changed; refresh without legacy fallback. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Fixed unqualified/not-configured/integrity/byte/census unavailable; never raw provider/SQL/prose or false empty. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
                 };
             };
         };
@@ -1653,6 +2992,92 @@ export interface operations {
             };
         };
     };
+    executionF0ApplyAttemptGetV2: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path: {
+                operation_id: string;
+                request_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description NONE, FOUND or CONFLICT for this actor, key and operation. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["F0ApplyAttemptLookup"];
+                };
+            };
+            /** @description COMMAND_INPUT_INVALID: strict path and query. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session authority refused; nothing disclosed. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RESOURCE_NOT_FOUND: unknown, other creator, other workspace and unauthorized target are one safe answer. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED: current authority changed during the read. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE; no raw stored or driver text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+        };
+    };
     applyExecutionCommandF0: {
         parameters: {
             query?: never;
@@ -1668,12 +3093,50 @@ export interface operations {
             };
         };
         responses: {
-            /** @description COMMAND_RELAY_DISABLED */
+            /** @description INVALID_EXECUTION_COMMAND_APPLY: strict body (schema_version, workspace_id, request_key, command_type); no extra field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated Portal session required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ORIGIN_DENIED or CSRF failure; nothing recorded. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description OPERATION_NOT_FOUND or WORKSPACE_NOT_FOUND: unknown, other creator and other workspace are one safe answer. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RELAY_DISABLED (the only answer for a visible plan) or REQUEST_KEY_PAYLOAD_CONFLICT (key first used for another operation). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["F0ApplyDeniedProblem"] | components["schemas"]["F0ApplyKeyConflictProblem"];
+                };
             };
         };
     };

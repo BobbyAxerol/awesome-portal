@@ -1,0 +1,597 @@
+/**
+ * Scoped slice (UXM-08, flag key `scoped`, FIXTURE ONLY): one portfolio, its fleet and an alpha, read-only, under a scope
+ * banner, with the life cycle of the notification stream that would keep it current.
+ *
+ * It wires the EXISTING V2 screens together by link (Portfolio 360, Alpha Fleet, Alpha 360) and rewrites none of them.
+ * Everything on this page comes from the published synthetic examples (`canonicalLane.ts`) through the strict readers, and
+ * the page says so in the place a reader looks first: "Fixture frames, not a real stream" and "Not connected to a real
+ * source". Nothing opens a stream, polls, fetches or sends. The buttons in the fixture group call the controller directly.
+ *
+ * UX-F02/03/04/05/07/19/21 are covered only as far as the examples reach; `evidence/UXM-08/README.md` lists what they cannot.
+ *
+ * Scale and degradation: one page of at most 100 rows (the contract's own cap), no client paging, sorting or totals; the
+ * server's page is the page. Past one page the screen says "More pages exist". A lane that serves the published page chain
+ * (`?fixture=chain`) also gets Newer / Older (`useSlicePager.ts`); the one-page example offers nothing it cannot back.
+ */
+import { useEffect, useMemo, type ReactNode } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+
+import { ExecutionSurface } from "../../../ExecutionSurface";
+import { GapWhy, SectionPanel, StateBoundary, MetricText, NotPublished } from "../../blocks";
+import { CardsTable, type CardsColumn } from "../../cardsTable";
+import { Flag } from "../../Flag";
+import type { FlagKind } from "../../flagKinds";
+import { readAsOf, formatAsOf } from "../../boundary";
+import type { Clock } from "../../realtime/scopedStreamController";
+import { useScopedStream } from "../../realtime/useScopedStream";
+import type { StreamConfig, StreamState } from "../../realtime/scopedStreamMachine";
+import { DROP_COPY, FIXTURE_LANE_LABEL, LOCAL_CAUSE_COPY, NOT_CONNECTED_LABEL, POSTURE_COPY, causeCopy, streamHeadline } from "../../realtime/streamView";
+import { evictScopedCaches } from "../../scopedEviction";
+import { ENV_LABEL, withContext } from "../../urlState";
+import { DEFAULT_ROUTES } from "../portfolios/routes";
+import {
+  FIXTURE_FRAME_IDS,
+  NEXT_READ_LABEL,
+  PAGE_REVOCATIONS,
+  chainScopedRead,
+  createFixtureLane,
+  fixtureChain,
+  fixtureFrame,
+  type FixtureFrameId,
+  type FixtureLane,
+  type NextRead,
+  type RevocationMemory,
+} from "./canonicalLane";
+import {
+  AVAILABILITY_REASON_SENTENCE,
+  bindingRows,
+  connectionKey,
+  dispositionChips,
+  environmentWord,
+  fleetRows,
+  portfolioDatasetRows,
+  portfolioRows,
+  scopeLines,
+  showingLabel,
+  withheldEnvironments,
+  type BalanceCell,
+  type BindingRow,
+  type FleetRow,
+  type PortfolioDatasetRow,
+  type PortfolioRow,
+  type SliceContext,
+} from "./model";
+import type { ScopedRead } from "./scopedRead";
+import type { ScopedRefusal } from "./scopedRefusal";
+import { useSlicePager, type SlicePager } from "./useSlicePager";
+
+import "../../css/blocks.css";
+import "../../css/flag.css";
+import "../../css/cards.css";
+import "./slice.css";
+
+export const SLICE_SCREEN_KEY = "scoped" as const;
+/** The route's one fixture dial: `?fixture=chain` (see `SliceRoute`). */
+export const SLICE_FIXTURE_PARAM = "fixture";
+export const SLICE_FIXTURE_CHAIN = "chain";
+
+export interface SliceScreenProps {
+  /** The URL context the lane is asked to authorize. */
+  context: SliceContext;
+  /** Injected by tests; the page uses the system clock. */
+  clock?: Clock;
+  config?: StreamConfig;
+  /** Injected by tests to hold a read open; the page builds the published-example lane itself. */
+  lane?: FixtureLane;
+  /** The fixture server's memory of withdrawn access (the route passes the page's). Without it a lane forgets, per mount. */
+  revocations?: RevocationMemory;
+}
+
+const FRAME_BUTTON: Readonly<Record<FixtureFrameId, string>> = {
+  "N09-REVALIDATE": "Revalidate notice",
+  "N09-HEARTBEAT": "Heartbeat",
+  "N09-RESYNC_REQUIRED": "Resync required",
+  "N09-ACCESS_REVOKED": "Access revoked",
+  "N09-UNAVAILABLE": "Source unavailable",
+};
+
+const BURST = 50;
+const DISPOSITION_FLAG: Readonly<Record<string, FlagKind>> = { PARTIAL: "partial", DENIED: "rejected", UNAVAILABLE: "attention" };
+const AVAILABILITY_FLAG: Readonly<Record<string, { kind: FlagKind; label: string }>> = {
+  AVAILABLE: { kind: "ok", label: "Available" },
+  PARTIAL: { kind: "partial", label: "Partial" },
+  NOT_PUBLISHED: { kind: "unknown", label: "Not published" },
+};
+
+function ScopePanel({ read }: { read: ScopedRead }) {
+  const lines = scopeLines(read);
+  const readAt = readAsOf(read.readAtMs);
+  const showing = showingLabel(read);
+  return (
+    <SectionPanel title="Your scope" level={2}>
+      <ul className="exec-slice-lines">
+        <li title={`${lines.totals}. ${lines.policy}.`}>{lines.scope}</li>
+        <li>{lines.completeness}</li>
+        <li>{lines.page}{lines.morePages ? ". More pages exist." : "."}</li>
+        {showing === null ? null : <li data-testid="page-showing" title="Rows visible to you">{showing}</li>}
+      </ul>
+      <dl className="exec-slice-facts">
+        <div>
+          <dt>Workspace</dt>
+          <dd className="exec-slice-id">{read.workspaceId}</dd>
+        </div>
+        <div>
+          <dt>Environment</dt>
+          <dd>{environmentWord(read.environment)}</dd>
+        </div>
+        <div>
+          <dt>Read at</dt>
+          <dd>{readAt === null ? "Unreadable instant" : formatAsOf(readAt)}</dd>
+        </div>
+      </dl>
+      {read.dispositions.length === 0 ? null : (
+        <ul className="exec-slice-lines" aria-label="Environment dispositions">
+          {dispositionChips(read).map((d) => (
+            <li key={d.environment} data-state={d.state}>
+              {ENV_LABEL[d.environment]} <Flag kind={DISPOSITION_FLAG[d.state] ?? "unknown"} label={d.stateWord} size="sm" />
+              {d.reasonWord === null ? <span className="exec-slice-muted"> No reason published</span> : <span className="exec-slice-muted"> {d.reasonWord}{d.reasonCode ? <GapWhy name={`Reason code for ${d.reasonWord}`} rows={[d.reasonCode]} next={null} /> : null}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </SectionPanel>
+  );
+}
+
+function PortfoliosPanel({ rows, search }: { rows: readonly PortfolioRow[]; search: URLSearchParams }) {
+  const columns: CardsColumn<PortfolioRow>[] = [
+    { key: "id", label: "Portfolio", render: (row) => <span className="exec-slice-id">{row.portfolioId}</span> },
+    { key: "name", label: "Name", render: () => <NotPublished id="FE-066">Portfolio name</NotPublished> },
+    { key: "rows", label: "Rows on this page", numeric: true, render: (row) => row.rowsOnThisPage },
+    { key: "env", label: "Environment", render: (row) => row.environments.map((env) => ENV_LABEL[env]).join(", ") },
+    {
+      key: "open",
+      label: "Open",
+      render: (row) => (
+        <Link className="exec-slice-link" to={withContext(DEFAULT_ROUTES.portfolio(row.portfolioId), search)}>
+          Open portfolio
+        </Link>
+      ),
+    },
+  ];
+  return (
+    <SectionPanel title="Portfolios in view" level={2}>
+      <CardsTable
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.portfolioId}
+        label="Portfolios in view"
+        empty={<span className="exec-slice-muted">No portfolio is named on this page.</span>}
+      />
+    </SectionPanel>
+  );
+}
+
+type CellMetric = Parameters<typeof MetricText>[0]["metric"];
+
+/** A figure with its currency; an absence keeps its currency too (a null EUR is not a missing EUR). */
+function CurrencyFigure({ currency, metric }: { currency: string; metric: CellMetric }) {
+  if (metric !== null && metric !== undefined && metric.kind === "value") return <MetricText metric={metric} suffix={currency} />;
+  return (
+    <span>
+      <small className="exec-blk-unit">{currency}</small> <MetricText metric={metric} />
+    </span>
+  );
+}
+
+function MoneyStack({ cells }: { cells: readonly { currency: string; metric: CellMetric }[] }) {
+  return (
+    <span className="exec-slice-money">
+      {cells.map((cell) => (
+        <CurrencyFigure key={cell.currency} currency={cell.currency} metric={cell.metric} />
+      ))}
+    </span>
+  );
+}
+
+function PortfolioDatasetPanel({ rows }: { rows: readonly PortfolioDatasetRow[] }) {
+  const columns: CardsColumn<PortfolioDatasetRow>[] = [
+    { key: "id", label: "Portfolio", render: (row) => (row.portfolioId === null ? <span className="exec-slice-muted">Not named in this row</span> : <span className="exec-slice-id">{row.portfolioId}</span>) },
+    { key: "name", label: "Name", render: (row) => (row.portfolioName === null ? <NotPublished id="FE-066">Portfolio name</NotPublished> : row.portfolioName) },
+    { key: "env", label: "Environment", render: (row) => environmentWord(row.environment) },
+    { key: "base", label: "Base currency", render: (row) => (row.baseCurrency === null ? <span className="exec-slice-muted">Not published</span> : row.baseCurrency) },
+    {
+      key: "allocation",
+      label: "Allocation",
+      numeric: true,
+      render: (row) => (row.allocation.length === 0 ? <MetricText metric={row.allocationAbsent} /> : <MoneyStack cells={row.allocation} />),
+    },
+  ];
+  return (
+    <SectionPanel title="Portfolios" level={2}>
+      <CardsTable columns={columns} rows={rows} rowKey={(row) => row.key} label="Portfolios" empty={<span className="exec-slice-muted">No row from the environments that were read.</span>} />
+    </SectionPanel>
+  );
+}
+
+function BalanceStack({ cells, pick }: { cells: readonly BalanceCell[]; pick: "total" | "free" | "locked" }) {
+  if (cells.length === 0) return <span className="exec-slice-muted">Not stated</span>;
+  return (
+    <span className="exec-slice-money">
+      {cells.map((cell) => (
+        <CurrencyFigure key={cell.currency} currency={cell.currency} metric={cell[pick]} />
+      ))}
+    </span>
+  );
+}
+
+/** The one place an account balance is shown: on the binding that owns the account. */
+function BindingsPanel({ rows }: { rows: readonly BindingRow[] }) {
+  const columns: CardsColumn<BindingRow>[] = [
+    { key: "id", label: "Binding", render: (row) => (row.bindingId === null ? <span className="exec-slice-muted">Not named in this row</span> : <span className="exec-slice-id">{row.bindingId}</span>) },
+    { key: "name", label: "Name", render: (row) => (row.bindingName === null ? <NotPublished id="FE-066">Binding name</NotPublished> : row.bindingName) },
+    { key: "env", label: "Environment", render: (row) => environmentWord(row.environment) },
+    { key: "accounts", label: "Accounts", numeric: true, render: (row) => row.accounts },
+    {
+      key: "allocation",
+      label: "Allocation",
+      numeric: true,
+      render: (row) => (row.allocation.length === 0 ? <MetricText metric={row.allocationAbsent} /> : <MoneyStack cells={row.allocation} />),
+    },
+    { key: "balance", label: "Balance", numeric: true, render: (row) => <BalanceStack cells={row.balances} pick="total" /> },
+    { key: "free", label: "Free", numeric: true, render: (row) => <BalanceStack cells={row.balances} pick="free" /> },
+    { key: "locked", label: "Locked", numeric: true, render: (row) => <BalanceStack cells={row.balances} pick="locked" /> },
+  ];
+  return (
+    <SectionPanel title="Bindings" level={2}>
+      <CardsTable columns={columns} rows={rows} rowKey={(row) => row.key} label="Bindings" empty={<span className="exec-slice-muted">No row from the environments that were read.</span>} />
+    </SectionPanel>
+  );
+}
+
+function FleetPanel({ rows, search, withheld }: { rows: readonly FleetRow[]; search: URLSearchParams; withheld: boolean }) {
+  const columns: CardsColumn<FleetRow>[] = [
+    {
+      key: "alpha",
+      label: "Alpha",
+      render: (row) => (
+        <span className="exec-slice-alpha">
+          {row.alphaName === null ? <NotPublished id="FE-066">Alpha name</NotPublished> : <span>{row.alphaName}</span>}
+          {row.alphaId === null ? null : (
+            <Link className="exec-slice-link exec-slice-id" to={withContext(DEFAULT_ROUTES.alpha(row.alphaId), search)}>
+              {row.alphaId}
+            </Link>
+          )}
+        </span>
+      ),
+    },
+    { key: "portfolio", label: "Portfolio", render: (row) => (row.portfolioId === null ? <span className="exec-slice-muted">Not named in this row</span> : <span className="exec-slice-id">{row.portfolioId}</span>) },
+    { key: "env", label: "Environment", render: (row) => environmentWord(row.environment) },
+    {
+      key: "allocation",
+      label: "Allocation",
+      numeric: true,
+      render: (row) =>
+        row.allocation.length === 0 ? (
+          <MetricText metric={row.allocationAbsent} />
+        ) : (
+          <MoneyStack cells={row.allocation} />
+        ),
+    },
+    {
+      key: "financial",
+      label: "Financial data",
+      render: (row) => {
+        const flag = AVAILABILITY_FLAG[row.availability.state] ?? { kind: "unknown" as const, label: "Unknown" };
+        return (
+          <span className="exec-slice-avail">
+            <Flag kind={flag.kind} label={flag.label} size="sm" />
+            <FinancialReason code={row.availability.reasonCode} />
+          </span>
+        );
+      },
+    },
+    {
+      key: "instances",
+      label: "Instances",
+      render: (row) => (row.instances === 0 ? <span className="exec-slice-muted">None in this read</span> : `${row.instances} in this read`),
+    },
+  ];
+  return (
+    <SectionPanel
+      title="Fleet on this page"
+      level={2}
+      aside={
+        <Link className="exec-slice-link" to={withContext(DEFAULT_ROUTES.fleet, search)}>
+          Open Alpha Fleet
+        </Link>
+      }
+    >
+      <CardsTable
+        columns={columns}
+        rows={rows}
+        rowKey={(row) => row.key}
+        label="Fleet on this page"
+        empty={<span className="exec-slice-muted">{withheld ? "No row from the environments that were read." : "No row is visible to you in this read."}</span>}
+      />
+    </SectionPanel>
+  );
+}
+
+/** The reason a row's financial data is partial or absent: a sentence, with the published code as its title and as screen-reader text. */
+function FinancialReason({ code }: { code: string | null }) {
+  if (code === null) return null;
+  const sentence = AVAILABILITY_REASON_SENTENCE[code];
+  if (sentence === undefined) return <span className="exec-slice-muted">{code}</span>;
+  return (
+    <span className="exec-slice-muted" title={code}>
+      {sentence}
+      <span className="exec-blk-sr"> ({code})</span>
+    </span>
+  );
+}
+
+/** The panels of one read: the dataset the read is of, under the scope panel. */
+function ReadPanels({ read, search }: { read: ScopedRead; search: URLSearchParams }) {
+  return (
+    <>
+      <ScopePanel read={read} />
+      {read.surface === "PORTFOLIOS" ? (
+        <PortfolioDatasetPanel rows={portfolioDatasetRows(read)} />
+      ) : read.surface === "BINDINGS" || read.surface === "BINDING_DETAIL" ? (
+        <BindingsPanel rows={bindingRows(read)} />
+      ) : (
+        <>
+          <PortfoliosPanel rows={portfolioRows(read)} search={search} />
+          <FleetPanel rows={fleetRows(read)} search={search} withheld={withheldEnvironments(read).length > 0} />
+        </>
+      )}
+    </>
+  );
+}
+
+/** The published code a refusal is shown by (the code waits behind the disclosure, in the words the screens already use). */
+const REFUSAL_CODE: Readonly<Record<Exclude<ScopedRefusal["kind"], "cursor_reset">, string>> = {
+  access_changed: "EXECUTION_READ_ACCESS_CHANGED",
+  authority_unavailable: "EXECUTION_READ_AUTHORITY_UNAVAILABLE",
+  not_available: "EXECUTION_READ_NOT_AVAILABLE",
+  policy_pending: "EXECUTION_READ_POLICY_PENDING",
+  field_policy_pending: "EXECUTION_READ_FIELD_POLICY_PENDING",
+};
+
+/** Newer / Older and the same two-part note as the Blotter's keyset pager. The cursors are not here: only whether they exist. */
+function SlicePagerBar({ pager }: { pager: SlicePager }) {
+  const { state } = pager;
+  const noteId = "slice-pager-note";
+  return (
+    <div className="exec-slice-pager" data-testid="slice-pager">
+      <span className="exec-slice-pagerbtns">
+        <button type="button" className="exec-slice-btn" disabled={!state.hasPrevious || state.busy} aria-describedby={!state.hasPrevious ? noteId : undefined} onClick={pager.previous}>
+          Newer
+        </button>
+        <button type="button" className="exec-slice-btn" disabled={!state.hasNext || state.busy} aria-describedby={!state.hasNext ? noteId : undefined} onClick={pager.next}>
+          Older
+        </button>
+      </span>
+      <span id={noteId} className="exec-slice-muted">
+        {state.hasPrevious ? "Newer rows exist" : "At the newest rows"}
+        {state.hasNext ? ", older rows exist" : ", at the oldest rows"}
+      </span>
+    </div>
+  );
+}
+
+/** A refused or unreadable page: no rows (a withheld read is not an empty list), the typed reason, one way out. */
+function PagerRefusal({ pager }: { pager: SlicePager }) {
+  const { refusal, phase } = pager.state;
+  const reason = phase === "unreadable" || refusal === null ? LOCAL_CAUSE_COPY.SNAPSHOT_MALFORMED : refusal.kind === "cursor_reset" ? refusal.code : REFUSAL_CODE[refusal.kind];
+  return (
+    <StateBoundary
+      status="unavailable"
+      reason={reason}
+      actions={
+        <button type="button" className="exec-slice-btn" onClick={pager.startOver}>
+          Start over
+        </button>
+      }
+    />
+  );
+}
+
+function boundaryFor<T>(state: StreamState<T>): {
+  status: "ok" | "loading" | "stale" | "unavailable" | "denied";
+  reason?: string;
+} {
+  switch (state.phase) {
+    case "idle":
+    case "loading":
+      return { status: "loading" };
+    case "live":
+    case "revalidating":
+      return { status: "ok" };
+    case "access_revoked":
+      return { status: "denied", reason: state.cause === null ? "Your access changed." : causeCopy(state.cause) };
+    case "resync_required":
+    case "unavailable": {
+      const why = state.cause === null ? "The stream is not available." : causeCopy(state.cause);
+      return state.data === null ? { status: "unavailable", reason: why } : { status: "stale", reason: `${why} ${POSTURE_COPY.not_confirmed}` };
+    }
+  }
+}
+
+export function SliceScreen({ context, clock, config, lane: injected, revocations }: SliceScreenProps) {
+  const [search] = useSearchParams();
+  const connection = connectionKey(context);
+  const lane = useMemo(() => injected ?? createFixtureLane(context, revocations), [injected, context, revocations]);
+  const { state, receive, retry } = useScopedStream<ScopedRead>({ snapshot: lane.port, connection, clock, config });
+  // UXM08-DEBT-1: a revoked frame or a DENIED snapshot read also empties what the linked screens (Portfolio 360, Alpha Fleet,
+  // Alpha 360) read under this scope, once per entry into the phase. Leaving the page is not a cause and evicts nothing.
+  const revoked = state.phase === "access_revoked";
+  const denied = revoked && state.cause?.origin === "local" && state.cause.code === "SNAPSHOT_DENIED";
+  useEffect(() => {
+    if (!revoked) return;
+    lane.revoke();
+    evictScopedCaches(denied ? "SNAPSHOT_DENIED" : "ACCESS_REVOKED");
+  }, [revoked, denied, lane]);
+
+  const headline = streamHeadline(state);
+  const chip = headline.chip;
+  const boundary = boundaryFor(state);
+  const read = state.data;
+  const pager = useSlicePager(lane, read, connection);
+  // A later page is the server's page of the SAME snapshot (the stream was not asked again); page 1 is the snapshot itself.
+  const paged = pager !== null && pager.state.phase === "ready" && pager.state.position > 1 ? pager.state.page : null;
+  const shown = paged ?? read;
+  const refusedPage = pager !== null && (pager.state.phase === "refused" || pager.state.phase === "unreadable");
+  const pageBody =
+    shown === null ? null : (
+      <>
+        {pager === null || pager.state.phase !== "ready" ? null : <SlicePagerBar pager={pager} />}
+        {pager !== null && refusedPage ? <PagerRefusal pager={pager} /> : <ReadPanels read={shown} search={search} />}
+      </>
+    );
+  const readAt = read === null ? null : readAsOf(read.readAtMs);
+
+  const send = (id: FixtureFrameId, on: string = connection) => receive(fixtureFrame(id), on);
+  const dropped = Object.entries(state.drops).filter(([, count]) => count > 0);
+  const droppedTotal = dropped.reduce((sum, [, count]) => sum + count, 0);
+
+  const actions: ReactNode =
+    boundary.status === "denied" ? (
+      <Link className="exec-slice-link" to={withContext(DEFAULT_ROUTES.access, search)}>
+        Open My access
+      </Link>
+    ) : (boundary.status === "stale" || boundary.status === "unavailable") && state.inFlight === null ? (
+      <button type="button" className="exec-slice-btn" onClick={retry}>
+        Retry once
+      </button>
+    ) : undefined;
+
+  return (
+    <ExecutionSurface kind="deployments" data-screen="slice-v2">
+      <div className="exec-slice">
+        <header className="exec-slice-head">
+          <div>
+            <h1 className="exec-slice-title">Scoped slice</h1>
+          </div>
+          <div className="exec-slice-chips" role="status" aria-live="polite" data-testid="stream-chip">
+            <Flag kind={chip.kind} label={chip.label} />
+          </div>
+        </header>
+        <p className="exec-slice-lane" role="note" title={`${FIXTURE_LANE_LABEL}. ${NOT_CONNECTED_LABEL}.`}>
+          <strong>Fixture: not connected</strong>
+        </p>
+
+        <SectionPanel title="Stream" level={2}>
+          <p className="exec-slice-line">{headline.line}</p>
+          {headline.next === null ? null : <p className="exec-slice-next">{headline.next}</p>}
+          <dl className="exec-slice-facts" data-testid="stream-facts">
+            <div>
+              <dt>Data</dt>
+              <dd>
+                {POSTURE_COPY[state.posture]}
+                {readAt === null ? null : <> Read {formatAsOf(readAt)}.</>}
+              </dd>
+            </div>
+            <div>
+              <dt>Notices</dt>
+              <dd title="Received, folded into an owed read, reads started">
+                {state.counters.revalidates} received, {state.counters.coalesced} folded into an owed read, {state.counters.readsStarted} reads started
+              </dd>
+            </div>
+            <div>
+              <dt>Heartbeats</dt>
+              <dd title="Liveness only">{state.counters.heartbeats}</dd>
+            </div>
+            <div>
+              <dt>Dropped</dt>
+              <dd>
+                {droppedTotal === 0
+                  ? "None"
+                  : dropped.map(([reason, count]) => `${DROP_COPY[reason as keyof typeof DROP_COPY]} ${count}`).join(", ")}
+              </dd>
+            </div>
+          </dl>
+          {state.notice === null ? null : (
+            <details className="exec-slice-details">
+              <summary title="The quality of the notice, not of the data">Last notice</summary>
+              <ul className="exec-slice-lines">
+                <li>Completeness {state.notice.quality.completeness.toLowerCase()}</li>
+                <li>Freshness {state.notice.quality.freshness.toLowerCase()}</li>
+                <li>Coverage {state.notice.quality.coverage.toLowerCase().replace(/_/g, " ")}</li>
+                <li>Confidence {state.notice.quality.confidence.toLowerCase()}</li>
+                <li>
+                  {state.notice.quality.sourceAsOfMs === null
+                    ? "The source did not state its own time"
+                    : `Source time ${formatAsOf(state.notice.quality.sourceAsOfMs)}`}
+                </li>
+              </ul>
+            </details>
+          )}
+          <fieldset className="exec-slice-fixture">
+            <legend className="exec-blk-sr">{FIXTURE_LANE_LABEL}</legend>
+            <div className="exec-slice-buttons">
+              {FIXTURE_FRAME_IDS.map((id) => (
+                <button key={id} type="button" className="exec-slice-btn" onClick={() => send(id)}>
+                  {FRAME_BUTTON[id]}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="exec-slice-btn"
+                onClick={() => {
+                  for (let i = 0; i < BURST; i += 1) send("N09-REVALIDATE");
+                }}
+              >
+                {BURST} notices at once
+              </button>
+              <button type="button" className="exec-slice-btn" onClick={() => send("N09-REVALIDATE", "previous-connection")}>
+                Late frame from the previous scope
+              </button>
+              <button type="button" className="exec-slice-btn" onClick={() => receive({ ...(fixtureFrame("N09-REVALIDATE") as object), unexpected: true }, connection)}>
+                Malformed frame
+              </button>
+            </div>
+            <label className="exec-slice-dial">
+              Next snapshot read{" "}
+              <select defaultValue="ok" onChange={(event) => lane.setNext(event.target.value as NextRead)}>
+                {(Object.keys(NEXT_READ_LABEL) as NextRead[]).map((key) => (
+                  <option key={key} value={key}>
+                    {NEXT_READ_LABEL[key]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
+        </SectionPanel>
+
+        {boundary.status === "denied" ? (
+          <StateBoundary status="denied" reason={boundary.reason ?? "Your access changed."} actions={actions} />
+        ) : boundary.status === "loading" ? (
+          <StateBoundary status="loading" />
+        ) : boundary.status === "unavailable" ? (
+          <StateBoundary status="unavailable" reason={boundary.reason ?? "The stream is not available."} actions={actions} />
+        ) : read === null ? null : boundary.status === "stale" ? (
+          <StateBoundary status="stale" reason={boundary.reason} actions={actions}>
+            {pageBody}
+          </StateBoundary>
+        ) : (
+          pageBody
+        )}
+      </div>
+    </ExecutionSurface>
+  );
+}
+
+/** Route entry: the URL context (`workspace_id`, `env`) is what the lane is asked to authorize. */
+export default function SliceRoute() {
+  const [search] = useSearchParams();
+  const workspaceId = search.get("workspace_id");
+  const environment = search.get("env");
+  const context = useMemo<SliceContext>(() => ({ workspaceId, environment }), [workspaceId, environment]);
+  // `?fixture=chain` serves the published 3-page chain (RV-12 `fleet-owner-paper-chain`) instead of the one-page example. It is
+  // read here and nowhere else, and it is not a context key: links to other screens do not carry it.
+  const chain = search.get(SLICE_FIXTURE_PARAM) === SLICE_FIXTURE_CHAIN;
+  const lane = useMemo(() => (chain ? createFixtureLane(context, PAGE_REVOCATIONS, chainScopedRead, fixtureChain()) : undefined), [chain, context]);
+  return <SliceScreen context={context} revocations={PAGE_REVOCATIONS} lane={lane} />;
+}

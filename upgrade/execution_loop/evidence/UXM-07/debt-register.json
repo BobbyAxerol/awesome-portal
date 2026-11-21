@@ -1,0 +1,575 @@
+{
+  "phase": "UXM-07",
+  "updated": "2026-10-23",
+  "reconciled_at_head": "799effc8",
+  "open": [
+    {
+      "id": "DEBT-UXM07-008",
+      "title": "HIFI fidelity rows not fixed after pass 2 (class B, MINOR/uncertain)",
+      "where": "hifi-comparison-2026-10-18.md section 'Pass 2 (2026-10-19)': Chua lam. Refresh 2026-10-21: T-B5 Table/Expand now exist (charts/ChartTools.tsx on Workbench, Compare, Live, Canary, Alpha Performance; expand height fixed in 693ee04d); the new copy of RV-11, the Exit control and audit A/B was approved by Bobby on 2026-10-21 (BOBBY_DECISIONS_2026-10-21 row 1) and the Fleet defaults (row 4) stay",
+      "consequence": "visual polish only; no data or authority effect. Passes 1-2 and the audit round fixed most rows. Remaining: T-B5 Y labels keep exact decimals as published (owner/Codex decision), T-B5 Table/Expand buttons (no table view), L-B7 stage bars (FE-029 data), R-B5 body colours already themed, A360 Open orders column (no source), USR-B2 per-user Access link (no view), USR-B5 kept, OP-5 kept as a reason-only lock because the local Range changes the window (lifting Range into the URL is optional), CK-2 (no font role)",
+      "owner": "Claude for rows with no dependency; owner/Codex for exact-decimal Y labels",
+      "status": "STILL_OPEN (polish, no data effect)",
+      "next_action": "Owner/Codex decides exact-decimal Y labels (T-B5) and the Open orders source (A360); L-B7 waits for FE-029 data; Claude can still do OP-5 (window into the URL) and the per-user Access link if Bobby wants them, otherwise leave as polish."
+    },
+    {
+      "id": "DEBT-UXM07-011",
+      "title": "Readers for self-eligibility/self-navigation/currency exist but are not wired",
+      "where": "Done: readers 4b12bb0c, W1/W3 a68f17a6, self-only route 9c90e68a, projection times 84f0ee53, W2 9d0eb97f (tokens are the served feature ids), W6 b2e00eea (Portfolio 360 Actions rail asks the self-eligibility batch once, only while open and with a workspace in the address, for PORTFOLIO x initial_grant, top_up, recall_partial, recall_full, adjust_target_budget; ALLOWED is a sentence, never an enabled button; tests in portfolio/railEligibility.test.tsx). Remaining: (a) access/index.tsx still prints \"Not published (FE-015)\" for per-action eligibility: the Access page asks per resource and action and has neither, so it deliberately does not read; \"Not read yet by this screen\" is Bobby's to approve; (b) controls with no action in the 28-action vocabulary keep Not published (FE-015) with the missing item named: Return capital, Lock allocation, Deploy version (Portfolio rail), Rotate credential (Account 360, REVISE_BINDING family not commissioned), acknowledge/mitigate/resolve (Operations); (c) the cockpit StepUpBlock has no caller: no cockpit decision names a capital action; (d) the lab double answers the rail question with a typed 404 (the canonical fixture states a different question, and the double invents no row), so the lab shows the unavailable state only; the other states are pinned in unit tests built from the canonical batch case.",
+      "consequence": "FE-037 stays provisional until Codex answers Q1-Q5 in consumer-review-self-contracts-2026-10-19.md; wiring plan W1-W8 is documented, not built. Navigation projection must stay menu-only (RK-1). Wording decision owed (Bobby/Codex): the Access cell 'Not published (FE-015)' for per-action eligibility may be stale now that portal.self-eligibility.v1 is published; proposed 'Not read yet by this screen' until the route is served and wired.",
+      "owner": "Bobby (Access cell wording) and Codex/PM (missing eligibility actions); Claude for the rest",
+      "status": "NARROWED (W6 wired on the Portfolio rail; typed absences listed)",
+      "next_action": "Codex/PM: say which actions (if any) cover return, lock, deploy-version, binding credential rotation and the operator writes, or confirm none; and which approval gate carries a capital action for the cockpit step-up. Bobby: Access cell wording and the proposed reason-class copy used on the rail. Claude: wire each new action when published; re-run the rail tests."
+    },
+    {
+      "id": "DEBT-UXM07-013",
+      "title": "Reader and testkit findings from the F5 closing round",
+      "where": "Closed: testkit/schema.ts IGNORED now holds 'discriminator' (ad118f15) and the AccessEffective test no longer writes a temp schema copy. Remaining and verified at HEAD: components/tradeReplayModel.ts:55 str() stringifies a JSON number (pinned KNOWN GAP in v2/screens/alpha/replay/replay.l2l3.test.tsx:211); api/subjectActivity.ts:69 treats a non-array records as []; v2/screens/portfolios/format.tsx:86 MoneyList keys by currency (duplicate-key warning when a currency repeats); V1 features/admin/accountApi.ts:163 roster returns [] for a malformed body (Users V2 uses rosterReader.ts)",
+      "consequence": "Replay/Users/Portfolios edge cases only; no secret or authority effect",
+      "owner": "Claude (FE files); testkit owner for IGNORED",
+      "status": "FOUR CASES FIXED 2026-10-22 (Codex FIXTURE_REVIEW_DATA handoff): decimalText for replay prices (a JSON number is refused, KNOWN GAP test flipped), subject-activity records container, duplicate-currency keys, V1 roster malformed answer; regressions in src/execution/debt013.test.tsx. Remaining part of this debt, if any, is not changed here.",
+      "next_action": "Claude, next time those files are touched: refuse a numeric price, make a non-array records a typed unavailable, key MoneyList by index and currency, give the V1 roster a typed error. tradeReplayModel and accountApi are V1-shared: same deliberate-exception question as DEBT-UXM07-025 if V1 pixels or copy change."
+    },
+    {
+      "id": "DEBT-UXM07-016",
+      "title": "V2 pixel baselines exist for 61 cells; Fleet Board/Map views, the exit-request form, the pending-control preview form and a submitted Sandbox note still have none",
+      "where": "Done: fe84ee69 + bc83e84b + 2fb75539 (46 images) and, since 5b9e2d32 (cells) / 14883423 (images), 15 more: New request page (1440, 390), the request drawer (docked 1600, overlay 1440 and 390), an open NaWhy disclosure (Users, 1440 and 390), the scoped slice pager on page 2 (1440, 390), the Operations dock and the incident drawer (1600, 1440, 390 each). All e2e/execution-v2-visual.spec.ts (chromium-v2, pinned image mcr.microsoft.com/playwright:v1.62.1-noble, recorder scripts/portal-web-visual-record-v2.sh, --workers=2), 61 files; recorded, then the WHOLE spec compared twice in a row, both green (v2-baselines-2026-10-21/README.md, section 'Third pass'; that run predates the merge of a512d55d). Every new image was looked at; the one product defect found is fixed in b74a4d29 (scoped slice Financial data cell). The post-merge pending item is DONE (refresh 2026-10-21 evening): after a512d55d the recorder re-recorded v2-access-390 (54ebc7ac; 1440 and the Compare cells compared identical), v2-workbench-paper 1440/390 (f6b2cc6d) and v2-users-390 / v2-alpha-360-orders-390 (9cf6b04b, DEBT-031), each time with the whole 61-cell spec compared twice, green; git ls-files confirms 61 snapshot files. Not covered: Fleet Board/Map views and drawer, Workbench exit-request form, pending-control preview form, Sandbox note submitted",
+      "consequence": "A pixel regression on those four states would not be caught; the baselines are FIXTURE_LAB over BFF_DOUBLE and say nothing about a real read",
+      "proposed": "Add cells for the four listed states to execution-v2-visual.spec.ts the same way (act step + recorder); review the images; restore zero-diff files",
+      "owner": "Claude (FE) at R2",
+      "status": "STILL_OPEN (narrowed 2026-10-21 evening: post-merge re-record done; four uncovered states remain)",
+      "next_action": "Claude: add cells for the four uncovered states (Fleet Board/Map views and drawer, Workbench exit-request form, pending-control preview form, submitted Sandbox note) when next touched; a whole-suite compare on the final SHA is tracked under DEBT-UXM07-037. No Bobby decision needed."
+    },
+    {
+      "id": "DEBT-UXM07-018",
+      "title": "Missing conformance suite for readLiveFull (V1 body); the Paper workbench reader and the New request outcomes now have theirs",
+      "where": "Closed since f4770841 (lane SHA of efe0f0d0): v2/screens/workbench/workbench.conformance.test.ts (92 cases; execution-paper-read.v1 as oracle; 2502 schema-invalid mutations tried, 0 read looser; the reader is v2/readers/paperRead.ts, wired at getPaperWorkbenchProfile) and v2/screens/request/request.conformance.test.ts (176 cases; ApprovalCreateResponse, Problem and ApprovalCreateRequest as oracles; 564 schema-invalid bodies, 0 read looser; the readers are v2/readers/approvalCreate.ts and the port's marks, read by model.readOutcome; the lookup replay now uses the strict reader). The differences from the schemas that were pinned in each suite's ledger and listed to Codex as FE-073 and FE-074 (backend-requests.md) are CLOSED: Codex published the five Paper members and the create-request outcomes in e1fb7906 (lane SHA of c02f63d8) and the FE consumes them (2f8eec78, lane SHA of c942919f) exactly as published (the five exceptions X-1, SI-1, SI-2, SI-3 and X-2 are removed from both suites; only S-1 stays in the request ledger and S-1/R-1 in the workbench ledger; workbench L3 3550 schema-invalid bodies and request L3 632, 0 read looser). Still without its own L0-L3 file: the Live V1 body readLiveFullByVersion (liveFull.ts), covered at dispatcher level only (readers/dispatch.conformance.test.ts: 6 V1 bodies x 8 routes). Refresh 2026-10-21 evening: re-checked with git ls-files; there is still no liveFull.conformance file (src/execution/liveFull.ts has only liveFull.test.tsx plus the dispatcher-level readers/dispatch.conformance.test.ts); every other reader under v2/readers has a *.conformance.test.ts",
+      "consequence": "The Live V1 body is proven against hand-written doubles and the dispatcher's cases, not against its published schema; a schema drift there would not fail a test",
+      "proposed": "Decide whether dispatcher-level coverage is enough for the V1 body; if not, add liveFull.conformance.test.ts (L0-L3, schema as oracle) and a matrix row",
+      "owner": "Claude (FE)",
+      "status": "STILL_OPEN (narrowed 2026-10-21 evening: only the Live V1 body readLiveFull remains)",
+      "next_action": "Claude: decide with the lead whether readLiveFull needs its own file (the V1 body is behind the same fail-closed reader the V2 screens no longer use); the matrix rows for the two new suites are in conformance-matrix-2026-10-19.md."
+    },
+    {
+      "id": "DEBT-UXM07-026",
+      "title": "Fleet realtime notice source is NOT_COMMISSIONED",
+      "where": "BE-CLAUDE-2026-10-20/BE-P17.md (snapshot source: notice_origin PORTAL_PUBLICATION_REVISION, edge_notice_source NOT_COMMISSIONED, reasons NO_EDGE_NOTICE_SOURCE, quality PARTIAL/UNKNOWN); apps/control-api/src/execution-v2/alpha-fleet-realtime.service.ts",
+      "consequence": "The alpha_fleet_overview stream only says 'a new Manager revision exists'; it carries no market, order or trade-server delta, and it stays dark until a stream.subscribe grant exists (Bobby 2026-10-21: whole-fleet viewers only). CODEX_LANDING_REVIEW_2026-10-21 section 5 confirms this is not resolved by a fixture or a READ grant",
+      "proposed": "A source owner (Edge) commissions a notice source; Codex/Claude then change edge_notice_source in one contract revision. Until then the FE keeps the typed PARTIAL/UNKNOWN posture.",
+      "owner": "Edge / source owners (Codex coordinates)",
+      "status": "STILL_OPEN (kept 2026-10-21 evening)",
+      "opened": "2026-10-21",
+      "next_action": "Edge/source owner: commission a notice source and its stream authority. Codex (CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21 section 5): the whole-Fleet snapshot and STREAM operations already exist in execution-alpha-fleet-realtime.openapi.json (BE-P17), so missing authority, eligible publication/notices and connected proof must not be called a missing API; the old recovery-only window and the native READ grant do not authorize whole-Fleet STREAM or load. Claude: no change; the FE keeps PARTIAL/UNKNOWN. Separate Codex CHANGE FLEET-1 (useFleetDataset.ts shared-flight race after abort) is a Claude FE fix, tracked in that review, not in this entry."
+    },
+    {
+      "id": "DEBT-UXM07-027",
+      "title": "Fleet realtime revokeSession is wired for in-process revoke and logout paths; the cross-process hint (native revoke / acceptance-session CLI) is not",
+      "where": "Wired by 966fc18a (BE-P18, 2026-10-21; BE-CLAUDE-2026-10-20/BE-P17.md section 10): auth/stream-revocation-hints.ts carries sessionEnded / userAuthorityChanged after commit and outside the transaction from AuthService.logout, changePassword, retireInvalidSession, AdminService revoke/disable/resetCredential, AccountLifecycleService and ExecutionAccessService.revoke; AlphaFleetRealtimeService registers as a listener and closes the client with a terminal frame in the same tick. Tests: be-p18-stream-revocation-hints.spec.ts (21) and the PG spec be-p18-stream-revocation-hints.pg.spec.ts, which ran in the targeted PG lanes (380/380, then 328/328). Remaining (BE-P17.md section 10, 'Con no'): ExecutionAccessService.revokeReviewedManagerDomainGrants and revokeAcceptanceSession run in the separate CLI process (execution-native-revoke), where the listener set is empty, so the hint is a no-op there; the running server relies on the per-poll fence (<= 5 s) as in BE-P10 section 5. Delegated child grants of a revoked grant also end only by the fence.",
+      "consequence": "Revocation always takes effect through the per-poll and per-write scope fence. In-process paths now close the stream in the same tick; for a revoke issued from the native revoke / acceptance-session CLI the real latency is still one poll cycle (up to 5 s), not an immediate purge. Getting below one poll across processes needs a DB LISTEN/NOTIFY channel, which is new code that has not been built and has not been proposed.",
+      "proposed": "Narrow, not closed. If Bobby/Codex want sub-poll revocation from the CLI, propose DB LISTEN/NOTIFY (new code, Codex review first); otherwise accept the 5 s fence bound for CLI revokes and record that acceptance here.",
+      "owner": "Claude (backend lane, Codex review)",
+      "status": "NARROWED (in-process hint wired 966fc18a; cross-process CLI hint needs DB LISTEN/NOTIFY, not built)",
+      "opened": "2026-10-21",
+      "closed_part": "966fc18a (BE-P18): revokeSession / revokeUser wired from the in-process logout, password-change, admin and access-revoke paths, fenced and non-throwing.",
+      "next_action": "Decision owed (Codex/Bobby): accept the <= 5 s fence bound for CLI revokes, or request a LISTEN/NOTIFY design. No Claude change until then."
+    },
+    {
+      "id": "DEBT-UXM07-028",
+      "title": "B1 Operations queue: EXPLAIN gate done and PASS; open: view-141 ordered-index decision, broad-scope page sorts about 340k rows, include= opt-in",
+      "where": "UXM-07/b1-handoff.md lines 93, 108, 137, 140 (afc5864e; index migration 145, cb8ca689); apps/control-api Operations queue read. Refresh 2026-10-21 evening: the large-scale EXPLAIN gate ran in 343f5bbb (BE-CLAUDE-2026-10-20/BE-P18-b1-explain.md, verdict PASS: 1,000,000 operations, 200,000 incidents, 599,978 links, warm cache, one sequential request at a time; scope predicate rewritten as a text[] semi-join, scope index, whole-request deadline). Codex reviewed (CODEX_CR02_B1_REVIEW_RETURN_2026-10-21.md): semi-join/index ACCEPT source semantics; CHANGE items fixed in 4ebc4d9e (deadline re-checked after the arming round trip and before COMMIT; observed evidence restored with the migration 148 -> 149 rename note; index file bytes identical, sha256 f306ecc9...); the scope index is migration 149 in this lane (90f84643)",
+      "consequence": "The G4/G5 gap is closed: no EXPLAIN gap remains on a real 10^6-link table. Still true: (1) the broad-scope page query sorts the whole in-scope set (about 340k rows, top-N heapsort on the to_char expression of the migration-141 view, about 0.6 s page, request median 2137 ms of the 2500 ms budget, big/broad/sort asc); an index in sort order needs an IMMUTABLE to_char function and a CREATE OR REPLACE VIEW of migration 141, which is Codex's decision; (2) up to about 7 statements per request stay always-on, with no include= opt-in (question 4, default 'no', undecided by Codex); (3) the numbers are warm-cache, sequential, synthetic TEST_ONLY, not concurrent, cold or connected; (4) the composition-path test (composite_revision / workflow_digest on a large body, question 6) is not mentioned in BE-P18-b1-explain.md and is not verified here.",
+      "proposed": "Codex decides (a) the view-141 ordered index (IMMUTABLE to_char + CREATE OR REPLACE VIEW) versus accepting the 0.6 s broad-scope sort, and (b) include= opt-in versus always-on; Claude then implements the chosen migration and re-runs the gate.",
+      "owner": "Codex (decision and review); Claude (PG cell run)",
+      "status": "NARROWED (EXPLAIN gate done, PASS; ordered-index and include= decisions with Codex)",
+      "opened": "2026-10-21",
+      "closed_part": "343f5bbb + 4ebc4d9e + 90f84643: EXPLAIN/10^6 gate, total deadline, evidence restored; PG lanes 380/380 and 328/328 cover B1 148/149.",
+      "next_action": "Codex: decide the view-141 ordered index for the broad-scope page sort (about 340k rows) and include= opt-in. Claude: implement the decision, add the composition test if wanted, re-run scripts/be-p18-b1-explain.sh."
+    },
+    {
+      "id": "DEBT-UXM07-029",
+      "title": "NET_PNL series can double a shared account's PnL: the dark reducer exists; the selected-producer mapping does not",
+      "where": "BE-CLAUDE-2026-10-20/BE-P16.md row 'Dedup tai khoan vat ly cua series (#11)'; apps/control-api manager-series-observation.ts and the dataset reader. Refresh 2026-10-21 evening: BE-P21 dark strict economic-source reducer f0b56371, with the two Codex-requested fixes in 0201df80 (typed ECONOMIC_SUM_OVERFLOW refusal; the set digest binds the sorted expected census identities), both ACCEPTED by Codex at 17:18 UTC (CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md). It implements the PM rules (same source_id counted once, changed content = REPORT_SOURCE_CONFLICT, overlapping economic leaves = REPORT_SOURCE_OVERLAP, only validated disjoint populations sum, missing = PARTIAL not zero; PM_OWNER_ACK_AND_NET_PNL_RETURN_2026-10-21.md). It is PROPOSAL_NOT_A_PRODUCER_MAPPING: no runtime wiring, and the manager-series path and the dataset reader still dedupe NET_PNL by fact_id only",
+      "consequence": "Unchanged until a producer is selected: no source sends two PnL facts for one shared account yet, so nothing is doubled today. PM found no accepted wire mapping for economic_account_ref / ownership_partition_ref and they must not be equated to account, deployment or portfolio by convenience; the PM/Edge examples 14/28/null are TEST_ONLY.",
+      "proposed": "PM/Edge return the exact selected-producer mapping (source_id/leaves, mode/venue, logical/physical scope, currency/basis, cutoffs, window/methodology, revisions, cost layers, original/correction provenance) with genuine reconciled examples; Core reviews; then Claude wires the reducer into the series path and the dataset reader with a PG test.",
+      "owner": "Core/PM (statement semantics); Claude/Codex (reader)",
+      "status": "NARROWED (dark reducer f0b56371/0201df80 exists; selected-producer mapping from PM/Edge remains)",
+      "opened": "2026-10-21",
+      "closed_part": "f0b56371 + 0201df80: reducer, overflow refusal, census-bound digest (vitest 68/68, dark).",
+      "next_action": "PM/Edge: selected-producer mapping. Claude: nothing to wire before it; keep unknown attribution typed unavailable/partial."
+    },
+    {
+      "id": "DEBT-UXM07-030",
+      "title": "The scoped slice pager is fixture-only: the contract has no page operation",
+      "where": "5bc040f6 (keyset Newer/Older pager, canonicalLane FIXTURE_LAB page port, ?fixture=chain); UXM-08/README.md request A (generated/execution-scoped-realtime.d.ts paths = Record<string, never>)",
+      "consequence": "The pager walks the published 3-page chain from fixtures; no operationId/route exists to fetch the next page of a real scoped read, so on a real source the screen has no way to follow 'More pages exist'. Do not call it real-source accepted (CODEX_LANDING_REVIEW section 5)",
+      "proposed": "Codex publishes the page operation (UXM-08 request A); Claude swaps the lane's page port for the HTTP one and re-runs scopedRead.chain.conformance",
+      "owner": "Codex (operation); Claude (port)",
+      "status": "STILL_OPEN (kept 2026-10-21 evening; premise corrected by Codex)",
+      "opened": "2026-10-21",
+      "next_action": "Codex disposition (CODEX_DEBT030_042_DISPOSITION_2026-10-21.md): the blanket 'no page operation' claim is superseded; listAlphaFleet with After/Before/Limit is published in packages/contracts/openapi/execution-manager-lists.openapi.json:10 (:66-75) and snapshot/stream operations exist in execution-alpha-fleet-realtime.openapi.json:9,162. Claude: map the slice's ScopedPagePort to the correct existing generated HTTP operation and qualify source/authority, keeping the Manager dataset response and ManagerScopedResponse envelopes distinct; return the exact operation/envelope mapping for Codex page-port review. Do not create a duplicate page endpoint. The pager stays FIXTURE_LAB until then."
+    },
+    {
+      "id": "DEBT-UXM07-031",
+      "title": "Phone Users and Alpha 360 Orders & Fills are bounded; the Users roster is keyset-paged (BE-P23); the Alpha order card is two-column (664b82af); remaining: re-record the cells the two-column Alpha card changed",
+      "where": "89536bda: v2/usePhoneRows.ts (the 660px query of Live and the Blotter, plus a window), screens/users/index.tsx (ten cards, Load more draws ten more of the roster already read; above 660px unchanged at 50 per Load more), screens/alpha/OrdersTab.tsx (three cards per table, Load more draws three more of the loaded rows and only then asks the server; the focused order is always inside the window). Measured on a host build at 390 (host Playwright, 6 orders and 3 fills in the double; 123 accounts): Users 7,729 -> 2,179 px, Alpha 360 Orders & Fills 4,522 -> 3,836 px (360: 4,600 -> 3,888); at 1440 both are byte-for-byte the same height (3,065 and 1,841 px); after one Load more at 390 Users is 20 cards (3,560 px). No new sentence (existing pager caption and Load more). Tests: users.test.tsx and alpha.test.tsx (phone window, Load more, no second read), plus testHygiene, absentValues, failClosed, v2Hygiene, linkTargets, titleAbsence, cardsTable, flagOff, flagOn green; tsc has no error in the touched files. BE-P23 (2026-10-21): the roster read is paged end to end. GET /api/admin/accounts?limit&cursor&q&role&state (apps/control-api/src/admin/account-roster-page.ts, UsersRepository.rosterPage; keyset on the UNIQUE username served by portal_users_username_key, no migration; limit 1..200 default 50; signed KeysetCursorCodec cursor bound to owner, filters and limit; page {limit, returned_count, has_more, next_cursor} and exact roster-wide counts from the same statement; no query keeps the unpaged answer for the V1 screen, additive in portal-account-lifecycle.openapi.json). Users V2 reads 50 rows (ten at 660px and narrower), Load more sends the cursor; search, role and state are the server's filters; the cards and pickers show the server's counts; a link to an account on a page not yet read opens from its own detail read. No new sentence. Tests: be-p23-account-roster-page.spec.ts (17), portal-account-lifecycle.spec.ts, users.test.tsx (reader L0-L3, screen, double), fixtureBff schema oracle; PG half be-p23-users-roster-keyset.pg.spec.ts written, not run | 664b82af: css/alpha.css (@media 660px, .exec-alp2-cardgrid on the Orders and Fills CardsTable; optional className on CardsTable): the Blotter two-column treatment; Alpha 360 Orders & Fills at 390 is 3,754 px (was 3,836). Test: alpha/layout.test.ts.",
+      "consequence": "Pixel side only: v2-alpha-360-orders-390 changes again (two-column cards); the Users V2 cells are expected zero diff (verify compare). The V1 Users screen still reads the unpaged roster (no query); 360 px is not baselined.",
+      "proposed": "Lead: one verify-mode compare of the V2 spec; re-record only the cells that changed (clean worktree, recorder with grep). Retire the unpaged answer when the V1 Users screen goes.",
+      "owner": "Claude (re-record, one verify compare)",
+      "status": "STILL_OPEN (narrowed 2026-10-21: code done for roster paging, Alpha two-column card and phone windows; PG spec 27/27 on real PG; remaining: baseline re-record of cells changed by 664b82af and the UX polish batch)",
+      "opened": "2026-10-21",
+      "closed_part": "2026-10-21: phone windows (89536bda), Users V2 cells re-recorded (9cf6b04b); BE-P23 roster keyset in code and green on real PG (be-p23 spec 27/27); Alpha two-column card in code (664b82af)."
+    },
+    {
+      "id": "DEBT-UXM07-037",
+      "title": "Landing happened (canonical 218b9428, ff-only, 16:33 UTC); open: the integrator carries the post-freeze slices and one changed-code freeze",
+      "where": "HOOK_RESULT_2026-10-20.md (hook a896bd08 on tip 9d15755f; later code, test and visual commits 5bc040f6, a13b4fa6, 97454777, fe84ee69, bc83e84b, 2fb75539, 63201e94, 1328d1b7, 6da309df, 9810f8ef, ec228e53, dd9609af); F1_F9_CLOSURE row F4 (landing not done); CODEX_LANDING_REVIEW sections 6, 8, 10. Refresh 2026-10-21 evening: Codex landed the frozen candidate ff-only into the canonical branch; canonical 218b9428 (committed 2026-10-21 16:32:56 UTC; present on docs/research-loop-plan and chore/elp210-landing-rebase; not an ancestor of the post-freeze lane claude/post-freeze-20261021, which carries the same changes under rebased SHAs). Codex's CODEX_BE_P21_P22_REVIEW_AND_ONE_WRITER_RETURN_2026-10-21.md confirms 'Canonical qualified landing is 218b9428' and that later slices are not silently covered by that gate",
+      "consequence": "ELP2-10 stays NOT_MET. What is left is no longer the landing: the post-freeze slices need their own carry and one changed-code freeze scheduled by the integrator (CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW section 1: 'the integrator schedules a later changed-code freeze once'): BE-P21 0201df80, BE-P22 bb541418/7d770f21/11bd501b, M-1 quiet gate 2c1b8717 and receipt a0b885b6, DEBT-044/045 e299c3df, DEBT-031 89536bda/9cf6b04b, and the FE consumption 2f8eec78. Their focused results exist (vitest; PG 11 files / 328 tests); the combined gate does not.",
+      "proposed": "Integrator (Codex): carry the post-freeze slices, schedule one changed-code freeze, merge --ff-only, record the resulting SHA. Claude: one whole-suite pinned compare on that final SHA and its receipt.",
+      "owner": "Claude (gates, carry); Codex integrator (ff-only landing, native client SHA)",
+      "status": "NARROWED (landing done at 218b9428; integrator carries the post-freeze slices)",
+      "opened": "2026-10-21",
+      "next_action": "Codex integrator: carry post-freeze slices + one changed-code freeze + ff-only. Claude: whole-suite compare receipt on the final SHA (the 61-cell V2 spec is green twice at 9cf6b04b).",
+      "closed_part": "2026-10-21: on the frozen SHA d58361ea (tree 64bcd565): full R2 hook exit 0 (contracts 90/1,577, control-api 480/9,729 + restore drill) and whole-suite pinned-image visual compare 683 passed / 0 failed / 16 skipped; logs sha256 afb8290d… and 4a1be04b… in ELP2-10/CLAUDE_FROZEN_HOOK_RUN_2026-10-21.md and UXM-07/visual-suite-runs-2026-10-21.md. Codex's committed native-transport fix 9d88e40a is carried path-level at 3394b04f in the post-freeze lane. 2026-10-21 16:33 UTC: landing into the canonical branch done at 218b9428 (ff-only, integrator)."
+    },
+    {
+      "id": "DEBT-UXM07-038",
+      "title": "Status rows that still read 'open' or 'not run' after later work",
+      "where": "BE-CLAUDE-2026-10-20/HANDOFF_TO_CODEX.md section 10 (Core009 zero installs, HOOK_RESULT does not exist, V2 baselines unwritten) although section 11 says it was updated; F1_F9_CLOSURE_2026-10-21.md rows F4 (baseline anh chua), F6/F7 (slice pager, two time styles, 11 title= reasons); UXM-07/README.md debt line of 2026-10-19; CODEX_LANDING_REVIEW section 5 lists the superseding commits (a13b4fa6, 5bc040f6, 97454777, fe84ee69)",
+      "consequence": "A reader who trusts the old rows rebuilds work that exists or doubts evidence that exists",
+      "proposed": "Keep the history rows, add one dated current-status table to HANDOFF section 10 and point F1_F9 F4/F6/F7 and the UXM-07 README to DEBT_RECONCILIATION_2026-10-21.md",
+      "owner": "Claude",
+      "status": "STILL_OPEN (new 2026-10-21)",
+      "opened": "2026-10-21"
+    },
+    {
+      "id": "DEBT-UXM07-042",
+      "title": "Eligibility vocabulary has no action for several rail and operator controls",
+      "where": "readers/accessSelf.ts ELIGIBILITY_ACTION_RULES (28 actions): no action for returning capital (capital.return_capital exists in ACCESS_ACTIONS but not in the eligibility vocabulary), locking an allocation, starting a version on an account (deployment.register registers an instance), rotating a binding credential (REVISE_BINDING, COMMAND_FAMILY_NOT_COMMISSIONED), acknowledge/mitigate/resolve an incident",
+      "consequence": "Those controls cannot say why they are off from a server fact; they keep Not published (FE-015) with the missing item named.",
+      "proposed": "Codex/PM publish an action (and its family) for each control they want eligibility for, or confirm that none exists.",
+      "owner": "Codex / PM (vocabulary); Claude wires on publish",
+      "status": "PARTIAL_SOURCE_DELIVERY (2026-10-22: incident advisory published; other controls remain explicitly NOT_COMMISSIONED; consumer/install pending)",
+      "opened": "2026-10-21",
+      "next_action": "Codex source support: GET /operations/incidents/:incident_id/eligibility, executionIncidentActionEligibilityGetV1 / IncidentActionEligibility; canonical open/mitigation_ready/resolution_ready/resolved fixtures. Existing Portal ADMIN workflow only, exact POST hash/version checks and SCOPED_V2 refusal retained. Actual TypeScript build, disposable incident HTTP/workflow4/4, existing boundary4/4, fresh migrations/restore and exact cell cleanup PASS 2026-10-22. Claude consumes sibling route in existing rail, not maintenance.execute or a new grant action. Return capital, allocation lock, deployment activation and credential rotation remain NOT_COMMISSIONED as CODEX_DEBT030_042_DISPOSITION_2026-10-21.md; never alias recall/register to them. Receipt: evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md. Source-only; runtime/consumer/browser pending."
+    },
+    {
+      "id": "DEBT-UXM07-043",
+      "title": "Access text safety: the strict readers refuse what the access producer admits",
+      "where": "control-api access.contract.ts accessText (no bidi, zero-width, C1 or whitespace-only check) against the readers accessSelf/accessEffective/commandCurrency, which refuse the whole read for one such string (reader stricter than the schema, named in their conformance suites)",
+      "consequence": "One grant, selector or id carrying such a character voids the whole self read for that member. The Manager dataset was fixed the same way in 27b42bd2; accessText is shared with stored-row parsing, so tightening it could make existing rows unreadable.",
+      "proposed": "Tighten only the WRITE side (grant proposals, previews, revokes) and audit stored rows first; commandCurrency producer parity is not yet audited.",
+      "owner": "Codex (Bobby-assigned local write validation); Claude consumer",
+      "status": "SOURCE_TESTED / NOT_INSTALLED (2026-10-22)",
+      "opened": "2026-10-21",
+      "next_action": "Research-only READ ONLY audit 2026-10-22T10:50:03.503Z: 5 grant_fact rows, 0 unsafe/whitespace-only/malformed fields; no values or IDs emitted. Input-only AccessWriteText/WriteSelector/WriteChange now reject the FE unsafe set without rewriting stored/read schemas, opaque revisions or password bytes. Boundary9/9 and OpenAPI/Zod contract71/71 PASS. Receipt: evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md. Not production/stable audit or runtime install; commandCurrency producer parity remains separately unaudited."
+    },
+    {
+      "id": "DEBT-UXM07-045",
+      "title": "M-1 access · canary fails 2 of 2 even alone on the fixture lane",
+      "where": "measurements M-1a receipts (access · canary)",
+      "consequence": "One route cannot be measured; unknown whether the cause is the harness or a product defect on /administration/my-access with the canary key.",
+      "proposed": "Reproduce in the harness with a trace, decide product defect vs fixture gap, fix or document.",
+      "owner": "Claude",
+      "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
+      "pre_commit_hook_blocks": false,
+      "status": "UNREPRODUCED / CAUSE_UNKNOWN (passes in the scopes listed under narrowed; trace on failure added; no cause established, product defect not excluded)",
+      "narrowed": "2026-10-21: the dist-v2 recorded in the M-1 receipt (index.html sha256 a7510937...) was rebuilt from the d832a88e tree and is byte-identical, and with it access · canary passes alone (11.7 s, 1 worker, trace on) as do canary-guard and canary-v2body; on the post-freeze tree it passes at 1 and 2 workers and under TZ=Asia/Ho_Chi_Minh and America/Los_Angeles. That does not establish what the cause was: the red is UNREPRODUCED and the cause is CAUSE_UNKNOWN, and passing in these scopes does not exclude the product bundle, the double or the route under the load of the M-1 run (2026-10-21 correction after the Codex review). Observations only: on /administration/my-access no canary key is involved; the failing line is ready() for [data-screen=canary-v2], and every branch of the Canary screen renders that root, so the page never mounted it in 45 s while the same bundle mounts it in 3 s elsewhere; the M-1 error context has no page snapshot at all. e299c3df keeps a Playwright trace on failure in playwright.measure.config.ts so the next red is attributable.",
+      "next_action": "Kept UNREPRODUCED / CAUSE_UNKNOWN (Codex 17:18 UTC: 'not product exoneration'). The original M-1 receipt bytes are restored (a0b885b6; JSON sha256 af161572...; additive interpretation sha256 2e650961...). If access canary is red again in an M-1 guard run, open the retained trace (network: canary lazy chunk or self-access read hang; console: mount error) and record the cause here. Open next to it (Claude, measurement tooling): QUIET-DELAYED-WAKE in e2e/quietGate.mjs:41-42 and the focused-receipt locator for the BE-P19 packet."
+    },
+    {
+      "id": "DEBT-UXM07-046",
+      "title": "M-4a p95 varies 43% and 75% between repetitions (limit R-C 25%); cell was 3 CPU / 3 GiB, not the manifest's 4/4",
+      "where": "measurements M-4a receipts",
+      "consequence": "No stable p95 can be quoted; the fixture numbers must not become a budget. Hook-time tests also flake when other heavy jobs run (2026-10-21 hook run: elp207 timeout, elp210 frame-coupled setup delay, profile-projection 60s read count).",
+      "proposed": "Rerun M-4a on a quiet host in the 4/4 cell with three repetitions; never run heavy jobs in parallel with the hook.",
+      "owner": "Claude",
+      "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
+      "pre_commit_hook_blocks": false
+    },
+    {
+      "id": "DEBT-UXM07-047",
+      "title": "Paper snapshot Records cap (200 rows) vs retained equity history (target 2000, not a ceiling): history depth, response bytes and render budget are not qualified",
+      "where": "execution-paper-read.v1 `Records` (maxItems 200) vs `PaperHistoryRecords` (no cap) for data.account_equity, published in e1fb7906 (FE-073, lane SHA of c02f63d8; consumed in 2f8eec78, lane SHA of c942919f); FE reader v2/readers/paperRead.ts `historyRecords` carries every retained row and validates each as a NarrowRecord; chart reduces client-side in v2/charts (reduceRuns) and the server's own reduction is shown in the envelope caption from data.history_windows",
+      "consequence": "No hard ceiling is asserted and none is invented: the FE neither truncates account_equity to the 200-row snapshot page nor claims a maximum. The cost is that the 7 MiB / 200-row L2 budgets of workbench.conformance.test.ts are measured with snapshot-sized history only; a history of several thousand rows (the 720-row producer case is valid, 2000 is a target, not a bound) has no response-byte or parse-time budget behind it, and Codex states the DTO does not qualify one.",
+      "proposed": "Codex qualifies the cardinality and response-byte budget of the history array (and says whether a hard output ceiling exists). Then Claude adds an L2 scale cell at that depth to workbench.conformance.test.ts (parse + model inside a budget) and, if the depth is bounded, a 'Showing N of M' line on the Paper equity table from history_windows.account_equity.source_rows/returned_rows. Until then the follow-up stays explicit instead of a silent cut.",
+      "owner": "Codex (bound) then Claude (scale cell)",
+      "origin": "FE-073 consumption 2026-10-21 (served-contract return, c02f63d8)",
+      "pre_commit_hook_blocks": false,
+      "status": "MEASURED_SUPPORT_POINTS / NO_HARD_CEILING / FE_DOM_BUDGET_OPEN (2026-10-22) || UPDATE 2026-10-23 (closeout §3.2; receipt PAPER_HISTORY_QUALIFICATION_2026-10-23.md, commits 9d0d92f99 / a92469bd9 integrated as 3ed9a2f71): REAL_CODE downsample + real controller (Nest/Fastify inject) show the Paper workbench response is bounded at roughly 2,000 rows for one series (0.39-1.07 MB, at most 6.41% of 16 MiB at N = 720 to 100,000 source rows); the workbench response is not stored in the 16 MiB retained cache at all (cached bytes 0). The 17.13 MB synthetic figure was the synthetic adapter bypassing the downsample, not the real path. The 2,000 target is not a hard ceiling: at N=32,000 with 50 / 1,000 series the repository returned 2,011 / 5,068 rows, and the producer enforces no per-row byte ceiling (residual). jsdom and a real headless Chromium (7 samples, 1 warm-up) show flat FE cost: 63-78 Equity SVG nodes, 3.45-4.12 MiB heap, p50 time to chart 230-325 ms. A DEFECT was found and fixed: the browser asks for the V2 screen envelope on /screens/*, which dropped the retained-history rows (the chart saw one point while history_windows claimed 1,799) and moved fields out of `data` so the strict reader rejected the body; PaperReadController.deploymentScreen now always answers the published V1 body (one-argument change, production, needs Codex review; V1 repeats up to 200 panel rows that V2 would send once, cost not measured). NOT measured: real Postgres plan/time, network/TLS/gzip, slow devices, /vn-market on its own. Not a production SLO.",
+      "next_action": "Actual synthetic retained-adapter producer→JSON→existing FE reader/model→chart-reducer measured at 720/2000/8000/32000 rows, 0.39/1.07/4.28/17.13 MB JSON; table and scope in evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md. target2000 is not a SQL LIMIT/global ceiling; no cap invented. Sparse numeric-population mismatch fixed without changing ordinary reader; population+depth12/12 and actual sparse PostgreSQL1/1, TypeScript build, isolated migrations/restore/cleanup PASS. Claude adds measured corpus L2 and browser DOM/overflow disposition, uses history_windows not snapshot cap200. The32k synthetic envelope exceeds16MiB; not qualified cached HTTP/DOM capacity or approved G2 budget. Pagination/byte policy remains separate contract work if required; runtime/consumer/browser pending."
+    },
+    {
+      "id": "DEBT-UXM07-048",
+      "title": "Re-triage of the audit A/B findings and the 1440/1024/390 consistency sweep: design calls left (items 3-10; items 1-2 closed as DEBT-UXM07-048A)",
+      "where": "DEBT-UXM07-040 resolution; each item below was seen in the browser on 2026-10-21 at HEAD 567cf494 and is asserted by an existing test or is a HiFi element, so none was changed without a call",
+      "consequence": "Visual and wording only; no data, authority or flag effect. Each row says what the screen does now and the recommended call.",
+      "proposed": "9) Workbench Orders quantity decimals: point-aligned by CSS with the exact strings as served (checked in the browser on the rebuilt preview 2026-10-22, 0.12 / 0.1 / 0.08 share one point column); the Workbench exit request is reachable on the preview (FIXTURE_WRITES=doubles) but the Operations pending-control preview (RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED) needs the command flag and a workspace, both off by design (B27). Remaining: only the pending-control preview mount (Bobby; command flag stays dark).",
+      "owner": "Claude (apply); Bobby only for the pending-control preview mount (command flag stays dark)",
+      "status": "STILL_OPEN (narrowed 2026-10-22: items 1-8 and 10 applied; item 9 decimal alignment verified; only the pending-control preview mount remains, Bobby's call) || UPDATE 2026-10-23 (closeout §6): item 9, the pending-control preview mount, is implemented fixture-only (flag key `pending-preview`, workspace ws_TEST_ONLY[_*], visible simulation label, the only port call is previewPendingControl, no apply/reserve/submit) in 2fb79e863 + 1e319ae9a; vitest 248 passed in operations and related files; the Playwright spec (own config, 1280 / 660 / a 404 branch) passes 3/3 in Chromium. Pixel baseline for this cell is NOT recorded yet. The product route never draws it.",
+      "opened": "2026-10-21",
+      "closed_part": "Items 1-2 closed 2026-10-22 as DEBT-UXM07-048A (Blotter CSV Export, Fleet/Compare/Portfolios controls, Alpha 360 shared reason line, Portfolio 360 Flow lane only). Applied on claude/post-freeze-20261021 (2026-10-22), tests updated with a one-line reason each, no image baseline recorded. 3) fe7155b4: JourneySpine cards print only published facts; the note under the spine says the gap once. 4) 0582049a, 0af823ff: ONE display-name dictionary v2/displayNames.ts (+ blocks/CodeName: known code = name + hidden code text, unknown code = humanized name + GapWhy with the code): chart envelope caption 'Server: N of M points, min and max kept per bucket' (PER_SERIES_BUCKET_EXTREMA), 'min, max and last value kept per bucket' (MIN_MAX_LAST_BUCKET_V1), any other method 'method not stated' with the code in a disclosure (Workbench, Portfolio 360, Account 360); Workbench exit-gate policy 'Policy Paper observation' with stage code and version in a disclosure; Cockpit R2 grant 'Paper activation authorization', R1 lineage and evaluation reasons, 'What the server offers'; Access banner and reason dictionary (Access policy pending, Owner recovery not approved); Admin 'Not live because', provenance reason column and the plan gate reason; Operations not-allowed pending-control preview. 5) 8498765e: Live V1 body states its gaps once, in the line under the strip (strip figures, Live net PnL series, reconciliation figures, position rows, order rows); the header chip line and the alpha name line stay (shared stage chrome). 6) 0582049a: the Approvals primary decision no longer prints 'Preview - not recorded'; the page banner says it once and it stays each button's description. 7) 2e36f3b8: Compare reads '<- Portfolio / Alpha Fleet / Portfolios'. 8) 2e36f3b8: Blotter, Accounts (list and 360) and Admin headers align to the first line like the rest. 10) 2e36f3b8, 0af823ff: Portfolios shows one banner (a degraded branch names what is missing; the partial-read sentence is its disclosure); the Alpha 360 Orders strip stays 2x2 at 660 px and below (KpiStrip phoneColumns)."
+    },
+    {
+      "id": "DEBT-UXM07-049",
+      "title": "Manager columns and rows of HIFI M01/M02/M03 are collapsed into one 'Not available' line instead of per-cell unavailable states",
+      "where": "V2 Overview, Portfolios, Alpha Fleet vs design/hifi m01-m03 and Guide v1.1 §6.2/§8.1; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md",
+      "consequence": "The layout Bobby drew (KPI row, window/domain selectors, Capital panel, Contributors, Portfolios table; Fleet Alloc/PnL/Unrealized/Balance/Equity30D/QBTS) is not on screen. No data effect: those values are not served by any qualified contract.",
+      "proposed": "Restore the columns/rows with per-cell 'Not available · reason' and 'Pending · policy not set' for score; window selectors; Fleet tabs All/Live/Canary/Sandbox/Paper. Fixture-only, no invented figures.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go)",
+      "status": "IN PROGRESS 2026-10-22 (late): Overview, Portfolios, Fleet restored and now read the Manager dataset (per-partition, simulated keys in the populated lane: see SIMULATED_DATA_REGISTER_2026-10-22.md). Fleet Map built. Not done: Overview basis/scope selectors, Fleet Group/Then, Allocation domain (BQ-FLEET-ALLOC), real Edge keys. || UPDATE 2026-10-23 (closeout §7): Fleet Group/Then is implemented (59462c672, `then=` in the URL, two-field group_by) and the Accounts baselines are recorded (v2-accounts-list cells). Overview basis/scope selectors are NOT built by decision: the closeout accepts the current semantics (every authorized portfolio, each currency separately, no conversion, FE-CAT-6). Still open: Allocation domain (FE-CAT-7), real Edge keys."
+    },
+    {
+      "id": "DEBT-UXM07-050",
+      "title": "Fleet Archived tab content, Fleet Map view and the Since-your-last-visit digest are not built (Archived Alphas is a Fleet lens in the V2 Screens artifact, not a screen)",
+      "where": "V2 Screens artifact X7Aqzz9rEA4Q51C7ifnKAQ; Fleet \"Archived list: Not available\"; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md section 5",
+      "consequence": "The Archived lens, heat map and digest drawn in the artifact are absent. Sidebar and Waivers/Exit Reviews placement already match the artifact.",
+      "proposed": "Build the Archived lens, Map view and digest on fixture with per-cell unavailable states; real data waits on the archive and feed contracts.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go)",
+      "status": "OPEN (found 2026-10-22; not previously tracked) || UPDATE 2026-10-23 (closeout §7): the Fleet Map is implemented independently of the still-open Archived lens and the since-last-visit digest (digest needs a persisted user-scoped baseline, FE-CAT-5; absence is typed until it exists)."
+    },
+    {
+      "id": "DEBT-UXM07-051",
+      "title": "The remaining V2 screens collapse unpublished tiles, panels, columns and actions into one 'Not available' line instead of keeping them with per-cell reasons",
+      "where": "Alpha 360, Portfolio 360, Account 360, Compare, Blotter, Operations, Incident, Users, Access, Admin vs V2 Screens artifact; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md section 6",
+      "consequence": "Same as DEBT-049: the manager layout in the design changes with data. No data effect. Findings are subagent reports, partly unverified by Claude.",
+      "proposed": "One pass per screen: restore the element with 'Not available' and its reason, update tests and baseline. Order by manager value: Portfolio 360, Alpha 360, Compare, Operations, Blotter, Account 360, Incident, Access, Users, Admin. Trade replay and Accounts list need a design decision and a baseline first.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go, order)",
+      "status": "IN PROGRESS 2026-10-22 (late): Portfolio 360, Alpha 360, Compare, Operations (health strip, Intent/Display columns), Incident (sections), Account 360 (tiles, drawdown panel), Blotter (columns), Access (13 actions, Role preset), Users (columns, actions), Admin (detail panel) restored by subagents and merged; baselines re-recording. Not done: Trade replay as a standalone screen (feasible, design decision), Accounts list baseline, ops-drawer design frame is mis-exported. || UPDATE 2026-10-23 (closeout §7): the Accounts list baseline is recorded and the two Accounts defects (native equity vs wallet, scoped row-facts cache) are fixed in ea537a9ba. Trade replay stays a design decision."
+    },
+    {
+      "id": "DEBT-UXM07-052",
+      "title": "Accounts list reads two resources per row (N+1) for Physical equity, Virtual headroom and Check",
+      "where": "src/execution/v2/screens/account/reads.ts (listRowFacts), ROW_FACTS_CAP=20, concurrency 4",
+      "consequence": "Up to 40 extra reads per list view; rows beyond 20 show a typed absence and the footer says so. Acceptable on the fixture lane, not at real scale.",
+      "proposed": "Backend request: add physical_equity, virtual_used, headroom and check (or an aggregate per binding) to the bindings list row, and per-environment counts for the ALL/ISSUES/REAL-FUNDED/PAPER/TESTNET tabs. Then delete listRowFacts.",
+      "opened": "2026-10-22",
+      "owner": "Codex (contract); Claude (consumer)",
+      "status": "OPEN"
+    },
+    {
+      "id": "DEBT-UXM07-053",
+      "title": "Whole-suite flakes under load: synchronous reads right after loaded() in Fleet tests, and the seq hash write in the research execute test",
+      "where": "fleet/fleetDataset.test.tsx (owner list after load), fleet/index.test.tsx (owner suggestions), research/executeRoute.seq.test.tsx (c)",
+      "consequence": "Two full runs at 2026-10-22 (884 s, 864 s, --maxWorkers=2): 1 and 2 failures, each passing alone and on rerun (6/6, 3/3). Same pattern as DEBT-UXM07-032: an assertion made before the render or the hash write lands. Fixed per test (cfed8fe61, d5cadc1b3, the seq test budget); other tests with the same read pattern may remain.",
+      "proposed": "Review expects placed straight after loaded() in Fleet and research tests; prefer waitFor with the shared SLOW budget.",
+      "opened": "2026-10-22",
+      "owner": "Claude",
+      "status": "OPEN || UPDATE 2026-10-23 (closeout §7): the fixes cfed8fe61, d5cadc1b3 and 500df58e9 are present on the lane; the full suite passed once at 500df58e9 (85,683 passed, 0 failed, 854 s). That is one run, not a final-cut gate: the single final gate on the frozen reconciled candidate is Codex's and is pending. Earlier failures and receipts are preserved above."
+    }
+  ],
+  "closed": [
+    {
+      "id": "DEBT-UXM07-001",
+      "title": "V1 governance primary button fails the carbon contrast gate",
+      "where": "apps/portal/frontend/src/execution/execution.css:7278 (.exec-gov .exec-btn-apply: background var(--accent) + color var(--accent-contrast))",
+      "measured": "--accent-contrast (#ffffff) on --accent (#78a9ff) = 2.35:1; src/styles/tokens.test.ts 'keeps every declared foreground/background pair legible on operations-carbon' fails on docs/research-loop-plan tip 0d5ceaba without any UXM-07 change",
+      "origin": "c67a0b1d 2026-10-12 feat(governance-ux) (Codex line)",
+      "not_fixed_because": "UXM-07 is flag-off pixel-neutral and may not edit V1 CSS or accepted baselines. A one-line fix (color: var(--paper), as execution.css:5981 already does) changes V1 governance button pixels and needs a baseline decision.",
+      "pre_commit_hook_blocks": false,
+      "proposed": "Codex or Bobby approves color: var(--paper) on line 7278 and a re-recorded governance baseline; V2 buttons never use --accent-contrast on --accent.",
+      "owner": "Codex / Bobby decision",
+      "closed_by": "a067682e (execution.css:7278 text uses the surface ink; hover keeps white on the strong accent); governance baselines re-recorded at R2"
+    },
+    {
+      "id": "DEBT-UXM07-002",
+      "title": "R2 persistence ledger lacks the V2 operations queue table",
+      "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 ('covers every execution/governance table the control-api names in SQL')",
+      "measured": "missing: execution_operation_queue_v2 (added by Codex with executionF0BlockedOperationsListV2); fails on docs/research-loop-plan tip 0d5ceaba without any UXM-07 change",
+      "not_fixed_because": "The ledger names persistence ownership for Codex tables; adding a row is Codex's ownership decision, not a frontend appearance change.",
+      "pre_commit_hook_blocks": false,
+      "proposed": "Codex adds the table to the R2 ledger (or states it is out of scope) in the next landing turn.",
+      "owner": "Codex",
+      "closed_by": "Codex 5291a80f registered execution_operation_queue_v2 (r2Ledger.test passes after the rebase)"
+    },
+    {
+      "id": "DEBT-UXM07-003",
+      "title": "e2e BFF double does not answer the UDB-03 retained-review read",
+      "where": "apps/portal/frontend/e2e/bffDouble.ts (no /retained-review branch) vs src/execution/retainedReview.ts:158",
+      "measured": "e2e/execution-preview.spec.ts 'every product route consumes the same-origin BFF' fails on docs/research-loop-plan tip: 501 on GET /api/v1/execution/retained-review for every route (29 console errors). Reproduced on a flag-off preview build, so it predates UXM-07.",
+      "not_fixed_because": "Serving a 200 body would flip every screen into retained (read-only) mode and a 404 still logs a console error; which stub the double should serve is a test-contract decision for the owner of the V1 spec. The V2 spec tolerates exactly this one URL and its console line (execution-v2-s1.spec.ts).",
+      "pre_commit_hook_blocks": false,
+      "proposed": "Codex/Bobby decide the stub (e.g. canonical execution-retained-review.valid.json with a non-retained scope) and re-green execution-preview.spec.",
+      "owner": "Codex / Bobby decision",
+      "closed_by": "d4bab3b2 (double answers the typed 404 UDB_RETAINED_REVIEW_NOT_CONFIGURED; specs allow exactly that URL); execution-preview spec 2/2 pass"
+    },
+    {
+      "id": "DEBT-UXM07-007",
+      "title": "Visual/e2e red that already exists on Codex tip 5291a80f",
+      "where": "e2e/execution-surface-audit.spec.ts (clipped paragraphs and type-scale on lab pages gate-r1-review, live-full-operations, sandbox-certification, incident-detail at 5 widths = 10 tests), e2e/execution-journeys.spec.ts EL-V2-05 (locator 'Exit reviews'), e2e/_preview-governance-c06.spec.ts (needs GOV_WORKSPACE of a real stack)",
+      "evidence": "same failures on a pristine detached checkout of 5291a80f under the pinned image (17 failed / 105 passed); not caused by UXM-07",
+      "owner": "Codex (V1 lab copy and governance inbox) / Bobby (the c06 probe is real-stack only; it is not excluded from the chromium project's testIgnore)",
+      "status": "CLOSED",
+      "resolution": "0356b0dc (2026-10-20): the governance-UX type voices declare data-hifi-exact (surface audit), EL-V2-05 targets the Exit chip by its accessible name 'Exit', execution-preview gets a 180 s budget, _preview-governance-c06 is no longer collected by the default chromium project (playwright.config.ts), and the one real pixel diff (phase-3-gate-r2-review-states-only-laptop, sticky-bar offset) was re-recorded. Evidence: the first whole-suite compare on the pinned image was 580 passed / 37 failed / 16 skipped (HOOK_RESULT_2026-10-20 last section; HANDOFF_TO_CODEX section 10); 36 were stale expectations or environment and were fixed, 1 was a real diff and was re-recorded. The lead reports a later compare of 609 passed / 7 failed, then fixed; that run has no receipt file in the repo, so the exact-SHA whole-suite compare is tracked in DEBT-UXM07-037."
+    },
+    {
+      "id": "DEBT-UXM07-009",
+      "title": "r2Ledger red on the Codex tip e19ad906",
+      "where": "apps/portal/frontend/src/execution/r2Ledger.test.ts:117 (governance_approval_decision_inbox is named in control-api SQL and has no row in r2_ledger/persistence-ownership.v1.json)",
+      "evidence": "fails after the rebase with no FE change; same class as DEBT-UXM07-002 (closed by Codex 5291a80f)",
+      "owner": "Codex",
+      "closed": "Codex d0789674 added the governance_approval_decision_inbox row; r2Ledger green after the rebase"
+    },
+    {
+      "id": "DEBT-UXM07-010",
+      "title": "One load-flaky V2 incident test",
+      "where": "v2/screens/operations/incident.test.tsx 'MITIGATED marks Open done...'",
+      "evidence": "fails in the wide run, passes alone (16/16) twice",
+      "owner": "Claude: find the timing dependency when the test lane is next touched",
+      "closed": "8e051084..d519232e: tests wait for the ready Workflow-state rail (readyDrawer); 17/17 three times alone and under load; component unchanged"
+    },
+    {
+      "id": "DEBT-UXM07-012",
+      "title": "Small shared-layer follow-ups from pass 2",
+      "where": "Compare Series head at 390px squeezes the SERIES title (blocks.css PanelHead); Drawer auto-focus when admin auto-opens the first ready row; Blotter Newer/Older DOM order differs from visual order at <=660px",
+      "consequence": "layout/a11y polish; no data effect",
+      "owner": "Claude",
+      "closed": "e5ba9eaf (Blotter pager now one copy placed by media query), a2f45299 (panel heads wrap at 660px), 8e051084 (Drawer focusOnOpen + close fallback)"
+    },
+    {
+      "id": "DEBT-UXM07-014",
+      "title": "realtimeProducerConsumer.test.tsx red on the pristine Codex tip d0789674 in this environment",
+      "where": "apps/portal/frontend/src/execution/realtimeProducerConsumer.test.tsx (5 tests: TypeError common_1.Optional is not a function, then service undefined in afterEach)",
+      "evidence": "same failure on a detached worktree of d0789674 with this machine's node_modules; not caused by UXM-07",
+      "owner": "Codex (the test compiles control-api code in a vm and needs the Nest runtime the Docker cell provides)",
+      "status": "CLOSED",
+      "resolution": "11906064 (2026-10-20): the producer now injects @Optional(), and the test's vm require() stub returned {Inject, Injectable} only; the stub now returns Optional too. The failure was a harness defect, not a missing Nest runtime as this entry assumed. Evidence: HOOK_RESULT_2026-10-20 second-wave section (tip 9d15755f, hook a896bd08): frontend src/execution + src/app 80.1xx tests PASS with a clean tsc, which includes this file. No isolated-run receipt exists; this docs-only reconciliation did not re-run it (the agent worktree has no complete node_modules)."
+    },
+    {
+      "id": "DEBT-UXM07-015",
+      "title": "Nine rows of e2e/execution-v2-s1.spec.ts assert a page overflow that is still there (KNOWN_OVERFLOW)",
+      "where": "apps/portal/frontend/e2e/execution-v2-s1.spec.ts KNOWN_OVERFLOW: alpha-360@narrow, alpha-replay@narrow, workbench@wide, workbench@narrow, workbench-vnm@wide, workbench-vnm@narrow, canary@narrow, canary-guard@narrow, canary-v2body@narrow",
+      "consequence": "At 390px the compact JourneySpine (blocks.css .exec-blk-spine-list, 400px) runs past the viewport on Alpha 360, Replay, Paper workbench and the three Canary rows; the stage tab strip and a long Flag also overflow on the Paper workbench at 390px, the Canary series panel (p.exec-cny-series) is 477px wide, and the NotPublished line (.exec-blk-na, 287px, no wrap) overflows the Paper workbench Overview at 1440px. The row asserts the overflow is still there, so the day a component is fixed its row turns red and the entry must be deleted",
+      "proposed": "Let .exec-blk-spine-list wrap or scroll inside its own box, let .exec-blk-na wrap, give the tab strip an inner scroller, cap .exec-cny-series; delete the nine entries",
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "resolution": "c78f48c8 (2026-10-19): the 390 px overflow rows were fixed in the components (JourneySpine, tab strip, Canary series, NotPublished) and the nine entries were deleted. At HEAD 799effc8 e2e/execution-v2-s1.spec.ts has KNOWN_OVERFLOW = {} and every SCREENS row asserts no horizontal page overflow at both widths. Evidence: HANDOFF_TO_CODEX section 5 'Playwright V2 s1+links 76 passed'; expectations later aligned by 543b30b4 and 97454777; phone Live bounded by bc83e84b."
+    },
+    {
+      "id": "DEBT-UXM07-017",
+      "title": "No axe run on the V2 routes",
+      "where": "e2e (no axe fixture for chromium-v2); a11y covered by Testing Library roles, aria-describedby on disabled controls and read-only reviews",
+      "consequence": "Colour contrast, landmark and ARIA-validity rules that axe checks are not machine-verified on any V2 route (17 S1/S2 routes + the S3 routes)",
+      "proposed": "Add an axe pass to execution-v2-s1.spec.ts for each SCREENS row at both widths",
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "resolution": "939189ac (2026-10-20, UXM-10): @axe-core/playwright 4.13 runs wcag2a/2aa/21a/21aa on 32 routes at 1440/1024/390 in e2e/execution-v2-coexistence.spec.ts; the findings it first raised were fixed at the source by 438dc1ee (RV-05) and KNOWN_AXE is {} at HEAD, so any new rule fails the run. Independent browser audit: ux-audit-B-2026-10-20/README.md and automated-probe-all.json, axe 0 violations on 25 routes at 1440 and 390. UXM-10 README F-2 already records this entry as stale. Caveat kept from UXM-10: axe covers a subset of WCAG; no screen reader, forced-colours or 200% zoom pass."
+    },
+    {
+      "id": "DEBT-UXM07-019",
+      "title": "V1-shared files changed in the S3 range have not been verified by the V1 visual suite",
+      "where": "src/execution/certification.ts and liveFull.ts (94402566: additive typed fields, V1 markup proved byte-identical in unit tests), src/execution/links.ts (65a5f74e), src/app/Sidebar.tsx and PortalRoutes.tsx (e6127770, behind the shell flag), src/app/PortalShell.tsx and commandRouting.ts and src/portal/navigation.ts (e926b09a, isNavigable exported), execution/ExecutionPreviewRoute.tsx",
+      "consequence": "Flag-off pixel identity is shown by DOM tests and a dist grep, not by the pinned-image visual run on this tip",
+      "proposed": "Run ./scripts/portal-web-visual.sh in verify mode (pinned image) before landing; attribute any red against a pristine Codex-tip worktree",
+      "owner": "Claude (FE) at R2",
+      "status": "CLOSED",
+      "resolution": "Verified in verify mode on the pinned image: whole-suite compare 580 passed / 37 failed / 16 skipped on the 2026-10-20 tip (HOOK_RESULT_2026-10-20; HANDOFF_TO_CODEX section 10). None of the V1-shared files named here moved a pixel: 1 real diff (sticky decision bar offset, phase-3-gate-r2 laptop, page height above the group) was re-recorded in 0356b0dc and the other 36 were test or environment issues fixed in 0356b0dc, 543b30b4, 97454777. The compare on the exact landing SHA is a landing gate, tracked in DEBT-UXM07-037."
+    },
+    {
+      "id": "DEBT-UXM07-020",
+      "title": "Sandbox PAPER_EXIT lineage link has no route",
+      "where": "The published V1 Sandbox body (packages/contracts/fixtures/execution-sandbox-certification.unavailable.valid.json:39, lineage kind PAPER_EXIT) carries href /deployments/paper/exit/{id}; v2/screens/sandbox/index.tsx ~:155 renders item.href as a router Link (any href that starts with /); execution/links.ts:11 documents that exit reviews live under /governance; e2e/execution-v2-links.spec.ts:108 allow-lists the case as a DEFECT",
+      "consequence": "The link lands on a path no route mounts (NotFound). The crawler stays green only through the reasoned allow-list row",
+      "proposed": "Map /deployments/paper/exit/{id} to /governance/exit-reviews/{id} in links.ts canonicalHref (FE side) and ask Codex to publish the mounted href; then delete the allow-list row",
+      "owner": "Claude (FE) for the mapping; Codex for the published href",
+      "status": "CLOSED",
+      "resolution": "c78f48c8 (2026-10-19): v2/screens/sandbox/lineageRoute.ts maps /deployments/paper/exit/{id} and /governance/exit-reviews/{id} (and the R1/R2 forms) through reviewRouteFor, anything else renders as text; tests lineageRoute.test.ts and sandbox.test.tsx. src/execution/links.ts canonicalHref also maps the V1 form for ids shaped AP-nnn. Leftover, cosmetic: the e2e allow-list row 'sandbox-lineage-paper-exit' in e2e/execution-v2-links.spec.ts (about line 106) is now dead and its own text says to delete it (Claude, next time that spec is touched). Optional for Codex: publish the mounted href so the V1 body stops carrying the unmounted one."
+    },
+    {
+      "id": "DEBT-UXM07-021",
+      "title": "Cockpit New request drawer: docked placement at 1500px and wider is not checked",
+      "where": "v2/Drawer.tsx useDockMode (modal below 1500px, docked at 1500px and above); v2/screens/request/RequestDrawer.tsx on the cockpit",
+      "consequence": "The e2e rows run at 1440 and 390, so the docked layout of the drawer next to the queue (hi-fi 380px dock) has not been looked at or measured",
+      "proposed": "Add a 1600px viewport row for ?compose=request and look at it",
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "resolution": "2026-10-19: the drawer docks at 1500px and wider as a sticky 380px column (c78f48c8); focus no longer scrolls the page under a docked panel (preventScroll in dock mode, Bobby approved 2026-10-20). Browser look at 1600px was done on the preview before the control-api incident."
+    },
+    {
+      "id": "DEBT-UXM07-022",
+      "title": "Fleet Board with 8 lanes overflows",
+      "where": "v2/screens/fleet board view (142946e3), css/fleet.css",
+      "consequence": "With 8 stage lanes the board grows past its container; no overflow guard or lane wrap, and the e2e fixture does not exercise 8 lanes",
+      "proposed": "Horizontal scroller inside the board with a visible edge, or wrap to two rows; add a scale case",
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "resolution": "2026-10-19: board lanes are flex with a 192px floor and scroll inside the board; empty gate lanes collapse to a labelled strip (9215c5dd)."
+    },
+    {
+      "id": "DEBT-UXM07-023",
+      "title": "Playwright V2 run on the S3 tip: 2 of 76 failed",
+      "where": "e2e/execution-v2-s1.spec.ts:45 'live-v2body ... at wide width' ([data-screen=\"live-v2\"] not visible in 5s) and :235 'the cockpit's New request opens the drawer ...' (Submit for R1 review stayed disabled: 'This screen has no published delivery policy')",
+      "evidence": "scratchpad g-pw.log ends with 74 passed, 2 failed, exit=1; the crawler spec passed. The build the run used is not recorded in the log",
+      "consequence": "The S3 browser gate is not green. The second failure is the symptom 8b9f361a was written to fix, so either the run used a build older than that commit or the fix is incomplete",
+      "proposed": "Rebuild dist-v2 at 21af6792 and rerun both specs; fix or record the cause before R2",
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "resolution": "Cause found 2026-10-19: PortalRoutes mounted ExecutionPreviewRoute on feature canonical routes (/governance/approvals) without requestPolicy, so the cockpit drawer's port refused the write. 8b9f361a only wired the screen routes. Fixed by 6e741dc0 (the request policy also reaches the canonical routes); spec :235 passes. Spec :45 (live-v2body wide) was a one-off in the full run and has not recurred: later full runs record 'Playwright V2 s1+links 76' (HANDOFF_TO_CODEX section 5) after 543b30b4 and 97454777 aligned the expectations to RV-06/RV-09/BE-P12."
+    },
+    {
+      "id": "DEBT-UXM07-024",
+      "title": "Shared navigation/shell files were edited behind the shell flag: Bobby approval to confirm",
+      "where": "src/app/Sidebar.tsx and PortalRoutes.tsx (FF-A e6127770), src/app/PortalShell.tsx, commandRouting.ts and src/portal/navigation.ts (e926b09a; CommandBar mount was decided by Bobby on 2026-10-19), execution/links.ts (65a5f74e)",
+      "consequence": "CLAUDE.md section 0 says a change to shared components that may alter Research or Planning stops and asks Bobby. The edits are guarded by the shell flag (off = identical, tests prove it) but the approval for the Sidebar/PortalRoutes edit is not recorded",
+      "proposed": "Bobby confirms or asks for a revert (rollback.md lists the revert commands)",
+      "owner": "Bobby",
+      "status": "APPROVED_BY_BOBBY",
+      "resolution": "Bobby approved on 2026-10-20 (AskUserQuestion): Sidebar, PortalShell, PortalRoutes, commandRouting, navigation, links, presentation (request page shell) and Drawer edits stay, behind the V2 flags; flag-off DOM digests are pinned and proved equal on the old and new sources. Nothing left to do."
+    },
+    {
+      "id": "DEBT-UXM07-025",
+      "title": "V1 behaviour changes that are not behind a flag",
+      "where": "v2/readers certification.ts (panel_state/freshness vocabulary: ready->ok, FRESH; finding fields; additive row fields), liveFull.ts (KPI strip fail-closed for missing/DERIVED authority), canonicalHref (?operation_id= became ?operation=), captureSandboxNote (reason starts REVIEW_CAPTURE_OUTCOME_UNKNOWN: for a throw, 408/5xx or an unreadable 2xx), shared unsafeText set, components/TradeReplayEvents.tsx (V2 branch only)",
+      "consequence": "With real data V1 shows what the schema says (a ready panel is no longer read as unavailable; the broker badge can change from warning to good; deep links open the right operation). Fixture lab pixels do not change (V1 fixtures are all unavailable/UNKNOWN)",
+      "decision": "Bobby approved on 2026-10-20 as deliberate exceptions (AskUserQuestion). They are fail-closed or fix a wrong read; they are not rolled back with the V2 flags",
+      "owner": "Claude (FE)",
+      "status": "ACCEPTED_EXCEPTION",
+      "resolution": "Accepted exceptions, not debt to pay: fail-closed or wrong-read fixes that are deliberately not rolled back with the V2 flags (Bobby 2026-10-20). Listed so a future flag rollback knows they stay."
+    },
+    {
+      "id": "DEBT-UXM07-004",
+      "title": "Reader defects documented by the L3 conformance suites",
+      "where": "server meaning of an absent stage in stage_counts (FE-048); the five intentional it.fails pins in v2/readers/managerDataset.conformance.test.ts (producer-only constraints that JSON Schema cannot state)",
+      "owner": "Claude (backend is Claude's since 2026-10-21; Codex reviews)",
+      "closed_by": "27b42bd2. FE-048 answered by the producer: manager-lists.service.ts fleetStageCounts lists a stage of a source environment read COMPLETE (strategies and deployments) with its exact count, 0 included (paper=PAPER, sandbox=SANDBOX, live=CANARY+LIVE), and omits a stage of an environment not read or read PARTIAL, so absence means \"not stated\" and the FE keeps Not available; no schema change. MD-S1/MD-S4: the Manager dataset producer now refuses to emit text with C1 controls, zero-width/bidi format characters, lone surrogates or only whitespace (MANAGER_TEXT_UNSAFE) and a partition metric key that is not a lower-case token or a 65th metric, the rules the strict reader enforced alone. The five it.fails in managerDataset.conformance.test.ts are PERMANENT: JSON Schema cannot compare an array length to a number or a field to its sibling list; the producer enforces each (manager-dataset-invariants.ts MD-1..MD-8, elp206-manager-dataset-invariants.spec.ts) and the reader holds each.",
+      "evidence": "control-api: fleet-stage-counts.spec.ts (6) and elp206-manager-dataset-invariants.spec.ts (48) green, tsc -p tsconfig.build.json clean, N29 ledgers refreshed. NOT_RUN: manager-lists.spec.ts (needs PostgreSQL, none here).",
+      "residual": "See DEBT-UXM07-043 (access text safety) and the commandCurrency producer parity, which was not audited."
+    },
+    {
+      "id": "DEBT-UXM07-006",
+      "title": "Compare has no registry row",
+      "where": "previewRegistry / registry.json (Codex)",
+      "consequence": "Compare still rides /deployments/portfolios?view=compare; registry.json is at revision 8 (PROFILE_ACCESS_SELF) and has no EXECUTION_COMPARE_SCREEN row. The V2 pixel baselines v2-compare-1440/390 were recorded on the ?view=compare URL",
+      "owner": "Claude (registry and backend are Claude's since 2026-10-21; Codex reviews)",
+      "closed_by": "8c70b177: registry.json revision 8 -> 9 adds the EXECUTION_COMPARE_SCREEN screen row at /deployments/compare (feature EXECUTION_PORTFOLIOS, fixture delivery contract equal to the portfolio 360, no flag enabled; registry.public.json and the six summary fixtures from scripts/export_handoff_contract.py); PortalRoutes claims the path only while the compare flag is on; the pre-rev-9 URL /deployments/portfolios[/:id]?view=compare redirects to it; N29 acceptance and verifier re-pinned 8 -> 9 as in 6d87825b, refresh-release-integrity-ledgers.sh --write and --check green.",
+      "evidence": "registry pytest (contract, api, handoff, navigation, summary) green; vitest routeContract/linkTargets/navigation/Sidebar/execution green; flag-off DOM digests (PortalShell.flagOff) unchanged because the route does not exist flag off. NOT_RUN: the Playwright e2e (URL moved in v2Lane, s1, links, visual specs) and the visual compare on the pinned image. The two Compare baselines v2-compare-1440/390 are expected to compare at zero diff (same screen, same env/window locks, breadcrumb outside #portal-content) and were NOT re-recorded.",
+      "residual": "FE-039 (hide the legacy APPROVALS rail entry) was not part of rev 9 and is untouched here; C-5 also named EXECUTION_ARCHIVED_ALPHAS_SCREEN, which the Fleet lens replaced (key archived is reserved)."
+    },
+    {
+      "id": "DEBT-UXM07-036",
+      "title": "CR-01 has no focused execution receipt",
+      "where": "dd9609af (ACCEPT source in CODEX_LANDING_REVIEW section 9); BE-CLAUDE-2026-10-20/BE-P17.md section 9 records the implementation and generator checks but no run counts; be-p17-fleet-pairing.spec.ts has four cases; one PG assertion is NOT_RUN; the last full hook (a896bd08, tip 9d15755f) predates the change",
+      "consequence": "The changed service, contract and FE leaf tests have no recorded result on this SHA; older counts cannot stand in",
+      "proposed": "Run only the focused service, contract and FE leaf tests for dd9609af and append the counts to BE-P17 section 9; keep the PG assertion pending until it is run",
+      "owner": "Claude",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "Focused receipt written at 35a1577a: BE-CLAUDE-2026-10-20/BE-P17.md section 9.1 (what be-p17-fleet-pairing.spec.ts proves, the four cases, and the run: be-p17-fleet-pairing 4/4, be-p16-alpha-fleet-realtime 50/50, elp206-manager-service 19/19, contracts execution-alpha-fleet-realtime 57/57 with the generator --check clean, FE alphaFleetRealtime.conformance + fixtureBff fleetRealtime 1388/1388). control-api and contracts are byte-identical to 799effc8. The PG assertion in elp2-read-scope.spec.ts is NOT_RUN (the whole file needs PG: 117 skipped) and stays pending until it is run; the hook on a frozen SHA is DEBT-UXM07-037."
+    },
+    {
+      "id": "DEBT-UXM07-005",
+      "title": "Nav and screen gating use provisional capability names",
+      "where": "Five screens still pre-narrow from the SESSION capability set against the menu tokens: alpha/index.tsx (sliceOnly), alpha/replay/index.tsx, blotter/index.tsx (accountsVisible), overview/index.tsx (fundWide), workbench/index.tsx. A real session never carries a menu token (only a live self-navigation projection adds one, in the shell), so for a real session they narrow for everyone; the e2e and lab sessions inject the tokens as a stand-in.",
+      "consequence": "Display narrowing only (Your slice chip, account links, deployer column); the API behind each screen refuses by itself. Wiring the shell's merged set into the screens would let a menu fact shape content, which RK-1 forbids.",
+      "proposed": "W4 of the self-contract review, one of: (a) drop the pre-narrowing and let the API refusal and the batch eligibility decide, or (b) feed the shell's merged navigation set to those five screens and accept menu-shaped content. The exact missing backend item for a data-grade answer: a published per-screen scope fact (\"fund-wide\" vs \"own slice\"); the 28 eligibility actions name resources, not scopes.",
+      "owner": "Bobby (RK-1 policy) then Claude",
+      "status": "CLOSED",
+      "closed_part": "9d0eb97f: the four invented names (execution.portfolios.read, execution.accounts.read, execution.operations.read, portal.execution.blotter.read) are gone from the client vocabulary. V2_NAV_TOKEN holds nav:<served portal.self-navigation.v1 feature id> (EXECUTION_PORTFOLIOS, EXECUTION_ACCOUNTS_BINDINGS, EXECUTION_OPERATIONS, EXECUTION_BLOTTER), V2_CAPABILITY keeps only the real governance.* names, and no copy prints an invented capability (Access rows and denials say \"Portfolios in your navigation read\"). Nothing is missing on the backend for the rail: the server publishes the four rows. execution.accounts.manage stays dropped (no server capability exists).",
+      "resolution": "Bobby chose (a) on 2026-10-21: drop the FE pre-narrowing. Closed at 7e327456 (apps/portal/frontend/src/execution/v2/screens): alpha/index.tsx + alpha/TableTabs.tsx + alpha/replay/{index,ReplayView}.tsx, blotter/index.tsx, overview/{index,useOverviewReads,overviewModel}.ts(x) and workbench/{index,Header}.tsx no longer read the session's capabilities. Gone: sliceOnly, canSeeAccounts, accountsVisible, fundWide, the inferred 'Your slice only' / 'Only deployments in your slice' / 'Your orders' / 'Your alphas' / 'Account not available' texts and the 'Scope: Your ...' context facts, the Overview researcher panel 'Alphas in your slice' (and ownRows/OwnRow), and the capabilities props of Overview, Blotter and Workbench. The account links, the deployer line, the Account column and the fund reads now follow what the server served; a refusal shows the server's typed reason (denied panel + My access link). Per screen, a test pins that a served answer is not hidden by a restricted session and that a refusal keeps its reason (alpha.test, replay.test, blotter.test, overview.test, workbench.test); the blotter, overview and workbench suites run under a session with no menu token. Gates green on the touched folders: tsc, vitest alpha/blotter/overview/workbench, testHygiene, absentValues, failClosed, v2Hygiene, linkTargets, titleAbsence, flagOff/flagOn, shell, app. No image baseline changes: the e2e and lab sessions are manager-like (e2e/v2Lane.ts MANAGER_CAPABILITIES), so every recorded cell renders the same DOM. Left open elsewhere: nav and Portfolio/Compare/Account screens still gate on the menu tokens (permitted = holds(...)); that is not part of this entry."
+    },
+    {
+      "id": "DEBT-UXM07-033",
+      "title": "createPaperExit and captureR2 do not mark a 5xx or an unreadable 2xx as an unknown outcome",
+      "where": "apps/portal/frontend/src/execution/api/httpApi.ts:754 createPaperExit and captureR2 (problem(response) for any !ok; REVIEW_CAPTURE_CONTRACT_INVALID for an unreadable 2xx) versus captureSandboxNote, which maps throw, 408, 5xx and an unreadable 2xx to REVIEW_CAPTURE_OUTCOME_UNKNOWN; v2/screens/workbench/ExitReviewRequest.tsx:182-185 and :288",
+      "consequence": "After a 5xx the Exit request screen says 'The server did not record this request', which is false when the write may have landed (only a thrown fetch reaches the 'Unknown: it may have been recorded' path). A retry reuses the same request_key so nothing is duplicated, but the sentence is wrong",
+      "proposed": "Classify like captureSandboxNote (throw, 408, 5xx, unreadable 2xx are OUTCOME_UNKNOWN) in createPaperExit and captureR2, with tests. httpApi.ts is shared with V1 (containers.tsx:564 and :918): treat it as a deliberate V1 exception like DEBT-UXM07-025 and get Bobby's yes, or wrap it V2-only",
+      "owner": "Claude (FE); Bobby for the V1 exception",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "Closed at 9e74a91c (Bobby approved the V1 exception 2026-10-21). apps/portal/frontend/src/execution/api/httpApi.ts: createPaperExit and captureR2 now go through one helper (unknownAwareCapture) that classifies like captureSandboxNote: a thrown fetch, a 408 or 5xx, a 2xx that is not JSON, and a 2xx the reader refuses or that is not this request's answer are REVIEW_CAPTURE_OUTCOME_UNKNOWN (the server's words kept after the prefix); a definite 4xx is unchanged (status and 'CODE: message'). New branches only: the 2xx success path and every other V1 route are untouched; the Exit request screen already kept the same request_key for an unknown outcome, so its 'Unknown: it may have been recorded' wording now also covers a 5xx. Tests: api/captureWrites.port.test.ts (unit, both calls, 5xx/408/throw/unreadable 2xx/wrong workspace/wrong kind -> unknown; 400/403/404/409/422/429 -> not unknown; the fixture BFF's DENIED/REFUSE/STALE bodies) and ExitReviewRequest.test.tsx (real port with a stubbed fetch: 503 -> unknown wording, retry sends the same request_key and summary). captureSandboxNote itself is unchanged. No image baseline is affected (no baseline cell shows a write failure)."
+    },
+    {
+      "id": "DEBT-UXM07-034",
+      "title": "Exit request refusal sentence prints '(unavailable)' for a 409",
+      "where": "v2/screens/workbench/ExitReviewRequest.tsx:288 prints ({outcome.status}) where status is the panel word; execution/adapter.ts:599 panelStatusForHttp maps 409 (and every 4xx except 401/403/429) to 'unavailable'; fixture BFF case POST /governance/paper-exit/create [summary REFUSE] -> 409 APPROVAL_VERSION_CONFLICT (fixtureBff/routeTable.ts:191)",
+      "consequence": "The reader sees 'The server did not record this request (unavailable). APPROVAL_VERSION_CONFLICT: ...': a panel-state word where the HTTP status, or nothing, belongs",
+      "proposed": "Print the HTTP status (or drop the word) and keep the typed code behind the disclosure; fix with its test",
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "Closed at 9e74a91c. exitReviewRequest.ts refusalWords splits 'CODE: message'; ExitReviewRequest.tsx prints 'The server did not record this request. <words>' where the words are the stage dictionary's sentence for the code (captureReasonText: ADMIN_ROLE_REQUIRED -> 'Needs the Admin role', and the others there) and, for a code the dictionary has no entry for (APPROVAL_VERSION_CONFLICT, CAPTURE_PROJECTION_VERSION_CONFLICT), the server's own message unchanged: no new sentence was written and the generic 'Not enabled for this profile' was NOT used because it would misstate a version conflict. The typed code sits behind the 'Server reason' disclosure; the panel word ('unavailable', 'denied') is no longer printed. Tests: ExitReviewRequest.test.tsx (409 x2 and 403 cases, refusalWords). e2e/execution-v2-paper-exit.spec.ts is updated for the new wording and was not run (heavy lane, owed to the next Playwright run). The sandbox note form (ReviewNoteForm.tsx:230) prints the same '(status)' word and was not in scope."
+    },
+    {
+      "id": "DEBT-UXM07-032",
+      "title": "Load-flaky V2 vitest tests",
+      "where": "account.test.tsx search test (ui-copy-diet-manager-2026-10-20.md gates: failed under load, passes solo); portfolio.test.tsx 'names Net PnL ... ONCE' (ux-audit-B README gates: act() warning once under load, 2 of 2 reruns and 69/69 alone); the lead also reports fleetDataset.test.tsx and the account tests red in the wide run and green alone, which this docs-only task did not reproduce; FLEET_BUSINESS_JOURNAL records a conformance wait that resolved before the read arrived, tightened",
+      "consequence": "Wide runs go red without a product change, which trains people to ignore red; DEBT-UXM07-010 was the same class and was fixed by waiting on the ready element",
+      "proposed": "Apply the readyDrawer-style wait (await the ready state, not a timer) to each; accept only after three solo and three --maxWorkers=3 runs",
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "025f3f22 (2026-10-21): the cause was testing-library's 1000 ms default for waitFor/findBy against a 130-row render under a loaded machine, not a timer in the tests. src/execution/v2/waitsTestUtil.ts adds SLOW ({ timeout: 8000 }) and SLOW_TEST (60 s); applied to the table-loaded helpers and the positive waits in fleetDataset, fleet index, account, admin and portfolios tests, and as an explicit per-test budget on the multi-step flows (paging 50/100/130, Close on the auto-opened pane, search and venue). No expect changed and no 'nothing happened' check got the longer limit. Evidence: the five files pass alone and together at --maxWorkers=1 (340 tests); the fleet + account + admin + portfolios folders pass at --maxWorkers=2 (25 files, 2153 tests, no failure, no act() warning); testHygiene, v2Hygiene, testkit, absentValues, failClosed, linkTargets and titleAbsence green; tsc clean for src/execution/v2. Caveat: the quiet machine never reproduced the flake, so the fix is by cause, not by observed red-to-green; if it recurs in a whole-suite run, reopen with the failing test name. Refresh 2026-10-21 evening: the fix is 3442f72c in this lane (025f3f22 is its pre-rebase twin and is not an ancestor of the post-freeze lane); the register close is e3d7b546. Lane ancestry verified with git merge-base --is-ancestor."
+    },
+    {
+      "id": "DEBT-UXM07-035",
+      "title": "CR-02 is still CHANGE: repair retry state shares mutable last_error_*",
+      "where": "CODEX_LANDING_REVIEW_2026-10-21.md sections 8 and 10 (canonical checkout /home/bobby/portal-research, untracked at 799effc8); ec228e53; apps/control-api/src/execution-v2/manager-series.store.ts (last_error_code, last_error_revision)",
+      "consequence": "Interleaved newer live failures reset the oldest revision's retry counter, so a later repair can starve; there is no durable, non-clobbering per-revision retry state. CR-03 (observed-prefix completeness) and CR-04 are ACCEPT source",
+      "proposed": "Store retry state per revision (additive migration, never edit migration 147) and add PG proof: interleave, restart, third attempt, cursor, lease",
+      "owner": "Claude (backend lane); Codex review",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "75c3d7e6 (2026-10-21, migration 148 execution-manager-series-repair-attempts): repair retry state is now scoped per revision, so an interleaved newer live failure no longer resets the oldest revision's budget; first part of the fix ec228e53 (bounded repair after a refused live write, CR-03 observed-prefix completeness). Codex review (ELP2-10/CODEX_CR02_B1_REVIEW_RETURN_2026-10-21.md): 'CR02 75c3d7e6, migration148: ACCEPT source design', with the condition that the new PG interleaving/lease/exhaustion/runtime cases pass on the current migration chain. That condition is met: the targeted PG lane ran 10 files / 380 tests, 380/380 PASS on the current chain, including CR-02 and B1 148/149 (ELP2-10/CLAUDE_CORE08_SOURCE_RETURN_2026-10-21.md, CLAUDE_FREEZE_HANDOFF_2026-10-21.md), and the post-landing PG lane ran 11 files / 328 tests, 328/328 PASS (89f561c4, CLAUDE_POST_FREEZE_DELTA_2026-10-21.md). Not claimed: connected or production proof; the PG lanes are TEST_ONLY."
+    },
+    {
+      "id": "DEBT-UXM07-041",
+      "title": "Access baselines changed with the menu-token copy",
+      "where": "e2e/execution-v2-visual.spec.ts cells v2-access-1440 and v2-access-390 (Access: \"What you can see\" reasons now read \"Portfolios in your navigation read\"; the caption now reads \"Menu entries from your navigation read\"), commit 9d0eb97f",
+      "consequence": "The visual suite compares the old pixels and will be red for those two images until they are re-recorded and the contact sheet reviewed. Flag-off pixels are unaffected.",
+      "proposed": "Re-record with scripts/portal-web-visual-record-v2.sh inside the pinned image, forced =all, review the contact sheet.",
+      "owner": "Claude (integrator step, needs Docker)",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "54ebc7ac (2026-10-21): v2-access-390 re-recorded after the Access Basis column reads the served navigation rows (DEBT-005, 5610eddb); v2-access-1440 compared byte-identical, so only one image changed. The V2 spec (61 cells) was compared twice in a row, green, at that commit and again after f6b2cc6d (v2-workbench-paper 1440/390) and 9cf6b04b (v2-users-390, v2-alpha-360-orders-390). Contact sheet reviewed in the recorder run. The remaining whole-suite compare on the final SHA belongs to DEBT-UXM07-037, not here."
+    },
+    {
+      "id": "DEBT-UXM07-044",
+      "title": "M-1 rule R-A is falsified for the workbench route: 12 requests with 1 worker, 11 with 2",
+      "where": "upgrade/execution_loop/evidence/ELP2-10/measurements (M-1a receipts), BE-P19-measurements.md",
+      "consequence": "The request count per route is not worker-independent on workbench, so a per-route read budget cannot be pinned from one run; counts elsewhere hold.",
+      "proposed": "Find the request that appears only at 1 worker (likely a race between the eligibility batch and the self-context read), make the order deterministic or declare it in the budget; rerun M-1a at 1/2/4 workers.",
+      "owner": "Claude",
+      "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
+      "pre_commit_hook_blocks": false,
+      "status": "CLOSED",
+      "resolution": "e299c3df (2026-10-21): the missing request is GET /governance/stage-action-eligibility (3033 B). The Paper exit control starts it when it mounts, after the profile answered and the body rendered, so its moment follows render time. There is no race between reads and no duplicate: one read per mount, none while the profile is loading, none on a tab without the control (the Fills tab asks once when Overview is opened). The meter judged idle with networkidle, which Playwright resolves at once when the page was idle at any earlier moment, so on the slower worker the read landed after the first-load snapshot (first load 11 requests and 182486 B, the 3033 B in the tab window) and on the faster one before it (12 and 185519 B). Fix: the workbench root carries data-state (loading until the profile answers, then ready or the typed status), as the other stage screens already do and as the harness ready() already assumed; the budget and M-1a meters get quiet() (nothing in flight and no activity for 400 ms, counted from the call). Pinned by workbench.requests.test.tsx (set and order, ready implies complete, Fills asks none, Overview asks once). Evidence: under 8x CPU throttling 15 of 15 loads count 12 requests and 186692 B, where networkidle alone landed the read late in 1 of 3 and the state wait alone in 5 of 8; budget measure mode on workbench, workbench-fills and workbench-vnm is byte-identical on 1 and 2 workers; all 33 budget guards pass; tsc and the workbench, stage and flagOn vitest folders green; no image baseline cell changes (data attribute only); no budget ceiling changed (workbench is now 12 against the table's 11, ceiling 14). Remainder: the M-1a receipt itself is not re-cut (the 1-worker count of 12 in it is the correct one); the next full M-1 run at 1 and 2 workers (the host cap is 2) is the confirmation, not a precondition. Refresh 2026-10-21 evening: register close 371224f0; Codex review 17:18 UTC keeps the M-1 receipt bytes immutable (a0b885b6) and the DEBT-044 explanation stands; the narrow QUIET-DELAYED-WAKE case Codex found in quietGate.mjs:41-42 (success evaluated before the deadline, delayed wake at 15500 with cap 15000 returns PASS) is a separate fix owed to the measurement tooling, not a reopening of this entry."
+    },
+    {
+      "id": "DEBT-UXM07-039",
+      "title": "Account 360 demoted panels use a lighter label token than the shared demotion",
+      "where": "v2/css/account.css:434-442 (.exec-acct-v2 .exec-blk-demoted { --ink-faint: var(--ink-soft) }); UXM-10 README F-5(a): the shared .exec-blk-demoted (opacity .85) renders --ink-faint at 4.02:1 on #1c1c1c",
+      "consequence": "Account 360 passes axe, but a demoted label is lighter there than on a healthy account and than on Workbench, Replay and Event feed, which keep the failing shared pair",
+      "proposed": "Owner decision: replace the opacity with a contrast-safe cue in the shared demotion (moves the Workbench, Replay and Event feed baselines) or keep the Account-only override",
+      "owner": "Bobby/Claude",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "9723b168 (2026-10-21): one shared demotion, no per-screen override. blocks.css .exec-blk-demoted drops opacity .85 and steps the ink one token (--ink: var(--ink-soft), color: var(--ink)); the faint label ink is untouched and renders at full strength (HiFi --ops-ink-faint #8d8d8d, about 5.6:1 on #1c1c1c). The HiFi has no demotion state, so the cue is the HiFi's own ink steps (ink #f4f4f4 -> ink-soft #c6c6c6). The Account 360 override (.exec-acct-v2 .exec-blk-demoted { --ink-faint: var(--ink-soft) }) is deleted, so a demoted label reads the same on Account 360, Workbench, Replay, Event feed, Admin and every other StateBoundary panel. Browser: axe color-contrast on Account 360 (a stale body is mounted, .exec-blk-demoted count 1), Overview, Portfolios, Portfolio 360, Accounts, Admin, Users and Workbench at 1440 on a local build: 0 nodes. Tests: account/layout.test.ts pins the shared rule (--ink step, no opacity, no --ink-faint) and that no screen restates it; uxm10Css, v2Hygiene, blocks green. V2 visual cells that move: every cell that mounts a partial or stale body (text one ink step quieter, accent and flag colours no longer dimmed), in particular v2-account-360 (stale panel), v2-workbench and its tabs (partial panels), v2-portfolio-360 partial rows, v2-admin if its stale variant is baselined; a verify compare gives the exact list. Re-record is not done here.",
+      "closed_by": "Claude 2026-10-21 (post-freeze lane)"
+    },
+    {
+      "id": "DEBT-UXM07-040",
+      "title": "Audit A/B findings recorded 'open' have no register row and were not re-triaged against HEAD",
+      "where": "ux-audit-A README rows 5, 9, 17, 28, 31, 32, 33; ux-audit-B README rows 18, 19, 21, 23, 26. Fixed since and therefore not carried: B16, B17, B20 (a13b4fa6 wraps the dock reason; the dock title is the command in words), B22 and B24 (a7b06cad), B27 (9d15755f, ab680e3b, 13a0e7fa), A10 (a7b06cad)",
+      "consequence": "Examples: shared JourneySpine '? UNKNOWN' chips (A28, needs a design call), source display names (A9, needs a name from the source), Users drawer repeats the Disable/Archive reason (B19), Workbench Orders quantity decimals not aligned (B23, exact-decimal rule), Live V1 body six 'Not available' lines (B18, asserted by live.test), 404 retained-review console noise on the fixture BFF (A32/B25). Each may or may not still reproduce; none was re-checked here",
+      "owner": "Claude; Bobby for the design calls",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "2026-10-21, re-triaged on HEAD (567cf494) in a browser: host Playwright chromium on a local vite build of this tree against the in-repo BFF double (32 V2 routes x 1440/1024/390, rendered text read, screenshots, axe) and the same tree served by vite dev against the Research preview BFF (:8095, read only). FIXED earlier, nothing left: A9 source display names (Overview Source health reads 'Paper Binance USDM' on the double and on the preview data); A10/B24 top bar and breadcrumb at 390 (title and breadcrumb wrap, nothing clipped, no document overflow on any route at 1440, 1024, 390); A28 '? UNKNOWN' chips and the underlined 'Stage history' on stage cards (an unknown stage is one quiet state, one note under the spine); A5 1970 as-of on a lane click (now 'Source time not published'); B16 context bar (draws only the segments the read honours, no pressed Real-funded above Paper rows); B17 timestamps (one short-Z family on every screen; the Blotter keeps its HiFi short form with seconds, the Alpha replay trade log keeps seconds); B20 Operations dock title is the command in words and the Resolve reason wraps (a13b4fa6); B22 Blotter @390 (2,795 px, was about 15,000); B19 Users drawer prints the Disable/Archive reason once; B26 Sandbox finding ids (none visible in the Sandbox read of the double). FIXED NOW: Accounts 'All environments' disabled tab (never enabled, not in the HiFi) removed; Users disabled 'Invite account' button and the two 'Not published ...' bullet lines became one 'Not available: Role presets, Last sign-in' line plus the existing sentence (a368e575); Overview measure switch loses the never-enabled 'Equity' button (7f809a60); Portfolio 360 back link reads '<- Portfolios' in accent ink like Account 360 and Alpha 360 (567cf494). NOT FIXABLE IN THE FRONTEND: A32/B25 console 404 /api/v1/execution/retained-review (the BFF answers the typed 'not configured' 404 and the browser logs any 4xx; the double lane tolerates it by design; needs a typed 200 from Codex or no call); 503 correlation (preview only); A5 'TEST_ONLY:' rows and ~28 vs 2 counts on a lane click (fixture data); A33 11,104.0061 (exact string as published). STILL OPEN, design calls or test-pinned: moved to DEBT-UXM07-048.",
+      "closed_by": "Claude 2026-10-21 (post-freeze lane)"
+    },
+    {
+      "id": "DEBT-UXM07-048A",
+      "title": "Disabled controls that restate a gap already on the screen (items 1 and 2 of DEBT-UXM07-048)",
+      "where": "Split from DEBT-UXM07-048 on 2026-10-22; Bobby delegated the design calls ('ban tu quyet'), Claude applied them on claude/post-freeze-20261021",
+      "consequence": "Visual and wording only; no data, authority or flag effect. Flag-off DOM unchanged.",
+      "owner": "Claude",
+      "status": "CLOSED 2026-10-22",
+      "opened": "2026-10-21",
+      "resolution": "Blotter Export (in the HiFi) is a real control: it saves the rows in the table (visible column labels as the header, exact decimals ungrouped, UTC short form as shown, empty cell for an absent fact, text cells that read as a formula get a leading apostrophe) as blotter-<environment>-<as-of>.csv, in the browser, no request; caption 'Exports the N loaded rows' (the loaded page after scope, not the filtered result, which the server pages); not drawn when there is no row (3f8dea4f). Fleet: the disabled Map segment and the disabled Group by select are gone (not in the HiFi; Group by stays a select when the dataset can group, else it is one word on the 'Not available:' line; ?view=map still explains itself) (a92d90fe). Compare: the one-option Compare segment and its disabled Alphas button are gone; the banner still says it once when the address asks for alphas (1086bd7e). Portfolios: the disabled Compare button and Load more are gone; Compare N is a link once 2-4 comparable rows are picked, the selection bar carries the one hint, the 'no cursor' line stays (19965c39). Alpha 360: Request archive and Request gate review share one reason line and one My access link via DecisionGroup (0d41f473). Canary and Live decision buttons already shared one reason line and one My access link (DecisionGroup); they stay disabled by design, DecisionGroup now keeps ids quiet like DockAction. Portfolio 360 Equity: only the Flow lane and chip are drawn (EventRibbon/EventKindChips take kinds instead of unpublished); an empty ledger draws neither, the notes say why (bb9822b4, 139520bb). The HiFi has no Fleet file; Map, Group by and Alphas appear in no HiFi screen. V2 visual cells to re-record (not recorded here): fleet 1440/1024/390, compare 1440/390, portfolios 1440/390, portfolio-360 1440/390, alpha-360-overview/orders/deployments 1440/1024/390, trade-replay 1440/390, blotter 1440/390.",
+      "closed_by": "3f8dea4f, a92d90fe, 1086bd7e, 19965c39, 0d41f473, bb9822b4, 139520bb"
+    }
+  ],
+  "followup_after": "89f561c4"
+}

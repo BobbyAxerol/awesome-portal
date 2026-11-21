@@ -1,0 +1,14 @@
+{
+  "availability": { "state": "AVAILABLE", "reason_code": null },
+  "aggregation_scope": "SUM_OF_FOLD_WINDOWS_MAY_OVERLAP",
+  "is_bars": 144,
+  "oos_bars": 96,
+  "folds": [
+    { "fold": 1, "is_bars": 144, "oos_bars": 96 }
+  ],
+  "holdout_bars": {
+    "state": "DENIED",
+    "reason_code": "P13_SEALED_HOLDOUT_BAR_COUNT_DENIED",
+    "value": null
+  }
+}

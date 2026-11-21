@@ -1,0 +1,264 @@
+{
+  "schema_version": "research.split-detail.v1",
+  "read_authority": "PORTAL_PERSISTED_RESEARCH",
+  "run_id": "R-WFO-118",
+  "revision": "p14r1_048ac28cf60a8da0f46970ff0a55e7aa51fd4ece1ab3407d16e7a999f901f71e",
+  "etag": "\"p14r1_048ac28cf60a8da0f46970ff0a55e7aa51fd4ece1ab3407d16e7a999f901f71e\"",
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "readiness": "COMPLETE",
+  "as_of_utc_ms": 1781827200000,
+  "as_of_basis": "P14_PROJECTION_RECEIVED_AT",
+  "dataset": {
+    "state": "AVAILABLE",
+    "dataset_id": "crypto-binance-1m",
+    "symbol": "BTCUSDT",
+    "timeframe": "1h",
+    "bar_interval_ms": 3600000,
+    "provenance": "P08_DATASET_BINDING",
+    "reason_code": null,
+    "availability": {
+      "state": "AVAILABLE",
+      "reason_code": null
+    }
+  },
+  "provenance": {
+    "source_adapter_id": "p04.delta-rsi.v1",
+    "engine_version": "1.1.1",
+    "input_scope": "P08_OPTIONAL_WARMUP_PLUS_IS_OOS_ONLY",
+    "source_transform_digest": "dad26d8aa4ea0deade8ede4a75d251a7791fab0e68ef4ca965634e2532a51c35",
+    "requested_spec_digest": "b4c03a6b68e462c82effb4ded7589240159528923d70dc190d4e273fd02ac5ca",
+    "effective_spec_digest": "b4c03a6b68e462c82effb4ded7589240159528923d70dc190d4e273fd02ac5ca",
+    "dataset_binding_digest": "5e50d7c2c795adcd9d5d65865e80a106eba6ed099b7d53191938852d2ccfa3c9",
+    "manifest_digest": "1baf77065ab0bc28862106b2bd285a18a006f1e29f753ae309e575b594f4ac24"
+  },
+  "timeline": {
+    "start_utc_ms": 1704067200000,
+    "end_exclusive_utc_ms": 1773187200000
+  },
+  "protocol": {
+    "kind": "THREE_WINDOW_CURRENT",
+    "selection": {
+      "state": "FIXED_PROFILE_NO_SEARCH",
+      "parameter_bundle_digest": "62de20c934cea9a0ef4ad4f8e8aac5df75b0f6b81abbb7e6beb270c992dc6ac1",
+      "strict_outer_oos": {
+        "state": "NOT_ASSERTED",
+        "reason_code": "P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P04_FIXED_PROFILE_ASSERTS_NO_STRICT_SELECTOR"
+        }
+      }
+    },
+    "fold_plan": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_FOLD_PLAN",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_FOLD_PLAN"
+      }
+    },
+    "inner_folds": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_INNER_FOLDS",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_INNER_FOLDS"
+      }
+    },
+    "purge": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_PURGE",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_PURGE"
+      }
+    },
+    "embargo": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_EMBARGO",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_EMBARGO"
+      }
+    },
+    "theta_per_fold": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P04_PUBLISHES_NO_THETA_PER_FOLD",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P04_PUBLISHES_NO_THETA_PER_FOLD"
+      }
+    },
+    "gap_scan": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P08_PUBLISHES_NO_GAP_SCAN",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P08_PUBLISHES_NO_GAP_SCAN"
+      }
+    }
+  },
+  "windows": {
+    "warmup": {
+      "state": "AVAILABLE",
+      "start_utc_ms": 1704067200000,
+      "end_exclusive_utc_ms": 1704153600000,
+      "bars": 6,
+      "data_role": "WARMUP_NOT_SCORED",
+      "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "is": {
+      "start_utc_ms": 1704153600000,
+      "end_exclusive_utc_ms": 1747267200000,
+      "bars": 2994,
+      "data_role": "IS_CALIBRATION_HISTORY",
+      "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "outer_oos": {
+      "start_utc_ms": 1747267200000,
+      "end_exclusive_utc_ms": 1764547200000,
+      "bars": 1200,
+      "data_role": "OUTER_OOS_OBSERVATION",
+      "child_input_state": "EXPOSED_TO_CHILD_TAPE",
+      "evaluation_state": "P04_OBSERVED_AFTER_FIXED_PROFILE",
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      }
+    },
+    "holdout": {
+      "start_utc_ms": 1764547200000,
+      "end_exclusive_utc_ms": 1773187200000,
+      "bars": null,
+      "data_role": "HOLDOUT",
+      "child_input_state": "NOT_EXPOSED_TO_CHILD_TAPE",
+      "evaluation_state": "NOT_EVALUATED",
+      "result_exposure_state": "NOT_EXPOSED",
+      "snapshot_integrity_state": "P08_METADATA_BOUND",
+      "physical_io": {
+        "state": "NOT_ATTESTED",
+        "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED"
+      },
+      "source_seal": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P08_PUBLISHES_NO_SEAL_RECORD",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P08_PUBLISHES_NO_SEAL_RECORD"
+        }
+      },
+      "unlock": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P14_PUBLISHES_NO_UNLOCK_RECORD",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P14_PUBLISHES_NO_UNLOCK_RECORD"
+        }
+      },
+      "availability": {
+        "state": "AVAILABLE",
+        "reason_code": null
+      },
+      "bars_absence": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE",
+        "availability": {
+          "state": "NOT_PUBLISHED",
+          "reason_code": "P10_HOLDOUT_BARS_NOT_COUNTED_OUTSIDE_CHILD_TAPE"
+        }
+      }
+    }
+  },
+  "actions": {
+    "holdout_unlock": {
+      "state": "NOT_PUBLISHED",
+      "href": null,
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P14_PUBLISHES_NO_UNLOCK_ACTION"
+      }
+    }
+  },
+  "absence_authority": "FIELD_LOCAL",
+  "absence_index": [
+    {
+      "key": "strict_outer_oos",
+      "pointer": "/protocol/selection/strict_outer_oos",
+      "state": "NOT_ASSERTED"
+    },
+    {
+      "key": "fold_plan",
+      "pointer": "/protocol/fold_plan",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "inner_folds",
+      "pointer": "/protocol/inner_folds",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "purge",
+      "pointer": "/protocol/purge",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "embargo",
+      "pointer": "/protocol/embargo",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "theta_per_fold",
+      "pointer": "/protocol/theta_per_fold",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "gap_scan",
+      "pointer": "/protocol/gap_scan",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "holdout_seal",
+      "pointer": "/windows/holdout/source_seal",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "holdout_unlock",
+      "pointer": "/windows/holdout/unlock",
+      "state": "NOT_PUBLISHED"
+    },
+    {
+      "key": "holdout_bars",
+      "pointer": "/windows/holdout/bars_absence",
+      "state": "NOT_PUBLISHED"
+    }
+  ],
+  "source_absences": {
+    "physical_holdout_io": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P10_ROW_GROUP_PHYSICAL_IO_BOUNDARY_NOT_PUBLISHED"
+      }
+    },
+    "gap_scan": {
+      "state": "NOT_PUBLISHED",
+      "reason_code": "P08_PUBLISHES_NO_GAP_SCAN",
+      "availability": {
+        "state": "NOT_PUBLISHED",
+        "reason_code": "P08_PUBLISHES_NO_GAP_SCAN"
+      }
+    }
+  }
+}

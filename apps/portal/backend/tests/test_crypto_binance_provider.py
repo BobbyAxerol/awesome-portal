@@ -202,6 +202,8 @@ def _runtime_test_modules(tmp_path: Path):
         STORAGE_DIR=storage_root,
         LOADER_CONTRACT_VERSION=HISTORICAL_LOADER_CONTRACT,
         CryptoBinance1m=Loader,
+        CryptoBinanceSpot1m=Loader,
+        CryptoBinanceQuarterly1m=Loader,
     )
 
     def assert_compatible(root: Path, **kwargs: str) -> dict[str, str]:

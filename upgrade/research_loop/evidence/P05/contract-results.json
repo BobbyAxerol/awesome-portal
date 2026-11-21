@@ -1,0 +1,41 @@
+{
+  "phase": "P05",
+  "status": "PASS",
+  "storage_contract": {
+    "manifest_schema_version": "research.artifact-manifest.v1",
+    "part_schema_version": "research.parquet-part.v1",
+    "manifest_schema_sha256": "1665bdf426568d580d22c332798b2795d55d462db720db5ccef23b6fb35e9c16",
+    "valid_fixture_sha256": "945ac8598222af4f771e995f6c96e4935f395dbcd7da8d9fded56c592570dc94",
+    "contracts_snapshot_sha256": "6640f0da55a92be388d36fef5ae6ca0c364d942f6fc4e5a900da22597b154b9b",
+    "portal_api_generated_sha256": "11d0c428ec9166274ba86328713b7638839f61cfd0414efb032ee0b788f6bd44",
+    "manifest_limit_bytes": 262144,
+    "page_limit_rows": 200,
+    "page_limit_logical_bytes": 1048576,
+    "python_batch_limit_bytes": 16777216,
+    "python_buffer_limit_bytes": 67108864
+  },
+  "integrity": {
+    "candidate_to_durable_transition": "WRITING -> SEALED only after matching worker attempt/lease epoch, manifest facts and immutable part ledger",
+    "post_seal_integrity_downgrade": "SEALED -> CORRUPT or MISSING retains the original sealed facts",
+    "cursor": "opaque HMAC-signed and bound to artifact, relation/table and canonical projection",
+    "parts": "table-scoped canonical paths and contiguous ordinals; stream SHA-256 is checked before read",
+    "retention": "active lease, child run, exposure, release candidate, selection and verification references pin storage"
+  },
+  "implementation_sha256": {
+    "python_writer_reader": "4c272f5d08231817677e29e3d74f253bdaedd9f289920384846edfef4e4196c2",
+    "control_api_migration": "fb326281a61fd9390cff1eef8b6269ac9b42872d3194259401a06ad6452c835b",
+    "control_api_contracts": "f2255bdb390f217f5c8a8f9b08489b9c893d5f83b918087be54ecd6b943b7e81",
+    "control_api_repository": "1c30ed164044324c4480a22faaf2ee495af1abe9cc1c64c2f4600c82fe01c5f6",
+    "rust_reader_manifest": "c769c6bdbb95e9fc72e89b236f17f415ec2098ad875579ecc51a45d03d75480f",
+    "rust_reader_source": "5f3605c5cceb419201e00991fa343a4529cf2623def72d3211be541070712268",
+    "rust_lockfile": "73d7416e85bb967cb0072723b5d6d54cee743ab4956e37b8f0b8cae4dcf1d729",
+    "p05_wrapper": "a2b44d5f2e71540323e0874aff37e23cc7d975ebf382ee910ab3ba9b41af98ae",
+    "p05_postgres_gate": "c478da23af25cdfebd7ccaee1498c1a4fb499d780efbebe6c4b630a37265e687"
+  },
+    "server_boundary": [
+    "No manifest contains an absolute filesystem path, database locator, credential, market row or Execution/Trading System authority.",
+    "No P05 client/browser route, raw artifact path, cursor signing secret, worker lease or database credential is exposed.",
+    "Exact decimal values cross P05 boundaries as strings; UTC values are explicit and opaque IDs are never parsed by consumers.",
+    "The regenerated Atlas type only reflects a pre-existing P04 read-only OpenAPI route; it neither creates a P05 browser route nor grants run submission."
+  ]
+}

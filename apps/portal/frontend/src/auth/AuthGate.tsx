@@ -28,6 +28,7 @@ import {
 } from "./authApi";
 import { AccessProblemScreen, problemForState } from "./AccessProblemScreen";
 import { LoginScreen } from "./LoginScreen";
+import { onSessionExpired } from "./sessionExpiry";
 import { SessionProvider } from "./session";
 import { PasswordChangeScreen } from "./PasswordChangeScreen";
 
@@ -37,7 +38,9 @@ type Phase =
   /** The identity BFF is not in front of this build. */
   | { kind: "unwired"; detail: string }
   /** The BFF is there but could not answer. */
-  | { kind: "unavailable"; requestId: string | null };
+  | { kind: "unavailable"; requestId: string | null }
+  /** A screen received 401 (RF01-F3): the session ended under the shell. */
+  | { kind: "expired" };
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
@@ -66,6 +69,21 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(read, [read]);
 
+  /*
+   * A screen's 401 lands here rather than in a login of its own. The shell is
+   * replaced without navigating, so "Sign in again" re-reads the context and,
+   * once authenticated, the router mounts at the URL the reader already had.
+   */
+  useEffect(
+    () =>
+      onSessionExpired(() =>
+        setPhase((current) =>
+          current.kind === "ready" && current.context.state === "AUTHENTICATED" ? { kind: "expired" } : current,
+        ),
+      ),
+    [],
+  );
+
   if (phase.kind === "loading") {
     return (
       <div className="auth-screen">
@@ -82,6 +100,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
         onRetry={read}
       />
     );
+  }
+
+  if (phase.kind === "expired") {
+    return <AccessProblemScreen problem="SESSION_EXPIRED" onRetry={read} />;
   }
 
   if (phase.kind === "unwired") {

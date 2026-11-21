@@ -1,22 +1,26 @@
+import { FollowingParentReads } from "../governance/following-parent.service";
 import { createHash } from "crypto";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { AuthSession, PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProfileReadService } from "../profile-read/profile-read.service";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
+import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
 import {
-  decimalAbsoluteSum,
   decimalSubtract,
-  decimalSum,
   latest,
-  openOrders,
   ProfileScreenSource,
 } from "../execution/profile-screen-composer";
 import { evaluateSandboxCertification } from "../sandbox/sandbox-certification.service";
 import { CanaryEnvelopeCreateRequest } from "./contracts";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "./canary.repository";
+import { profileStageFacts } from "../execution/stage-facts-profile";
+import { gapRanges, sourceFigures, typedOrders, typedPositions } from "../execution/stage-rows";
+import { complianceRows, rollbackItems, trialSchedule } from "../execution/canary-envelope-facts";
 import { OwnerAccessService } from "../auth/owner-access.service";
+import { attachFollowingIdentity, parseFollowingInclude } from "../governance/following-parent.identity";
 import {
   GOVERNANCE_DENIAL_MESSAGE,
   governanceDenial,
@@ -56,6 +60,8 @@ export class CanaryService {
     @Inject(CanaryRepository) private readonly repository: CanaryRepository,
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
     @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
+    @Optional() @Inject(ExecutionReadScopes) private readonly readScopes?: ExecutionReadScopes,
+    @Optional() @Inject(FollowingParentReads) private readonly followingParents?: FollowingParentReads,
   ) {}
 
   /**
@@ -80,19 +86,34 @@ export class CanaryService {
     }
   }
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string,
+    include?: unknown) {
+    const principal = { user, session, workspaceId, viewerWorkspaceId };
+    if(this.followingParents&&await this.followingParents.mode(principal)==="SCOPED_V2"){
+      // BE-P12: opt-in only; the legacy body below already carries the identity.
+      const wanted=parseFollowingInclude(include);
+      const parent=await this.followingParents.detail(principal,"CANARY",deploymentId);
+      return wanted.has("identity")?attachFollowingIdentity(parent,
+        await this.profileReads.deploymentIdentity(principal,"canary",deploymentId)):parent;
+    }
     await this.assertGovernance(user, "read", workspaceId);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
+      throw new GovernanceError("CANARY_SCOPED_PARENT_NOT_COMMISSIONED", "Canary parent evidence field authority is not commissioned.", 503);
     const envelope = await this.repository.latestByDeployment(workspaceId, deploymentId);
     const [lineage, currentSource] = await Promise.all([
       this.repository.lineageFor(envelope),
       this.profileReads.snapshot(
-        { user, session, workspaceId },
+        principal,
         "canary",
         "EXECUTION_CANARY_CONTROL_ROOM_SCREEN",
         deploymentId,
       ),
     ]);
-    return this.publicDetail(user, envelope, lineage, false, currentSource);
+    const result = this.publicDetail(user, envelope, lineage, false, currentSource);
+    await this.assertGovernance(user, "read", workspaceId);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
   }
 
   async create(user: PortalUser, input: CanaryEnvelopeCreateRequest, requestId: string) {
@@ -176,7 +197,7 @@ export class CanaryService {
     const readAt = new Date().toISOString();
     const source = new ProfileScreenSource(currentSource ?? {}, readAt);
     const sourceConnected = source.connected;
-    const unavailablePanel = (panelId: string, authority: "EXECUTION" | "BROKER" | "DERIVED") => ({
+    const unavailablePanel = (panelId: string, authority: "EXECUTION" | "BROKER" | "DERIVED", reason?: string) => ({
       panel_id: panelId,
       source_authority: authority,
       panel_state: "unavailable",
@@ -192,7 +213,7 @@ export class CanaryService {
       projection_sequence: null,
       capability_snapshot_id: null,
       data: null,
-      warnings: [{ code: `CANARY_${panelId.toUpperCase()}_UNAVAILABLE` }],
+      warnings: [{ code: reason ?? `CANARY_${panelId.toUpperCase()}_UNAVAILABLE` }],
     });
     const unavailableCollection = (panelId: string, authority: "EXECUTION" | "BROKER") => ({
       envelope: unavailablePanel(panelId, authority),
@@ -200,12 +221,12 @@ export class CanaryService {
       returned_count: 0,
       rows: [],
     });
-    const unavailableKpi = (key: string, label: string, authority: "EXECUTION" | "BROKER" | "DERIVED") => ({
+    const unavailableKpi = (key: string, label: string, authority: "EXECUTION" | "BROKER" | "DERIVED", unit = envelope.currency, reason?: string) => ({
       key,
       label,
       value: null,
-      unit: envelope.currency,
-      envelope: unavailablePanel(`kpi-${key}`, authority),
+      unit,
+      envelope: unavailablePanel(`kpi-${key}`, authority, reason),
     });
     const positions = source.rows("positions");
     const orders = source.rows("orders");
@@ -216,12 +237,11 @@ export class CanaryService {
     const accountSync = source.rows("account_sync");
     const brokerSync = source.rows("broker_sync");
     const reconciliation = source.rows("reconciliation");
-    const open = openOrders(orders);
-    const capitalConsumed = decimalSum(margins, ["initial"]);
-    const grossNotional = decimalAbsoluteSum(positions, "notional");
-    const dailyPnl = decimalSum(positions, ["realized_pnl", "unrealized_pnl"]);
     const broker = latest(brokerSync, "synced_at");
-    const brokerEquity = typeof broker?.buying_power === "string" ? broker.buying_power : null;
+    // Buying power is not broker equity. Nor do position P&L fields establish
+    // a daily window or a common currency. Do not publish either as a KPI.
+    const dailyPnl = null;
+    const brokerEquity = null;
     const valueKpi = (
       key: string,
       label: string,
@@ -229,23 +249,40 @@ export class CanaryService {
       value: string | null,
       keys: readonly string[],
       unit = envelope.currency,
-    ) => ({ key, label, value, unit, envelope: source.panel(`kpi-${key}`, authority, keys, value === null ? {} : { value }) });
+      reason?: string,
+    ) => value === null ? unavailableKpi(key, label, authority, unit, reason)
+      : ({ key, label, value, unit, envelope: source.panel(`kpi-${key}`, authority, keys, { value }) });
     const sourcePositions = source.collection("positions", "EXECUTION", "positions");
     const sourceBlotter = source.collection("blotter", "EXECUTION", "orders");
     const internalData = { positions, orders, fills, sessions, account_balances: balances, margin_balances: margins, account_sync: accountSync };
     const brokerData = { broker_sync: brokerSync };
     const differenceData = { reconciliation };
+    const compliance = complianceRows({
+      currency: envelope.currency,
+      capital_cap: envelope.capital_cap,
+      gross_notional_cap: envelope.gross_notional_cap,
+      daily_loss_cap: envelope.daily_loss_cap,
+      max_open_orders: envelope.max_open_orders,
+      duration_days: envelope.duration_days,
+    }, source);
+    // The legacy summary and headroom must not bypass the qualified facts
+    // used by the newer compliance rows. A partial/mixed-currency relation
+    // must never look like a complete monetary total or zero.
+    const fact = (cap: (typeof compliance.rows)[number]["cap"]) => compliance.rows.find(row => row.cap === cap)!.consumed;
+    const capital = fact("capital"), gross = fact("gross_notional"), orderCount = fact("open_orders");
+    const capitalConsumed = capital.value, grossNotional = gross.value;
+    const openCount = orderCount.value === null ? null : Number(orderCount.value);
     const consumed = sourceConnected ? {
       capital: capitalConsumed,
       gross_notional: grossNotional,
       daily_pnl: dailyPnl,
-      open_orders: open.length,
+      open_orders: openCount,
     } : null;
     const headroom = sourceConnected ? {
       capital: capitalConsumed === null ? null : decimalSubtract(decimal(envelope.capital_cap), capitalConsumed),
       gross_notional: grossNotional === null ? null : decimalSubtract(decimal(envelope.gross_notional_cap), grossNotional),
-      daily_loss: dailyPnl === null ? null : decimalSubtract(decimal(envelope.daily_loss_cap), dailyPnl.startsWith("-") ? dailyPnl.slice(1) : "0"),
-      open_orders: envelope.max_open_orders - open.length,
+      daily_loss: null,
+      open_orders: openCount === null ? null : envelope.max_open_orders - openCount,
     } : null;
     return {
       schema_version: "execution.canary-control-room.v1",
@@ -263,6 +300,7 @@ export class CanaryService {
       deployment: {
         deployment_id: envelope.deployment_id,
         portfolio_id: certification.portfolio_id,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         account_id: certification.account_id,
         external_account_ref: certification.external_account_ref,
         venue: certification.venue,
@@ -302,19 +340,26 @@ export class CanaryService {
         day_index: null,
         duration_days: envelope.duration_days,
         blocker_codes: envelope.blocker_codes,
+        // FE-071: trial start and exit-review date, only from a source-stated activation; additive.
+        trial: trialSchedule(source.rows("deployments")[0]?.activated_at, envelope.duration_days),
       },
+      // FE-067: runtime / reconciliation / sessions as typed facts. Additive; the pinned-null
+      // `runtime_state` above stays, the real value (when the source publishes one) is here.
+      stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
+      // FE-072: Internal / Broker / Difference figures; every cell typed, broker side unpublished.
+      source_figures: sourceFigures(source, "LIVE_SOURCE_UNAVAILABLE"),
       kpis: [
         ...(sourceConnected ? [
-          valueKpi("capital_consumed", "Capital consumed", "EXECUTION", capitalConsumed, ["margin_balances"]),
-          valueKpi("gross_notional", "Gross notional", "EXECUTION", grossNotional, ["positions"]),
-          valueKpi("daily_pnl", "Daily P&L", "DERIVED", dailyPnl, ["positions"]),
-          valueKpi("open_orders", "Open orders", "EXECUTION", String(open.length), ["orders"], "COUNT"),
-          valueKpi("broker_equity", "Broker equity", "BROKER", brokerEquity, ["broker_sync"]),
+          valueKpi("capital_consumed", "Capital consumed", "EXECUTION", capitalConsumed, ["margin_balances"], envelope.currency, capital.reason_code ?? undefined),
+          valueKpi("gross_notional", "Gross notional", "EXECUTION", grossNotional, ["positions"], envelope.currency, gross.reason_code ?? undefined),
+          valueKpi("daily_pnl", "Daily P&L", "DERIVED", dailyPnl, ["positions"], envelope.currency, "DAILY_PNL_WINDOW_NOT_PUBLISHED"),
+          valueKpi("open_orders", "Open orders", "EXECUTION", orderCount.value, ["orders"], "COUNT", orderCount.reason_code ?? undefined),
+          valueKpi("broker_equity", "Broker equity", "BROKER", brokerEquity, ["broker_sync"], envelope.currency, "BROKER_EQUITY_NOT_PUBLISHED"),
         ] : [
           unavailableKpi("capital_consumed", "Capital consumed", "EXECUTION"),
           unavailableKpi("gross_notional", "Gross notional", "EXECUTION"),
           unavailableKpi("daily_pnl", "Daily P&L", "DERIVED"),
-          unavailableKpi("open_orders", "Open orders", "EXECUTION"),
+          unavailableKpi("open_orders", "Open orders", "EXECUTION", "COUNT"),
           unavailableKpi("broker_equity", "Broker equity", "BROKER"),
         ]),
       ],
@@ -331,6 +376,9 @@ export class CanaryService {
         consumed,
         headroom,
         base_risk_profile_verified: false,
+        // FE-071: one row per cap with the server's own ratio and a server verdict; additive.
+        rows: compliance.rows,
+        verdict: compliance.verdict,
       },
       source_panels: [
         ...(sourceConnected ? [
@@ -343,8 +391,9 @@ export class CanaryService {
           unavailablePanel("difference", "DERIVED"),
         ]),
       ],
-      positions: sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION"),
-      blotter: sourceConnected ? sourceBlotter : unavailableCollection("blotter", "EXECUTION"),
+      // FE-072: `typed` is the same relation as the free rows, typed; leverage / ack latency named as unpublished columns.
+      positions: { ...(sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION")), typed: typedPositions(source, "LIVE_SOURCE_UNAVAILABLE") },
+      blotter: { ...(sourceConnected ? sourceBlotter : unavailableCollection("blotter", "EXECUTION")), typed: typedOrders(source, "LIVE_SOURCE_UNAVAILABLE") },
       series: {
         envelope: unavailablePanel("series", "DERIVED"),
         resolution: null,
@@ -355,6 +404,8 @@ export class CanaryService {
         ready: false,
         evidence_hash: null,
         blocker_codes: ["ROLLBACK_EVIDENCE_UNAVAILABLE"],
+        // FE-071: the four readiness checks with the date each was last checked; additive.
+        items: rollbackItems(source),
       },
       command_policy: {
         production_command_active: false,

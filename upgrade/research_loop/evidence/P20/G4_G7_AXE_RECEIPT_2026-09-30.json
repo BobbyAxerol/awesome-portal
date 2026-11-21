@@ -1,0 +1,1729 @@
+{
+ "receipt": "RF-04 axe per Research screen (G7), compact",
+ "derived_from": "the probe's own receipt rf04-a11y-receipt.json (not committed, 948 KB; sha256 first 16 hex below)",
+ "probe_receipt_sha256_16": "5173535ff0ef7338",
+ "g4_ladder_receipt_sha256_16": "4df7aaca78e537c3",
+ "probe": "apps/portal/frontend/e2e/_probe-research-rf04-a11y.spec.ts",
+ "host": "vite preview of a fresh build of this tree, http://127.0.0.1:4361 (RESEARCH_PROBE_SERVE=preview)",
+ "axe_core": "4.13.0",
+ "motion": "prefers-reduced-motion: reduce (the running-state pulse is held still)",
+ "accepted": "D-B1 only: color-contrast where axe measured the foreground as exactly #939db0 (--ink-faint). Counted here, not listed node by node.",
+ "totals": {
+  "cells": 45,
+  "d_b1_nodes_accepted": 2389,
+  "other_nodes": 74
+ },
+ "rows": [
+  {
+   "key": "S00@660",
+   "screen": "S00",
+   "title": "journey map",
+   "path": "/research/quantbt/journey",
+   "width": 660,
+   "waited_ms_for_screen_root": 620,
+   "passes": 19,
+   "d_b1_nodes_accepted": 25,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 26
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S00@1280",
+   "screen": "S00",
+   "title": "journey map",
+   "path": "/research/quantbt/journey",
+   "width": 1280,
+   "waited_ms_for_screen_root": 603,
+   "passes": 19,
+   "d_b1_nodes_accepted": 25,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 26
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S00@1440",
+   "screen": "S00",
+   "title": "journey map",
+   "path": "/research/quantbt/journey",
+   "width": 1440,
+   "waited_ms_for_screen_root": 404,
+   "passes": 19,
+   "d_b1_nodes_accepted": 25,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 26
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S01@660",
+   "screen": "S01",
+   "title": "run library",
+   "path": "/research/quantbt/runs",
+   "width": 660,
+   "waited_ms_for_screen_root": 774,
+   "passes": 24,
+   "d_b1_nodes_accepted": 58,
+   "other_nodes": 4,
+   "incomplete_needs_review": [],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "article[data-run=\"R-WFO-118\"] > .flex-wrap:nth-child(2) > .flex-none.flex-col[data-trail=\"true\"] > .flex > span[data-stage-state=\"cap\"][data-stage-cell=\"S2\"][data-tooltip-source=\"SOURCE_VERBATIM\"]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#f4ecdb",
+     "contrast": 4.01,
+     "html": "<span role=\"img\" aria-label=\"S2: S2 Search \u2014 stri...\" data-stage-cell=\"S2\" data-stage-state=\"cap\" data-tooltip-source=\"SOURCE_VERBATIM\" title=\"S2 Search \u2014 strict s...\" class=\"inline-flex items-ce...\" style=\"width: 34px; height:...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "article[data-run=\"R-WFO-120\"] > .flex-wrap:nth-child(2) > .flex-none.flex-col[data-trail=\"true\"] > .flex > span[data-stage-state=\"cap\"][data-stage-cell=\"S2\"][data-tooltip-source=\"SOURCE_VERBATIM\"]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#f4ecdb",
+     "contrast": 4.01,
+     "html": "<span role=\"img\" aria-label=\"S2: S2 Search \u2014 stri...\" data-stage-cell=\"S2\" data-stage-state=\"cap\" data-tooltip-source=\"SOURCE_VERBATIM\" title=\"S2 Search \u2014 strict s...\" class=\"inline-flex items-ce...\" style=\"width: 34px; height:...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-superseded=\"true\"] > span:nth-child(1)"
+     ],
+     "foreground": "#b3bac8",
+     "background": "#ffffff",
+     "contrast": 1.94,
+     "html": "<span style=\"text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--line-strong); border-radius: 3px; padding: 0px 5px;\">superseded</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-superseded=\"true\"] > span:nth-child(2)"
+     ],
+     "foreground": "#b3bac8",
+     "background": "#ffffff",
+     "contrast": 1.94,
+     "html": "<span>att_00 \u00b7 replaced by this attempt after a config fix \u2014 kept for lineage, may never support an approval</span>"
+    }
+   ]
+  },
+  {
+   "key": "S01@1280",
+   "screen": "S01",
+   "title": "run library",
+   "path": "/research/quantbt/runs",
+   "width": 1280,
+   "waited_ms_for_screen_root": 509,
+   "passes": 24,
+   "d_b1_nodes_accepted": 58,
+   "other_nodes": 4,
+   "incomplete_needs_review": [],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "article[data-run=\"R-WFO-118\"] > .flex-wrap:nth-child(2) > .flex-none.flex-col[data-trail=\"true\"] > .flex > span[data-stage-state=\"cap\"][data-stage-cell=\"S2\"][data-tooltip-source=\"SOURCE_VERBATIM\"]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#f4ecdb",
+     "contrast": 4.01,
+     "html": "<span role=\"img\" aria-label=\"S2: S2 Search \u2014 stri...\" data-stage-cell=\"S2\" data-stage-state=\"cap\" data-tooltip-source=\"SOURCE_VERBATIM\" title=\"S2 Search \u2014 strict s...\" class=\"inline-flex items-ce...\" style=\"width: 34px; height:...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "article[data-run=\"R-WFO-120\"] > .flex-wrap:nth-child(2) > .flex-none.flex-col[data-trail=\"true\"] > .flex > span[data-stage-state=\"cap\"][data-stage-cell=\"S2\"][data-tooltip-source=\"SOURCE_VERBATIM\"]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#f4ecdb",
+     "contrast": 4.01,
+     "html": "<span role=\"img\" aria-label=\"S2: S2 Search \u2014 stri...\" data-stage-cell=\"S2\" data-stage-state=\"cap\" data-tooltip-source=\"SOURCE_VERBATIM\" title=\"S2 Search \u2014 strict s...\" class=\"inline-flex items-ce...\" style=\"width: 34px; height:...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-superseded=\"true\"] > span:nth-child(1)"
+     ],
+     "foreground": "#b3bac8",
+     "background": "#ffffff",
+     "contrast": 1.94,
+     "html": "<span style=\"text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--line-strong); border-radius: 3px; padding: 0px 5px;\">superseded</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-superseded=\"true\"] > span:nth-child(2)"
+     ],
+     "foreground": "#b3bac8",
+     "background": "#ffffff",
+     "contrast": 1.94,
+     "html": "<span>att_00 \u00b7 replaced by this attempt after a config fix \u2014 kept for lineage, may never support an approval</span>"
+    }
+   ]
+  },
+  {
+   "key": "S01@1440",
+   "screen": "S01",
+   "title": "run library",
+   "path": "/research/quantbt/runs",
+   "width": 1440,
+   "waited_ms_for_screen_root": 476,
+   "passes": 24,
+   "d_b1_nodes_accepted": 58,
+   "other_nodes": 4,
+   "incomplete_needs_review": [],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "article[data-run=\"R-WFO-118\"] > .flex-wrap:nth-child(2) > .flex-none.flex-col[data-trail=\"true\"] > .flex > span[data-stage-state=\"cap\"][data-stage-cell=\"S2\"][data-tooltip-source=\"SOURCE_VERBATIM\"]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#f4ecdb",
+     "contrast": 4.01,
+     "html": "<span role=\"img\" aria-label=\"S2: S2 Search \u2014 stri...\" data-stage-cell=\"S2\" data-stage-state=\"cap\" data-tooltip-source=\"SOURCE_VERBATIM\" title=\"S2 Search \u2014 strict s...\" class=\"inline-flex items-ce...\" style=\"width: 34px; height:...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "article[data-run=\"R-WFO-120\"] > .flex-wrap:nth-child(2) > .flex-none.flex-col[data-trail=\"true\"] > .flex > span[data-stage-state=\"cap\"][data-stage-cell=\"S2\"][data-tooltip-source=\"SOURCE_VERBATIM\"]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#f4ecdb",
+     "contrast": 4.01,
+     "html": "<span role=\"img\" aria-label=\"S2: S2 Search \u2014 stri...\" data-stage-cell=\"S2\" data-stage-state=\"cap\" data-tooltip-source=\"SOURCE_VERBATIM\" title=\"S2 Search \u2014 strict s...\" class=\"inline-flex items-ce...\" style=\"width: 34px; height:...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-superseded=\"true\"] > span:nth-child(1)"
+     ],
+     "foreground": "#b3bac8",
+     "background": "#ffffff",
+     "contrast": 1.94,
+     "html": "<span style=\"text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid var(--line-strong); border-radius: 3px; padding: 0px 5px;\">superseded</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-superseded=\"true\"] > span:nth-child(2)"
+     ],
+     "foreground": "#b3bac8",
+     "background": "#ffffff",
+     "contrast": 1.94,
+     "html": "<span>att_00 \u00b7 replaced by this attempt after a config fix \u2014 kept for lineage, may never support an approval</span>"
+    }
+   ]
+  },
+  {
+   "key": "S02@660",
+   "screen": "S02",
+   "title": "new run",
+   "path": "/research/quantbt/runs/new",
+   "width": 660,
+   "waited_ms_for_screen_root": 543,
+   "passes": 23,
+   "d_b1_nodes_accepted": 44,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 7
+    }
+   ],
+   "other": [
+    {
+     "rule": "heading-order",
+     "impact": "moderate",
+     "target": [
+      ".text-\\[12px\\]"
+     ],
+     "foreground": null,
+     "background": null,
+     "contrast": null,
+     "html": "<h3 class=\"text-[12px] font-semibold uppercase tracking-[.05em]\">Context \u2014 alpha &amp; version binding</h3>"
+    }
+   ]
+  },
+  {
+   "key": "S02@1280",
+   "screen": "S02",
+   "title": "new run",
+   "path": "/research/quantbt/runs/new",
+   "width": 1280,
+   "waited_ms_for_screen_root": 694,
+   "passes": 23,
+   "d_b1_nodes_accepted": 44,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 7
+    }
+   ],
+   "other": [
+    {
+     "rule": "heading-order",
+     "impact": "moderate",
+     "target": [
+      ".text-\\[12px\\]"
+     ],
+     "foreground": null,
+     "background": null,
+     "contrast": null,
+     "html": "<h3 class=\"text-[12px] font-semibold uppercase tracking-[.05em]\">Context \u2014 alpha &amp; version binding</h3>"
+    }
+   ]
+  },
+  {
+   "key": "S02@1440",
+   "screen": "S02",
+   "title": "new run",
+   "path": "/research/quantbt/runs/new",
+   "width": 1440,
+   "waited_ms_for_screen_root": 558,
+   "passes": 23,
+   "d_b1_nodes_accepted": 44,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 7
+    }
+   ],
+   "other": [
+    {
+     "rule": "heading-order",
+     "impact": "moderate",
+     "target": [
+      ".text-\\[12px\\]"
+     ],
+     "foreground": null,
+     "background": null,
+     "contrast": null,
+     "html": "<h3 class=\"text-[12px] font-semibold uppercase tracking-[.05em]\">Context \u2014 alpha &amp; version binding</h3>"
+    }
+   ]
+  },
+  {
+   "key": "S03@660",
+   "screen": "S03",
+   "title": "run progress",
+   "path": "/research/quantbt/runs/run_01HZQ7PROBE/progress",
+   "width": 660,
+   "waited_ms_for_screen_root": 503,
+   "passes": 23,
+   "d_b1_nodes_accepted": 31,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 5
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-claim-text=\"true\"]"
+     ],
+     "foreground": "#a3acbc",
+     "background": "#ffffff",
+     "contrast": 2.28,
+     "html": "<span data-claim-text=\"true\" style=\"font-family: var(--font-mono); font-size: 11.5px; overflow-wrap: anywhere; color: var(--ink-faint); border: 1px dashed var(--viz-legend-inactive); border-radius: 3px; padding: 0px 6px; font-style: italic;\u2026"
+    }
+   ]
+  },
+  {
+   "key": "S03@1280",
+   "screen": "S03",
+   "title": "run progress",
+   "path": "/research/quantbt/runs/run_01HZQ7PROBE/progress",
+   "width": 1280,
+   "waited_ms_for_screen_root": 750,
+   "passes": 23,
+   "d_b1_nodes_accepted": 31,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 5
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-claim-text=\"true\"]"
+     ],
+     "foreground": "#a3acbc",
+     "background": "#ffffff",
+     "contrast": 2.28,
+     "html": "<span data-claim-text=\"true\" style=\"font-family: var(--font-mono); font-size: 11.5px; overflow-wrap: anywhere; color: var(--ink-faint); border: 1px dashed var(--viz-legend-inactive); border-radius: 3px; padding: 0px 6px; font-style: italic;\u2026"
+    }
+   ]
+  },
+  {
+   "key": "S03@1440",
+   "screen": "S03",
+   "title": "run progress",
+   "path": "/research/quantbt/runs/run_01HZQ7PROBE/progress",
+   "width": 1440,
+   "waited_ms_for_screen_root": 604,
+   "passes": 23,
+   "d_b1_nodes_accepted": 31,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 5
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-claim-text=\"true\"]"
+     ],
+     "foreground": "#a3acbc",
+     "background": "#ffffff",
+     "contrast": 2.28,
+     "html": "<span data-claim-text=\"true\" style=\"font-family: var(--font-mono); font-size: 11.5px; overflow-wrap: anywhere; color: var(--ink-faint); border: 1px dashed var(--viz-legend-inactive); border-radius: 3px; padding: 0px 6px; font-style: italic;\u2026"
+    }
+   ]
+  },
+  {
+   "key": "S04@660",
+   "screen": "S04",
+   "title": "evidence hub",
+   "path": "/research/quantbt/runs/R-WFO-118/evidence#stage=search&fold=3&params=prm_7c1a9e",
+   "width": 660,
+   "waited_ms_for_screen_root": 591,
+   "passes": 27,
+   "d_b1_nodes_accepted": 47,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 14
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S04@1280",
+   "screen": "S04",
+   "title": "evidence hub",
+   "path": "/research/quantbt/runs/R-WFO-118/evidence#stage=search&fold=3&params=prm_7c1a9e",
+   "width": 1280,
+   "waited_ms_for_screen_root": 457,
+   "passes": 27,
+   "d_b1_nodes_accepted": 51,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 7
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-promotion-soon=\"true\"] > .items-baseline.gap-1\\.5.flex > .tracking-\\[\\.05em\\].text-\\[12px\\].font-medium"
+     ],
+     "foreground": "#9199a5",
+     "background": "#ffffff",
+     "contrast": 2.87,
+     "html": "<span class=\"text-[12px] font-medium uppercase tracking-[.05em]\" style=\"color: var(--ink-soft);\">Promotion</span>"
+    }
+   ]
+  },
+  {
+   "key": "S04@1440",
+   "screen": "S04",
+   "title": "evidence hub",
+   "path": "/research/quantbt/runs/R-WFO-118/evidence#stage=search&fold=3&params=prm_7c1a9e",
+   "width": 1440,
+   "waited_ms_for_screen_root": 716,
+   "passes": 26,
+   "d_b1_nodes_accepted": 51,
+   "other_nodes": 3,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 5
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-promotion-soon=\"true\"] > .items-baseline.gap-1\\.5.flex > .tracking-\\[\\.05em\\].text-\\[12px\\].font-medium"
+     ],
+     "foreground": "#9199a5",
+     "background": "#ffffff",
+     "contrast": 2.87,
+     "html": "<span class=\"text-[12px] font-medium uppercase tracking-[.05em]\" style=\"color: var(--ink-soft);\">Promotion</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".px-1"
+     ],
+     "foreground": "#bcc2ce",
+     "background": "#ffffff",
+     "contrast": 1.78,
+     "html": "<span class=\"mono rounded-[3px] border border-dashed px-1 text-[9px] font-semibold\" style=\"color: var(--ink-faint); border-color: var(--ink-faint);\">SOON</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-promotion-soon=\"true\"] > .text-\\[9\\.5px\\].mono"
+     ],
+     "foreground": "#bcc2ce",
+     "background": "#ffffff",
+     "contrast": 1.78,
+     "html": "<span class=\"mono text-[9.5px]\" style=\"color: var(--ink-faint);\">Approval Gate \u00b7 Paper</span>"
+    }
+   ]
+  },
+  {
+   "key": "S05@660",
+   "screen": "S05",
+   "title": "split",
+   "path": "/research/quantbt/runs/R-WFO-118/split#stage=split&fold=2&params=prm_3b81c7",
+   "width": 660,
+   "waited_ms_for_screen_root": 957,
+   "passes": 30,
+   "d_b1_nodes_accepted": 73,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 2
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S05@1280",
+   "screen": "S05",
+   "title": "split",
+   "path": "/research/quantbt/runs/R-WFO-118/split#stage=split&fold=2&params=prm_3b81c7",
+   "width": 1280,
+   "waited_ms_for_screen_root": 526,
+   "passes": 30,
+   "d_b1_nodes_accepted": 78,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 2
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S05@1440",
+   "screen": "S05",
+   "title": "split",
+   "path": "/research/quantbt/runs/R-WFO-118/split#stage=split&fold=2&params=prm_3b81c7",
+   "width": 1440,
+   "waited_ms_for_screen_root": 712,
+   "passes": 29,
+   "d_b1_nodes_accepted": 80,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 2
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S06@660",
+   "screen": "S06",
+   "title": "search",
+   "path": "/research/quantbt/runs/R-WFO-118/search#stage=split&fold=2&params=prm_3b81c7",
+   "width": 660,
+   "waited_ms_for_screen_root": 764,
+   "passes": 22,
+   "d_b1_nodes_accepted": 91,
+   "other_nodes": 4,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 3
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".self-start"
+     ],
+     "foreground": "#6f7a8c",
+     "background": "#ffffff",
+     "contrast": 4.34,
+     "html": "<span class=\"mono self-start roun...\" title=\"The outer-OOS window...\" data-claim-fact=\"oos column\" data-oos-column=\"REPORT_ONLY\" style=\"color: var(--state-u...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-stage=\"A\"] > .gap-2\\.5.items-baseline.flex-wrap > h2"
+     ],
+     "foreground": "#7a8699",
+     "background": "#faf9f5",
+     "contrast": 3.49,
+     "html": "<h2 class=\"mono text-[11px] font-bold uppercase tracking-[.08em]\" style=\"color: var(--role-is);\">Stage A \u00b7 search</h2>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".tracking-\\[\\.14em\\]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#faf9f5",
+     "contrast": 4.47,
+     "html": "<span class=\"mono whitespace-nowr...\" title=\"Stage A searches, th...\" data-freeze-label=\"rule\" style=\"color: var(--accent-...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-stage=\"B\"] > .gap-2\\.5.items-baseline.flex-wrap > h2"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#faf9f5",
+     "contrast": 4.47,
+     "html": "<h2 class=\"mono text-[11px] font-bold uppercase tracking-[.08em]\" style=\"color: var(--accent-2);\">Stage B \u00b7 selection</h2>"
+    }
+   ]
+  },
+  {
+   "key": "S06@1280",
+   "screen": "S06",
+   "title": "search",
+   "path": "/research/quantbt/runs/R-WFO-118/search#stage=split&fold=2&params=prm_3b81c7",
+   "width": 1280,
+   "waited_ms_for_screen_root": 727,
+   "passes": 22,
+   "d_b1_nodes_accepted": 87,
+   "other_nodes": 5,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 7
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".self-start"
+     ],
+     "foreground": "#6f7a8c",
+     "background": "#ffffff",
+     "contrast": 4.34,
+     "html": "<span class=\"mono self-start roun...\" title=\"The outer-OOS window...\" data-claim-fact=\"oos column\" data-oos-column=\"REPORT_ONLY\" style=\"color: var(--state-u...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-stage=\"A\"] > .gap-2\\.5.items-baseline.flex-wrap > h2"
+     ],
+     "foreground": "#7a8699",
+     "background": "#faf9f5",
+     "contrast": 3.49,
+     "html": "<h2 class=\"mono text-[11px] font-bold uppercase tracking-[.08em]\" style=\"color: var(--role-is);\">Stage A \u00b7 search</h2>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".tracking-\\[\\.14em\\]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#faf9f5",
+     "contrast": 4.47,
+     "html": "<span class=\"mono whitespace-nowr...\" title=\"Stage A searches, th...\" data-freeze-label=\"rule\" style=\"color: var(--accent-...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-stage=\"B\"] > .gap-2\\.5.items-baseline.flex-wrap > h2"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#faf9f5",
+     "contrast": 4.47,
+     "html": "<h2 class=\"mono text-[11px] font-bold uppercase tracking-[.08em]\" style=\"color: var(--accent-2);\">Stage B \u00b7 selection</h2>"
+    },
+    {
+     "rule": "scrollable-region-focusable",
+     "impact": "serious",
+     "target": [
+      "section[data-panel=\"search-space\"]"
+     ],
+     "foreground": null,
+     "background": null,
+     "contrast": null,
+     "html": "<section class=\"flex flex-col gap-[6px] rounded-[8px] border p-[14px] min-w-0 overflow-x-auto\" data-panel=\"search-space\" style=\"border-color: var(--line); background: var(--paper-raised);\">"
+    }
+   ]
+  },
+  {
+   "key": "S06@1440",
+   "screen": "S06",
+   "title": "search",
+   "path": "/research/quantbt/runs/R-WFO-118/search#stage=split&fold=2&params=prm_3b81c7",
+   "width": 1440,
+   "waited_ms_for_screen_root": 811,
+   "passes": 22,
+   "d_b1_nodes_accepted": 91,
+   "other_nodes": 4,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 3
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".self-start"
+     ],
+     "foreground": "#6f7a8c",
+     "background": "#ffffff",
+     "contrast": 4.34,
+     "html": "<span class=\"mono self-start roun...\" title=\"The outer-OOS window...\" data-claim-fact=\"oos column\" data-oos-column=\"REPORT_ONLY\" style=\"color: var(--state-u...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-stage=\"A\"] > .gap-2\\.5.items-baseline.flex-wrap > h2"
+     ],
+     "foreground": "#7a8699",
+     "background": "#faf9f5",
+     "contrast": 3.49,
+     "html": "<h2 class=\"mono text-[11px] font-bold uppercase tracking-[.08em]\" style=\"color: var(--role-is);\">Stage A \u00b7 search</h2>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".tracking-\\[\\.14em\\]"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#faf9f5",
+     "contrast": 4.47,
+     "html": "<span class=\"mono whitespace-nowr...\" title=\"Stage A searches, th...\" data-freeze-label=\"rule\" style=\"color: var(--accent-...\">"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-stage=\"B\"] > .gap-2\\.5.items-baseline.flex-wrap > h2"
+     ],
+     "foreground": "#9a6a1f",
+     "background": "#faf9f5",
+     "contrast": 4.47,
+     "html": "<h2 class=\"mono text-[11px] font-bold uppercase tracking-[.08em]\" style=\"color: var(--accent-2);\">Stage B \u00b7 selection</h2>"
+    }
+   ]
+  },
+  {
+   "key": "S07@660",
+   "screen": "S07",
+   "title": "freeze",
+   "path": "/research/quantbt/runs/R-WFO-118/freeze#stage=split&fold=2&params=prm_3b81c7",
+   "width": 660,
+   "waited_ms_for_screen_root": 575,
+   "passes": 30,
+   "d_b1_nodes_accepted": 87,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 4
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S07@1280",
+   "screen": "S07",
+   "title": "freeze",
+   "path": "/research/quantbt/runs/R-WFO-118/freeze#stage=split&fold=2&params=prm_3b81c7",
+   "width": 1280,
+   "waited_ms_for_screen_root": 782,
+   "passes": 30,
+   "d_b1_nodes_accepted": 87,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 4
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S07@1440",
+   "screen": "S07",
+   "title": "freeze",
+   "path": "/research/quantbt/runs/R-WFO-118/freeze#stage=split&fold=2&params=prm_3b81c7",
+   "width": 1440,
+   "waited_ms_for_screen_root": 695,
+   "passes": 30,
+   "d_b1_nodes_accepted": 87,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 4
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S08@660",
+   "screen": "S08",
+   "title": "execute replay",
+   "path": "/research/quantbt/runs/R-WFO-118/execute#stage=execute&fold=2&params=prm_3b81c7&seq=5",
+   "width": 660,
+   "waited_ms_for_screen_root": 625,
+   "passes": 30,
+   "d_b1_nodes_accepted": 76,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 3
+    }
+   ],
+   "other": [
+    {
+     "rule": "heading-order",
+     "impact": "moderate",
+     "target": [
+      "section[aria-label=\"execution contract\"] > .justify-between.gap-2.items-baseline > h3"
+     ],
+     "foreground": null,
+     "background": null,
+     "contrast": null,
+     "html": "<h3 class=\"mono text-[10px] uppercase tracking-[.07em]\" style=\"color: var(--ink-faint);\">execution contract</h3>"
+    }
+   ]
+  },
+  {
+   "key": "S08@1280",
+   "screen": "S08",
+   "title": "execute replay",
+   "path": "/research/quantbt/runs/R-WFO-118/execute#stage=execute&fold=2&params=prm_3b81c7&seq=5",
+   "width": 1280,
+   "waited_ms_for_screen_root": 729,
+   "passes": 30,
+   "d_b1_nodes_accepted": 76,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 3
+    }
+   ],
+   "other": [
+    {
+     "rule": "heading-order",
+     "impact": "moderate",
+     "target": [
+      "section[aria-label=\"execution contract\"] > .justify-between.gap-2.items-baseline > h3"
+     ],
+     "foreground": null,
+     "background": null,
+     "contrast": null,
+     "html": "<h3 class=\"mono text-[10px] uppercase tracking-[.07em]\" style=\"color: var(--ink-faint);\">execution contract</h3>"
+    }
+   ]
+  },
+  {
+   "key": "S08@1440",
+   "screen": "S08",
+   "title": "execute replay",
+   "path": "/research/quantbt/runs/R-WFO-118/execute#stage=execute&fold=2&params=prm_3b81c7&seq=5",
+   "width": 1440,
+   "waited_ms_for_screen_root": 1058,
+   "passes": 30,
+   "d_b1_nodes_accepted": 76,
+   "other_nodes": 1,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 3
+    }
+   ],
+   "other": [
+    {
+     "rule": "heading-order",
+     "impact": "moderate",
+     "target": [
+      "section[aria-label=\"execution contract\"] > .justify-between.gap-2.items-baseline > h3"
+     ],
+     "foreground": null,
+     "background": null,
+     "contrast": null,
+     "html": "<h3 class=\"mono text-[10px] uppercase tracking-[.07em]\" style=\"color: var(--ink-faint);\">execution contract</h3>"
+    }
+   ]
+  },
+  {
+   "key": "S09@660",
+   "screen": "S09",
+   "title": "run report",
+   "path": "/research/quantbt/runs/R-WFO-118/report",
+   "width": 660,
+   "waited_ms_for_screen_root": 929,
+   "passes": 30,
+   "d_b1_nodes_accepted": 142,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 5
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S09@1280",
+   "screen": "S09",
+   "title": "run report",
+   "path": "/research/quantbt/runs/R-WFO-118/report",
+   "width": 1280,
+   "waited_ms_for_screen_root": 773,
+   "passes": 29,
+   "d_b1_nodes_accepted": 142,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 5
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S09@1440",
+   "screen": "S09",
+   "title": "run report",
+   "path": "/research/quantbt/runs/R-WFO-118/report",
+   "width": 1440,
+   "waited_ms_for_screen_root": 924,
+   "passes": 29,
+   "d_b1_nodes_accepted": 142,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 5
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S10@660",
+   "screen": "S10",
+   "title": "attempt lineage",
+   "path": "/research/quantbt/alphas/alpha-momentum-btc/lineage",
+   "width": 660,
+   "waited_ms_for_screen_root": 621,
+   "passes": 24,
+   "d_b1_nodes_accepted": 49,
+   "other_nodes": 12,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 1
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "button[data-chip=\"att_01\"]"
+     ],
+     "foreground": "#7a8392",
+     "background": "#ffffff",
+     "contrast": 3.82,
+     "html": "<button type=\"button\" class=\"ln-chip\" data-chip=\"att_01\" data-state=\"READY\" data-status=\"SUPERSEDED\" aria-label=\"attempt att_01 \u2014 SUPERSEDED \u00b7 READY\" title=\"att_01 \u00b7 run-att_01 \u00b7 READY\" aria-current=\"true\">att_01</button>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-st[data-fill=\"true\"][data-raw-state=\"READY\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-st\" data-status=\"SUPERSEDED\" data-fill=\"true\" data-raw-state=\"READY\" title=\"attempt state READY (as the lineage recorded it)\">SUPERSEDED</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-faint"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-faint\" style=\"font-size: 10px;\">2026-09-22 00:01Z</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-grade=\"C\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-cert\" data-grade=\"C\" title=\"methodology certificate the source issued\">cert C</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".ln-av[data-s=\"SUPERSEDED\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-av\" data-s=\"SUPERSEDED\" title=\"superseded code artifact \u2014 attempt stays readable, promotion closed\">av_0_9_2</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-cfg"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-cfg\" title=\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\">cfg ffffffff</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-specline > .ln-spec"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span class=\"ln-spec\" title=\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\">signal_notional \u00b7 mode_1_decay \u00d7 global  \u00b7  3p \u00b7 2 swept \u00b7 1 pinned</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".ln-diff[data-diff-state=\"ROOT\"]"
+     ],
+     "foreground": "#ab8446",
+     "background": "#fefefd",
+     "contrast": 3.39,
+     "html": "<span class=\"ln-diff\" data-diff-state=\"ROOT\">root \u2014 no parent</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-note[title=\"claim ISSUED\"][data-outcome-line=\"SOURCE_CLAIM_SENTENCE\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span class=\"ln-note\" data-outcome-line=\"SOURCE_CLAIM_SENTENCE\" title=\"claim ISSUED\">Retrospective claim only \u2014 the schedule capped it at C.</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"OOS\"][data-metric-value=\"0.7440081232022494\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span data-metric=\"OOS\" data-metric-value=\"0.7440081232022494\" title=\"0.7440081232022494 \u00b7 research.metric.v3.oos_sharpe \u00b7 P13_EVIDENCE_PROJECTION\">OOS <span class=\"v\">0.744</span></span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"decay\"][data-metric-state=\"NOT_PUBLISHED\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span data-metric=\"decay\" data-metric-state=\"NOT_PUBLISHED\" title=\"P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT\">decay <span class=\"ln-absent\">not published</span></span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"decay\"][data-metric-state=\"NOT_PUBLISHED\"] > .ln-absent"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-absent\">not published</span>"
+    }
+   ]
+  },
+  {
+   "key": "S10@1280",
+   "screen": "S10",
+   "title": "attempt lineage",
+   "path": "/research/quantbt/alphas/alpha-momentum-btc/lineage",
+   "width": 1280,
+   "waited_ms_for_screen_root": 1052,
+   "passes": 24,
+   "d_b1_nodes_accepted": 49,
+   "other_nodes": 12,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 1
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "button[data-chip=\"att_01\"]"
+     ],
+     "foreground": "#7a8392",
+     "background": "#ffffff",
+     "contrast": 3.82,
+     "html": "<button type=\"button\" class=\"ln-chip\" data-chip=\"att_01\" data-state=\"READY\" data-status=\"SUPERSEDED\" aria-label=\"attempt att_01 \u2014 SUPERSEDED \u00b7 READY\" title=\"att_01 \u00b7 run-att_01 \u00b7 READY\" aria-current=\"true\">att_01</button>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-st[data-fill=\"true\"][data-raw-state=\"READY\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-st\" data-status=\"SUPERSEDED\" data-fill=\"true\" data-raw-state=\"READY\" title=\"attempt state READY (as the lineage recorded it)\">SUPERSEDED</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-faint"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-faint\" style=\"font-size: 10px;\">2026-09-22 00:01Z</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-grade=\"C\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-cert\" data-grade=\"C\" title=\"methodology certificate the source issued\">cert C</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".ln-av[data-s=\"SUPERSEDED\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-av\" data-s=\"SUPERSEDED\" title=\"superseded code artifact \u2014 attempt stays readable, promotion closed\">av_0_9_2</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-cfg"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-cfg\" title=\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\">cfg ffffffff</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-specline > .ln-spec"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span class=\"ln-spec\" title=\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\">signal_notional \u00b7 mode_1_decay \u00d7 global  \u00b7  3p \u00b7 2 swept \u00b7 1 pinned</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".ln-diff[data-diff-state=\"ROOT\"]"
+     ],
+     "foreground": "#ab8446",
+     "background": "#fefefd",
+     "contrast": 3.39,
+     "html": "<span class=\"ln-diff\" data-diff-state=\"ROOT\">root \u2014 no parent</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-note[title=\"claim ISSUED\"][data-outcome-line=\"SOURCE_CLAIM_SENTENCE\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span class=\"ln-note\" data-outcome-line=\"SOURCE_CLAIM_SENTENCE\" title=\"claim ISSUED\">Retrospective claim only \u2014 the schedule capped it at C.</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"OOS\"][data-metric-value=\"0.7440081232022494\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span data-metric=\"OOS\" data-metric-value=\"0.7440081232022494\" title=\"0.7440081232022494 \u00b7 research.metric.v3.oos_sharpe \u00b7 P13_EVIDENCE_PROJECTION\">OOS <span class=\"v\">0.744</span></span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"decay\"][data-metric-state=\"NOT_PUBLISHED\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span data-metric=\"decay\" data-metric-state=\"NOT_PUBLISHED\" title=\"P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT\">decay <span class=\"ln-absent\">not published</span></span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"decay\"][data-metric-state=\"NOT_PUBLISHED\"] > .ln-absent"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-absent\">not published</span>"
+    }
+   ]
+  },
+  {
+   "key": "S10@1440",
+   "screen": "S10",
+   "title": "attempt lineage",
+   "path": "/research/quantbt/alphas/alpha-momentum-btc/lineage",
+   "width": 1440,
+   "waited_ms_for_screen_root": 766,
+   "passes": 24,
+   "d_b1_nodes_accepted": 49,
+   "other_nodes": 12,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 1
+    }
+   ],
+   "other": [
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "button[data-chip=\"att_01\"]"
+     ],
+     "foreground": "#7a8392",
+     "background": "#ffffff",
+     "contrast": 3.82,
+     "html": "<button type=\"button\" class=\"ln-chip\" data-chip=\"att_01\" data-state=\"READY\" data-status=\"SUPERSEDED\" aria-label=\"attempt att_01 \u2014 SUPERSEDED \u00b7 READY\" title=\"att_01 \u00b7 run-att_01 \u00b7 READY\" aria-current=\"true\">att_01</button>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-st[data-fill=\"true\"][data-raw-state=\"READY\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-st\" data-status=\"SUPERSEDED\" data-fill=\"true\" data-raw-state=\"READY\" title=\"attempt state READY (as the lineage recorded it)\">SUPERSEDED</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-faint"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-faint\" style=\"font-size: 10px;\">2026-09-22 00:01Z</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-grade=\"C\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-cert\" data-grade=\"C\" title=\"methodology certificate the source issued\">cert C</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".ln-av[data-s=\"SUPERSEDED\"]"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#fefefd",
+     "contrast": 2.21,
+     "html": "<span class=\"ln-av\" data-s=\"SUPERSEDED\" title=\"superseded code artifact \u2014 attempt stays readable, promotion closed\">av_0_9_2</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-cardhead > .ln-cfg"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-cfg\" title=\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\">cfg ffffffff</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-specline > .ln-spec"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span class=\"ln-spec\" title=\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\">signal_notional \u00b7 mode_1_decay \u00d7 global  \u00b7  3p \u00b7 2 swept \u00b7 1 pinned</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      ".ln-diff[data-diff-state=\"ROOT\"]"
+     ],
+     "foreground": "#ab8446",
+     "background": "#fefefd",
+     "contrast": 3.39,
+     "html": "<span class=\"ln-diff\" data-diff-state=\"ROOT\">root \u2014 no parent</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "div[data-attempt=\"att_01\"] > .ln-card > .ln-note[title=\"claim ISSUED\"][data-outcome-line=\"SOURCE_CLAIM_SENTENCE\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span class=\"ln-note\" data-outcome-line=\"SOURCE_CLAIM_SENTENCE\" title=\"claim ISSUED\">Retrospective claim only \u2014 the schedule capped it at C.</span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"OOS\"][data-metric-value=\"0.7440081232022494\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span data-metric=\"OOS\" data-metric-value=\"0.7440081232022494\" title=\"0.7440081232022494 \u00b7 research.metric.v3.oos_sharpe \u00b7 P13_EVIDENCE_PROJECTION\">OOS <span class=\"v\">0.744</span></span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"decay\"][data-metric-state=\"NOT_PUBLISHED\"]"
+     ],
+     "foreground": "#6d7786",
+     "background": "#e6eff1",
+     "contrast": 3.88,
+     "html": "<span data-metric=\"decay\" data-metric-state=\"NOT_PUBLISHED\" title=\"P13_IS_BOUNDARY_NOT_IN_CHILD_RECEIPT\">decay <span class=\"ln-absent\">not published</span></span>"
+    },
+    {
+     "rule": "color-contrast",
+     "impact": "serious",
+     "target": [
+      "span[data-metrics=\"att_01\"] > span[data-metric=\"decay\"][data-metric-state=\"NOT_PUBLISHED\"] > .ln-absent"
+     ],
+     "foreground": "#a6aebc",
+     "background": "#e6eff1",
+     "contrast": 1.91,
+     "html": "<span class=\"ln-absent\">not published</span>"
+    }
+   ]
+  },
+  {
+   "key": "S11@660",
+   "screen": "S11",
+   "title": "release candidate",
+   "path": "/research/quantbt/runs/run_rc_0917/release-candidate",
+   "width": 660,
+   "waited_ms_for_screen_root": 389,
+   "passes": 31,
+   "d_b1_nodes_accepted": 1,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 4
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S11@1280",
+   "screen": "S11",
+   "title": "release candidate",
+   "path": "/research/quantbt/runs/run_rc_0917/release-candidate",
+   "width": 1280,
+   "waited_ms_for_screen_root": 454,
+   "passes": 31,
+   "d_b1_nodes_accepted": 1,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 4
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S11@1440",
+   "screen": "S11",
+   "title": "release candidate",
+   "path": "/research/quantbt/runs/run_rc_0917/release-candidate",
+   "width": 1440,
+   "waited_ms_for_screen_root": 723,
+   "passes": 31,
+   "d_b1_nodes_accepted": 1,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 4
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S12@660",
+   "screen": "S12",
+   "title": "engine atlas",
+   "path": "/research/quantbt/atlas",
+   "width": 660,
+   "waited_ms_for_screen_root": 486,
+   "passes": 28,
+   "d_b1_nodes_accepted": 3,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 12
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S12@1280",
+   "screen": "S12",
+   "title": "engine atlas",
+   "path": "/research/quantbt/atlas",
+   "width": 1280,
+   "waited_ms_for_screen_root": 525,
+   "passes": 28,
+   "d_b1_nodes_accepted": 3,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 17
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S12@1440",
+   "screen": "S12",
+   "title": "engine atlas",
+   "path": "/research/quantbt/atlas",
+   "width": 1440,
+   "waited_ms_for_screen_root": 566,
+   "passes": 28,
+   "d_b1_nodes_accepted": 3,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 12
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S13@660",
+   "screen": "S13",
+   "title": "compare",
+   "path": "/research/quantbt/alphas/alpha-momentum-btc/compare",
+   "width": 660,
+   "waited_ms_for_screen_root": 460,
+   "passes": 31,
+   "d_b1_nodes_accepted": 46,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 1
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S13@1280",
+   "screen": "S13",
+   "title": "compare",
+   "path": "/research/quantbt/alphas/alpha-momentum-btc/compare",
+   "width": 1280,
+   "waited_ms_for_screen_root": 489,
+   "passes": 31,
+   "d_b1_nodes_accepted": 46,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 1
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S13@1440",
+   "screen": "S13",
+   "title": "compare",
+   "path": "/research/quantbt/alphas/alpha-momentum-btc/compare",
+   "width": 1440,
+   "waited_ms_for_screen_root": 364,
+   "passes": 31,
+   "d_b1_nodes_accepted": 46,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 1
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S14@660",
+   "screen": "S14",
+   "title": "alpha import",
+   "path": "/research/quantbt/alpha-import",
+   "width": 660,
+   "waited_ms_for_screen_root": 710,
+   "passes": 27,
+   "d_b1_nodes_accepted": 18,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 2
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S14@1280",
+   "screen": "S14",
+   "title": "alpha import",
+   "path": "/research/quantbt/alpha-import",
+   "width": 1280,
+   "waited_ms_for_screen_root": 671,
+   "passes": 27,
+   "d_b1_nodes_accepted": 18,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 2
+    }
+   ],
+   "other": []
+  },
+  {
+   "key": "S14@1440",
+   "screen": "S14",
+   "title": "alpha import",
+   "path": "/research/quantbt/alpha-import",
+   "width": 1440,
+   "waited_ms_for_screen_root": 933,
+   "passes": 27,
+   "d_b1_nodes_accepted": 18,
+   "other_nodes": 0,
+   "incomplete_needs_review": [
+    {
+     "rule": "color-contrast",
+     "nodes": 2
+    }
+   ],
+   "other": []
+  }
+ ],
+ "g4_ladder": [
+  {
+   "key": "ladder@1440",
+   "base_url": "http://127.0.0.1:4361",
+   "width": 1440,
+   "columns": 4,
+   "rows": 3,
+   "cards": 11,
+   "connectors_drawn": 8,
+   "axe_unaccepted": 0
+  },
+  {
+   "key": "ladder@1280",
+   "base_url": "http://127.0.0.1:4361",
+   "width": 1280,
+   "columns": 3,
+   "rows": 4,
+   "cards": 11,
+   "connectors_drawn": 7,
+   "axe_unaccepted": 0
+  },
+  {
+   "key": "ladder@1100",
+   "base_url": "http://127.0.0.1:4361",
+   "width": 1100,
+   "columns": 3,
+   "rows": 4,
+   "cards": 11,
+   "connectors_drawn": 7,
+   "axe_unaccepted": 0
+  },
+  {
+   "key": "ladder@1040",
+   "base_url": "http://127.0.0.1:4361",
+   "width": 1040,
+   "columns": 2,
+   "rows": 6,
+   "cards": 11,
+   "connectors_drawn": 5,
+   "axe_unaccepted": 0
+  },
+  {
+   "key": "ladder@1000",
+   "base_url": "http://127.0.0.1:4361",
+   "width": 1000,
+   "columns": 3,
+   "rows": 4,
+   "cards": 11,
+   "connectors_drawn": 7,
+   "axe_unaccepted": 0
+  },
+  {
+   "key": "ladder@901",
+   "base_url": "http://127.0.0.1:4361",
+   "width": 901,
+   "columns": 3,
+   "rows": 4,
+   "cards": 11,
+   "connectors_drawn": 7,
+   "axe_unaccepted": 0
+  },
+  {
+   "key": "ladder@900",
+   "base_url": "http://127.0.0.1:4361",
+   "width": 900,
+   "columns": 1,
+   "rows": 11,
+   "cards": 11,
+   "connectors_drawn": 0,
+   "axe_unaccepted": 0
+  },
+  {
+   "key": "ladder@660",
+   "base_url": "http://127.0.0.1:4361",
+   "width": 660,
+   "columns": 1,
+   "rows": 11,
+   "cards": 11,
+   "connectors_drawn": 0,
+   "axe_unaccepted": 0
+  }
+ ]
+}

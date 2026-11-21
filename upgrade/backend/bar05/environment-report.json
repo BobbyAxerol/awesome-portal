@@ -1,6 +1,6 @@
 {
   "control_api_version": "0.1.0",
-  "git_commit": "5deb0ddfac9d6a93d9c84fcade7a31a8bc5ad762",
+  "git_commit": "0841c8c69e2ff583c1a2ecd13776e042107edb1e",
   "modes": {
     "control_api_auth_mode": null,
     "historical_data_mode": null,
@@ -16,7 +16,7 @@
     "pandas": "2.3.3",
     "portal-api": "0.1.0",
     "pyarrow": "24.0.0",
-    "quantbt-engine": "1.0.8"
+    "quantbt-engine": "1.1.1"
   },
   "platform": "linux",
   "python_version": "3.12.14",

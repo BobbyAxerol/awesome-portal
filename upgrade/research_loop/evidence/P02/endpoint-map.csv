@@ -1,0 +1,8 @@
+owner,method,path,current_semantics,P02_use,P02_boundary
+Research Portal,POST,/api/runs,202+run_id means facade seeds one QUEUED run_read_model,actual spike only,existing endpoint and schema remain unchanged
+Research Portal,GET,/api/runs/:run_id,terminal detail for existing RunSync,actual spike only,no direct browser or DB access
+Research Portal,GET,/api/runs/:run_id/summary,selected_params/claims for existing RunSync,actual spike only,no producer change
+Control API,POST,/api/v1/execution/governance/approvals,strict R1 create request,actual spike only,Research may not append fields
+Control API,GET,/api/v1/execution/governance/approvals/:approval_id/r1,immutable governance.r1-review.v1 envelope with data.approval,actual spike only,no governance mutation beyond existing create
+Control API,GET,/api/workspaces,session-scoped workspace discovery,actual spike only,no caller-supplied cross-workspace authority
+Execution Edge,N/A,N/A,not involved in Research P02,not used,do not call or change runtime

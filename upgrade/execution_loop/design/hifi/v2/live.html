@@ -1,0 +1,56 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Live operations — V2</title><link rel="stylesheet" href="kit.css">
+<style>
+/* layout only */
+.railx{display:grid;gap:24px;align-content:start}.colx{display:grid;gap:24px;min-width:0;align-content:start}
+.lad{display:grid;gap:0}.rung{padding:10px 0 12px 22px;border-bottom:1px solid var(--line-soft);box-shadow:inset 4px 0 0 var(--ink-faint)}.rung:last-of-type{border-bottom:0}
+.rung.r2{box-shadow:inset 8px 0 0 var(--warn)}.rung.r3{box-shadow:inset 12px 0 0 var(--bad);padding-left:26px}.rung.r2{padding-left:24px}
+.rung .h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}.rung b{font-weight:500}.rung .m{font-size:12px;color:var(--ink-faint);margin:2px 0 8px}.rung .st{font:500 10.5px/16px var(--font-mono);letter-spacing:.08em;color:var(--ink-faint)}
+.bl{margin:0;padding:0;list-style:none}.bl li{padding:8px 0 8px 12px;border-left:3px solid var(--bad);border-bottom:1px solid var(--line-soft)}.bl li:last-child{border-bottom:0}
+.slot{min-height:240px;display:grid;align-content:center;gap:12px;justify-items:start;padding:24px}.slot.bad{border:2px solid var(--bad);background:var(--sunken)}.slot p{margin:0;font-size:16px;line-height:24px;max-width:560px}
+.hid{font:400 16px/32px var(--font-sans);color:var(--ink)}
+@media(max-width:660px){.slot{padding:8px}}
+</style></head>
+<body data-page="Live operations" data-nav="fleet" data-crumb="Execution / Live operations" data-window-lock="Since activation">
+<main><div class="stack">
+<div id="app" class="stack" data-hide-roles="researcher"></div>
+<div class="stack" data-roles="researcher">
+ <div class="mast"><div><h1>Live operations</h1><div class="sub">Operators, managers and reviewers</div></div></div>
+ <div class="panel"><div class="empty" style="min-height:200px"><div style="text-align:center;display:grid;gap:10px"><div>You can’t open this page.</div><div><a href="access.html#see">See what you can access</a> · <a href="fleet.html">Alpha Fleet</a></div></div></div></div>
+</div>
+</div></main>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/stage.js"></script>
+<script>
+var TABS=[["exposure-orders","Exposure & orders"],["continuity","Continuity"],["predecessor-envelope","Predecessor envelope"],["guard-rules","Guard rules"]];
+function note(t){return'<div class="na">'+t+"</div>"}
+function render(){var S=KIT.state;if(S.role==="researcher")return;STG.states([["normal","Normal"],["loading","Loading"],["partial","Partial"],["stale","Stale"],["mismatch","Mismatch"],["gap","Gap"]]);
+ var ps=STG.ps(),nq=S.data==="nq",ld=ps==="loading",stale=ps==="stale"&&!nq,part=ps==="partial"&&!nq,mm=ps==="mismatch"&&!nq,gap=ps==="gap"&&!nq,tab=STG.tab(TABS);
+ var chips=ld?{loading:1}:nq?{rt:["na","Not available"],fr:{k:"na",t:"Source not qualified"},rc:["na","Not available"]}:{rt:["ok","Running"],fr:gap?{k:"gap",t:"Gap · 11:52Z to 12:04Z"}:stale?{k:"stale",t:"Stale · 11:40Z"}:{k:"fresh",t:"Fresh · 12:04Z"},rc:mm?["attention","Mismatch"]:gap?["unknown","Not checked"]:part?["unknown","Not reported"]:["ok","Matched"]};
+ var h=STG.head({stage:"live",crumb:[["Alpha Fleet","fleet.html"],["BTC-Trend v3","alpha.html"],["Binance-02","account.html"],["Live",null]],title:"Live operations",sub:"BTC-Trend v3 · Binance-02 · Core",chips:chips,spine:{cur:5,blk:mm||gap}});
+ var banner=nq?'<div class="banner">Source not qualified. Figures stay unavailable until it is.</div>':stale?'<div class="banner">Showing data as of 11:40Z. Source has not updated for 24 min.</div>':part?'<div class="banner">Some figures are missing. 2 of 3 sources reported.</div>':"";
+ var k=ld?"ld":nq?"na":"ok",kp=function(l,v,n,c,na){return STG.kpi(l,v,n,na&&!ld&&!nq?"na":k,c,na&&!nq?"Source did not report":"")},asof=gap?"As of 11:52Z":"Live";
+ var brk=mm&&!ld&&!nq?'<div class="kpi"><div class="l">Broker equity</div><div class="hid">Hidden</div><div class="n">While figures disagree</div></div>':kp("Broker equity","60,118.40 <small>USDT</small>",gap?"As of 11:52Z":"Matches internal",0,part);
+ var K=kp("Capital","60,000.00 <small>USDT</small>","Allocated")+kp("Gross notional","41,080.00 <small>USDT</small>",gap?"As of 11:52Z":"68% of capital",0,part)+kp("Daily PnL","−240.00 <small>USDT</small>",gap?"As of 11:52Z":"After fees","neg")+kp("Open orders","2",gap?"As of 11:52Z":"2 limit")+brk;
+ /* chart slot: MISMATCH / GAP replace the chart with one sentence */
+ var slot;if(ld)slot='<div class="panel"><div class="ph">Live net PnL</div><span class="sk b" style="height:200px"></span></div>';
+ else if(nq||part)slot='<div class="panel"><div class="ph">Live net PnL <span class="r">Since activation</span></div><div class="empty" style="min-height:200px">Not available. '+(nq?"Source not qualified.":"The live series did not report.")+"</div></div>";
+ else if(mm)slot='<div class="panel slot bad" role="alert"><div>'+KIT.flag("attention","Mismatch")+'</div><p>Internal and broker figures disagree. Chart hidden until reconciled.</p><div>'+STG.chip("incident.html","Open finding")+"</div></div>";
+ else if(gap)slot='<div class="panel slot bad" role="alert"><div>'+KIT.flag("partial","Gap")+'</div><p>Updates are missing from 11:52Z to 12:04Z. Chart hidden until the gap is filled.</p><div>'+STG.chip("operations.html","Open operation")+"</div></div>";
+ else slot='<div class="panel"><div class="ph">Live net PnL <span class="r">Since activation</span></div><div class="chart" id="lv"></div></div>';
+ /* tabs */
+ var T;
+ if(ld)T='<div class="panel"><div class="ph">Loading Live operations…</div><span class="sk b"></span><span class="sk b"></span><span class="sk b"></span></div>';
+ else if(tab==="exposure-orders")T=STG.triad({rows:[["Equity (USDT)","60,118.40","60,118.40","0.00"],["Gross exposure (USDT)","41,080.00","41,080.00","0.00"],["Positions","4","4","0"],["Open orders","2","2","0"]],hide:mm,na:nq?"all":part?["broker","dif"]:[],why:nq?"Source not qualified.":"The broker did not report.",asof:gap?"11:52Z":stale?"11:40Z":"12:04Z"})+
+  '<div class="panel" style="margin-top:24px"><div class="ph">Positions <span class="r">Internal figures</span></div>'+(nq?note("Not available. Source not qualified."):STG.tbl([["Symbol"],["Side"],["Quantity",1],["Entry",1],["Unrealised PnL",1],["Leverage",1],["Ack latency",1]],[["BTCUSDT",KIT.flag("ok","Long"),"0.4000","61,120.00","+2,140.20","1.3×","240 ms"],["ETHUSDT",KIT.flag("pending","Short"),"2.1000","3,412.50","−214.85","1.1×","212 ms"],["SOLUSDT",KIT.flag("ok","Long"),"18.0000","148.20","+402.11","1.2×","268 ms"],["BNBUSDT",KIT.flag("ok","Long"),"3.5000","566.40","+88.60","1.0×","231 ms"]]))+"</div>";
+ else if(tab==="continuity")T='<div class="panel"><div class="ph">Display continuity <span class="r">'+(nq?KIT.flag("na","Not available"):gap?KIT.flag("partial","Gap"):KIT.flag("ok","Continuous"))+"</span></div>"+(nq?note("Not available. Source not qualified."):STG.tbl([["Check"],["Result"]],[["State",gap?"Gap in updates":"Continuous"],["Gap window",gap?"11:52Z to 12:04Z":"None"],["Last update",gap?"11:52Z":stale?"11:40Z":"12:04Z"],["Affected sources",gap?STG.chip("account.html","Broker")+" "+STG.chip("account.html","Derived"):"None"]])+'<details><summary>Provenance</summary><div class="prov"><div>Epoch 41 · sequence '+(gap?"88,212 to 88,240":"88,240")+"</div>"+(gap?"<div>SOURCE_CONTINUITY_UNAVAILABLE · EX_BE_08_PENDING</div>":"")+"</div></details>")+"</div>";
+ else if(tab==="predecessor-envelope")T='<div class="panel"><div class="ph">Canary envelope <span class="r">Predecessor</span></div>'+(nq?note("Not available. Source not qualified."):'<div style="margin-bottom:12px">'+KIT.flag("na","Not active for Live")+"</div>"+STG.tbl([["Cap"],["Approved",1],["Applies to Live"]],[["Capital cap (USDT)","5,000.00","No"],["Gross notional cap (USDT)","10,000.00","No"],["Daily loss cap (USDT)","250.00","No"]])+'<div class="na" style="margin-top:10px">No Live envelope is on record.</div>')+"</div>";
+ else T='<div class="panel"><div class="ph">Guard rules</div>'+STG.tbl([["When"],["Effect"],["Now"]],[["Internal and broker figures disagree","Broker values are hidden",nq?KIT.flag("na","Not available"):mm?KIT.flag("attention","Active"):KIT.flag("ok","Not active")],["Updates have a gap","Risk-increasing actions are blocked",nq?KIT.flag("na","Not available"):gap?KIT.flag("partial","Active"):KIT.flag("ok","Not active")],["Updates have a gap","Protective actions stay open",KIT.flag("ok","Always")]])+'<details><summary>Provenance</summary><div class="prov">BROKER_MISMATCH_SUPPRESSES_VALUES_AND_SOURCE_GAP_BLOCKS_R4 · SUPPRESS_ALL_BROKER_VALUES</div></details></div>';
+ var tabsP=ld?T:STG.tabs(TABS,tab)+T;
+ /* rail: protective ladder + one blockers list */
+ var rg=[["Halt","Stops new orders.","1 of 3"],["Reduce","Trims exposure.","2 of 3"],["Emergency close","Closes every position now.","3 of 3"]];
+ var L='<div class="panel"><div class="ph">Protective ladder <span class="r">Halt → Reduce → Close</span></div><div class="lad">'+rg.map(function(r,i){return'<div class="rung r'+(i+1)+'"><div class="h"><b>'+r[0]+'</b><span class="st">STEP '+r[2]+'</span></div><div class="m">'+r[1]+"</div>"+KIT.disabled(r[0],nq?"Source not qualified":"liveClosed")+"</div>"}).join("")+"</div>"+(gap?'<div class="na" style="margin-top:8px">A gap blocks risk-increasing actions. Protective actions stay open.</div>':"")+"</div>";
+ var bl=nq?"<li>Source not qualified. Nothing can be assessed yet.</li>":'<li>Commands are closed on this build.</li>'+(mm?"<li>Risk-increasing actions are blocked until figures match.</li>":"")+(gap?"<li>Risk-increasing actions are blocked until the gap closes.</li>":"")+'<li>Canary exit evidence is not available.</li>';
+ var B='<div class="panel"><div class="ph">What is blocking</div>'+(ld?'<span class="sk b"></span><span class="sk b"></span>':'<ul class="bl">'+bl+"</ul>")+'<details><summary>Provenance</summary><div class="prov"><div>PRODUCTION_COMMAND_INACTIVE · LIVE_FULL_ACTIVATION_NOT_APPROVED · CANARY_EXIT_EVIDENCE_UNAVAILABLE</div><div>LIVE_SOURCE_UNAVAILABLE · SOURCE_CONTINUITY_UNAVAILABLE · BROKER_STATE_UNAVAILABLE</div><div>ROLLBACK_EVIDENCE_UNAVAILABLE · EX_BE_08_PENDING · REALTIME_INACTIVE (watch)</div><div>Deployment dep_live · stage LIVE_FULL</div></div></details></div>';
+ document.getElementById("app").innerHTML=h+banner+'<div class="kpis">'+K+'</div><div class="grid2"><div class="colx">'+slot+'<div style="min-width:0">'+tabsP+'</div></div><div class="railx">'+L+B+"</div></div>";
+ var c=document.getElementById("lv");if(c&&c.offsetParent)equityChart(c,{mode:"pnl",seed:23,drift:260,vol:5200,n:30,label:"Live net PnL",base:60000,end:4210.55})}
+KIT.on(render);window.addEventListener("stg:tab",render);
+</script></body></html>

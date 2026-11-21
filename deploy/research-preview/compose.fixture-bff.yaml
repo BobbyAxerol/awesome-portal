@@ -1,0 +1,85 @@
+# FIXTURE_LAB lane. NOT acceptance evidence.
+#
+# Fixture BFF overlay for the isolated Research preview (Bobby 2026-10-19). Appended by
+# scripts/research-preview/preview.sh only while $ENV_DIR/fixture-bff.enabled exists
+# (`preview.sh fixture on|off|status`); it is never applied to dev, stable or the Execution probe.
+#
+# It adds one private service, portal-fixture-bff (apps/portal/fixture-bff: the Playwright BFF
+# doubles behind node:http), and changes portal-web in two ways:
+#   - nginx sends the Execution V2 reads AND the shell bootstrap (the sign-in state as a synthetic
+#     "Fixture reviewer", the registry, the links, the summary) to that service instead of the Control
+#     API, so the stack needs no control-api at all
+#     (deploy/research-preview/nginx/fixture-bff/fixture-bff.conf);
+#   - every HTML document carries a fixed, non-dismissible "FIXTURE DATA" banner.
+# Nothing else moves: research, QuantBT, runs and the legacy profile-access reads stay on the real
+# services. No database, no migration, no secret, no session.
+#
+# Turn it off with `preview.sh fixture off` and `preview.sh up`: the same paths then reach the real
+# Control API again, and the frontend is unchanged because it has no fixture mode.
+services:
+  portal-fixture-bff:
+    build:
+      context: .
+      dockerfile: deploy/images/fixture-bff.Dockerfile
+    image: ${PORTAL_IMAGE_PREFIX:-local/portal-research-preview}-fixture-bff:${PORTAL_IMAGE_TAG:-rf02}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
+    pids_limit: 64
+    # Private: reachable as portal-fixture-bff:4100 on the compose network only. Never `ports:`.
+    expose:
+      - "4100"
+    environment:
+      # Optional knobs from the host-bound env file; an empty value means "server default".
+      # FIXTURE_LANE_LABEL is deliberately not overridable here: the image fixes it to FIXTURE_LAB.
+      FIXTURE_SCALE: ${FIXTURE_SCALE:-medium}
+      # Data-only opt-in. Never a real-upstream fallback or a production profile.
+      FIXTURE_REVIEW_PROFILE: ${FIXTURE_REVIEW_PROFILE:-populated}
+      # WP-P: the selected review scenario. positive is the complete, linked world; partial, stale, denied, empty, missing, zero and dense are selectable at run time
+      # through GET/POST /__fixture/scenario (nginx proxies ^~ /__fixture/) or by setting this variable.
+      FIXTURE_SCENARIO: ${FIXTURE_SCENARIO:-positive}
+      # Default `refuse`: every non-GET is 405, so the preview never shows a fake successful command.
+      # `doubles` answers the canned successes the Playwright specs use (they store nothing).
+      FIXTURE_WRITES: ${FIXTURE_WRITES:-refuse}
+      FIXTURE_USER_ID: ${FIXTURE_USER_ID:-}
+      FIXTURE_NOW_ISO: ${FIXTURE_NOW_ISO:-}
+      # Preview clock anchor: 1 shifts the time-valued fields of every served body to the real clock (fixture-bff/time-rebase.ts).
+      FIXTURE_REBASE_TIME: ${FIXTURE_REBASE_TIME:-0}
+      FIXTURE_VARIANTS: ${FIXTURE_VARIANTS:-}
+    networks:
+      - portal
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4100/__fixture/healthz').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 5s
+
+  portal-web:
+    environment:
+      # portal-web's nginx resolves its upstream by name when it starts, and a stopped control-api has no
+      # DNS entry, so a recreate would fail with "host not found in upstream". While the lane is on, the
+      # catch-all /api/ upstream is the fixture BFF itself: every /api path the fixture does not serve is
+      # refused there (404 FIXTURE_ROUTE_NOT_SERVED), never forwarded to a Control API, and the stack needs
+      # none. Set FIXTURE_WEB_UPSTREAM=control-api:4000 to let those paths reach a healthy Control API again.
+      PORTAL_WEB_UPSTREAM: ${FIXTURE_WEB_UPSTREAM:-portal-fixture-bff:4100}
+    volumes:
+      # Server-context nginx fragment + shared proxy settings; read by the nginx master at start.
+      - ./deploy/research-preview/nginx/fixture-bff:/etc/nginx/fixture:ro
+    depends_on:
+      # nginx resolves portal-fixture-bff when it starts, so it must be up first.
+      portal-fixture-bff:
+        condition: service_healthy

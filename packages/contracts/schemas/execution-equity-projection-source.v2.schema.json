@@ -1,0 +1,765 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-equity-projection-source.v2.schema.json",
+  "$ref": "#/$defs/EquityProjectionSourceResponse",
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "EquityProjectionSourceResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "workspace_id",
+        "deployment_id",
+        "environment",
+        "observed_at",
+        "source_side_effect_requested",
+        "request",
+        "series",
+        "band"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "execution.analytics.equity-projection.source.v2"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "deployment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[A-Za-z0-9._:-]+$"
+        },
+        "environment": {
+          "type": "string",
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "source_side_effect_requested": {
+          "const": false
+        },
+        "request": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "window",
+            "intent",
+            "limit",
+            "cursor"
+          ],
+          "properties": {
+            "window": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "7d",
+                "30d",
+                "90d",
+                "1y"
+              ]
+            },
+            "intent": {
+              "type": "string",
+              "enum": [
+                "overview",
+                "inspect"
+              ]
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000
+            },
+            "cursor": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[A-Za-z0-9_-]+$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "series": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "currency",
+                "timestamp_semantics",
+                "interval",
+                "interval_seconds",
+                "window_from",
+                "window_to",
+                "expected_buckets",
+                "returned_buckets",
+                "source_rows",
+                "coverage",
+                "points",
+                "gaps",
+                "next_cursor",
+                "retention",
+                "lineage",
+                "drawdown"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z0-9]{2,12}$"
+                },
+                "timestamp_semantics": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "bucket_basis",
+                    "time_basis",
+                    "interpolation"
+                  ],
+                  "properties": {
+                    "bucket_basis": {
+                      "const": "bucket_start_utc_inclusive"
+                    },
+                    "time_basis": {
+                      "const": "event_time_source_clock"
+                    },
+                    "interpolation": {
+                      "const": "NONE"
+                    }
+                  }
+                },
+                "interval": {
+                  "type": "string",
+                  "enum": [
+                    "1m",
+                    "5m",
+                    "15m",
+                    "1h",
+                    "4h",
+                    "1d"
+                  ]
+                },
+                "interval_seconds": {
+                  "type": "integer",
+                  "enum": [
+                    60,
+                    300,
+                    900,
+                    3600,
+                    14400,
+                    86400
+                  ]
+                },
+                "window_from": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "window_to": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "expected_buckets": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 5000
+                },
+                "returned_buckets": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5000
+                },
+                "source_rows": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "coverage": {
+                  "type": "string",
+                  "pattern": "^(?:0(?:[.][0-9]+)?|1(?:[.]0+)?)$"
+                },
+                "points": {
+                  "type": "array",
+                  "maxItems": 5000,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "bucket_start",
+                      "equity",
+                      "drawdown"
+                    ],
+                    "properties": {
+                      "bucket_start": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "equity": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[+-]?[0-9]+([.][0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "drawdown": {
+                        "oneOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^[+-]?[0-9]+([.][0-9]+)?$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "gaps": {
+                  "type": "array",
+                  "maxItems": 5000,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "from",
+                      "to",
+                      "reason"
+                    ],
+                    "properties": {
+                      "from": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "to": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "reason": {
+                        "type": "string",
+                        "enum": [
+                          "SOURCE_GAP",
+                          "RETENTION",
+                          "SESSION_CLOSED",
+                          "PROJECTION_DISCONTINUITY"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "next_cursor": {
+                  "oneOf": [
+                    {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512,
+                      "pattern": "^[A-Za-z0-9_-]+$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "retention": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "availability",
+                    "policy_version",
+                    "oldest_retained_at"
+                  ],
+                  "properties": {
+                    "availability": {
+                      "type": "string",
+                      "enum": [
+                        "HOT",
+                        "PARTIAL_HOT",
+                        "COLD_REQUESTABLE",
+                        "PURGED",
+                        "UNKNOWN"
+                      ]
+                    },
+                    "policy_version": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128
+                    },
+                    "oldest_retained_at": {
+                      "oneOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "lineage": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "source_contract",
+                    "source_revision",
+                    "source_digest",
+                    "source_as_of",
+                    "account_scope"
+                  ],
+                  "properties": {
+                    "source_contract": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "source_revision": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "source_digest": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    },
+                    "source_as_of": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "account_scope": {
+                      "const": "DEPLOYMENT"
+                    }
+                  }
+                },
+                "drawdown": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "formula_version",
+                    "formula",
+                    "population",
+                    "peak_resets_on_gap",
+                    "authority",
+                    "confirmed_by_source"
+                  ],
+                  "properties": {
+                    "formula_version": {
+                      "const": "drawdown.running_peak.v1"
+                    },
+                    "formula": {
+                      "const": "value / running_max - 1"
+                    },
+                    "population": {
+                      "type": "string",
+                      "enum": [
+                        "RETURNED_WINDOW_BUCKETS",
+                        "SOURCE_FULL_HISTORY"
+                      ]
+                    },
+                    "peak_resets_on_gap": {
+                      "const": false
+                    },
+                    "authority": {
+                      "type": "string",
+                      "enum": [
+                        "EDGE_QUALIFIED",
+                        "PORTAL_DERIVED"
+                      ]
+                    },
+                    "confirmed_by_source": {
+                      "type": "boolean"
+                    }
+                  },
+                  "description": "States which population, formula and authority produced the drawdown fraction. confirmed_by_source may be true only for EDGE_QUALIFIED.",
+                  "allOf": [
+                    {
+                      "if": {
+                        "type": "object",
+                        "properties": {
+                          "confirmed_by_source": {
+                            "const": true
+                          }
+                        },
+                        "required": [
+                          "confirmed_by_source"
+                        ]
+                      },
+                      "then": {
+                        "type": "object",
+                        "properties": {
+                          "authority": {
+                            "const": "EDGE_QUALIFIED"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "1m"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 60
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "5m"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 300
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "15m"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 900
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "1h"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 3600
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "4h"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 14400
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "interval": {
+                        "const": "1d"
+                      }
+                    },
+                    "required": [
+                      "interval"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "interval_seconds": {
+                        "const": 86400
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "source_rows": {
+                        "const": 0
+                      }
+                    },
+                    "required": [
+                      "source_rows"
+                    ]
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "coverage": {
+                        "type": "string",
+                        "pattern": "^0(?:[.]0+)?$"
+                      },
+                      "points": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "equity": {
+                              "type": "null"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "points": {
+                        "type": "array",
+                        "contains": {
+                          "type": "object",
+                          "properties": {
+                            "equity": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "equity"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "description": "Per-deployment retained series with its OWN source revision/digest. null equity/drawdown is a missing bucket, never 0. No interpolation across gaps. interval and interval_seconds are one closed pair. coverage = non-null buckets / expected_buckets, a ratio in [0,1]. Runtime also checks returned_buckets == points.length <= request.limit, source_rows >= non-null buckets, currency equality with the band, and body identity equals the request."
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "ABSENT"
+                },
+                "reason_code": {
+                  "type": "string",
+                  "enum": [
+                    "SOURCE_NOT_COMMISSIONED",
+                    "SOURCE_NOT_READ",
+                    "NOT_AUTHORIZED",
+                    "RETENTION_EXPIRED",
+                    "SOURCE_STALE",
+                    "NO_DATA_IN_WINDOW"
+                  ]
+                }
+              },
+              "description": "Typed absence. Never zero, never an empty AVAILABLE section. No data keys."
+            }
+          ]
+        },
+        "band": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "currency",
+                "run_id",
+                "lineage",
+                "points"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "currency": {
+                  "type": "string",
+                  "pattern": "^[A-Z0-9]{2,12}$"
+                },
+                "run_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 128,
+                  "pattern": "^[A-Za-z0-9._:-]+$"
+                },
+                "lineage": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "band_revision",
+                    "artifact_digest",
+                    "approval_reference",
+                    "approved_at",
+                    "approval_authority",
+                    "immutable"
+                  ],
+                  "properties": {
+                    "band_revision": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "artifact_digest": {
+                      "type": "string",
+                      "pattern": "^sha256:[0-9a-f]{64}$"
+                    },
+                    "approval_reference": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 128,
+                      "pattern": "^[A-Za-z0-9._:-]+$"
+                    },
+                    "approved_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "approval_authority": {
+                      "const": "RESEARCH"
+                    },
+                    "immutable": {
+                      "const": true
+                    }
+                  }
+                },
+                "points": {
+                  "type": "array",
+                  "maxItems": 5000,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "bucket_start",
+                      "lower",
+                      "upper"
+                    ],
+                    "properties": {
+                      "bucket_start": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "lower": {
+                        "type": "string",
+                        "pattern": "^[+-]?[0-9]+([.][0-9]+)?$"
+                      },
+                      "upper": {
+                        "type": "string",
+                        "pattern": "^[+-]?[0-9]+([.][0-9]+)?$"
+                      }
+                    }
+                  }
+                }
+              },
+              "description": "Approved immutable Research band with its OWN lineage (required). An unapproved or unlinked band is typed absence, never an illustrative value."
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "ABSENT"
+                },
+                "reason_code": {
+                  "type": "string",
+                  "enum": [
+                    "SOURCE_NOT_COMMISSIONED",
+                    "SOURCE_NOT_READ",
+                    "NOT_AUTHORIZED",
+                    "BAND_NOT_APPROVED",
+                    "BAND_NOT_LINKED",
+                    "RETENTION_EXPIRED"
+                  ]
+                }
+              },
+              "description": "Typed absence. Never zero, never an empty AVAILABLE section. No data keys."
+            }
+          ]
+        }
+      },
+      "description": "Source-backed equity projection. Series and band are independently AVAILABLE or ABSENT. No Edge-qualified source exists yet: every real body is typed absence."
+    }
+  }
+}

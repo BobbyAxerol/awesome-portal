@@ -3,13 +3,41 @@ from __future__ import annotations
 import importlib
 from importlib import metadata
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Literal, Mapping
 
 import pandas as pd
 
 
 QUANTBT_DISTRIBUTION = "quantbt-engine"
-QUANTBT_ENGINE_VERSION = "1.0.8"
+QUANTBT_ENGINE_VERSION = "1.1.1"
+
+# Only these release-verified public constructors may be selected by Research
+# Loop code. The map deliberately lives at the Python boundary rather than in
+# a browser payload: a manifest may describe capability, but never gains the
+# ability to call arbitrary engine attributes.
+PUBLIC_ROUTE_FACTORIES: dict[str, tuple[str, Mapping[str, object]]] = {
+    "signal_notional": ("signal_notional", {}),
+    "pct_equity": ("pct_equity", {}),
+    "intrabar_bracket": ("intrabar_bracket", {}),
+    "dca_ladder": ("dca_ladder", {}),
+    # QuantBT exposes the reactive strategy facade through event_driven; it
+    # does not expose a guessed reactive() constructor.
+    "reactive": ("event_driven", {"input_mode": "strategy"}),
+    "event_driven": ("event_driven", {}),
+    "native_event_lifecycle": ("native_event_lifecycle", {}),
+    "orders": ("orders", {}),
+    "fill_replay": ("fill_replay", {}),
+    "basket": ("basket", {}),
+    "arbitrage": ("arbitrage", {}),
+    "portfolio": ("portfolio", {}),
+    "nautilus_dca_grid": ("nautilus_dca_grid", {}),
+    "options": ("options", {}),
+}
+
+
+def _never_called_strategy(*_args: object, **_kwargs: object) -> None:
+    """Placeholder for fold planning; build_folds/prepare never call it."""
+    raise RuntimeError("P08 fold planning must never evaluate a strategy")
 
 
 class QuantBTGateway:
@@ -20,8 +48,15 @@ class QuantBTGateway:
     this gateway deliberately never adds a source checkout to ``sys.path``.
     """
 
-    @staticmethod
-    def _module():
+    def __init__(self, *, expected_version: str = QUANTBT_ENGINE_VERSION, confined_qualification_child: bool = False) -> None:
+        if expected_version != QUANTBT_ENGINE_VERSION:
+            from portal_api.domain.research_engine_qualification import engine110_qualification_enabled, confined_engine110_qualification_enabled
+            opted_in = confined_engine110_qualification_enabled() if confined_qualification_child else engine110_qualification_enabled()
+            if expected_version != "1.1.0" or not opted_in:
+                raise RuntimeError("QuantBT old-version compatibility is isolated-only and explicitly opted in")
+        self._expected_version = expected_version
+
+    def _module(self):
         try:
             distribution = metadata.distribution(QUANTBT_DISTRIBUTION)
         except metadata.PackageNotFoundError as exc:
@@ -30,11 +65,13 @@ class QuantBTGateway:
                 "from PyPI through the backend project dependencies."
             ) from exc
         installed_version = distribution.version
-        if installed_version != QUANTBT_ENGINE_VERSION:
+        if installed_version != self._expected_version:
             raise RuntimeError(
                 f"Unsupported {QUANTBT_DISTRIBUTION} version {installed_version!r}; "
-                f"expected {QUANTBT_ENGINE_VERSION!r}."
+                f"expected {self._expected_version!r}."
             )
+        if self._expected_version == "1.1.0" and metadata.version("quantbt-native") != "0.4.1":
+            raise RuntimeError("Old-engine qualification requires exact quantbt-native==0.4.1")
         try:
             module = importlib.import_module("quantbt")
         except ModuleNotFoundError as exc:
@@ -81,6 +118,101 @@ class QuantBTGateway:
     def pct_equity_endpoint(self, **kwargs):
         return self._module().QuantBTEndpoint.pct_equity(**kwargs)
 
+    def signal_notional_endpoint(self, **kwargs):
+        """Construct the P04 current default through the verified public API."""
+        return self._module().QuantBTEndpoint.signal_notional(**kwargs)
+
+    def public_route_surface(self) -> dict[str, bool]:
+        """Verify the immutable P04 route map against the installed public API.
+
+        This is a constructor-surface probe only. It deliberately does not
+        execute a route whose domain-specific request (options package,
+        arbitrage specification, order tape, ...) has not passed Portal
+        admission yet.
+        """
+        endpoint = self._module().QuantBTEndpoint
+        return {
+            route_id: callable(getattr(endpoint, factory_name, None))
+            for route_id, (factory_name, _) in PUBLIC_ROUTE_FACTORIES.items()
+        }
+
+    def route_endpoint(self, route_id: str, /, **kwargs):
+        """Build one allowlisted public endpoint without dynamic dispatch.
+
+        Forced arguments in the release mapping cannot be silently overridden
+        by a caller. This matters for the reactive route: it must remain the
+        explicit strategy-input facade until a future typed tape contract is
+        admitted.
+        """
+        try:
+            factory_name, forced_kwargs = PUBLIC_ROUTE_FACTORIES[route_id]
+        except KeyError as exc:
+            raise ValueError(f"unknown QuantBT public route {route_id!r}") from exc
+        supplied = dict(kwargs)
+        for key, value in forced_kwargs.items():
+            if key in supplied and supplied[key] != value:
+                raise ValueError(
+                    f"route {route_id!r} requires {key}={value!r}; conflicting value supplied"
+                )
+            supplied[key] = value
+        factory = getattr(self._module().QuantBTEndpoint, factory_name, None)
+        if not callable(factory):
+            raise RuntimeError(
+                f"{QUANTBT_DISTRIBUTION}=={QUANTBT_ENGINE_VERSION} no longer exposes "
+                f"the mapped public factory {factory_name!r} for {route_id!r}."
+            )
+        return factory(**supplied)
+
+    def build_optimization_config(self, *, config_fields: Mapping[str, object]):
+        """Build 1.1.1's public OptimizationConfig with Portal-safe defaults.
+
+        P04 does not retrofit the legacy execution runner. New Research jobs
+        can use this method after their own request schema is admitted. Alias
+        names and unsafe parallelism fail before any engine compute starts.
+        """
+        fields = dict(config_fields)
+        aliases = {"random_seed": "seed", "optuna_trials": "n_trials"}
+        for alias, canonical in aliases.items():
+            if alias in fields:
+                raise ValueError(
+                    f"optimizer field {alias!r} is not accepted; use canonical {canonical!r}"
+                )
+        allowed = {
+            "study_name",
+            "n_trials",
+            "directions",
+            "seed",
+            "n_jobs",
+            "early_stopping_rounds",
+            "early_stopping_min_trials",
+            "early_stopping_min_delta",
+            "show_progress_bar",
+            "duplicate_policy",
+            "exception_policy",
+        }
+        deferred = {"storage", "load_if_exists", "log_path"}
+        requested_deferred = sorted(set(fields) & deferred)
+        if requested_deferred:
+            raise ValueError(
+                "optimizer persistence fields are deferred until persistent study lifecycle "
+                f"admission: {', '.join(requested_deferred)}"
+            )
+        unknown = sorted(set(fields) - allowed)
+        if unknown:
+            raise ValueError(f"unsupported optimizer fields: {', '.join(unknown)}")
+        if fields.get("n_jobs", 1) != 1:
+            raise ValueError("optimizer n_jobs is locked to 1 until dedupe is certified")
+        # P04 establishes only an in-process, deterministic adapter baseline.
+        # Persistent Optuna storage and filesystem logs belong to a later
+        # lifecycle phase with explicit retention, ownership and cleanup
+        # contracts; accepting their public QuantBT knobs here would create an
+        # accidental side-effect channel before that phase exists.
+        fields["n_jobs"] = 1
+        config_type = getattr(self._module(), "OptimizationConfig", None)
+        if config_type is None:
+            raise RuntimeError("QuantBT public OptimizationConfig is unavailable")
+        return config_type(**fields)
+
     # --- Phase P2 orchestration (plan §10) ----------------------------------
 
     def run_mode1_calibration(
@@ -95,6 +227,7 @@ class QuantBTGateway:
         optuna_early_stopping: int | None,
         random_seed: int | None,
         account_kwargs: Mapping[str, object],
+        target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
     ) -> tuple[Any, dict[str, Any]]:
         """Run the single IS/OOS Mode 1 study on the calibration tape.
 
@@ -102,12 +235,14 @@ class QuantBTGateway:
         public-API artifact (plan §10 steps 4-6) and must be normalized only
         through the canonical serializer.
         """
+        if target_mode not in {"pct_equity", "signal_notional"}:
+            raise ValueError("three-window target mode is not Portal-allowlisted")
         module = self._module()
         self.validate_param_ranges(param_ranges)
         endpoint = module.QuantBTEndpoint.train_test_split(
             strategy_class=strategy_fn,
             test_start=oos_start,
-            target_mode="pct_equity",
+            target_mode=target_mode,
             optimization_mode="mode_1_decay",
             optimization_schedule="global",
             optimization_config=dict(optimization_config),
@@ -125,9 +260,12 @@ class QuantBTGateway:
         evaluation_frame: pd.DataFrame,
         signal: pd.Series,
         account_kwargs: Mapping[str, object],
+        target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
     ) -> Any:
         """Replay one segment with frozen params on a fresh account (plan §10.8)."""
-        endpoint = self._module().QuantBTEndpoint.pct_equity(**dict(account_kwargs))
+        if target_mode not in {"pct_equity", "signal_notional"}:
+            raise ValueError("frozen replay target mode is not Portal-allowlisted")
+        endpoint = self.route_endpoint(target_mode, **dict(account_kwargs))
         endpoint.backtest(data=evaluation_frame, signal=signal)
         return endpoint
 
@@ -151,6 +289,58 @@ class QuantBTGateway:
         """Fail fast on invalid public WalkForwardConfig combinations."""
         self.build_advanced_walkforward_config(config_fields=config_fields)
 
+    def walk_forward_fold_plan(
+        self,
+        *,
+        index: pd.DatetimeIndex,
+        config_fields: Mapping[str, object],
+    ) -> list[dict[str, Any]]:
+        """Build, never run, the engine's own outer and nested fold plan.
+
+        ``WalkForwardConfig`` validates the combination (rolling width, temporal
+        guards, causal Mode 1 inner fields); ``WalkForwardEngine.build_folds``
+        and ``PreparedWalkForwardContext.prepare`` are the public objects a run
+        uses, so a P08 plan cannot drift from the executed one. The placeholder
+        strategy is never invoked by either call. Engine refusals propagate as
+        ``ValueError``/``NotImplementedError`` for the caller to type.
+        """
+        self._module()
+        walkforward_module = importlib.import_module("quantbt.walkforward")
+        config = walkforward_module.WalkForwardConfig(**dict(config_fields))
+        engine = walkforward_module.WalkForwardEngine(strategy=_never_called_strategy, config=config)
+        folds = engine.build_folds(index)
+        prepared = None
+        if config.optimization_mode == "mode_1_decay" and config.optimization_schedule == "per_fold_causal":
+            prepared = walkforward_module.PreparedWalkForwardContext.prepare(
+                data=pd.DataFrame(index=index),
+                datetime_index=index,
+                folds=folds,
+                config=config,
+            )
+
+        def span(values: pd.DatetimeIndex) -> dict[str, Any] | None:
+            if len(values) == 0:
+                return None
+            return {"first": values[0], "last": values[-1], "bars": int(len(values))}
+
+        plan: list[dict[str, Any]] = []
+        for fold in folds:
+            inner = prepared.inner_folds_for(fold) if prepared is not None else None
+            plan.append(
+                {
+                    "fold_id": int(fold.fold_id),
+                    "train": span(fold.train_index),
+                    "test": span(fold.test_index),
+                    "label_horizon": span(fold.label_horizon_index),
+                    "purge": span(fold.purge_index),
+                    "embargo": span(fold.embargo_index),
+                    "inner": None
+                    if inner is None
+                    else [{"train": span(item.train_index), "test": span(item.test_index)} for item in inner],
+                }
+            )
+        return plan
+
     def run_advanced_walkforward(
         self,
         *,
@@ -161,12 +351,25 @@ class QuantBTGateway:
         param_ranges: Mapping[str, tuple[int | float, int | float, int | float]] | None,
         fixed_params: Mapping[str, object] | None,
         account_kwargs: Mapping[str, object],
+        target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
     ) -> tuple[Any, dict[str, Any]]:
-        """Run the public walk_forward endpoint with a fully typed config."""
+        """Run one source-supported WFO route without changing legacy defaults.
+
+        The existing Portal runner remains pct_equity. Research's future
+        versioned adapter must explicitly select signal_notional; a caller
+        cannot turn any public QuantBT route into an admitted Portal route.
+        """
+        if target_mode not in {"pct_equity", "signal_notional"}:
+            raise ValueError("walk-forward target mode is not Portal-allowlisted")
+        if not any(
+            row.get("target_mode") == target_mode and row.get("status") == "supported"
+            for row in self.walkforward_capabilities()
+        ):
+            raise RuntimeError(f"QuantBT 1.1.1 does not support walk-forward target {target_mode}")
         module = self._module()
         endpoint = module.QuantBTEndpoint.walk_forward(
             strategy_class=strategy_fn,
-            target_mode="pct_equity",
+            target_mode=target_mode,
             walkforward_config=wf_config,
             optimization_config=dict(optimization_config),
             **dict(account_kwargs),

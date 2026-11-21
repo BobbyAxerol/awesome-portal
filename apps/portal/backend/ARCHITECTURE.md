@@ -98,7 +98,7 @@ ports; it must not recalculate engine metrics or create a durable run authority.
 
 The scripts use this application's virtual environment (or an explicitly set
 `POOL_ALPHA_PYTHON`). QuantBT is always supplied by the published
-`quantbt-engine==1.0.8` dependency with its `optimization` extra; the gateway
+`quantbt-engine==1.1.1` dependency with its `optimization` extra; the gateway
 verifies that exact installed PyPI distribution at first use, rejects local
 module shadowing, and never adds a sibling source checkout to `sys.path`.
 

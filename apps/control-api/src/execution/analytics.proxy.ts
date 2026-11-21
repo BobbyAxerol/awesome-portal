@@ -5,6 +5,7 @@ import { OnApplicationShutdown } from "@nestjs/common";
 import { ControlApiConfig } from "../config";
 import { AuthSession, PortalUser } from "../domain";
 import { ExecutionDelegationService } from "./delegation";
+import { ExecutionReadScopes } from "../execution-v2/read-scope";
 
 const IDENTIFIER = /^[A-Za-z0-9._-]{1,128}$/;
 const TYPED_UPSTREAM_CODE = /^(?:N07|N25|ANALYTICS)_[A-Z0-9_]{1,80}$/;
@@ -14,6 +15,7 @@ export interface AnalyticsPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  viewerWorkspaceId?: string;
 }
 
 type Screen =
@@ -167,6 +169,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
     private readonly config: ControlApiConfig,
     private readonly delegation: ExecutionDelegationService | null,
     private readonly tls: { ca: Buffer; cert: Buffer; key: Buffer } | null,
+    private readonly readScopes?: ExecutionReadScopes,
   ) {
     this.bulkhead = new AnalyticsBulkhead(
       config.EXECUTION_EDGE_ANALYTICS_MAXIMUM_CONCURRENCY,
@@ -175,12 +178,12 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
     );
   }
 
-  static async create(config: ControlApiConfig): Promise<ExecutionAnalyticsProxy> {
+  static async create(config: ControlApiConfig, readScopes?: ExecutionReadScopes): Promise<ExecutionAnalyticsProxy> {
     if (
       config.FEATURE_EXECUTION_ANALYTICS_QUERY !== "true" &&
       config.FEATURE_EXECUTION_SHADOW_QUERY !== "true"
     ) {
-      return new ExecutionAnalyticsProxy(config, null, null);
+      return new ExecutionAnalyticsProxy(config, null, null, readScopes);
     }
     const [delegation, ca, cert, key] = await Promise.all([
       ExecutionDelegationService.fromPrivateKeyFile({
@@ -196,7 +199,7 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
       readFile(config.EXECUTION_EDGE_CLIENT_CERT_FILE!),
       readFile(config.EXECUTION_EDGE_CLIENT_KEY_FILE!),
     ]);
-    return new ExecutionAnalyticsProxy(config, delegation, { ca, cert, key });
+    return new ExecutionAnalyticsProxy(config, delegation, { ca, cert, key }, readScopes);
   }
 
   capitalPreview(principal: AnalyticsPrincipal, approvalId: string, body: unknown): Promise<unknown> {
@@ -326,6 +329,12 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
     body?: unknown,
     delegatedWorkspaceId: string = principal.workspaceId,
   ): Promise<unknown> {
+    const scopedPrincipal = { ...principal, workspaceId: delegatedWorkspaceId,
+      viewerWorkspaceId: principal.viewerWorkspaceId ?? principal.workspaceId };
+    // This wire protocol carries legacy roles/resources, not current ELP2
+    // field/population publication pins. Do not treat mTLS as V2 authority.
+    if (this.readScopes && await this.readScopes.selectionMode(scopedPrincipal) !== "LEGACY_COMPATIBILITY")
+      throw new AnalyticsProxyError("ANALYTICS_SCOPED_TRANSPORT_NOT_COMMISSIONED", 503);
     if (!this.delegation || !this.tls) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
     const release = await this.bulkhead.acquire();
     try {
@@ -343,7 +352,10 @@ export class ExecutionAnalyticsProxy implements OnApplicationShutdown {
         throw new AnalyticsProxyError("ANALYTICS_REQUEST_TOO_LARGE", 413);
       }
       const session = await this.getSession();
-      return await this.sendRequest(session, assertion, method, path, payload);
+      const response = await this.sendRequest(session, assertion, method, path, payload);
+      if (this.readScopes && await this.readScopes.selectionMode(scopedPrincipal) !== "LEGACY_COMPATIBILITY")
+        throw new AnalyticsProxyError("ANALYTICS_ACCESS_CHANGED", 409);
+      return response;
     } finally {
       release();
     }

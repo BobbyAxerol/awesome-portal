@@ -54,6 +54,8 @@ docker run --rm \
   -e HOME=/tmp \
   -e npm_config_cache=/tmp/.npm \
   -e VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=true \
+  -e PORTAL_VISUAL_PINNED_IMAGE="${IMAGE}" \
+  -e RESEARCH_LOOP_VISUAL="${RESEARCH_LOOP_VISUAL:-}" \
   "${IMAGE}" \
   sh -lc "
     set -e

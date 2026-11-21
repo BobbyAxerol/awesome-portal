@@ -1,0 +1,15 @@
+{
+  "schema_version": "portal.execution.phase-test-results.v1",
+  "phase": "ELP2-10",
+  "tier": "R1",
+  "status": "ISOLATED_TEST_SOURCE_PASS_CONNECTED_NOT_MET",
+  "observed_on_utc": "2026-10-26",
+  "source_commit": "ed74740f1",
+  "checks": [
+    {"name": "Accounts native HTTP and PostgreSQL", "passed": 31, "failed": 0, "skipped": 0, "duration_seconds": 38.83, "external_source": "TEST_ONLY", "previously_skipped": 17},
+    {"name": "First attempt Vite cache read-only", "status": "FAIL_REPAIRED", "reason": "EROFS before test execution; cache moved to isolated tmpfs"},
+    {"name": "Owned test network and containers removed", "status": "PASS"}
+  ],
+  "not_claimed": ["CONNECTED_EDGE_SOURCE", "STREAM", "FULL_R2", "ELP2_10_CLOSEOUT"],
+  "evidence": "ACCOUNTS_NATIVE_PG_HTTP_ISOLATED_2026-10-26.md"
+}

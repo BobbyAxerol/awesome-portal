@@ -1,0 +1,416 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "order-detail",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/orders/{order_id}/detail": {
+      "get": {
+        "operationId": "executionOrderDetailGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "description": "The typed fields of one order: deployment, filled quantity (a true 0 is a value), average fill price, fee with the fee rule (never defaulted to 0; absent with a stated reason when a fill has no commission or the fills use two currencies), acknowledgement latency and the order intent record. Source-dark route: no positive producer is commissioned; the route refuses instead of inventing data.",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized current answer; absence stays typed",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Profile not commissioned",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authority or source changed before dispatch",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Source unavailable",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetailProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "OrderDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "record_authority",
+          "read_at_ms",
+          "order_id"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.order-detail.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "record_authority": {
+            "const": "PORTAL_PROJECTION"
+          },
+          "read_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "order_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191,
+            "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+          },
+          "deployment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 191,
+                "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filled_quantity": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "average_fill_price": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fee": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "currency",
+                  "value"
+                ],
+                "properties": {
+                  "currency": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "value": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fee_absence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "NO_FILLS",
+                  "FILL_WITHOUT_COMMISSION",
+                  "MIXED_FEE_CURRENCIES"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ack_latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "intent": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "intent_id",
+                  "idempotency_scope"
+                ],
+                "properties": {
+                  "intent_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+                  },
+                  "idempotency_scope": {
+                    "type": "string",
+                    "enum": [
+                      "ACTOR_REQUEST_KEY",
+                      "WORKSPACE_REQUEST_KEY"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "not": {
+              "type": "object",
+              "required": [
+                "fee",
+                "fee_absence"
+              ],
+              "properties": {
+                "fee": {
+                  "type": "object"
+                },
+                "fee_absence": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "OrderDetailProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EXECUTION_READ_NOT_AVAILABLE",
+                  "EXECUTION_READ_QUERY_INVALID",
+                  "SESSION_REQUIRED",
+                  "REQUEST_REJECTED",
+                  "PORTAL_AUTHORITY_UNAVAILABLE",
+                  "PORTAL_READ_STORE_UNAVAILABLE",
+                  "EXECUTION_LOCAL_READ_BUSY",
+                  "EXECUTION_READ_SCOPE_REQUIRED",
+                  "EXECUTION_READ_ACCESS_CHANGED",
+                  "EXECUTION_READ_CURRENT_ONLY",
+                  "EXECUTION_READ_POLICY_PENDING",
+                  "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",
+                  "EXECUTION_READ_FIELD_POLICY_PENDING",
+                  "EXECUTION_READ_SCOPE_LIMIT",
+                  "EXECUTION_READ_AUTHORITY_UNAVAILABLE",
+                  "EXECUTION_READ_CURSOR_INVALID"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

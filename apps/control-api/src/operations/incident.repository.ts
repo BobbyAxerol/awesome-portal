@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient, QueryResult } from "pg";
 import { GovernanceError } from "../governance/governance.service";
+import type { IncidentEligibilityFacts } from "./incident-eligibility";
 import { CONTROL_API_POOL } from "../tokens";
 
 export type IncidentWorkflowState = "OPEN" | "MITIGATED" | "RESOLVED";
@@ -151,6 +152,21 @@ export class IncidentRepository {
 
   async detail(workspaceId: string, incidentId: string): Promise<IncidentDetailRecord> {
     return this.loadDetail(this.pool, workspaceId, incidentId);
+  }
+
+  /** One statement/snapshot; evidence beyond the detail page's 250 rows counts.
+   * EXISTS is only a workflow hint. Mutation still checks the submitted hash. */
+  async eligibility(workspaceId: string, incidentId: string): Promise<IncidentEligibilityFacts> {
+    const result = await this.pool.query<IncidentEligibilityFacts & Record<string, unknown>>(
+      `SELECT i.incident_id, i.environment, i.workflow_state, i.workflow_version,
+              i.acknowledged_at, i.assigned_to_user_id,
+              EXISTS(SELECT 1 FROM execution_incident_evidence e WHERE e.workspace_id=i.workspace_id
+                AND e.incident_id=i.incident_id AND e.evidence_kind='MITIGATION_ATTESTATION') AS has_mitigation_attestation,
+              EXISTS(SELECT 1 FROM execution_incident_evidence e WHERE e.workspace_id=i.workspace_id
+                AND e.incident_id=i.incident_id AND e.evidence_kind='CLEAN_DRY_RUN') AS has_clean_dry_run
+       FROM execution_incidents i WHERE i.workspace_id=$1 AND i.incident_id=$2`, [workspaceId, incidentId]);
+    if (!result.rows[0]) throw new GovernanceError("INCIDENT_NOT_FOUND", "Incident not found.", 404);
+    return result.rows[0];
   }
 
   async create(input: CreateIncidentWrite): Promise<{ detail: IncidentDetailRecord; replayed: boolean }> {

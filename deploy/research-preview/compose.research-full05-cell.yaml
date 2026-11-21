@@ -1,0 +1,10 @@
+# FULL05 owned qualification custody. No production/preview volume is reused.
+volumes:
+  portal-artifacts:
+    name: portal-research-full05-20261006-artifacts
+  portal-postgres-data:
+    name: portal-research-full05-20261006-postgres
+  portal-nats-data:
+    name: portal-research-full05-20261006-nats
+  roadmap-task-board-data:
+    name: portal-research-full05-20261006-roadmap

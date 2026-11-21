@@ -1,0 +1,153 @@
+{
+  "schema_version": "portal.native-core-runtime.v1",
+  "pool_profile": {
+    "max": "<<FILL:int:POOL_MAX|1..10; same bounded profile as the installed 008 descriptor, never raised silently>>",
+    "connectionTimeoutMillis": "<<FILL:int:POOL_CONNECTION_TIMEOUT_MS|1..60000>>",
+    "statement_timeout": "<<FILL:int:POOL_STATEMENT_TIMEOUT_MS|1..60000>>",
+    "query_timeout": "<<FILL:int:POOL_QUERY_TIMEOUT_MS|1..60000 and strictly greater than statement_timeout>>",
+    "idle_in_transaction_session_timeout": "<<FILL:int:POOL_IDLE_TX_TIMEOUT_MS|1..60000>>"
+  },
+  "realtime_limits": {
+    "maximumClients": "<<FILL:int:RT_MAX_CLIENTS|1..4096; REQUIRED for native_manager_review_v1 even for a READ-only plan>>",
+    "maximumEntriesPerClient": "<<FILL:int:RT_MAX_ENTRIES_PER_CLIENT|1..4096>>",
+    "maximumFrameBytes": "<<FILL:int:RT_MAX_FRAME_BYTES|1..1048576>>",
+    "maximumClientBytes": "<<FILL:int:RT_MAX_CLIENT_BYTES|>= maximumFrameBytes>>",
+    "maximumTotalBytes": "<<FILL:int:RT_MAX_TOTAL_BYTES|>= maximumClientBytes, <= 67108864>>",
+    "maximumNoticesPerRead": "<<FILL:int:RT_MAX_NOTICES_PER_READ|1..200>>",
+    "readTimeoutMs": "<<FILL:int:RT_READ_TIMEOUT_MS|1..60000>>"
+  },
+  "composition": {
+    "expected_workload_id": "<<FILL:str:WORKLOAD_ID|exact PM workload id of the FRESH Edge observer return>>",
+    "selections": [
+      {
+        "selector": {
+          "portal_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+          "human_issuer": "portal-control-api.native-manager-read",
+          "subject": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+          "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+          "environment": "paper",
+          "domain": {
+            "profile_id": "PAPER_BINANCE_USDM",
+            "catalogue_sha256": "<<FILL:hex64:DOMAIN_CATALOGUE_SHA256|reviewed catalogue seal; identical in the owner artifact>>",
+            "profile_sha256": "<<FILL:hex64:DOMAIN_PROFILE_SHA256|reviewed profile seal>>",
+            "field_policy_sha256": "<<FILL:hex64:DOMAIN_FIELD_POLICY_SHA256|reviewed field-policy seal>>"
+          }
+        },
+        "config": {
+          "issuer": "portal-control-api.native-manager-read",
+          "audience": "<<FILL:str:HUMAN_AUDIENCE|PM audience of the fresh trust bundle>>",
+          "key_id": "<<FILL:str:HUMAN_KEY_ID|Core signer key id of the fresh trust bundle>>",
+          "private_key_ref": {
+            "path": "<<FILL:path:HUMAN_SIGNING_KEY_PATH|absolute path of the Core-only Ed25519 PKCS8 PEM; owned by the process uid, mode 0400/0600>>",
+            "sha256": "<<FILL:hex64:HUMAN_SIGNING_KEY_FILE_SHA256|sha256 of the file bytes, taken on the host>>"
+          },
+          "selected_source": {
+            "transport": {
+              "origin": "<<FILL:url:SOURCE_ORIGIN|https origin of the NEW Edge finite window; never the revoked 28446 revision-1 window by assumption>>",
+              "tls": {
+                "ca_ref": { "path": "<<FILL:path:TLS_CA_PATH>>", "sha256": "<<FILL:hex64:TLS_CA_FILE_SHA256>>" },
+                "cert_ref": { "path": "<<FILL:path:TLS_CLIENT_CERT_PATH>>", "sha256": "<<FILL:hex64:TLS_CLIENT_CERT_FILE_SHA256>>" },
+                "key_ref": { "path": "<<FILL:path:TLS_CLIENT_KEY_PATH>>", "sha256": "<<FILL:hex64:TLS_CLIENT_KEY_FILE_SHA256>>" }
+              },
+              "pm_leaf_sha256": "<<FILL:sha256p:PM_LEAF_SHA256|sha256:<64 hex> of the PM server leaf in the RENEWED trust>>",
+              "workload_id": "<<FILL:str:WORKLOAD_ID|equal to expected_workload_id>>",
+              "deadline_ms": "<<FILL:int:SOURCE_DEADLINE_MS|>0>>",
+              "request_bytes": "<<FILL:int:SOURCE_REQUEST_BYTES|>0>>",
+              "response_bytes": "<<FILL:int:SOURCE_RESPONSE_BYTES|>0>>",
+              "max_inflight": "<<FILL:int:SOURCE_MAX_INFLIGHT|>0; <= the source window's declared connection bound>>"
+            },
+            "pins": {
+              "binding": {
+                "human_issuer": "portal-control-api.native-manager-read",
+                "subject": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+                "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+                "environment": "paper",
+                "workload_id": "<<FILL:str:WORKLOAD_ID>>"
+              },
+              "domain": {
+                "profile_id": "PAPER_BINANCE_USDM",
+                "catalogue_sha256": "<<FILL:hex64:DOMAIN_CATALOGUE_SHA256>>",
+                "profile_sha256": "<<FILL:hex64:DOMAIN_PROFILE_SHA256>>",
+                "field_policy_sha256": "<<FILL:hex64:DOMAIN_FIELD_POLICY_SHA256>>"
+              },
+              "human": {
+                "issuer": "portal-control-api.native-manager-read",
+                "subject": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+                "portal_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+                "ts_user_id": "608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd",
+                "mapping_revision": "ts-user:608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd:1"
+              },
+              "native": {
+                "revision": "<<FILL:str:NATIVE_ACCEPTANCE_REVISION|positive integer string from the NEW append-only acceptance; never 1 of the retired b922c105>>",
+                "receipt_id": "<<FILL:uuid:NATIVE_RECEIPT_ID>>",
+                "receipt_digest": "<<FILL:sha256p:NATIVE_RECEIPT_DIGEST>>",
+                "document_digest": "<<FILL:sha256p:NATIVE_DOCUMENT_DIGEST>>",
+                "policy_revision": "<<FILL:str:NATIVE_POLICY_REVISION|positive integer string>>",
+                "owner_mapping_revision": "<<FILL:str:NATIVE_OWNER_MAPPING_REVISION|ts-user:<uuid>:<n> of the PROTECTED TS owner, not the Research subject>>",
+                "semantic_revision": "<<FILL:sha256p:NATIVE_SEMANTIC_REVISION>>",
+                "effective_from": "<<FILL:iso:NATIVE_EFFECTIVE_FROM|UTC, from the fresh observer return>>",
+                "expires_at": "<<FILL:iso:NATIVE_EXPIRES_AT|UTC, from the fresh observer return>>"
+              },
+              "source_fingerprint": "<<FILL:hex64:SOURCE_FINGERPRINT|from the fresh observer return>>"
+            },
+            "installation_expires_at_utc_ms": "<<FILL:ms:INSTALLATION_EXPIRES_AT_MS|UTC epoch ms; <= trust expiry, <= 24 h from now>>"
+          },
+          "limits": {
+            "ttl_ms": "<<FILL:int:LEASE_TTL_MS|<= 60000>>",
+            "maximum_unresolved": "<<FILL:int:LEASE_MAX_UNRESOLVED>>",
+            "maximum_retained": "<<FILL:int:LEASE_MAX_RETAINED>>"
+          },
+          "installation_scope": {
+            "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+            "environment": "paper",
+            "valid_until_ms": "<<FILL:ms:INSTALLATION_SCOPE_VALID_UNTIL_MS|<= installation_expires_at_utc_ms>>"
+          },
+          "terminal": {
+            "issuer": "portal-control-api.native-manager-read-terminal",
+            "audience": "trading-system.native-business-read-terminal",
+            "key_id": "<<FILL:str:TERMINAL_KEY_ID|same candidate Core signer as the human key by explicit pairing>>",
+            "private_key_ref": {
+              "path": "<<FILL:path:TERMINAL_SIGNING_KEY_PATH>>",
+              "sha256": "<<FILL:hex64:TERMINAL_SIGNING_KEY_FILE_SHA256>>"
+            },
+            "ttl_seconds": "<<FILL:int:TERMINAL_TTL_SECONDS|>0>>"
+          },
+          "egress": {
+            "maximum_response_bytes": "<<FILL:int:EGRESS_MAX_RESPONSE_BYTES>>",
+            "maximum_inflight": "<<FILL:int:EGRESS_MAX_INFLIGHT>>",
+            "send_timeout_ms": "<<FILL:int:EGRESS_SEND_TIMEOUT_MS>>",
+            "quiesce_timeout_ms": "<<FILL:int:EGRESS_QUIESCE_TIMEOUT_MS>>"
+          }
+        }
+      }
+    ],
+    "retained_recovery": [],
+    "owner_intakes": [
+      {
+        "artifact_path": "<<FILL:path:OWNER_ARTIFACT_PATH|absolute path, root-owned regular file mode 0600, read ONLY by the offline installer>>",
+        "approved_sha256": "<<FILL:hex64:OWNER_ARTIFACT_SHA256|sha256 of the owner artifact bytes; recomputed by the validator>>",
+        "target": {
+          "database_name": "portal_control",
+          "database_system_identifier": "7688673963308855330",
+          "role_name": "portal",
+          "protected_owner_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+          "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+          "principal_workspace_pins": [
+            { "user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434", "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660" }
+          ]
+        },
+        "intake_not_before_ms": "<<FILL:ms:INTAKE_NOT_BEFORE_MS>>",
+        "intake_not_after_ms": "<<FILL:ms:INTAKE_NOT_AFTER_MS|bounded installation-intake window only; not a product grant TTL>>",
+        "grant_window": {
+          "plan": "READ_AND_STREAM",
+          "maximum_grant_ms": "<<FILL:int:PLAN_B_MAXIMUM_GRANT_MS|Plan B cap on EACH grant (valid_until - valid_from); at most 7200000 = 2 h>>",
+          "trust_not_after_ms": "<<FILL:ms:TRUST_NOT_AFTER_MS|end of the RENEWED source trust; no grant may end later>>"
+        }
+      }
+    ],
+    "mutation_limits": {
+      "maximum_intents": "<<FILL:int:MUTATION_MAX_INTENTS|MUST be >= the intents already used (32 audit rows at the 008 cut) plus headroom; the installed 008 bootstrap uses 128>>",
+      "maximum_recoveries_per_request": "<<FILL:int:MUTATION_MAX_RECOVERIES_PER_REQUEST|1..16>>"
+    }
+  }
+}

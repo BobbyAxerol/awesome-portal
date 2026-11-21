@@ -1,0 +1,177 @@
+{
+  "schema_version": "research.local-candidate-evidence.v3",
+  "candidate_source_sha": "128276d70a8f0d47e69617d8dcaedf4fed05cfde",
+  "project": "portal-research-p23-ol12",
+  "base_url": "http://127.0.0.1:8096",
+  "recorded_at_utc": "2026-10-03T22:40:07.497Z",
+  "signed": false,
+  "production_authority": false,
+  "verdict": "SCOPED_BACKEND_ACCEPTED_RESTORED_WORKSPACE_BROWSER_FAILED_FULL_P24_OPEN",
+  "prior_manifests_preserved": [
+    "current-source-candidate-manifest.v1.json",
+    "current-source-candidate-manifest.v2.json"
+  ],
+  "component_provenance": {
+    "control-api": {
+      "source_sha": "128276d70a8f0d47e69617d8dcaedf4fed05cfde",
+      "dirty": false,
+      "compiled_module_count": 11
+    },
+    "portal-web": {
+      "source_sha": "4bc9cefe0bfe8de0f67c1ae2b54aa9032523db88",
+      "frontend_code_sha": "2f4cb81a7600eeeb8efa2bf61dee743ea1ddbb52",
+      "current_frontend_source_diff_files": 0,
+      "bundle": "index-C41KmM2A.js",
+      "bundle_sha256": "215b10a6ee9c90832b0b61f2531d07cc2efdb2a15d2913709a9a06fd7203ad28",
+      "index_sha256": "558c8b22fb0dcf078c64653beb77326b33cd2f3f71eea2589b15db56331dd649",
+      "bytes_verified": true,
+      "full_product_acceptance": false
+    },
+    "portal-api-and-worker": {
+      "source_sha": "4bc9cefe0bfe8de0f67c1ae2b54aa9032523db88",
+      "current_python_source_diff_files": 0,
+      "engine_version": "1.1.1",
+      "worker_off_at_restored_browser": true
+    },
+    "frontend-evidence-review": {
+      "commit": "d0569d49b6b6102b927f0663b789fce24832086a",
+      "changed_files": 2,
+      "changed_frontend_code_files": 0,
+      "reported_lane_and_w5_tests": 228,
+      "independently_reexecuted": false
+    }
+  },
+  "images": {
+    "control-api": "sha256:629d9bef43e83b10ce8565722a932c5c52e3d5c5b2455dd58f6e765b853b7a46",
+    "quant-worker-py": "sha256:7d68b990005ef504176128c83513fce7103c31b8db725979cfc30dcc75ac9700",
+    "portal-web": "sha256:9490db8b87bef987ebdb9bfaee1b330ce06caa569d0fc0abe1949416aa8f9a00",
+    "portal-api": "sha256:7d68b990005ef504176128c83513fce7103c31b8db725979cfc30dcc75ac9700",
+    "portal-postgres": "sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "portal-nats": "sha256:b83efabe3e7def1e0a4a31ec6e078999bb17c80363f881df35edc70fcb6bb927",
+    "roadmap-task-board-api": "sha256:3f7acd1518a866eca9c2bba6da2c2b8ea67d457ff9adf274842f3f2b283ad095"
+  },
+  "private_evidence_root": "/home/bobby/.local/state/portal-research-p23/20261003/nonreuse-r020",
+  "private_receipts": [
+    {
+      "file": "read-cost-v3-candidate-identity.json",
+      "sha256": "f2409208ce77f9ad8aa972a2708ab5859797bd1572a24012445f379c83fb6735",
+      "scope": "CLEAN_IDENTITY_AND_ELEVEN_COMPILED_MODULES",
+      "verdict": "PASS"
+    },
+    {
+      "file": "linked-audit-product-original-r020.json",
+      "sha256": "b26ccac6a63bcb6097241c186afff327aa63c9980fd1c179baadac3cfa9251b3",
+      "scope": "ORIGINAL_NONREUSABLE_AUTHENTICATED_PINNED_CHILD",
+      "verdict": "PASS"
+    },
+    {
+      "file": "nonreuse-proof-restart-restore-close-sockets.json",
+      "sha256": "c6722fae0a9f60c78ade22e7e4a99b68ebfbc9f688ed6f056efecdcc389016f7",
+      "scope": "NEW_PROOF_API_RESTART_FRESH_RESTORE_BYTES",
+      "verdict": "PASS"
+    },
+    {
+      "file": "linked-report-read-load-companions-clean.json",
+      "sha256": "f3f97668ffe3bc50a20a1438516b3d582b2cc6117288b3abb3cbaea93ca16dae",
+      "scope": "TWENTY_USERS_REPORT_RC_HTTP_SLO",
+      "verdict": "PASS"
+    },
+    {
+      "file": "current-restored-audit-browser.json",
+      "sha256": "d982d786e58d52a41a1c05b62b531af3a2404aa942baf647dce69eaa8bce26a7",
+      "scope": "NEW_PROOF_RESTORED_S09_S11_BROWSER",
+      "verdict": "FAIL_404"
+    },
+    {
+      "file": "workspace-reader-confirmation.json",
+      "sha256": "233d02090d1429b0d039325f6ac880de3a3161ca023252f2c0a01fbb1f266a6b",
+      "scope": "SAME_ACTOR_PERSONAL_DEFAULT_VS_EXPLICIT_WORKSPACE",
+      "verdict": "DIAGNOSIS_CONFIRMED"
+    },
+    {
+      "file": "restored-proof-qa-cleanup.json",
+      "sha256": "e00c2e7c0fc0a32445b3d038ecc69e9b36c2acc91ad101acc6ccb6d06e538e5b",
+      "scope": "ONE_RESTORED_NEW_QA_REVOKED_CUSTODY_PRESERVED",
+      "verdict": "PASS"
+    },
+    {
+      "file": "clone-source-receipt.json",
+      "sha256": "abb6bb2cfad4bc32e52284da42983f26aa0c16a6276911d9ec90187b2ca9957b",
+      "scope": "TWENTY_ONE_NEW_CLONE_QA_REVOKED_SHARED_SOURCE_UNCHANGED",
+      "verdict": "PASS_FINAL_CLEANUP_AMENDMENT"
+    },
+    {
+      "file": "completion-capacity.json",
+      "sha256": "582e553c178ff7afc16f29958f037997c3ffc0fc38837f7265b39e8ec865fd92",
+      "scope": "CELL_TEMP_CONTAINER_NETWORK_AND_CAPACITY_C4",
+      "verdict": "PASS"
+    }
+  ],
+  "reused_verified_evidence": [
+    {
+      "receipt": "../P22/READER_RUNTIME_RECEIPT_2026-10-03.md",
+      "private_sha256": "0843df07847ef77c3573a57ebdd2577555ed1ff530d13c12bdb194f9bc3c6e78",
+      "scope": "R022_R023_R027_SIX_NAMED_GETS_NO_RESEAL_OR_PUBLISH",
+      "disposition": "REUSED_SCOPED_PASS"
+    },
+    {
+      "receipt": "../P23/CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md",
+      "private_sha256": "cc7ce486d8645639c7f5c6d6d1c26e9df4263d974424874cd26ea4a393370ef2",
+      "scope": "GENUINE_JSON_502_S14_BROWSER_1280_660",
+      "disposition": "REUSED_SCOPED_PASS"
+    },
+    {
+      "receipt": "../P23/CURRENT_CANDIDATE_AUDIT_502_RESTORE_BROWSER_2026-10-03.md",
+      "private_sha256": "70ed23d72ccb671ab6cd7174af50363f8eaf1a1f8f1bc993d02f3c9e48a5fe54",
+      "scope": "PRIOR_RESTORE_PERSONAL_WORKSPACE_30_RENDERS_28_GETS",
+      "disposition": "REUSED_SCOPED_PASS_NOT_NEW_SHARED_WORKSPACE_PARENT"
+    },
+    {
+      "receipt": "../P23/MIXED_LOAD_AND_HISTORICAL_MANIFEST_EXCEPTION_2026-10-03.md",
+      "scope": "LIBRARY_499_MS_PROGRESS_403_MS_EXACT_AFFECTED_MODULE_EVIDENCE",
+      "disposition": "REUSED_SCOPED_PASS_NOT_A_NEW_FULL_MIXED_LOAD"
+    }
+  ],
+  "read_load": {
+    "users": 20,
+    "http_200": 120,
+    "report_p95_ms": 377,
+    "rc_p95_ms": 487,
+    "target_p95_ms": 500,
+    "peak_current_bytes": 435445760,
+    "original_report_and_rc_fingerprint_unchanged": true,
+    "no_implicit_compute": true
+  },
+  "normal_source_commit_hook": {
+    "source_sha": "128276d70a8f0d47e69617d8dcaedf4fed05cfde",
+    "contract_passed": 267,
+    "control_passed": 1930,
+    "control_named_skipped": 1,
+    "verdict": "PASS"
+  },
+  "cleanup": {
+    "disabled_fresh_clone_qa_accounts": 21,
+    "clone_active_qa_sessions": 0,
+    "clone_active_compute": 0,
+    "restored_disabled_fresh_qa_accounts": 1,
+    "restored_active_qa_sessions": 0,
+    "restored_active_compute": 0,
+    "owned_containers": 0,
+    "owned_networks": 0,
+    "original_source_and_shared_worker_unchanged": true,
+    "copied_queued_source_history_retained": true,
+    "volumes_backups_current_and_rollback_images_retained": true,
+    "cache_deletion": "NO_ACTION_NEEDED"
+  },
+  "full_store_integrity": false,
+  "verified_historical_manifests": 83,
+  "required_historical_manifests": 86,
+  "open_gates": [
+    "CG_P23_WORKSPACE_01_RESTORED_SHARED_WORKSPACE_BROWSER_MAPPING",
+    "LINKED_AUDIT_NAMED_OPERATION_PRODUCT_CONSUMER",
+    "THREE_ORIGINAL_MANIFEST_BYTES_OR_BOBBY_SCOPE_DISPOSITION",
+    "REAL_SECOND_QUALIFIED_ENGINE_T07_T13_P24_T05",
+    "FULL_P24_SCENARIO_FIELD_ACTION_VISUAL_PRINT_OWNER_ACCEPTANCE",
+    "SIGNED_RELEASE_SBOM_PROVENANCE_NOT_DISPATCHED"
+  ]
+}

@@ -18,6 +18,45 @@ interface UserRow {
   archived_at: Date | null;
 }
 
+/** Roster-only display fact, never part of identity/session authorization. */
+export interface RosterUser extends PortalUser {
+  lastSignInAt?: Date;
+}
+
+type RosterUserRow = UserRow & { last_sign_in_at?: Date | null };
+
+function toRosterUser(row: RosterUserRow): RosterUser {
+  const user: RosterUser = toUser(row);
+  // Audit retention does not prove an account never signed in. No retained
+  // successful interactive event means unavailable, not a published null.
+  if (row.last_sign_in_at instanceof Date && Number.isFinite(row.last_sign_in_at.getTime())
+      && row.last_sign_in_at.getTime() >= 0) user.lastSignInAt = row.last_sign_in_at;
+  return user;
+}
+
+/** Only a successful interactive login is a sign-in. Research commissioning
+ * and preview auto-sessions must not overwrite a human's sign-in timestamp. */
+export const ROSTER_LAST_SIGN_IN_SQL = `(SELECT max(a.occurred_at)
+  FROM auth_audit_events a
+  WHERE a.event_type = 'login_succeeded' AND a.result = 'SUCCESS'
+    AND a.actor_user_id = page.user_id AND a.target_user_id = page.user_id
+    AND a.reason_code IS DISTINCT FROM 'PREVIEW_AUTO_LOGIN')`;
+
+interface RosterCountsSql {
+  total_count: number; matching_count: number;
+  n_invited: number; n_active: number; n_disabled: number; n_archived: number;
+  n_admin: number; n_user: number; n_locked: number; n_awaiting: number;
+}
+
+export interface RosterCountsRow {
+  total: number;
+  matching: number;
+  byState: { INVITED: number; ACTIVE: number; DISABLED: number; ARCHIVED: number };
+  byRole: { ADMIN: number; USER: number };
+  locked: number;
+  awaitingFirstPassword: number;
+}
+
 function toUser(row: UserRow): PortalUser {
   return {
     userId: row.user_id,
@@ -36,6 +75,49 @@ function toUser(row: UserRow): PortalUser {
     archivedAt: row.archived_at,
   };
 }
+
+/** The filter shared by the count pass and the page, written once so the two cannot drift. `a` is the table alias. */
+const rosterMatchSql = (a: string): string =>
+  `(($2::text IS NULL OR position(lower($2::text) IN lower(${a}.username)) > 0
+                     OR position(lower($2::text) IN lower(${a}.display_name)) > 0)
+    AND ($3::text IS NULL OR ${a}.role = $3::text)
+    AND ($4::text IS NULL OR (CASE WHEN ${a}.archived_at IS NOT NULL THEN 'ARCHIVED' ELSE ${a}.status END) = $4::text))`;
+
+/**
+ * BE-P23 · the exact statement `rosterPage` executes. Parameters: $1 after-username, $2 search, $3 role,
+ * $4 state, $5 row limit (page size + 1), $6 the one instant. Exported so the PG spec explains THIS text.
+ * `f` feeds only the aggregate; `page` reads `portal_users` directly so its ORDER BY ... LIMIT can use the unique index.
+ */
+export const ROSTER_PAGE_SQL = `WITH f AS (
+         SELECT u.role, u.must_change_password,
+                CASE WHEN u.archived_at IS NOT NULL THEN 'ARCHIVED' ELSE u.status END AS acct_state,
+                (u.locked_until IS NOT NULL AND u.locked_until > $6::timestamptz) AS is_locked,
+                ${rosterMatchSql("u")} AS is_match
+           FROM portal_users u
+       ), agg AS (
+         SELECT count(*)::int AS total_count,
+                count(*) FILTER (WHERE is_match)::int AS matching_count,
+                count(*) FILTER (WHERE acct_state = 'INVITED')::int AS n_invited,
+                count(*) FILTER (WHERE acct_state = 'ACTIVE')::int AS n_active,
+                count(*) FILTER (WHERE acct_state = 'DISABLED')::int AS n_disabled,
+                count(*) FILTER (WHERE acct_state = 'ARCHIVED')::int AS n_archived,
+                count(*) FILTER (WHERE role = 'ADMIN')::int AS n_admin,
+                count(*) FILTER (WHERE role = 'USER')::int AS n_user,
+                count(*) FILTER (WHERE is_locked)::int AS n_locked,
+                count(*) FILTER (WHERE must_change_password AND acct_state <> 'ARCHIVED')::int AS n_awaiting
+           FROM f
+       ), page AS (
+         SELECT u.* FROM portal_users u
+          WHERE ${rosterMatchSql("u")} AND ($1::text IS NULL OR u.username > $1::text)
+          ORDER BY u.username
+          LIMIT $5::int
+       )
+       SELECT agg.*, page.user_id, page.username, page.display_name, page.role, page.status,
+              page.must_change_password, page.failed_login_count, page.locked_until, page.session_version,
+              page.created_at, page.updated_at, page.disabled_at, page.account_revision, page.archived_at,
+              ${ROSTER_LAST_SIGN_IN_SQL} AS last_sign_in_at
+         FROM agg LEFT JOIN page ON true
+        ORDER BY page.username`;
 
 export class UsersRepository {
   constructor(private readonly pool: Pool | PoolClient) {}
@@ -56,11 +138,88 @@ export class UsersRepository {
     return result.rows[0] ? toUser(result.rows[0]) : null;
   }
 
+  /** One read snapshot for own-profile's final post-source authority boundary.
+   * Do not assemble a positive session/user/workspace proof from three reads
+   * that can straddle a revoke. No locks or source I/O in this repository. */
+  async findCurrentSessionInWorkspace(input: {
+    userId: string; sessionId: string; sessionVersion: number; workspaceId: string;
+  }): Promise<PortalUser | null> {
+    const result = await this.pool.query<UserRow>(`SELECT u.* FROM portal_users u
+      JOIN auth_sessions s ON s.user_id=u.user_id
+      JOIN workspace_members m ON m.user_id=u.user_id AND m.workspace_id=$4
+      WHERE u.user_id=$1 AND s.session_id=$2 AND u.session_version=$3 AND s.session_version=$3
+        AND u.status='ACTIVE' AND u.archived_at IS NULL AND NOT u.must_change_password
+        AND s.state='ACTIVE' AND s.idle_expires_at>clock_timestamp()
+        AND s.absolute_expires_at>clock_timestamp()`,
+    [input.userId, input.sessionId, input.sessionVersion, input.workspaceId]);
+    return result.rows[0] ? toUser(result.rows[0]) : null;
+  }
+
+  /** Transaction-only identity fence; never infer ownership from a name. */
+  async lockById(userId: string): Promise<PortalUser | null> {
+    const result = await this.pool.query<UserRow>(
+      `SELECT * FROM portal_users WHERE user_id = $1 FOR UPDATE`, [userId],
+    );
+    return result.rows[0] ? toUser(result.rows[0]) : null;
+  }
+
   async list(): Promise<PortalUser[]> {
     const result = await this.pool.query<UserRow>(
       `SELECT * FROM portal_users ORDER BY username`,
     );
     return result.rows.map(toUser);
+  }
+
+  /** Owner roster only. Keep lifecycle audit projections and generic identity
+   * reads unchanged; the timestamp comes from the same statement snapshot. */
+  async listRoster(): Promise<RosterUser[]> {
+    const result = await this.pool.query<RosterUserRow>(
+      `SELECT page.*, ${ROSTER_LAST_SIGN_IN_SQL} AS last_sign_in_at
+       FROM portal_users page ORDER BY page.username`,
+    );
+    return result.rows.map(toRosterUser);
+  }
+
+  /**
+   * BE-P23 · one keyset page of the roster plus its exact counts, from ONE statement.
+   *
+   * A single SQL statement is a single snapshot, so `counts` and `rows` can never
+   * disagree about the same instant (no REPEATABLE READ transaction needed, no
+   * second round trip). Order is `username`, which is `UNIQUE` (a total order,
+   * so there is no tie to break) and already indexed by `portal_users_username_key`.
+   * The page is read from the base table, not from the counting relation: with no
+   * filter it is an index range scan that stops after `limit + 1` rows; with a filter
+   * it walks the same index until `limit + 1` rows match (measured, not assumed:
+   * see the EXPLAIN ANALYZE case in the PG spec). The counts are one aggregate pass
+   * over the table (cost O(accounts), no rows leave the database).
+   *
+   * `locked` uses the instant the caller passes, and the caller hands that same
+   * instant to `projectAccount`, so a count and the rows it counts cannot straddle an expiry.
+   * The state is derived exactly as `accountStateOf` does (archived wins over status).
+   */
+  async rosterPage(input: {
+    limit: number;
+    afterUsername: string | null;
+    q: string | null;
+    role: Role | null;
+    state: "INVITED" | "ACTIVE" | "DISABLED" | "ARCHIVED" | null;
+    now: Date;
+  }): Promise<{ counts: RosterCountsRow; rows: RosterUser[] }> {
+    const result = await this.pool.query<RosterUserRow & RosterCountsSql>(
+      ROSTER_PAGE_SQL,
+      [input.afterUsername, input.q, input.role, input.state, input.limit + 1, input.now],
+    );
+    const first = result.rows[0];
+    if (!first) throw new Error("roster page statement returned no aggregate row");
+    const counts: RosterCountsRow = {
+      total: first.total_count,
+      matching: first.matching_count,
+      byState: { INVITED: first.n_invited, ACTIVE: first.n_active, DISABLED: first.n_disabled, ARCHIVED: first.n_archived },
+      byRole: { ADMIN: first.n_admin, USER: first.n_user },
+      locked: first.n_locked,
+      awaitingFirstPassword: first.n_awaiting,
+    };
+    return { counts, rows: result.rows.filter((row) => row.user_id !== null).map(toRosterUser) };
   }
 
   /**

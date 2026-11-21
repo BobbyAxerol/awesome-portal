@@ -1,0 +1,47 @@
+{
+  "scope": "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY",
+  "source_ref": "SEALED_CHILD_OPTUNA_PUBLIC_HOOK_CAPTURE_V1",
+  "state": "AVAILABLE",
+  "reason_code": null,
+  "capture": {
+    "schema_version": "research.sampler-public-observer.v1",
+    "state": "AVAILABLE",
+    "reason_code": null,
+    "scope": "OPTUNA_PUBLIC_SAMPLER_INVOCATIONS_NOT_TPE_DENSITY",
+    "engine_version": "1.1.1",
+    "optuna_version": "4.8.0",
+    "capture_complete": true,
+    "invocation_count": 5,
+    "recorded_trial_count": 1,
+    "omitted_trial_count": 0,
+    "study_count": 1,
+    "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "size_bytes": 1024,
+    "studies": [
+      {
+        "observer_study_index": 0,
+        "source_study_id": "0",
+        "sampler_class": "TPESampler",
+        "pruner_class": "NopPruner",
+        "directions": ["MAXIMIZE"],
+        "effective_configuration_state": "NOT_PUBLISHED"
+      }
+    ],
+    "sampled_trial_count": 1,
+    "omitted_sample_trial_count": 0,
+    "sample_trials": [
+      {
+        "observer_study_index": 0,
+        "source_study_id": "0",
+        "trial_number": 0,
+        "started_at_utc_ms": 1791158400000,
+        "completed_at_utc_ms": 1791158400100,
+        "state": "COMPLETE",
+        "invocation_kinds": ["before_trial", "infer_relative_search_space", "sample_relative", "sample_independent", "after_trial"],
+        "invocation_count": 5,
+        "returned_parameters": {"window": "32"},
+        "values": ["0.25"]
+      }
+    ]
+  }
+}

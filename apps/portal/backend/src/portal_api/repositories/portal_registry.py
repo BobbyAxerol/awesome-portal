@@ -160,6 +160,15 @@ def registry_invariant_errors(registry: PortalRegistrySource) -> tuple[str, ...]
             or feature.navigation.show_in_command_palette
         ):
             errors.append(f"deprecated feature {feature.id} appears in default navigation")
+        replacement = feature.navigation.scoped_v2_replacement
+        if replacement is not None:
+            if registry.revision < 7:
+                errors.append("scoped V2 navigation metadata requires registry revision 7")
+            if feature.id != "APPROVALS":
+                errors.append("scoped V2 navigation replacement is limited to APPROVALS")
+            target = features.get(replacement.feature_id)
+            if target is None or target.maturity in {"HIDDEN", "DEPRECATED"}:
+                errors.append("scoped V2 navigation replacement target is unavailable")
         for value in (feature.label, feature.description, feature.activation_gate or ""):
             if _unsafe_metadata(value):
                 errors.append(f"feature {feature.id} contains unsafe metadata")

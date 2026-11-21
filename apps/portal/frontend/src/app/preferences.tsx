@@ -29,7 +29,7 @@ const DEFAULTS: Preferences = {
 
 const STORAGE_KEY = "portal.preferences.v1";
 
-interface PreferencesContextValue extends Preferences {
+export interface PreferencesContextValue extends Preferences {
   set: <K extends keyof Preferences>(key: K, value: Preferences[K]) => void;
 }
 

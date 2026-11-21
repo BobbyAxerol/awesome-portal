@@ -69,7 +69,9 @@ function publicOperation(record: OperationQueueRecord) {
 }
 
 const operationQueueResource: PostgresListResource<OperationQueueRow, ReturnType<typeof publicOperation>> = {
-  resourceId: "execution.operations-queue",
+  // Old cursors encoded millisecond boundaries; fail closed rather than
+  // silently replaying them against the now lossless timestamp keyset.
+  resourceId: "execution.operations-queue.precise-v2",
   table: "execution_operation_queue_read",
   selectColumns: OPERATION_COLUMNS,
   workspaceColumn: "workspace_id",
@@ -100,7 +102,7 @@ const operationQueueResource: PostgresListResource<OperationQueueRow, ReturnType
     assigned_to_user_id: { column: "assigned_to_user_id", kind: "text", operators: ["eq"] },
   },
   sorts: {
-    created_at: { column: "created_at", kind: "timestamp" },
+    created_at: { column: "created_at", kind: "timestamp", timestampPrecision: "microseconds" },
     operation_id: { column: "operation_id", kind: "text" },
   },
   defaultSort: [{ field: "created_at", direction: "desc" }],

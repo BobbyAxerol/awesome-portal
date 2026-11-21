@@ -24,7 +24,9 @@
  * one.
  */
 import { readDecimal, readEnum, readId, readTimestamp, type MaybeKnown } from "../adapter";
+import { bindExitDecision, bindGateDecision, bindR1Decision, readCaptureContext, readDecisionContext, readPaperExitDecisionContext, safeR1Href, type CaptureContext, type ContextRead, type DecisionContext, type ExitBinding, type R1Binding } from "./governanceContext";
 import type { ApprovalId, EvidenceMark, PromotionStage, Sla } from "../contracts";
+import { v1Refusal } from "./schemaGuard";
 import type { ApprovalGate, ApprovalRow, DecidedRow, InertReason } from "../screens/ApprovalInbox";
 import type { ChecklistItem, DecisionLock, PassportEntry } from "../screens/GateR1Review";
 import type { CapitalPreview } from "../analytics";
@@ -141,6 +143,7 @@ export function readApprovalRow(raw: Record<string, unknown>): ApprovalRowRead {
   return {
     row: {
       id,
+      ...(readId(raw.approval_id) ? { approvalId: readId(raw.approval_id) as ApprovalId } : {}),
       gate: gateParsed.value,
       subject: str(raw.subject) ?? id,
       target: str(raw.target) ?? "target not published",
@@ -183,6 +186,9 @@ export function readDecidedRow(raw: Record<string, unknown>): { row: DecidedRow 
   return {
     row: {
       id,
+      // The history keys a row by its decision id (`dec_AP-352`); the approval it closed is named apart. A screen that opens a request
+      // by its approval id (a review path) finds its decision through this, not through the decision id.
+      ...(readId(raw.approval_id) && readId(raw.approval_id) !== id ? { approvalId: readId(raw.approval_id) as ApprovalId } : {}),
       gate: gateParsed.value,
       subject: str(raw.subject) ?? id,
       outcome: outcomeParsed.value,
@@ -240,7 +246,25 @@ export function readChecklistItem(raw: unknown): ChecklistItem | null {
     // reader can see what the server actually said.
     return { label: `${label} — server reported "${outcome.raw}"`, outcome: "insufficient" };
   }
-  return { label, outcome: outcome.value, suggestion: str(o.suggestion) };
+  return { label, outcome: outcome.value, suggestion: str(o.suggestion), ...readEvidenceRef(o) };
+}
+
+const REF_KINDS = ["REPORT", "RUN", "FREEZE", "AUDIT"] as const;
+const SAFE_ID = /^[A-Za-z0-9_.:-]{1,191}$/;
+
+/**
+ * §56: the Research source a finding rests on, when the server recorded one it could verify. A reference names its ACTUAL kind (a run is not a
+ * report); anything unreadable or unsafe becomes a typed absence, and no destination is ever inferred from a label, hash or id prefix.
+ */
+function readEvidenceRef(o: Record<string, unknown>): { ref?: { kind: (typeof REF_KINDS)[number]; runId: string } | null; refReason?: string | null } {
+  if (!("evidence_ref" in o) && !("evidence_ref_reason" in o)) return {};
+  const raw = obj(o.evidence_ref);
+  const reason = str(o.evidence_ref_reason);
+  if (raw === null) return { ref: null, refReason: reason };
+  const kind = REF_KINDS.find((k) => k === raw.kind);
+  const runId = str(raw.run_id);
+  if (!kind || !runId || !SAFE_ID.test(runId)) return { ref: null, refReason: "R1_EVIDENCE_SOURCE_NOT_LINKABLE" };
+  return { ref: { kind, runId }, refReason: null };
 }
 
 /**
@@ -313,6 +337,10 @@ export function readEligibility(raw: unknown): Eligibility {
 
 export interface GateR1Detail {
   approvalId: ApprovalId;
+  /** The exact pins an R1 decision may send, from this same read — or the reason it cannot be planned (FE-GOV-01). */
+  binding: R1Binding;
+  /** Pins for the R1 → R2 review capture (FE-GOV-03). `absent` on older reads. */
+  capture: ContextRead<CaptureContext>;
   /**
    * The workspace this review was read from, as the BFF publishes it.
    *
@@ -388,6 +416,9 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
     : Array.isArray(data.passport)
       ? data.passport
       : [];
+  const manifestPins = Array.isArray(manifest?.entries)
+    ? { entryCount: manifest.entries.length, sha256: manifest.entries.map((e) => str(obj(e)?.sha256)) }
+    : null;
   const passport = passportRaw
     .map(readPassportEntry)
     .filter((e): e is PassportEntry => e !== null);
@@ -424,7 +455,16 @@ export function readGateR1Detail(raw: unknown): GateR1Detail | null {
   const decidedRaw = decisions.length > 0 ? obj(decisions[decisions.length - 1]) : obj(data.decided);
   const decidedOutcome = decidedRaw ? readEnum(decidedRaw.outcome, DECIDED_OUTCOMES) : null;
 
+  const binding = bindR1Decision({
+    context: readDecisionContext(data.decision_context),
+    envelopeWorkspaceId: workspaceId,
+    approvalId,
+    manifest: manifestPins,
+    legacyVersion: int(approval.approval_version ?? data.approval_version),
+  });
   return {
+    binding,
+    capture: readCaptureContext(data.capture_context),
     workspaceId,
     approvalId,
     alphaLabel: str(approval.subject_label) ?? str(approval.alpha_label) ?? approvalId,
@@ -534,6 +574,10 @@ export function readReadinessGroup(raw: unknown): ReadinessGroup | null {
 }
 
 export interface GateR2Detail {
+  /** R2 has no commissioned decision executor: this is the server's typed statement of that (FE-GOV-02), or `absent`/`invalid` on older reads. */
+  decision: ContextRead<DecisionContext>;
+  /** Pins for the R2 → Paper Exit review capture (FE-GOV-03). */
+  capture: ContextRead<CaptureContext>;
   /** The workspace this review was read from; a decision must name the same
    *  one. `null` when the envelope carries none — the screen then disables the
    *  decision controls with a reason rather than writing into a workspace
@@ -567,6 +611,8 @@ export interface GateR2Detail {
   grantName: string | null;
   locks: readonly R2Lock[];
   eligibility: Eligibility;
+  /** The pins of an R2 decision from this read's `decision_context`, or why it cannot be planned (FE-GOV-C03). */
+  binding: R1Binding;
   /**
    * Optimistic-concurrency version, as the published row carries it.
    *
@@ -583,6 +629,8 @@ export interface GateR2Detail {
 }
 
 export function readGateR2Detail(raw: unknown): GateR2Detail | null {
+  // A V2 body on this route is refused, never read as a V1 body with nothing in it (api/schemaGuard.ts).
+  if (v1Refusal(raw) !== null) return null;
   const o = obj(raw);
   const workspaceId = typeof o?.workspace_id === "string" && o.workspace_id.length > 0 ? o.workspace_id : null;
   if (!o) return null;
@@ -618,6 +666,8 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
         "R1_NOT_APPROVED",
         "R1_EXPIRED",
         "R1_EVIDENCE_INCOMPLETE",
+        "R1_PARENT_CHANGED",
+        "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED",
       ].includes(entry)
     ) {
       locks.push("R1_NOT_VALID");
@@ -632,6 +682,10 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
   }
 
   return {
+    decision: readDecisionContext(data.decision_context),
+    /** The exact pins an R2 decision may send, from this same read (its OWN child evidence — never the R1 parent's manifest or digest), or the reason it cannot be planned. */
+    binding: bindGateDecision({ gate: "R2", context: readDecisionContext(data.decision_context), envelopeWorkspaceId: workspaceId, approvalId }),
+    capture: readCaptureContext(data.capture_context),
     workspaceId,
     portfolioId: readId(approval.portfolio_id ?? data.portfolio_id),
     currency: str(approval.currency ?? data.currency),
@@ -643,7 +697,7 @@ export function readGateR2Detail(raw: unknown): GateR2Detail | null {
     // cannot understand is not a reference we may proceed on.
     r1State: r1Parsed?.known ? r1Parsed.value : "MISSING",
     r1LineagePublished,
-    r1Href: str(r1.href),
+    r1Href: safeR1Href(str(r1.href), workspaceId),
     r1Expiry: str(r1.expiry),
     r1Digest: str(r1.digest),
     r1DecidedBy: str(r1.decided_by),
@@ -741,6 +795,8 @@ export interface PaperExitDetail {
   sla: Sla | null;
   /** artifact · R1 · R2 · observation policy · evidence pack digest (§5). */
   lineage: readonly LineageRef[];
+  /** The exact pins of a Paper Exit decision from this same read's `decision_context` (its own command), or the reason it cannot be planned. */
+  binding: ExitBinding;
   panels: readonly EvidencePanelSpec[];
   recommendation: string | null;
   /**
@@ -766,6 +822,7 @@ export interface PaperExitDetail {
 }
 
 export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
+  if (v1Refusal(raw) !== null) return null;
   const o = obj(raw);
   const workspaceId = typeof o?.workspace_id === "string" && o.workspace_id.length > 0 ? o.workspace_id : null;
   if (!o) return null;
@@ -775,7 +832,8 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
   if (!reviewId) return null;
 
   const gaps: string[] = [];
-  const lineage = (Array.isArray(data.lineage) ? data.lineage : []).flatMap((e) => {
+  const lineageRaw = Array.isArray(data.lineage) ? data.lineage : [];
+  const lineage = lineageRaw.flatMap((e) => {
     const eo = obj(e);
     const label = eo && str(eo.label);
     const value = eo && str(eo.value);
@@ -815,6 +873,7 @@ export function readPaperExitDetail(raw: unknown): PaperExitDetail | null {
     approverRole: str(data.approver_role),
     sla: readSla(review.sla),
     lineage,
+    binding: bindExitDecision({ context: readPaperExitDecisionContext(data.decision_context), envelopeWorkspaceId: workspaceId, reviewId }),
     panels,
     recommendation: str(data.recommendation),
     activationPlan: (() => {

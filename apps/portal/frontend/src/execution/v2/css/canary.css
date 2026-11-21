@@ -1,0 +1,398 @@
+/* Canary control room (UXM-07 S3, flag key `canary`). Tokens and type roles only; no raw colour, no
+ * uppercase (the labels reuse the blocks' reviewed selectors). Measured against design/hifi/v2/canary.html,
+ * modules/stage.js and kit.css:
+ *   page stack gap 24 (kit `.stack`), content grid `1fr 360px` with gap 24 (kit `.grid2`), rail stack gap 24,
+ *   trial strip: 10px above the strip, gap 10, ticks 14x8 with 2px between (stage.js `.trial .tk i`),
+ *   decision rows: 10px 0 with a 1px line-soft rule and 8px under the hint (canary.html `.dec`),
+ *   rollback rows: 7px 0 with a 1px line-soft rule, 12px between name and flag (canary.html `.rb`),
+ *   compliance line: 12px between, 12px under (canary.html `.cmpl`).
+ * Names are `.exec-cny-*`. Every rule that sets both a text and a fill colour uses a pair already proven by
+ * blocks.css or stage.css. */
+.exec-cny-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+
+/* denied: the page title without the guard frame (hi-fi researcher view) */
+.exec-cny-plain-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-cny-plain-sub {
+  margin: 2px 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-cny-state {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: center;
+  min-height: 200px;
+  align-content: center;
+  padding: var(--space-4);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  text-align: center;
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-cny-state p {
+  margin: 0;
+}
+.exec-cny-state a,
+.exec-cny-prov a {
+  color: var(--accent);
+}
+.exec-cny-state a:focus-visible,
+.exec-cny-prov a:focus-visible,
+.exec-cny-refresh:focus-visible,
+.exec-cny-how summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* the toolbar: Refresh, right-aligned above the figures */
+.exec-cny-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: calc(var(--space-3) * -1) 0 0;
+}
+.exec-cny-refresh {
+  padding: 6px 16px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+
+/* the two columns */
+.exec-cny-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+}
+.exec-cny-col,
+.exec-cny-rail,
+.exec-cny-stack {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-content: start;
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .exec-cny-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* trial strip (inside the guard frame) */
+.exec-cny-trial {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: 10px;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-cny-ticks {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+.exec-cny-ticks i {
+  display: block;
+  width: 14px;
+  height: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.exec-cny-ticks i[data-state="on"] {
+  background: var(--ink-faint);
+  border-color: var(--ink-faint);
+}
+.exec-cny-ticks i[data-state="now"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* envelope */
+.exec-cny-cmpl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+}
+.exec-cny-cmpl-label {
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-cny-cmpl-note {
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-cny-foot,
+.exec-cny-rowsnote,
+.exec-cny-series {
+  margin: var(--space-3) 0 0;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-cny-rowsnote,
+.exec-cny-series {
+  margin-top: 0;
+}
+.exec-cny-sources {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-data);
+}
+.exec-cny-source-name {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+
+/* rail: promotion decision */
+.exec-cny-dec {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-cny-dec:last-of-type {
+  border-bottom: 0;
+}
+.exec-cny-dec-hint {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+/* DockAction is built for the dock footer (button, then a full-width reason row); the same row here. */
+.exec-cny-dec-act {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+/* The button already carries the action's name; the dock's repeated name before the reason is not wanted here. */
+.exec-cny-dec-act .exec-dock-why[data-l]::before {
+  content: none;
+}
+.exec-cny-how {
+  margin-top: var(--space-3);
+}
+.exec-cny-how summary {
+  font: var(--exec-font-meta);
+  color: var(--accent);
+  cursor: pointer;
+}
+.exec-cny-how p {
+  margin: var(--space-2) 0 0;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+
+/* rail: before scale-up provenance */
+.exec-cny-prov p {
+  margin: 0;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-cny-lineage {
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+
+/* rail: rollback readiness */
+.exec-cny-rb {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-cny-rb-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-cny-rb-item:last-child {
+  border-bottom: 0;
+}
+/* The text side takes the room and wraps; the state flag keeps its word whole ("READY" never breaks into "READ" and "Y"). */
+.exec-cny-rb-item > div {
+  min-width: 0;
+}
+.exec-cny-rb-item > :last-child {
+  flex: none;
+  white-space: nowrap;
+}
+.exec-cny-rb-name {
+  display: block;
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-cny-rb-note {
+  display: block;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+@media (max-width: 660px) {
+  .exec-cny-trial {
+    gap: var(--space-2);
+  }
+  .exec-cny-toolbar {
+    margin-top: 0;
+  }
+  .exec-cny-rb-item {
+    align-items: flex-start;
+  }
+}
+
+/* A decision this portal does not offer is native-disabled (never a write). It reads as closed, not as a quiet live
+ * button: muted, dashed frame. Its reason is the line under it, shown in full (wrapped): a touch screen has no hover
+ * to reveal an ellipsised line. Scoped to this screen; the shared dock keeps its look. */
+.exec-cny-v2 .exec-dock-btn:disabled {
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+}
+.exec-cny-v2 .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
+
+/* A figure and its unit stay on one line in the Internal / Broker / Difference rows; a long label wraps by word instead. */
+.exec-cny-v2 .exec-blk-triad-row {
+  flex-wrap: wrap;
+}
+.exec-cny-v2 .exec-blk-triad-row dd {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* QA1 R5/R4 fixes (WP-F3). The alpha id in the sub-line is the id size, not a larger mono than its neighbours (R5-16). */
+.exec-cny-v2 .exec-stage-sub .exec-blk-num,
+.exec-cny-v2 .exec-wb-sub .exec-blk-num {
+  font: var(--exec-font-id);
+}
+/* Touch targets at phone width (R5-26): a 44px hit area for the small controls without enlarging their drawn size. */
+@media (max-width: 660px) {
+  .exec-cny-v2 :is(.exec-blk-link, .exec-dock-access, .exec-blk-btn, .exec-wb-btn, .exec-dock-btn, .exec-cny-refresh) {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .exec-cny-v2 .exec-blk-why-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    margin-block: -13px;
+  }
+}
+/* Internal / Broker / Difference rows (R5-14): EVERY row stacks label over figure in
+ * EVERY column, at every width, so the rows keep one baseline across the three columns. */
+@media all {
+  .exec-cny-v2 .exec-blk-triad-row {
+    display: block;
+    min-height: 0;
+    padding-bottom: var(--space-1);
+  }
+  .exec-cny-v2 .exec-blk-triad-row dd {
+    text-align: right;
+    margin-left: 0;
+  }
+}
+/* One banner component, two tones (R5-05): amber for old or missing figures, red for a halted runtime, a breached envelope, untrusted figures. */
+.exec-cny-v2 .exec-blk-banner[data-tone="warn"] {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn);
+}
+.exec-cny-v2 .exec-blk-banner[data-tone="bad"] {
+  background: var(--bad-bg);
+  border: 1px solid var(--bad);
+}
+/* Promotion decision (R5-09): what each does, its closed button and its reason; Request scale says when it opens. */
+.exec-cny-dec {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-cny-dec:last-child {
+  border-bottom: 0;
+}
+.exec-cny-dec-hint,
+.exec-cny-dec-opens {
+  margin: 0 0 var(--space-1);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-cny-dec-opens {
+  margin: var(--space-1) 0 0;
+  color: var(--ink-faint);
+}
+.exec-cny-how {
+  margin-top: var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-cny-how summary {
+  cursor: pointer;
+}
+.exec-cny-how p {
+  margin: var(--space-1) 0 0;
+}
+/* The used bar column (R5-12): one fixed text width, so every bar has the same length and the 80% mark the same place. */
+.exec-cny-v2 .exec-gauge-wrap {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+.exec-cny-v2 .exec-gauge {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 80px;
+}
+.exec-cny-v2 .exec-gauge-text {
+  flex: none;
+  min-width: 11ch;
+  text-align: right;
+  white-space: nowrap;
+}
+/* Guard rule: the three result columns are the rule's effect, not the present state (R5-22). */
+.exec-cny-guard-note {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+/* QA7 N5-07: the envelope table's USED column stays whole at 1440 and 1024: the bar sits over its words ("at limit", "over limit"), which wrap
+   instead of being cut at the panel edge. */
+.exec-cny-v2 .exec-cards .exec-gauge-wrap {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+.exec-cny-v2 .exec-cards .exec-gauge {
+  min-width: 72px;
+}
+.exec-cny-v2 .exec-cards .exec-gauge-text {
+  white-space: normal;
+}

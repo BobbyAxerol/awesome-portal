@@ -31,6 +31,7 @@ interface MarketContextRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalSession: AuthSession;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
 }
 
 /** Browser-safe, exact route family; raw Edge routes stay forbidden. */
@@ -48,7 +49,8 @@ export class MarketContextController {
     if (!query.success) throw new MarketContextError("EDS11R4_MARKET_QUERY_INVALID", 400);
     const workspaceId = await workspaceFor(request, query.data.workspace_id, this.workspaces);
     return this.marketContext.latest(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       { environment: query.data.environment, venue: query.data.venue, instrument: query.data.instrument },
     );
   }
@@ -65,7 +67,8 @@ export class MarketContextController {
     }
     const workspaceId = await workspaceFor(request, query.data.workspace_id, this.workspaces);
     return this.marketContext.candles(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       {
         environment: query.data.environment,
         venue: query.data.venue,

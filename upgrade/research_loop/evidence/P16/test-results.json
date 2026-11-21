@@ -1,0 +1,16 @@
+{
+  "schema_version": "research.phase-test-results.v1",
+  "phase": "P16",
+  "date_utc": "2026-09-22",
+  "status": "BACKEND_CURRENT_SOURCE_CONTRACT_COMPLETE",
+  "results": [
+    {"name": "control-api-build", "status": "PASS", "command": "npm --prefix apps/control-api run build"},
+    {"name": "p16-control-units", "status": "PASS", "tests": 23, "files": 4},
+    {"name": "p16-disposable-postgres", "status": "PASS", "tests": 1, "cleanup": "one focused P16 scenario in a named tmpfs container; trap removes it"},
+    {"name": "generated-contract", "status": "PASS", "tests": 161, "files": 10},
+    {"name": "r2-route-ledger", "status": "PASS", "tests": 22},
+    {"name": "screen07-browser-hifi", "status": "PENDING_FRONTEND_OWNER"},
+    {"name": "runtime-deployment-real-run", "status": "NOT_CLAIMED_FEATURE_DARK"},
+    {"name": "generic-artifact-ordering-grid", "status": "SOURCE_CAPABILITY_BLOCKED_NOT_WAIVED"}
+  ]
+}

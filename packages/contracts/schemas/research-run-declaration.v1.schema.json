@@ -1,0 +1,415 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "research.run-declaration.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "state",
+    "reason_code",
+    "source_ref",
+    "alpha_binding",
+    "declaration_digest",
+    "requested_spec_digest",
+    "declaration",
+    "requested_overrides"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "research.run-declaration.v1"
+    },
+    "state": {
+      "enum": [
+        "AVAILABLE",
+        "NOT_PUBLISHED",
+        "NOT_APPLICABLE"
+      ]
+    },
+    "reason_code": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "source_ref": {
+      "const": "IMMUTABLE_RUN_REQUEST_AND_ALPHA_VERSION_DECLARATION_V1"
+    },
+    "alpha_binding": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "alpha_id",
+            "alpha_version_id"
+          ],
+          "properties": {
+            "alpha_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            },
+            "alpha_version_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "declaration_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "requested_spec_digest": {
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "declaration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AlphaVersionDeclaration"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "requested_overrides": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "kind",
+                  "low",
+                  "high"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                  },
+                  "kind": {
+                    "const": "sweep"
+                  },
+                  "low": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  },
+                  "high": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "kind",
+                  "value"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 191,
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$"
+                  },
+                  "kind": {
+                    "const": "pin"
+                  },
+                  "value": {
+                    "type": [
+                      "string",
+                      "number",
+                      "boolean"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "maxItems": 64
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "$defs": {
+    "DeclarationScalar": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ParameterDeclaration": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "const": "fixed"
+            },
+            "value": {
+              "$ref": "#/$defs/DeclarationScalar"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "low",
+            "high",
+            "step"
+          ],
+          "properties": {
+            "kind": {
+              "const": "int_range"
+            },
+            "low": {
+              "type": "integer"
+            },
+            "high": {
+              "type": "integer"
+            },
+            "step": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "low",
+            "high",
+            "step"
+          ],
+          "properties": {
+            "kind": {
+              "const": "float_range"
+            },
+            "low": {
+              "type": "number"
+            },
+            "high": {
+              "type": "number"
+            },
+            "step": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "values"
+          ],
+          "properties": {
+            "kind": {
+              "const": "categorical"
+            },
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 64,
+              "items": {
+                "$ref": "#/$defs/DeclarationScalar"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AlphaVersionDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Safe immutable AlphaVersion validator inputs, not raw source, provenance or mutable execution instructions.",
+      "required": [
+        "schema_version",
+        "entrypoint",
+        "timeframes",
+        "determinism",
+        "parameter_space",
+        "required_columns",
+        "warmup_bars"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "research.alpha-version-declaration.v1"
+        },
+        "entrypoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[A-Za-z][A-Za-z0-9_.:]{0,159}$"
+        },
+        "timeframes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 12,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*(?:m|h|d|w)$"
+          }
+        },
+        "required_columns": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "open",
+              "high",
+              "low",
+              "close",
+              "volume"
+            ]
+          }
+        },
+        "warmup_bars": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "determinism": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "seed_required"
+          ],
+          "properties": {
+            "seed_required": {
+              "type": "boolean"
+            }
+          }
+        },
+        "parameter_space": {
+          "type": "object",
+          "maxProperties": 12,
+          "propertyNames": {
+            "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/ParameterDeclaration"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "AVAILABLE"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "reason_code": {
+            "type": "null"
+          },
+          "alpha_binding": {
+            "type": "object"
+          },
+          "declaration": {
+            "type": "object"
+          },
+          "declaration_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "requested_spec_digest": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "requested_overrides": {
+            "type": "array"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "reason_code": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+          },
+          "declaration": {
+            "type": "null"
+          },
+          "declaration_digest": {
+            "type": "null"
+          },
+          "requested_overrides": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

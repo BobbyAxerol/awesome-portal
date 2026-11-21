@@ -1,0 +1,42 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.limits.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "subject": {
+      "type": "DEPLOYMENT",
+      "id": "TEST_ONLY:dep-1"
+    },
+    "items": [
+      {
+        "limit_id": "TEST_ONLY:lim-1",
+        "scope": {
+          "type": "DEPLOYMENT",
+          "id": "TEST_ONLY:dep-1"
+        },
+        "label": "Gross notional",
+        "model_revision": "TEST_ONLY:model-4",
+        "used_ratio": "0.412300",
+        "state": "OK",
+        "cap": {
+          "currency": "USDT",
+          "value": "150000.00"
+        }
+      },
+      {
+        "limit_id": "TEST_ONLY:lim-2",
+        "scope": {
+          "type": "DEPLOYMENT",
+          "id": "TEST_ONLY:dep-1"
+        },
+        "label": "Open orders",
+        "model_revision": "TEST_ONLY:model-4",
+        "used_ratio": null,
+        "state": "UNKNOWN",
+        "cap": null
+      }
+    ]
+  }
+}

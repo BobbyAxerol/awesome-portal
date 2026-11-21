@@ -1,0 +1,15 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.obligations.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "subject": {
+      "type": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio-a"
+    },
+    "items": [],
+    "next_cursor": null
+  }
+}

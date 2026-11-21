@@ -1,0 +1,24 @@
+{
+  "fixture_scope": "SYNTHETIC_CONTRACT_ONLY_NOT_QUALIFICATION",
+  "selection": {
+    "schema_version": "research.current-source-fold-selection.v1",
+    "scope": "OUTER_FOLD_SELECTION",
+    "study_id": "0",
+    "selected_trial_id": "study_0.trial_1",
+    "parameters": {"window": "34", "rvol": "2"},
+    "objective": "0.5",
+    "objective_kind": "OUTER_FOLD_DECAY_J",
+    "candidate_is_metric": "0.8",
+    "candidate_oos_metric": "0.6",
+    "candidate_decay": "0.2",
+    "candidate_count": 1,
+    "study_trial_rows": 3,
+    "outer_oos_used_for_selection": true,
+    "params_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "selection_sequence": 0,
+    "params_frozen_at_utc_ms": null,
+    "selected_trial_ordinal": 2,
+    "selected_trial_ordinal_scope": "STUDY_LOCAL",
+    "selected_trial_ordinal_reason_code": null
+  }
+}

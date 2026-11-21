@@ -1,0 +1,172 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Portfolio 360 — V2</title><link rel="stylesheet" href="kit.css"><style>
+[hidden]{display:none!important}.stack>*,.grid2>*{min-width:0}#capR,#capS{overflow-x:auto}@media(max-width:900px){#capR svg,#capS svg{min-width:900px}}.grid2{align-items:start}#eq .rd{padding-bottom:26px}.tool{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{flex:1}.nc{display:block;text-align:right}td:not(.n) .nc{text-align:left}td .why{margin-top:0}td.n .na{font:400 13px/20px var(--font-sans)}
+.drawer.dock{position:fixed;right:0;top:81px;bottom:0;z-index:30;width:min(420px,100vw);overflow:auto}.drawer[hidden]{display:none}
+.kv{display:grid;grid-template-columns:128px 1fr;gap:8px 12px;font-size:13px}.kv dt{color:var(--ink-faint)}.kv dd{margin:0}.act{padding:10px 0;border-top:1px solid var(--line)}.act .t{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.bar{display:flex;height:10px;gap:2px;background:var(--line)}.bar i{display:block;height:100%}.leg{display:flex;flex-wrap:wrap;gap:4px 16px;font:400 11px/16px var(--font-mono);color:var(--ink-soft);margin-top:8px}.leg i{display:inline-block;width:8px;height:8px;margin-right:6px}
+.tri{display:inline-block;width:0;height:0;margin-right:8px;border:4px solid transparent;vertical-align:middle}.tri.d{border-top:5px solid var(--ink-faint);border-bottom:0}.tri.r{border-left:5px solid var(--ink-faint);border-right:0}
+.hatch{background:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 6px);border:1px dashed var(--line-strong)}.mx{display:grid;grid-template-columns:90px repeat(4,1fr);gap:1px;background:var(--line);font:400 11px/16px var(--font-mono)}.mx>div{background:var(--panel);padding:8px;min-height:34px;color:var(--ink-faint)}.mx>.hatch{border:0;background:repeating-linear-gradient(135deg,var(--panel) 0 5px,var(--line) 5px 6px)}
+.sla{width:90px;display:inline-block;vertical-align:middle;margin:0 8px 0 0}.feed .item .t{align-items:flex-start}.feed .item .f{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+details.prov{margin-top:8px}.sub2{font-size:12px;color:var(--ink-faint)}
+@media(max-width:660px){.tool.stackm{display:grid}}
+</style></head>
+<body data-page="Portfolio 360" data-nav="portfolios" data-crumb="Execution / Portfolios / Core">
+<main><div class="stack">
+
+<div class="stack" data-roles="researcher">
+ <div class="mast"><div><h1>Portfolio</h1><div class="sub">Manager view</div></div></div>
+ <div class="panel"><div class="ph">Access</div><div class="empty" style="min-height:160px;text-align:center"><div><div style="font-size:15px;color:var(--ink)">You can't open this page.</div><div style="margin-top:8px"><a href="access.html">See what you can access</a></div></div></div></div>
+</div>
+
+<div class="stack" data-roles="manager operator reviewer">
+<div class="mast"><div><h1>Core</h1><div class="sub"><span class="mono">pf_0001</span> · M. Tran · USDT</div></div>
+ <div class="ctrls"><span class="flag" data-k="na">Not scored · policy not set</span><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Source not qualified</span></span>
+  <span id="rp"></span><a class="btn" style="text-decoration:none" href="compare.html?kind=pf&items=core&from=portfolio">Compare with…</a><span id="actbtn"></span></div></div>
+<div class="banner" data-data="nq">Source not qualified. Identity and structure are shown; figures are not available yet.</div>
+<div class="banner info" id="simban" hidden>Simulated capital. It is never added to Real-funded figures.</div>
+
+<div><div class="tabs" role="tablist" id="tabs">
+ <button data-t="overview" aria-selected="true">Overview</button><button data-t="alloc" aria-selected="false">Allocations</button><button data-t="alphas" aria-selected="false">Alphas</button>
+ <button data-t="acc" aria-selected="false" data-roles="manager operator">Accounts</button><button data-t="risk" aria-selected="false">Risk &amp; Health</button><button data-t="people" aria-selected="false">People &amp; Activity</button></div>
+
+<section class="p stack" data-p="overview">
+ <div class="kpis" style="--n:4" id="kpis"></div>
+ <div class="grid2">
+  <div class="panel"><div class="ph"><span class="seg" id="mseg"><button data-v="pnl" aria-pressed="true">Net PnL</button><button data-v="ret" aria-pressed="false">Return</button><button data-v="eq" aria-pressed="false">NAV</button></span>
+   <span class="tool"><button class="btn" id="tblbtn">Table</button><button class="btn" id="expbtn">Expand</button><span id="chexp"></span></span></div>
+   <div class="chart" id="eq"></div><div class="empty hatch" id="eqna" hidden>No series published · Source not qualified</div><div id="tbl" hidden></div>
+   <div class="cap"><span class="win">90D</span><span>1D</span><span>USDT</span><span>Retained snapshots</span><span>Benchmark · Not available</span></div></div>
+  <div class="panel" id="capp"></div></div>
+ <div class="grid2">
+  <div class="panel"><div class="ph">Concentration <span class="r" id="hhi"></span></div><div id="conc"></div></div>
+  <div class="panel"><div class="ph">Needs attention <a class="r" href="operations.html">Operations</a></div><div id="attn"></div></div></div>
+</section>
+
+<section class="p stack" data-p="alloc" hidden>
+ <div class="panel"><div class="ph">Real-funded <span class="r">USDT · Live and Canary</span></div><div class="stack" style="gap:16px">
+  <div class="tw"><table id="envR"></table></div>
+  <div><div class="sub2" style="margin-bottom:6px">Capital flow</div><div id="capR"></div><details><summary>Table view</summary><div class="tw"><table id="hier" style="margin-top:8px"></table></div></details></div>
+  <div><div class="sub2" style="margin-bottom:6px">Capital ledger · append-only · newest first</div><div class="tw"><table class="cards" id="ledR"></table></div><details class="prov"><summary>Provenance</summary><div class="sub2">Commands: <span class="mono">cmd-7d41, cmd-7d3a, cmd-7d37, cmd-7d36, cmd-6c02, cmd-6c01, cmd-5a00</span></div></details></div></div></div>
+ <div class="panel"><div class="ph">Simulated <span class="r">USDT · Paper and Sandbox · never added to Real-funded</span></div><div class="stack" style="gap:16px">
+  <div class="tw"><table id="envS"></table></div>
+  <div><div class="sub2" style="margin-bottom:6px">Capital flow</div><div id="capS"></div></div>
+  <div><div class="sub2" style="margin-bottom:6px">Capital ledger · append-only · newest first</div><div class="tw"><table class="cards" id="ledS"></table></div></div></div></div>
+</section>
+
+<section class="p stack" data-p="alphas" hidden><div class="grid2">
+ <div class="panel"><div class="ph">Alphas <span class="r">4 alphas · 5 deployments · <a href="fleet.html">Open in Alpha Fleet</a></span></div><div class="tw"><table class="cards" id="alt"></table></div></div>
+ <div class="panel"><div class="ph">Contribution · <span class="win">90D</span></div><div id="contrib"></div></div></div></section>
+
+<section class="p stack" data-p="acc" hidden data-roles="manager operator">
+ <div class="banner info" data-data="ok">Binance-02 is shared with sleeves outside this portfolio.</div>
+ <div class="panel"><div class="tw"><table class="cards" id="acct"></table></div></div></section>
+
+<section class="p stack" data-p="risk" hidden><div class="grid2">
+ <div class="stack"><div class="panel"><div class="ph">Exposure</div><div id="expo"></div></div><div class="panel"><div class="ph">Margin · venue-reported</div><div class="tw"><table class="cards" id="marg"></table></div></div></div>
+ <div class="stack"><div class="panel"><div class="ph">Reconciliation</div><div class="tw"><table class="cards" id="recon"></table></div></div>
+  <div class="panel"><div class="ph">Correlation</div><div class="mx" id="mx"></div><div class="sub2" style="margin-top:8px">Not available · No correlation data source</div></div></div></div></section>
+
+<section class="p stack" data-p="people" hidden>
+ <div class="grid2"><div class="panel"><div class="ph">Activity <span class="r">Receipt and display are separate</span></div><div class="feed" id="feed"></div></div>
+  <div class="stack"><div class="panel"><div class="ph">Attribution</div><div class="tw"><table class="cards" id="attr"></table></div></div></div></div>
+ <div class="grid2"><div class="panel"><div class="ph">Approvals <a class="r" href="approvals.html">All approvals</a></div><div class="feed" id="appr"></div></div>
+  <div class="panel"><div class="ph">Incidents <a class="r" href="operations.html">Operations</a></div><div class="feed" id="inc"></div></div></div>
+ <div class="panel"><div class="ph">Configuration log</div><div class="tw"><table class="cards" id="cfg"></table></div></div>
+</section>
+</div>
+</div>
+</div></main>
+
+<aside class="drawer dock" id="dr" hidden aria-label="Actions"></aside>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/compare.js"></script><script src="modules/capital.js"></script>
+<script>
+(function(){
+var F=Compare.fmt,SG=Compare.sg,CORE=Compare.by("pf","core"),tab="overview",mode="pnl";
+var SIM={nav:262310,pnl:2410.3,fund:250000,appr:300000,alloc:200000};
+function nq(){return KIT.state.data==="nq"}function sim(){return KIT.state.env!=="real"}
+function NA(r){return'<span class="nc"><span class="na">Not available</span><span class="why">'+r+'</span></span>'}
+function C(v,r){return nq()?NA(r):v}
+function link(t,h){return'<a class="chipx" href="'+h+'">'+t+'</a>'}
+function sgc(v,d){return'<span class="'+(v<0?"neg":"pos")+'">'+SG(v,d)+'</span>'}
+function metr(){var m=Compare.metrics(CORE),s=Compare.ser(CORE);if(sim()){var k=.26;return{pnl:m.pnl*k,ret:m.ret*.55,dd:m.dd*.6,ddNow:m.ddNow*.6,b0:SIM.nav-m.pnl*k,Pn:s.Pn.map(function(v){return v*k}),nav:SIM.nav}}return{pnl:m.pnl,ret:m.ret,dd:m.dd,ddNow:m.ddNow,b0:m.b0,Pn:s.Pn,nav:CORE.base}}
+function setShare(){var m=metr(),sh={d0192:.35444,d0193:.22772,d0210:.41784,d0215:.044,d0221:-.044},o={};for(var k in sh)o[k]=m.pnl*sh[k];return o}
+function pnlEnd(){var m=metr();return m.Pn[m.Pn.length-1]}
+function kpis(){var m=metr(),el=document.getElementById("kpis"),w=Compare.winL(),n=nq();
+ function k(l,v,cls,note,r){return'<div class="kpi"><div class="l">'+l+'</div>'+(n?'<div class="v na">Not available</div><div class="n">'+r+'</div>':'<div class="v '+cls+'">'+v+'</div><div class="n">'+note+'</div>')+'</div>'}
+ var P=pnlEnd();
+ el.innerHTML=k("NAV",F(m.nav,2)+' <small>USDT</small>',"",sim()?"Simulated":"Real-funded","Source not qualified")+k("Net PnL · "+w,SG(P,2),P<0?"neg":"pos","After fees and funding","Fees incomplete")+k("Return · "+w,SG(m.ret,1)+"%",m.ret<0?"neg":"pos","Modified Dietz","Method not certified")+k("Drawdown",F(m.ddNow,1)+"%","neg","Max "+F(m.dd,1)+"%","Needs a NAV series")}
+function chart(){var h=document.getElementById("eq"),na=document.getElementById("eqna");na.hidden=!nq();h.hidden=nq();if(nq())return;if(!h.offsetParent)return;var m=metr(),n=m.Pn.length;
+ equityChart(h,{mode:mode,data:m.Pn,base:m.b0,flows:sim()?[]:[{ago:62,v:100000}],sim:sim()?n-1:0,label:"Portfolio performance",seriesName:sim()?"Net PnL · simulated":null});
+ var ph=document.getElementById("tbl");if(!ph.hidden){var rows=[];for(var i=n-1;i>=0&&rows.length<8;i-=Math.max(1,Math.floor(n/8))){var d=new Date(Date.UTC(2026,9,17)-(n-1-i)*864e5);rows.push('<tr><td>'+d.toISOString().slice(0,10)+'</td><td class="n">'+SG(m.Pn[i],2)+'</td><td class="n">'+F(m.b0+m.Pn[i],2)+'</td></tr>')}ph.innerHTML='<div class="tw"><table><thead><tr><th>Date · UTC</th><th class="n">Net PnL</th><th class="n">NAV</th></tr></thead><tbody>'+rows.join("")+'</tbody></table></div>'}}
+function capp(){var m=metr(),n=nq(),s=sim(),el=document.getElementById("capp");
+ function r(l,v,rs,b){return'<tr><td>'+(b?'<b>'+l+'</b>':l)+'</td><td class="n">'+(n?NA(rs):(b?'<b>'+v+'</b>':v))+'</td></tr>'}function g(t){return'<tr class="grp"><td colspan="2">'+t+'</td></tr>'}
+ el.innerHTML='<div class="ph">Capital <span class="r">USDT · '+(s?"simulated":"real-funded")+'</span></div><table><tbody>'+g("Cash flows")
+ +r(s?"Virtual funds":"Initial funds",s?F(SIM.fund,2):"500,000.00","Not published")+r("Added funds",s?"0.00":"100,000.00","Not published")+r("Returned","0.00","Not published")
+ +r("Net external flows",s?F(SIM.fund,2):"600,000.00","Not published",1)+r("Net PnL, since start",s?SG(SIM.pnl,2):"+12,480.40","Fees incomplete")+r("NAV",F(m.nav,2),"Source not qualified",1)
+ +g("Budget · not cash")+r("Approved",s?F(SIM.appr,2):"700,000.00","Not published")+r("Allocated",s?F(SIM.alloc,2):"540,000.00","Not published")+r("Recalling",s?"0.00":"20,000.00","Not published")+r("Headroom",s?F(SIM.appr-SIM.alloc,2):"160,000.00","Not published")+'</tbody></table>'
+ +(n?'':'<div style="margin-top:12px"><div class="bar"><i style="width:'+(s?66.7:74.3)+'%;background:var(--series)"></i><i style="width:'+(s?0:2.9)+'%;background:var(--f-recall)"></i></div><div class="leg"><span><i style="background:var(--series)"></i>Allocated</span>'+(s?"":'<span><i style="background:var(--f-recall)"></i>Recalling</span>')+'<span>of approved</span></div></div>')
+ +'<details style="margin-top:12px"><summary>By funding source</summary><div class="na" style="padding:6px 0">Not available · No per-source attribution</div></details>'}
+function conc(){var n=nq(),el=document.getElementById("conc");document.getElementById("hhi").textContent=n?"":"HHI 0.28";
+ el.innerHTML=n?NA("No grouping"):'<div class="bar" style="height:12px"><i style="width:37%;background:var(--series)"></i><i style="width:29.6%;background:var(--series-2)"></i><i style="width:18.5%;background:var(--series-3)"></i><i style="width:14.9%;background:var(--series-4)"></i></div><div class="leg"><span><i style="background:var(--series)"></i>BTC-Trend v3 37.0%</span><span><i style="background:var(--series-2)"></i>ETH-Mean v2 29.6%</span><span><i style="background:var(--series-3)"></i>SOL-Breakout v1 18.5%</span><span><i style="background:var(--series-4)"></i>Funding-Carry v4 14.8%</span></div>'}
+function attn(){var n=nq();document.getElementById("attn").innerHTML=sim()?'<div class="na">No items need attention in this environment.</div>':n?'<div class="na">Not available · Source not qualified</div>':'<div class="item"><div class="t"><span>'+KIT.flag("recall","Recall pending")+' BTC-Trend v3 · '+link("live-0192","deployment.html")+'</span><a href="operations.html">Verify</a></div><div class="m">20,000.00 USDT · since 17 Oct 09:14Z · budget still allocated</div></div><div class="item"><div class="t"><span>'+KIT.flag("stale","Stale")+' '+link("Binance-02","account.html")+'</span><a href="incident.html">Investigate</a></div><div class="m">Last reconciled 14m ago</div></div>'}
+function ledger(id,rows){var el=document.getElementById(id);el.innerHTML='<thead><tr><th>Seq</th><th>Time · UTC</th><th>Event</th><th>Target</th><th>Basis</th><th class="n">Amount · USDT</th><th>Receipt</th></tr></thead><tbody>'+rows.map(function(r){return'<tr><td data-l="Seq" class="mono">'+r[0]+'</td><td data-l="Time">'+r[1]+'</td><td data-l="Event">'+r[2]+'</td><td data-l="Target">'+r[3]+'</td><td data-l="Basis">'+r[4]+'</td><td class="n" data-l="Amount">'+(nq()?NA("Not published"):r[5])+'</td><td data-l="Receipt">'+r[6]+'</td></tr>'}).join("")+'</tbody>'}
+function ledgers(){var rec=KIT.flag("applied","Recorded");
+ ledger("ledR",[["0007","17 Oct 09:14Z","Recall budget",link("live-0192","deployment.html"),"Budget",sgc(-20000,2),KIT.flag("recall","Recall pending")],["0006","17 Oct 09:02Z","Lock allocation",link("live-0210","deployment.html"),"Budget",'<span class="na">Not applicable</span>',rec],["0005","17 Oct 08:41Z","Approve budget · 650,000.00 to 700,000.00",link("Core","portfolio.html"),"Budget",sgc(50000,2),rec],["0004","17 Oct 08:40Z","Grant budget",link("live-0221","deployment.html"),"Budget",sgc(50000,2),rec],["0003","11 Aug 09:14Z","Approve budget",link("Core","portfolio.html"),"Budget","650,000.00",rec],["0002","11 Aug 09:12Z","Added funds",link("Core","portfolio.html"),"Capital",sgc(100000,2),rec],["0001","02 Jul 08:00Z","Initial funds",link("Core","portfolio.html"),"Capital",sgc(500000,2),rec]]);
+ ledger("ledS",[["0004","11 Aug 09:21Z","Grant budget",link("ETH-Mean v2 paper","alpha.html"),"Budget",sgc(80000,2),rec],["0003","11 Aug 09:21Z","Grant budget",link("BTC-Trend v3 paper","alpha.html"),"Budget",sgc(120000,2),rec],["0002","02 Sep 08:00Z","Virtual funds added · Sandbox",link("Core","portfolio.html"),"Capital",sgc(50000,2),rec],["0001","11 Aug 09:20Z","Virtual funds added · Paper",link("Core","portfolio.html"),"Capital",sgc(250000,2),rec]])}
+function env(id,rows){var el=document.getElementById(id);el.className="cards";el.innerHTML='<thead><tr><th>Environment</th><th class="n">Accounts</th><th class="n">Allocated</th><th class="n">Max</th><th class="n">Balance total</th><th class="n">Free</th><th class="n">Locked</th></tr></thead><tbody>'+rows.map(function(r){return'<tr><td data-l="Environment">'+r[0]+'</td><td class="n" data-l="Accounts">'+r[1]+'</td><td class="n" data-l="Allocated">'+C(r[2],"Not published")+'</td><td class="n" data-l="Max">'+C(r[3],"Not published")+'</td><td class="n" data-l="Balance total">'+(r[4]===null?NA("Shared account"):C(r[4],"Not published"))+'</td><td class="n" data-l="Free">'+(r[5]===null?NA("Shared account"):C(r[5],"Not published"))+'</td><td class="n" data-l="Locked">'+C(r[6],"Not published")+'</td></tr>'}).join("")+'</tbody>'}
+function alloc(){env("envR",[['<span class="stage live"><i></i>Live and Canary</span>',"3","540,000.00","700,000.00",null,null,"20,000.00"]]);
+ env("envS",[['<span class="stage paper"><i></i>Paper</span>',"1","200,000.00","250,000.00","252,310.00","52,310.00","0.00"],['<span class="stage sandbox"><i></i>Sandbox</span>',"1","40,000.00","50,000.00","40,120.00","10,120.00","0.00"]]);
+ var w=Compare.winL(),pn=setShare();CapitalFlow.draw(document.getElementById("capR"),{block:"real",nq:nq(),winLabel:w,pnl:pn});CapitalFlow.draw(document.getElementById("capS"),{block:"sim",nq:nq()});
+ document.getElementById("hier").innerHTML=CapitalFlow.tableHTML(nq());ledgers()}
+function alphas(){var pn=setShare(),m=metr(),n=nq(),t=document.getElementById("alt"),P=m.pnl;
+ var A=[["BTC-Trend v3","200,000.00",pn.d0192+pn.d0193,[["live-0192 · Binance-02","120,000.00",pn.d0192,"stale","Stale"],["live-0193 · OKX-01","80,000.00",pn.d0193,"ok","OK"]],"recall","Recall pending"],["ETH-Mean v2","160,000.00",pn.d0210,null,"paused","Locked"],["SOL-Breakout v1","100,000.00",pn.d0215,null,"ok","OK"],["Funding-Carry v4","80,000.00",pn.d0221,null,"ok","OK"]];
+ function row(a,kid){return'<tr class="'+(kid?"kid":"")+'"><td data-l="Alpha">'+(kid?"&nbsp;&nbsp;&nbsp;&nbsp;":'<i class="tri d"></i>')+link(kid?a[0]:a[0],kid?"deployment.html":"alpha.html")+'</td><td data-l="Stage"><span class="stage live"><i></i>Live</span></td><td class="n" data-l="Allocation">'+C(a[1],"Not published")+'</td><td class="n" data-l="Net PnL">'+C(sgc(a[2],2),"Fees incomplete")+'</td><td class="n" data-l="Share of PnL">'+C((P?(a[2]/P*100).toFixed(1):"0.0")+"%","Needs PnL")+'</td><td data-l="Health">'+(n?KIT.flag("na","Identity"):KIT.flag(a[4],a[5]))+'</td></tr>'}
+ var html='<thead><tr><th>Alpha</th><th>Stage</th><th class="n">Allocation</th><th class="n">Net PnL · <span class="win">'+Compare.winL()+'</span></th><th class="n">Share of PnL</th><th>Health</th></tr></thead><tbody>';
+ A.forEach(function(a){html+=row([a[0],a[1],a[2],0,a[4],a[5]]);if(a[3])a[3].forEach(function(d){html+=row([d[0],d[1],d[2],0,d[3],d[4]],1)})});t.innerHTML=html+'</tbody>';
+ var hc=document.getElementById("contrib");if(n)hc.innerHTML=NA("Fees incomplete");else{hc.innerHTML="";if(hc.offsetParent)divBars(hc,[{n:"BTC-Trend v3",v:Math.round(pn.d0192+pn.d0193)},{n:"ETH-Mean v2",v:Math.round(pn.d0210)},{n:"SOL-Breakout v1",v:Math.round(pn.d0215)},{n:"Funding-Carry v4",v:Math.round(pn.d0221)}])}}
+function accts(){var n=nq();document.getElementById("acct").innerHTML='<thead><tr><th>Account</th><th>Profile</th><th>Serves here</th><th class="n">Venue balance, total</th><th>Status</th></tr></thead><tbody>'
+ +[["Binance-02","USDT-M futures","2 deployments","412,880.00",["stale","Stale"],1],["OKX-01","USDT-M swap","2 deployments","188,300.00",["ok","OK"],0],["Bybit-01","USDT perpetual","1 deployment","96,520.00",["ok","OK"],0]].map(function(a){return'<tr><td data-l="Account">'+link(a[0],"account.html")+(a[5]?' <span class="flag" data-k="na">Shared</span>':"")+'</td><td data-l="Profile">'+a[1]+'</td><td data-l="Serves here">'+a[2]+'</td><td class="n" data-l="Venue balance">'+C(a[3],"Not published")+'</td><td data-l="Status">'+(n?KIT.flag("na","Identity"):KIT.flag(a[4][0],a[4][1]))+'</td></tr>'}).join("")+'</tbody>'}
+function risk(){var n=nq(),m=metr(),u=function(p){return'<span class="sla" style="height:6px;background:var(--line)"><i style="display:block;height:100%;width:'+p+'%;background:var(--series)"></i></span>'};
+ document.getElementById("expo").innerHTML='<table><tbody><tr><td>Drawdown now / max</td><td class="n">'+C('<span class="neg">'+F(m.ddNow,1)+'%</span> / <span class="neg">'+F(m.dd,1)+'%</span>',"Needs a NAV series")+'</td></tr><tr><td>Gross exposure</td><td class="n">'+C("459,200.00","Not published")+'</td></tr><tr><td>Allocated budget</td><td class="n">'+C("540,000.00","Not published")+'</td></tr><tr><td>Exposure cap</td><td class="n">'+NA("No cap published")+'</td></tr></tbody></table>'+(n?"":'<div style="margin-top:12px"><div class="bar"><i style="width:85%;background:var(--series)"></i></div><div class="leg"><span>85.0% of allocated budget in use</span></div></div>');
+ document.getElementById("marg").innerHTML='<thead><tr><th>Account</th><th class="n">Margin used</th><th class="n">Utilization</th></tr></thead><tbody>'+[["Binance-02","100,430.00",24.3],["OKX-01","24,500.00",13],["Bybit-01","15,860.00",16.4]].map(function(a){return'<tr><td data-l="Account">'+link(a[0],"account.html")+'</td><td class="n" data-l="Margin used">'+C(a[1],"Not published")+'</td><td class="n" data-l="Utilization" style="white-space:nowrap">'+(n?NA("Not published"):u(a[2])+a[2].toFixed(1)+"%")+'</td></tr>'}).join("")+'</tbody>';
+ document.getElementById("recon").innerHTML='<thead><tr><th>Account</th><th class="n">Last</th><th>Status</th></tr></thead><tbody>'+[["Binance-02","14m ago",["stale","Stale"]],["OKX-01","20s ago",["ok","Reconciled"]],["Bybit-01","41s ago",["ok","Reconciled"]]].map(function(a){return'<tr><td data-l="Account">'+link(a[0],"account.html")+'</td><td class="n" data-l="Last">'+C(a[1],"Not published")+'</td><td data-l="Status">'+(n?KIT.flag("na","Identity"):KIT.flag(a[2][0],a[2][1]))+'</td></tr>'}).join("")+'</tbody>';
+ var nm=["BTC-Trend v3","ETH-Mean v2","SOL-Breakout v1","Funding-Carry v4"],h='<div></div>'+nm.map(function(x){return'<div>'+x.split(" ")[0]+'</div>'}).join("");nm.forEach(function(x){h+='<div>'+x.split(" ")[0]+'</div>';for(var i=0;i<4;i++)h+='<div class="hatch"></div>'});document.getElementById("mx").innerHTML=h}
+function feedItem(t,flags,text,link2,extra){return'<div class="item"><div class="t"><span>'+text+'</span>'+(link2||"")+'</div><div class="m">'+t+(extra?" · "+extra:"")+'</div><div class="f">'+flags.join("")+'</div></div>'}
+function people(){var n=nq();
+ document.getElementById("feed").innerHTML=[feedItem("17 Oct 09:14Z",[KIT.flag("recall","Recall pending"),KIT.flag("display","Display catching up")],"M. Tran · Recall budget · "+link("live-0192","deployment.html")+" · "+SG(-20000,2),'<a href="operations.html">Track</a>'),
+  feedItem("17 Oct 08:41Z",[KIT.flag("applied","Recorded"),KIT.flag("ok","Display current")],"M. Tran · Approved budget · 650,000.00 to 700,000.00"),
+  feedItem("17 Oct 08:40Z",[KIT.flag("applied","Recorded"),KIT.flag("ok","Display current")],"S. Park · Grant budget · "+link("live-0221","deployment.html")+" · "+SG(50000,2)),
+  feedItem("17 Oct 07:55Z",[KIT.flag("unknown","Outcome unknown")],"S. Park · Deploy ETH-Mean v2 · "+link("Bybit-01","account.html"),KIT.state.role==="operator"||KIT.state.role==="manager"?'<a href="operations.html">Check original request</a>':"")].join("");
+ document.getElementById("appr").innerHTML=feedItem("Due in 1:00h",[KIT.flag("approval","Awaiting approval")],"Return capital · M. Tran",'<a href="approvals.html">Review</a>')+feedItem("Due in 6:00h",[KIT.flag("approval","Awaiting approval")],"Archive request · "+link("BTC-Trend v3","alpha.html"),'<a href="approvals.html">Review</a>');
+ document.getElementById("inc").innerHTML=n?'<div class="na">Not available · Source not qualified</div>':feedItem("Overdue 2:00",[KIT.flag("incident","Open")],"Broker sync diverged · "+link("Binance-02","account.html"),'<a href="incident.html">Investigate</a>')+feedItem("Since 17 Oct 09:01Z",[KIT.flag("stale","Stale")],"Valuation not reconciled · "+link("Binance-02","account.html"),'<a href="incident.html">Investigate</a>');
+ document.getElementById("attr").innerHTML='<thead><tr><th>Person</th><th>Role here</th><th>Basis</th></tr></thead><tbody>'+[["M. Tran","Portfolio manager","Current grant"],["S. Park","Delegate · deploy, recall","Current grant"],["asmith","Alpha owner · BTC-Trend","Attribution"],["bjones","Alpha owner · ETH-Mean","Attribution"]].map(function(a){return'<tr><td data-l="Person">'+a[0]+'</td><td data-l="Role">'+a[1]+'</td><td data-l="Basis">'+(a[2]==="Current grant"?KIT.flag("ok","Current"):KIT.flag("na",a[2]))+'</td></tr>'}).join("")+'</tbody>';
+ document.getElementById("cfg").innerHTML='<thead><tr><th>When</th><th>Actor</th><th>Setting</th><th class="n">Change</th></tr></thead><tbody><tr><td data-l="When">17 Oct 09:02Z</td><td data-l="Actor">L. Nguyen</td><td data-l="Setting">Allocation lock · '+link("live-0210","deployment.html")+'</td><td class="n" data-l="Change">Unlocked to Locked</td></tr><tr><td data-l="When">17 Oct 08:41Z</td><td data-l="Actor">M. Tran</td><td data-l="Setting">Approved budget</td><td class="n" data-l="Change">650,000.00 to 700,000.00</td></tr></tbody>'}
+/* actions drawer */
+var A={grant:{n:"Grant budget",tgt:link("Core","portfolio.html")+" › "+link("live-0221","deployment.html"),amt:"80,000.00 to 130,000.00 USDT",sub:"Grant 50,000.00 · budget, not cash",ob:"None",lab:"grant"},recall:{n:"Recall budget",tgt:link("Core","portfolio.html")+" › "+link("live-0215","deployment.html"),amt:"100,000.00 to 75,000.00 USDT",sub:"Recall 25,000.00 · budget, not cash",ob:"2 working orders reserve 4,200.00 USDT. Pending until they fill or cancel.",lab:"recall"},target:{n:"Set target budget",tgt:link("Core","portfolio.html")+" › "+link("live-0193","deployment.html"),amt:"Target 90,000.00 USDT (now 80,000.00)",sub:"A target may be recorded without amounts",ob:"None",lab:"target"}};
+function dr(view,key){var d=document.getElementById("dr");if(view==="off"){d.hidden=true;return}d.hidden=false;
+ if(view==="menu"){d.innerHTML='<div class="ph">Actions <button class="btn" data-dr="off">Close</button></div>'
+  +["grant","recall","target"].map(function(k){return'<div class="act"><div class="t"><b>'+A[k].n+'</b>'+KIT.flag("ok","Available")+'</div><div class="sub2">'+(k==="grant"?"Budget only":k==="recall"?"Budget, pending until obligations clear":"Target for one deployment")+'</div><div style="margin-top:6px"><button class="btn" data-dr="review" data-k="'+k+'">Review '+k+'</button></div></div>'}).join("")
+  +'<div class="act"><div class="t"><b>Return capital</b>'+KIT.flag("na","Unavailable")+'</div><div style="margin-top:6px"><button class="btn" disabled>Return capital</button>'+KIT.why("Open obligations: recall pending",false)+'</div></div>'
+  +'<div class="act"><div class="t"><b>Lock allocation</b>'+KIT.flag("na","Unavailable")+'</div><div style="margin-top:6px"><button class="btn" disabled>Lock</button>'+KIT.why("Not offered in the portal yet",false)+'</div></div>'
+  +'<div class="act"><div class="t"><b>Deploy version</b>'+KIT.flag("na","Unavailable")+'</div><div style="margin-top:6px">'+KIT.disabled("Deploy","Your role does not include this")+'</div></div>'}
+ else if(view==="review"){var a=A[key];d.innerHTML='<div class="ph">Review · '+a.n+'</div><div style="margin-bottom:12px"><span class="flag" data-k="pending">Preview · not recorded</span></div><dl class="kv"><dt>Action</dt><dd>'+a.n+'</dd><dt>Target</dt><dd>'+a.tgt+'</dd><dt>Amount</dt><dd><span class="mono">'+a.amt+'</span><div class="sub2">'+a.sub+'</div></dd><dt>Expected version</dt><dd><span class="mono">rev 4812</span><div class="sub2">Rejected if the allocation changed</div></dd><dt>Authority</dt><dd>Portfolio manager · can adjust budget</dd><dt>Open obligations</dt><dd>'+a.ob+'</dd></dl><div class="tool" style="margin-top:16px"><button class="btn" data-dr="menu">Cancel</button><button class="btn pri" data-dr="submit" data-k="'+key+'">Submit command</button></div><div class="sub2" style="margin-top:12px">Closing never submits.</div>'}
+ else if(view==="submit"){var a2=A[key];d.innerHTML='<div class="ph">Submitting · '+a2.n+'</div><div class="sub2">Request sent. Waiting for the receipt.</div><div style="margin-top:12px"><button class="btn pri" disabled aria-busy="true">Submitting…</button></div>';setTimeout(function(){dr("receipt",key)},700)}
+ else if(view==="receipt"){var a3=A[key];d.innerHTML='<div class="ph">Receipt · '+a3.n+' <button class="btn" data-dr="off">Close</button></div><div class="tool" style="margin-bottom:12px">'+KIT.flag("applied","Recorded")+KIT.flag("display","Display catching up")+'</div><dl class="kv"><dt>Recorded</dt><dd>17 Oct 09:31Z</dd><dt>Target</dt><dd>'+a3.tgt+'</dd><dt>Amount</dt><dd><span class="mono">'+a3.amt+'</span></dd></dl><div class="sub2" style="margin-top:12px">Recorded is not displayed yet. Do not send again.</div><div class="tool" style="margin-top:12px"><a href="operations.html">Track in Operations</a></div><details class="prov"><summary>Provenance</summary><div class="sub2">Receipt <span class="mono">rcpt-9a12</span> · Request <span class="mono">cmd-7d44</span></div></details>'}}
+document.addEventListener("click",function(e){var b=e.target.closest("[data-dr]");if(b){dr(b.getAttribute("data-dr"),b.getAttribute("data-k"));return}
+ var t=e.target.closest("#tabs button");if(t){go(t.getAttribute("data-t"));return}
+ var ms=e.target.closest("#mseg button");if(ms){mode=ms.getAttribute("data-v");document.querySelectorAll("#mseg button").forEach(function(x){x.setAttribute("aria-pressed",x===ms)});chart();return}
+ if(e.target.id==="tblbtn"){var tb=document.getElementById("tbl");tb.hidden=!tb.hidden;document.getElementById("eq").hidden=!tb.hidden&&false;chart();return}
+ if(e.target.id==="expbtn"){document.querySelector('[data-p="overview"] .grid2').style.gridTemplateColumns=e.target.getAttribute("data-x")?"":"1fr";e.target.setAttribute("data-x",e.target.getAttribute("data-x")?"":"1");e.target.textContent=e.target.getAttribute("data-x")?"Reduce":"Expand";setTimeout(chart,0)}});
+function go(t){tab=t;document.querySelectorAll(".p").forEach(function(p){p.hidden=p.getAttribute("data-p")!==t});document.querySelectorAll("#tabs button").forEach(function(b){b.setAttribute("aria-selected",b.getAttribute("data-t")===t)});try{history.replaceState(null,"","#"+t)}catch(e){}setTimeout(draw,0)}
+function draw(){if(KIT.state.role==="researcher")return;
+ if(tab==="acc"&&KIT.state.role==="reviewer"){go("overview");return}
+ document.getElementById("simban").hidden=!sim();
+ document.getElementById("rp").innerHTML=KIT.disabled("Report pack","noExport");
+ document.getElementById("chexp").innerHTML='<button class="btn" disabled title="Export is not available yet">Export</button>';
+ var ab=document.getElementById("actbtn");ab.innerHTML=KIT.state.role!=="manager"?KIT.disabled("Actions","Manager action"):nq()?KIT.disabled("Actions","Source not qualified"):'<button class="btn" data-dr="menu">Actions</button>';
+ if(KIT.state.role!=="manager"||nq())document.getElementById("dr").hidden=true;
+ kpis();chart();capp();conc();attn();alphas();accts();risk();people();if(tab==="alloc")alloc();var w=Compare.winL();document.querySelectorAll(".win").forEach(function(e){e.textContent=w})}
+var h=location.hash.slice(1);if(["overview","alloc","alphas","acc","risk","people"].indexOf(h)>=0)tab=h;
+KIT.on(function(){document.querySelectorAll(".p").forEach(function(p){p.hidden=p.getAttribute("data-p")!==tab});document.querySelectorAll("#tabs button").forEach(function(b){b.setAttribute("aria-selected",b.getAttribute("data-t")===tab)});setTimeout(draw,0)});
+window.addEventListener("resize",function(){chart();if(tab==="alloc")alloc();if(tab==="alphas")alphas()});
+})();
+</script></body></html>

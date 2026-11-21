@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
@@ -9,6 +9,7 @@ import { LiveOperationsService } from "./live-operations.service";
 interface LiveRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -21,10 +22,15 @@ export class LiveOperationsController {
   ) {}
 
   @Get("/deployments/:deployment_id/live")
+  @Header("Cache-Control", "private, no-store")
   async detail(
     @Req() request: LiveRequest,
     @Param("deployment_id") deploymentId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
+    @Query("panel") rawPanel?:unknown,
+    @Query("cursor") rawCursor?:unknown,
+    // BE-P12: SCOPED_V2 only. The legacy body already carries identity and stage facts, so it ignores this.
+    @Query("include") rawInclude?:unknown,
   ) {
     const workspaceId = rawWorkspaceId === undefined || rawWorkspaceId === null || rawWorkspaceId === ""
       ? request.portalWorkspaceId
@@ -32,6 +38,11 @@ export class LiveOperationsController {
     if (!workspaceId || !(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
       throw new GovernanceError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
-    return this.live.detail(request.portalUser, request.portalSession, workspaceId, deploymentId);
+    const result = await this.live.detail(request.portalUser, request.portalSession, workspaceId, deploymentId,
+      request.portalViewerWorkspaceId ?? request.portalWorkspaceId,{panel:rawPanel,cursor:rawCursor,include:rawInclude});
+    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+      throw new GovernanceError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
+    }
+    return result;
   }
 }

@@ -1,0 +1,537 @@
+/**
+ * EquityPanel · one value series over time (equity, PnL, return) in pure SVG.
+ *
+ * What it will not do: join a gap, smooth an extremum, print a digit that is
+ * not in the published string, or draw a plot when there is nothing to plot.
+ * See the barrel (`index.ts`) for the prop contract.
+ */
+import { useContext, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent } from "react";
+
+import "../css/charts.css";
+import type { ExactUnit } from "../../formatExact";
+import { GapWhy } from "../blocks/notPublished";
+import { formatAsOf } from "../boundary";
+import { samplingWords } from "../displayNames";
+import { ChartStateFlags, ChartUnavailable } from "./ChartStateView";
+import { ChartExpandedContext } from "./ChartTools";
+import { compareDecimal, readChartDecimal, showDecimal, subtractDecimal, toGeometry } from "./decimal";
+import { envelopeCaption, reduceRun, bucketSizeFor, type Envelope } from "./downsample";
+import { EVENT_KIND_TABLE } from "./eventKinds";
+import { CHART_MARGIN, useChartId, useElementWidth } from "./hooks";
+import { buildSeries, domainOfSeries, nearestIndex, resolveCursor, runsOf, splitByKind, stepCursor, type KindRun, type SeriesModel } from "./model";
+import { areaPath, gapRectsPath, gapSpans, linePath, XAxis, YAxis, type Frame } from "./plotParts";
+import { linear, niceTicks } from "./scale";
+import type { ChartDomain, ChartEvent, ChartSegment, ChartState, FlowPin, SeriesPoint, ServerEnvelope, UtcEpochMs } from "./types";
+
+export type DrawdownInput =
+  | { readonly kind: "series"; readonly points: readonly SeriesPoint[] }
+  | { readonly kind: "absent"; readonly copy: string; readonly reason?: string };
+
+export interface EquityPanelProps {
+  /** Visible heading and accessible name. */
+  label: string;
+  /** Observations in strictly increasing time order; `v: null` is a gap. */
+  points: readonly SeriesPoint[];
+  /** Legend and readout name of the series. Defaults to `label`. */
+  seriesName?: string;
+  /** What the readout's change figure is called. Default "Change across the plotted points"; a realized-only PnL series says so (QA7 N5-06). */
+  changeLabel?: string;
+  /** The published read's as-of (ms). Printed once for the equity and the drawdown readouts together, so the two never carry different instants (QA7 N2-07). */
+  readAsOf?: number;
+  /** Display class for every value label. Default `money`. */
+  unit?: ExactUnit;
+  /** Appended to readout values, e.g. `USDT`. */
+  currency?: string;
+  /** Prefix `+` on positive labels (use for PnL and return). */
+  signed?: boolean;
+  /** `unavailable` prints the caller's copy and draws no series; `partial` and `stale` still draw and wear a Flag. */
+  state?: ChartState;
+  /** Shared window. Pass the same value to `EventRibbon` to line the two up. Defaults to the series extent. */
+  domain?: ChartDomain;
+  /** Expected spacing in ms. A larger gap between two points breaks the line instead of joining them. */
+  intervalMs?: number;
+  /** A second series on the same axes (for example a paper twin), drawn dashed in the simulated colour. */
+  ghost?: { readonly name: string; readonly points: readonly SeriesPoint[] };
+  /** Approved band as exact decimals. */
+  band?: { readonly name?: string; readonly lo: string; readonly hi: string };
+  /** Spans drawn hatched and worded: simulated or retained data. */
+  segments?: readonly ChartSegment[];
+  /**
+   * Drawdown pane. `series` is the published drawdown in percent (<= 0); `absent` prints the
+   * caller's copy ("Not published (FE-xxx)"). Omit to show no pane. Drawdown is never derived here.
+   */
+  drawdown?: DrawdownInput;
+  /** Capital movements drawn as signed pins on the plot (the first 24; the caption counts the rest). */
+  flows?: readonly FlowPin[];
+  /** Marks on the top strip (the first 40; the caption counts the rest). Use `EventRibbon` for the full list. */
+  events?: readonly ChartEvent[];
+  /** What the server already reduced, repeated verbatim in the envelope caption. */
+  serverEnvelope?: ServerEnvelope;
+  /** Main plot height in px. Default 280. */
+  height?: number;
+  /** Rendered between the readout and the plot, for an `EventRibbon`. */
+  ribbon?: ReactNode;
+}
+
+const DD_HEIGHT = 84;
+const DD_GAP = 22;
+const DD_LINE = 14;
+const MAX_PINS = 24;
+const MAX_MARKS = 40;
+const charW = 6.6;
+
+/**
+ * What the server already reduced, in words of what it kept. A method the dictionary names keeps its code in a `data-method` attribute (never in text, not even hidden text); any other
+ * reads `method not stated` with the code behind a disclosure (UXM-07 DEBT-048/4).
+ */
+function ServerReduction({ envelope }: { envelope: ServerEnvelope }) {
+  const { words, known } = samplingWords(envelope.method);
+  return (
+    <>
+      {` · Server: ${envelope.shownCount.toLocaleString("en-US")} of ${envelope.sourceCount.toLocaleString("en-US")} points, ${words}`}
+      {envelope.method === "" ? null : known ? <span data-method={envelope.method} hidden /> : <GapWhy name="Reduction method" rows={[envelope.method]} next={null} />}
+    </>
+  );
+}
+
+/**
+ * Break copy into lines of at most `maxChars`: first on ' · ' separators, then on spaces. A word longer
+ * than the width gets its own line (never cut). Every line but the last keeps one trailing space, so
+ * the lines concatenate back to exactly `text`.
+ */
+export function wrapLines(text: string, maxChars: number): string[] {
+  const limit = Math.max(1, Math.floor(maxChars));
+  const chunks: string[] = [];
+  const parts = text.split(" · ");
+  parts.forEach((part, i) => chunks.push(i < parts.length - 1 ? `${part} ·` : part));
+  const lines: string[] = [];
+  for (const chunk of chunks) {
+    if (chunk.length <= limit) {
+      lines.push(chunk);
+      continue;
+    }
+    const words = chunk.split(" ");
+    let cur = "";
+    for (const word of words) {
+      const next = cur === "" ? word : `${cur} ${word}`;
+      if (cur !== "" && next.length > limit) {
+        lines.push(cur);
+        cur = word;
+      } else cur = next;
+    }
+    lines.push(cur);
+  }
+  return lines.map((l, i) => (i < lines.length - 1 ? `${l} ` : l));
+}
+
+function latestDrawable(model: SeriesModel): number {
+  for (let i = model.obs.length - 1; i >= 0; i -= 1) if (model.obs[i].s !== null) return i;
+  return -1;
+}
+function firstDrawable(model: SeriesModel): number {
+  for (let i = 0; i < model.obs.length; i += 1) if (model.obs[i].s !== null) return i;
+  return -1;
+}
+
+function reduceKindRuns(runs: readonly KindRun[], budget: number): { runs: KindRun[]; envelope: Envelope } {
+  const sourceCount = runs.reduce((sum, r) => sum + r.marks.length, 0);
+  const bucket = bucketSizeFor(sourceCount, budget);
+  const out = runs.map((r) => ({ kind: r.kind, marks: reduceRun(r.marks, bucket) }));
+  const shownCount = out.reduce((sum, r) => sum + r.marks.length, 0);
+  return { runs: out, envelope: { sourceCount, shownCount, bucket, reduced: shownCount < sourceCount } };
+}
+
+function sameTime(model: SeriesModel | null, t: number): number {
+  if (model === null) return -1;
+  const i = nearestIndex(model.obs, t);
+  return i >= 0 && model.obs[i].t === t ? i : -1;
+}
+
+export function EquityPanel(props: EquityPanelProps) {
+  const {
+    label, points, unit = "money", currency, signed = false, state = { kind: "ready" }, intervalMs, ghost, band,
+    segments = [], drawdown, flows = [], events = [], serverEnvelope, height: heightProp = 280, ribbon,
+  } = props;
+  // Expanded: the plot takes half the window height (at most 620 px), not only the width.
+  const expanded = useContext(ChartExpandedContext);
+  const height = expanded ? Math.max(heightProp, Math.min(620, Math.round(window.innerHeight * 0.5))) : heightProp;
+  const seriesName = props.seriesName ?? label;
+  const id = useChartId("exec-eq");
+  const plotRef = useRef<HTMLDivElement | null>(null);
+  const W = useElementWidth(plotRef);
+  // The cursor is an INSTANT, not an ordinal (see `resolveCursor`). `say` is true only for a keyboard move; the
+  // live-region text is derived from what is on screen, so a replaced series can never leave a stale sentence.
+  const [cur, setCur] = useState<{ readonly t: number | null; readonly say: boolean }>({ t: null, say: false });
+
+  const model = useMemo(() => buildSeries(points, unit, intervalMs), [points, unit, intervalMs]);
+  const times = useMemo(() => model.obs.map((ob) => ob.t), [model]);
+  const ghostModel = useMemo(() => (ghost ? buildSeries(ghost.points, unit, intervalMs) : null), [ghost, unit, intervalMs]);
+  const ddModel = useMemo(
+    () => (drawdown?.kind === "series" ? buildSeries(drawdown.points, "pct", intervalMs) : null),
+    [drawdown, intervalMs],
+  );
+
+  if (state.kind === "unavailable") return <ChartUnavailable label={label} copy={state.copy} reason={state.reason} height={height} />;
+  if (!model.ordered || (ghostModel && !ghostModel.ordered) || (ddModel && !ddModel.ordered)) {
+    return <ChartUnavailable label={label} copy="Not available" reason="Points are not in strictly increasing time order, so the series was not drawn." height={height} />;
+  }
+  if (model.drawable === 0) {
+    return <ChartUnavailable label={label} copy="Not available" reason="No published value in this window." height={height} />;
+  }
+
+  const own = domainOfSeries(points) as ChartDomain;
+  const domain: ChartDomain = props.domain ?? own;
+  const x0 = domain.from as number;
+  const x1 = domain.to as number;
+
+  const hasDd = drawdown !== undefined;
+  const gap = hasDd ? DD_GAP : 0;
+  // The latest-value callout sits in the right margin, to the right of the end dot: the margin grows to hold the label, so it never covers the last points.
+  const endMargin = Math.ceil(showDecimal(model.obs[latestDrawable(model)].s as string, { unit, signed, currency }).length * 7.4 + 16) + 12;
+  const frame: Frame = { W, ml: CHART_MARGIN.l, mr: Math.max(CHART_MARGIN.r, endMargin), top: CHART_MARGIN.t, bottom: height - CHART_MARGIN.b };
+  const iw = W - frame.ml - frame.mr;
+  // The drawdown-absent copy wraps inside the plot width and the pane grows with it, instead of clipping.
+  const ddAbsentCopy =
+    hasDd && !(ddModel && ddModel.drawable > 0)
+      ? drawdown?.kind === "absent"
+        ? `${drawdown.copy}${drawdown.reason ? ` · ${drawdown.reason}` : ""}`
+        : "Not available · no published value in this window"
+      : null;
+  const ddLines = ddAbsentCopy === null ? [] : wrapLines(ddAbsentCopy, Math.floor((iw - 20) / charW));
+  const ddH = hasDd ? Math.max(DD_HEIGHT, ddLines.length * DD_LINE + 24) : 0;
+  const ih = frame.bottom - frame.top;
+  const x = linear(x0, x1, frame.ml, frame.ml + iw);
+
+  // y range: series, ghost, band, then 10% air, then round ticks.
+  let lo = model.min as number;
+  let hi = model.max as number;
+  if (ghostModel && ghostModel.min !== null && ghostModel.max !== null) {
+    lo = Math.min(lo, ghostModel.min);
+    hi = Math.max(hi, ghostModel.max);
+  }
+  const bandLo = band ? readChartDecimal(band.lo, unit) : null;
+  const bandHi = band ? readChartDecimal(band.hi, unit) : null;
+  const bandOk = bandLo !== null && bandHi !== null && compareDecimal(bandLo, bandHi) <= 0;
+  if (bandOk) {
+    lo = Math.min(lo, toGeometry(bandLo));
+    hi = Math.max(hi, toGeometry(bandHi));
+  }
+  const air = (hi - lo) * 0.1;
+  const ticks = niceTicks(lo - air, hi + air, 4);
+  const y = linear(ticks.lo, ticks.hi, frame.bottom, frame.top);
+
+  const budget = Math.max(64, Math.floor(iw));
+  const { runs: kindRuns, envelope } = reduceKindRuns(splitByKind(runsOf(model), segments), budget);
+  const actualRuns = kindRuns.filter((r) => r.kind === "actual").map((r) => r.marks);
+  const simRuns = kindRuns.filter((r) => r.kind === "simulated").map((r) => r.marks);
+  const retRuns = kindRuns.filter((r) => r.kind === "retained").map((r) => r.marks);
+  const allRuns = kindRuns.map((r) => r.marks);
+  const ghostRuns = ghostModel ? reduceKindRuns(runsOf(ghostModel).map((m) => ({ kind: "actual" as const, marks: m })), budget).runs.map((r) => r.marks) : [];
+
+  const spans = gapSpans(model, x);
+  const loIdx = model.low;
+  const hiIdx = model.high;
+  const last = latestDrawable(model);
+  const first = firstDrawable(model);
+
+  const show = (s: string, signedLabel = signed) => showDecimal(s, { unit, signed: signedLabel, currency });
+  const timeOf = (t: number) => formatAsOf(t as UtcEpochMs);
+
+  // Cursor and readout.
+  const cursor = resolveCursor(times, cur.t);
+  const idx = cursor ?? last;
+  const o = model.obs[idx];
+  const dd = ddModel && sameTime(ddModel, o.t) >= 0 ? ddModel.obs[sameTime(ddModel, o.t)] : null;
+  // The drawdown pane is its own series: when it has no point at the cursor's instant, the readout names its latest point before it (with that point's time), not "No published value".
+  const ddBefore = ddModel && dd === null ? [...ddModel.obs].reverse().find((ob) => ob.t <= o.t && ob.s !== null) ?? null : null;
+  const gh = ghostModel && sameTime(ghostModel, o.t) >= 0 ? ghostModel.obs[sameTime(ghostModel, o.t)] : null;
+  const readoutValue = o.s !== null ? show(o.s) : o.bad ? "Unreadable value" : "No published value at this time";
+  const change = o.s !== null && first >= 0 && model.obs[first].s !== null ? show(subtractDecimal(o.s, model.obs[first].s as string), true) : null;
+  const ddText = drawdown === undefined ? null : drawdown.kind === "absent" ? drawdown.copy : dd?.s ? showDecimal(dd.s, { unit: "pct" }) : ddBefore?.s ? `${showDecimal(ddBefore.s, { unit: "pct" })}${props.readAsOf !== undefined ? "" : ` as of ${timeOf(ddBefore.t)}`}` : "No drawdown point up to this time";
+  const ghostText = ghost === undefined ? null : gh?.s ? show(gh.s) : "No point at this time";
+
+  const sayPoint = (at: SeriesModel["obs"][number]) => `${timeOf(at.t)}, ${at.s !== null ? show(at.s) : "no published value"}`;
+  const moveTo = (next: number | null, say: boolean) => setCur({ t: next === null ? null : model.obs[next].t, say });
+  // A keyboard move says the point on screen; Escape says the latest; a cursor released by new data says nothing.
+  const announce = !cur.say ? "" : cur.t === null ? sayPoint(model.obs[last]) : cursor === null ? "" : sayPoint(model.obs[cursor]);
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End", "Escape"].includes(e.key)) return;
+    e.preventDefault();
+    moveTo(stepCursor(cursor, e.key, e.shiftKey, model.obs.length, last), true);
+  };
+  const fromClientX = (clientX: number) => {
+    const rect = plotRef.current?.getBoundingClientRect();
+    const scale = rect && rect.width > 0 ? W / rect.width : 1;
+    const pxX = (clientX - (rect?.left ?? 0)) * scale;
+    const t = x0 + ((pxX - frame.ml) / iw) * (x1 - x0);
+    moveTo(nearestIndex(model.obs, t), false);
+  };
+  const onMove = (e: MouseEvent<HTMLDivElement>) => fromClientX(e.clientX);
+  const onTouch = (e: TouchEvent<HTMLDivElement>) => {
+    if (e.touches.length > 0) fromClientX(e.touches[0].clientX);
+  };
+
+  const cx = x(o.t);
+  const cursorVisible = cursor !== null;
+
+  // Flag boxes for the high and the low.
+  const flagBox = (index: number, text: string, up: boolean) => {
+    const ob = model.obs[index];
+    const xx = x(ob.t);
+    const yy = y(ob.n as number);
+    const w = text.length * charW + 12;
+    // A low that sits near the axis would put its box over the tick labels: it is drawn above its point instead.
+    const geomUp = up || yy + 22 > frame.bottom - 2;
+    const ty = geomUp ? yy - 22 : yy + 22;
+    const gx = Math.max(frame.ml, Math.min(frame.W - frame.mr - w, xx - w / 2));
+    return { xx, yy, w, ty, gx, text, up, geomUp };
+  };
+  const flags: ReturnType<typeof flagBox>[] = [];
+  if (hiIdx && loIdx && compareDecimal(hiIdx.s, loIdx.s) !== 0) {
+    if (hiIdx.index !== last) flags.push(flagBox(hiIdx.index, `High ${show(hiIdx.s)}`, true));
+    // The last point already wears the latest-value callout; a Low flag on it would sit on top of that callout.
+    if (loIdx.index !== first && loIdx.index !== last) flags.push(flagBox(loIdx.index, `Low ${show(loIdx.s)}`, false));
+  }
+
+  const inDomain = (t: number) => t >= x0 && t <= x1;
+  const pins = flows.filter((f) => inDomain(f.t) && readChartDecimal(f.value, "money") !== null);
+  const drawnPins = pins.slice(0, MAX_PINS);
+  const evs = events.filter((e) => inDomain(e.t));
+  const drawnEvs = evs.slice(0, MAX_MARKS);
+
+  const ddTop = height + gap;
+  const dd0 = ddModel ? Math.min(0, ddModel.min as number) : 0;
+  const ddY = linear(dd0 === 0 ? -1 : dd0 * 1.12, 0, ddTop + ddH, ddTop);
+  const ddRuns = ddModel ? reduceKindRuns(runsOf(ddModel).map((m) => ({ kind: "actual" as const, marks: m })), budget).runs.map((r) => r.marks) : [];
+
+  const endLabel = show(model.obs[last].s as string);
+  const endY = y(model.obs[last].n as number);
+  const endW = endLabel.length * 7.4 + 16;
+
+  const segDraw = segments
+    .map((s, k) => ({ s, k, a: Math.max(x(s.from), frame.ml), b: Math.min(x(s.to), frame.ml + iw) }))
+    .filter((d) => d.b > d.a);
+
+  const caption = envelopeCaption(envelope, model.gaps, model.unreadable);
+  const hiddenPins = pins.length - drawnPins.length;
+  const hiddenEvs = evs.length - drawnEvs.length;
+
+  const summaryId = `${id}-sum`;
+  const readoutId = `${id}-rd`;
+  const keyRows: { name: string; t: number; v: string }[] = [];
+  if (first >= 0) keyRows.push({ name: "First", t: model.obs[first].t, v: model.obs[first].s as string });
+  if (hiIdx) keyRows.push({ name: "High", t: model.obs[hiIdx.index].t, v: hiIdx.s });
+  if (loIdx) keyRows.push({ name: "Low", t: model.obs[loIdx.index].t, v: loIdx.s });
+  if (last >= 0) keyRows.push({ name: "Latest", t: model.obs[last].t, v: model.obs[last].s as string });
+
+  const summary =
+    `${label}. ${model.drawable.toLocaleString("en-US")} published points from ${timeOf(x0)} to ${timeOf(x1)}. ` +
+    `Latest ${show(model.obs[last].s as string)}.` +
+    (hiIdx && loIdx ? ` High ${show(hiIdx.s)} at ${timeOf(model.obs[hiIdx.index].t)}. Low ${show(loIdx.s)} at ${timeOf(model.obs[loIdx.index].t)}.` : "") +
+    (model.gaps > 0 ? ` ${model.gaps} ${model.gaps === 1 ? "gap" : "gaps"} with no published value.` : "") +
+    (envelope.reduced ? ` Drawn from ${envelope.shownCount} of ${envelope.sourceCount} points, minimum and maximum kept.` : "");
+
+  // The one swatch of a lone series repeats the title it sits under ("Core equity" under "Core equity · USDT"): drawn only when it says more or stands beside another entry.
+  const loneSeries = label.toLowerCase().includes(seriesName.toLowerCase()) && !ghost && !bandOk && spans.length === 0 && !segments.some((s) => s.kind === "simulated" || s.kind === "retained");
+
+  return (
+    <figure className="exec-chart exec-eq2" style={{ "--exec-plot-mr": `${frame.mr}px` } as CSSProperties} data-state={state.kind} data-reduced={envelope.reduced ? "true" : "false"}>
+      <figcaption className="exec-c2-head">
+        <span className="exec-c2-title">{label}</span>
+        <ChartStateFlags state={state} />
+      </figcaption>
+
+      {loneSeries ? null : <ul className="exec-c2-legend">
+        <li><i className="exec-c2-sw" data-s="series" />{seriesName}</li>
+        {ghost ? <li><i className="exec-c2-sw" data-s="sim" data-dash="true" />{ghost.name}</li> : null}
+        {segments.some((s) => s.kind === "simulated") ? <li><i className="exec-c2-sw" data-s="sim" data-hatch="true" />Simulated</li> : null}
+        {segments.some((s) => s.kind === "retained") ? <li><i className="exec-c2-sw" data-s="retained" data-hatch="true" />Retained</li> : null}
+        {bandOk ? <li><i className="exec-c2-sw" data-s="band" data-dash="true" />{band?.name ?? "Approved band"}</li> : null}
+        {spans.length > 0 ? <li><i className="exec-c2-sw" data-s="gap" data-hatch="true" />No published value</li> : null}
+      </ul>}
+
+      <div className="exec-c2-readout" id={readoutId}>
+        <span><span className="exec-c2-ru" data-testid="readout-time">{timeOf(o.t)}</span><b className="exec-c2-rv" data-testid="readout-value">{readoutValue}</b></span>
+        {change !== null ? (
+          // Derived here, not published: the cursor point minus the first plotted point, one series, one unit. It is
+          // a change across the plotted points, never "in window" (the window is the server's, and may be unpublished).
+          <span title={`${timeOf(model.obs[first].t)} to ${timeOf(o.t)}`}>
+            <span className="exec-c2-ru">{props.changeLabel ?? "Change across the plotted points"}</span>
+            <span className="exec-c2-nw" data-testid="readout-change">{change}</span>{" "}
+            <span className="exec-c2-ru exec-c2-nw" data-testid="readout-change-span">{timeOf(model.obs[first].t)} to {timeOf(o.t)}</span>
+          </span>
+        ) : null}
+        {props.readAsOf !== undefined ? <span><span className="exec-c2-ru">As of</span><span data-testid="readout-asof">{timeOf(props.readAsOf)}</span></span> : null}
+        {ddText !== null ? <span><span className="exec-c2-ru">Drawdown at this point (published)</span><span data-testid="readout-drawdown">{ddText}</span></span> : null}
+        {ddModel?.low ? <span><span className="exec-c2-ru">Worst drawdown in the series</span><span data-testid="readout-drawdown-low">{showDecimal(ddModel.low.s, { unit: "pct" })}</span></span> : null}
+        {ghostText !== null ? <span><span className="exec-c2-ru">{ghost?.name}</span><span data-testid="readout-ghost">{ghostText}</span></span> : null}
+      </div>
+
+      {ribbon}
+
+      <div
+        ref={plotRef}
+        className="exec-c2-plot"
+        role="group"
+        tabIndex={0}
+        aria-label={`${label}. Left and right arrow keys move the readout, Shift moves ten points, Home and End jump to the ends, Escape releases it.`}
+        aria-describedby={readoutId}
+        onKeyDown={onKey}
+        onMouseMove={onMove}
+        onMouseLeave={() => moveTo(null, false)}
+        onTouchMove={onTouch}
+        onTouchEnd={() => moveTo(null, false)}
+      >
+        <svg
+          className="exec-c2-svg"
+          viewBox={`0 0 ${W} ${height + gap + ddH}`}
+          width={W}
+          height={height + gap + ddH}
+          role="img"
+          aria-label={label}
+          aria-describedby={summaryId}
+        >
+          <defs>
+            <clipPath id={`${id}-clip`}><rect x={frame.ml} y={frame.top - 12} width={iw} height={ih + 12} /></clipPath>
+            <linearGradient id={`${id}-area`} x1="0" y1="0" x2="0" y2="1">
+              <stop className="exec-c2-area-top" offset="0%" />
+              <stop className="exec-c2-area-bottom" offset="100%" />
+            </linearGradient>
+            <pattern id={`${id}-hsim`} className="exec-c2-pat" data-s="sim" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="7" /></pattern>
+            <pattern id={`${id}-hret`} className="exec-c2-pat" data-s="retained" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><line x1="0" y1="0" x2="0" y2="7" /></pattern>
+            <pattern id={`${id}-hgap`} className="exec-c2-pat" data-s="gap" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" /></pattern>
+          </defs>
+
+          <YAxis frame={frame} ticks={ticks} y={y} unit={unit} />
+          <XAxis frame={frame} from={x0} to={x1} />
+
+          {bandOk ? (
+            <g className="exec-c2-band" data-testid="band">
+              <rect x={frame.ml} y={y(toGeometry(bandHi))} width={iw} height={Math.max(y(toGeometry(bandLo)) - y(toGeometry(bandHi)), 1)} />
+              <line x1={frame.ml} x2={frame.ml + iw} y1={y(toGeometry(bandHi))} y2={y(toGeometry(bandHi))} />
+              <line x1={frame.ml} x2={frame.ml + iw} y1={y(toGeometry(bandLo))} y2={y(toGeometry(bandLo))} />
+            </g>
+          ) : null}
+
+          {segDraw.map((d) => (
+            <g key={`${d.s.kind}-${d.k}`} className="exec-c2-seg" data-kind={d.s.kind}>
+              <rect x={d.a} y={frame.top} width={d.b - d.a} height={ih} fill={`url(#${id}-${d.s.kind === "simulated" ? "hsim" : "hret"})`} />
+              <text x={d.a + 8} y={frame.top + 14} className="exec-c2-seg-label">{d.s.label ?? (d.s.kind === "simulated" ? "Simulated" : "Retained")}</text>
+            </g>
+          ))}
+
+          {spans.length > 0 ? <path className="exec-c2-gaps" d={gapRectsPath(spans, frame.top, frame.bottom)} fill={`url(#${id}-hgap)`} data-testid="gaps" /> : null}
+
+          <g clipPath={`url(#${id}-clip)`}>
+            <path className="exec-c2-area" d={areaPath(allRuns, x, y, frame.bottom)} fill={`url(#${id}-area)`} />
+            {ghostRuns.length > 0 ? <path className="exec-c2-line" data-s="sim" data-dash="true" d={linePath(ghostRuns, x, y)} data-testid="ghost-line" /> : null}
+            {retRuns.length > 0 ? <path className="exec-c2-line" data-s="retained" data-dash="true" d={linePath(retRuns, x, y)} data-testid="retained-line" /> : null}
+            {simRuns.length > 0 ? <path className="exec-c2-line" data-s="sim" data-dash="true" d={linePath(simRuns, x, y)} data-testid="simulated-line" /> : null}
+            <path className="exec-c2-line" data-s="series" data-main="true" d={linePath(actualRuns, x, y)} data-testid="series-line" />
+          </g>
+
+          {flags.map((f) => (
+            <g key={f.text} className="exec-c2-flag" data-testid={f.up ? "high-flag" : "low-flag"}>
+              <line x1={f.xx} x2={f.xx} y1={f.yy} y2={f.ty + (f.geomUp ? 14 : -14)} />
+              <rect x={f.gx} y={f.ty - (f.geomUp ? 0 : 14)} width={f.w} height={14} />
+              <text x={f.gx + 6} y={f.ty - (f.geomUp ? 0 : 14) + 11}>{f.text}</text>
+              <circle cx={f.xx} cy={f.yy} r={3} />
+            </g>
+          ))}
+
+          {drawnPins.map((p) => {
+            const xx = x(p.t);
+            const negative = p.value.startsWith("-");
+            const text = showDecimal(p.value, { unit: "money", signed: true });
+            const w = text.length * charW + 12;
+            return (
+              <g key={p.id} className="exec-c2-pin" data-neg={negative ? "true" : "false"} data-testid="flow-pin">
+                <line x1={xx} x2={xx} y1={frame.bottom - 26} y2={frame.bottom} />
+                <rect x={xx - w / 2} y={frame.bottom - 40} width={w} height={14} />
+                <text x={xx} y={frame.bottom - 29} textAnchor="middle">{text}</text>
+              </g>
+            );
+          })}
+
+          {drawnEvs.map((e) => (
+            <g key={e.id} className="exec-c2-evt" data-kind={e.kind} data-testid="event-mark">
+              <line x1={x(e.t)} x2={x(e.t)} y1={frame.top - 2} y2={frame.bottom} />
+              <text x={x(e.t)} y={frame.top - 8} textAnchor="middle">{EVENT_KIND_TABLE[e.kind].glyph}</text>
+            </g>
+          ))}
+
+          <g className="exec-c2-end" data-testid="endpoint">
+            <circle className="exec-c2-end-halo" cx={x(model.obs[last].t)} cy={endY} r={9} />
+            <circle className="exec-c2-end-dot" cx={x(model.obs[last].t)} cy={endY} r={4.5} />
+            <rect x={Math.min(W - frame.mr + 8, W - endW - 2)} y={endY - 11} width={endW} height={22} />
+            <text x={Math.min(W - frame.mr + 8, W - endW - 2) + 8} y={endY + 4}>{endLabel}</text>
+          </g>
+
+          {hasDd ? (
+            <g className="exec-c2-dd" data-testid="drawdown-pane">
+              <text className="exec-c2-pane-title" x={frame.ml} y={ddTop - 7}>Drawdown</text>
+              <line className="exec-c2-grid" x1={frame.ml} x2={frame.ml + iw} y1={ddTop} y2={ddTop} />
+              {ddModel && ddModel.drawable > 0 ? (
+                <>
+                  {/* The drawdown series may start before the equity axis does: nothing is drawn outside the plot (QA7 N2-06). */}
+                  <clipPath id={`${id}-ddclip`}><rect x={frame.ml} y={ddTop - 2} width={iw} height={ddH + 4} /></clipPath>
+                  <g clipPath={`url(#${id}-ddclip)`} data-testid="drawdown-clip">
+                    <path className="exec-c2-dd-area" d={areaPath(ddRuns, x, ddY, ddTop)} />
+                    <path className="exec-c2-line" data-s="dd" d={linePath(ddRuns, x, ddY)} />
+                  </g>
+                  {ddModel.low ? (
+                    <g className="exec-c2-dd-min">
+                      <circle cx={x(ddModel.obs[ddModel.low.index].t)} cy={ddY(ddModel.obs[ddModel.low.index].n as number)} r={4} />
+                      <text x={Math.min(x(ddModel.obs[ddModel.low.index].t) + 9, W - frame.mr - 34)} y={Math.max(ddTop + 12, Math.min(ddY(ddModel.obs[ddModel.low.index].n as number) + 4, ddTop + ddH - 6))}>{showDecimal(ddModel.low.s, { unit: "pct" })}</text>
+                    </g>
+                  ) : null}
+                </>
+              ) : (
+                <g className="exec-c2-dd-absent">
+                  <rect x={frame.ml} y={ddTop} width={iw} height={ddH} fill={`url(#${id}-hgap)`} />
+                  <text x={frame.ml + 10} y={ddTop + ddH / 2 + 4 - ((ddLines.length - 1) * DD_LINE) / 2}>
+                    {ddLines.map((l, i) => (
+                      <tspan key={i} x={frame.ml + 10} dy={i === 0 ? 0 : DD_LINE}>{l}</tspan>
+                    ))}
+                  </text>
+                </g>
+              )}
+            </g>
+          ) : null}
+
+          {cursorVisible ? (
+            <g className="exec-c2-cursor" data-testid="cursor">
+              <line x1={cx} x2={cx} y1={frame.top} y2={height + gap + ddH} />
+              {o.s !== null ? <circle cx={cx} cy={y(o.n as number)} r={5} /> : null}
+            </g>
+          ) : null}
+        </svg>
+      </div>
+
+      <p className="exec-c2-envelope" data-testid="envelope">
+        {caption}
+        {serverEnvelope ? <ServerReduction envelope={serverEnvelope} /> : null}
+        {band && !bandOk ? " · Band not drawn: its bounds are unreadable" : ""}
+        {hiddenPins > 0 ? ` · ${hiddenPins} more flow ${hiddenPins === 1 ? "pin" : "pins"} not drawn here` : ""}
+        {hiddenEvs > 0 ? ` · ${hiddenEvs} more ${hiddenEvs === 1 ? "event" : "events"} not drawn here` : ""}
+        {serverEnvelope && !serverEnvelope.keepsExtrema ? <> <ChartStateFlags state={{ kind: "partial", reason: "server reduction does not guarantee extrema" }} /></> : null}
+      </p>
+
+      <p className="exec-c2-envelope" data-testid="axis-span">{`Axis ${timeOf(x0)} to ${timeOf(x1)}`}</p>
+
+      <div className="exec-c2-sr" id={summaryId}>
+        <p>{summary}</p>
+        <table>
+          <caption>{`Key readings, ${label}`}</caption>
+          <thead><tr><th scope="col">Reading</th><th scope="col">Time (UTC)</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            {keyRows.map((r) => (
+              <tr key={r.name}><th scope="row">{r.name}</th><td>{timeOf(r.t)}</td><td>{show(r.v)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="exec-c2-sr" role="status" aria-live="polite">{announce}</div>
+    </figure>
+  );
+}

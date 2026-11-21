@@ -1,11 +1,16 @@
 import { performance } from "perf_hooks";
-import { Pool, PoolClient, QueryResultRow } from "pg";
+import { createHash } from "crypto";
+import { Pool, QueryResult, QueryResultRow } from "pg";
 import {
   AppliedSort,
   KeysetPage,
   NormalizedFilter,
   NormalizedKeysetQuery,
+  GroupedCountSpec,
   PostgresListResource,
+  PostgresSnapshotRead,
+  PostgresSnapshotReader,
+  PostgresRowScope,
   QueryActorContext,
   QueryContractError,
   QueryScalar,
@@ -19,6 +24,17 @@ import { normalizeKeysetQuery } from "./request";
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
 const DEFAULT_STATEMENT_TIMEOUT_MS = 2_000;
 const MAX_STATEMENT_TIMEOUT_MS = 10_000;
+const MAX_TOTAL_DEADLINE_MS = 30_000;
+const MAX_SCOPE_COLUMNS = 8;
+const MAX_SCOPE_TUPLES = 2_000;
+const MAX_SCOPE_STRING_BYTES = 4_096;
+const MAX_SCOPE_BYTES = 1_048_576;
+const TIMESTAMP_BOUNDARY_PREFIX = "__query_timestamp_boundary_";
+
+/** The one statement entry point of a read transaction (the pg client, or its deadline-guarded wrapper). */
+interface Queryable {
+  query<R extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]): Promise<QueryResult<R>>;
+}
 
 interface SqlPart {
   sql: string;
@@ -92,6 +108,82 @@ function rowVisibilitySql<TRow extends Record<string, unknown>, TItem>(
   return `${column} IN (${placeholders.join(", ")})`;
 }
 
+/** Validate and detach mutable caller input before a pool/query await. */
+function normalizeRowScope(input: unknown): PostgresRowScope {
+  const invalid = (): never => { throw new Error("query row scope is invalid"); };
+  if (!input || typeof input !== "object" || Array.isArray(input)) return invalid();
+  const prototype = Object.getPrototypeOf(input);
+  if (prototype !== Object.prototype && prototype !== null) return invalid();
+  const scope = input as Record<string, unknown>;
+  if (Object.keys(scope).length !== 3 ||
+      !Object.hasOwn(scope, "columns") || !Object.hasOwn(scope, "allowedTuples") ||
+      !Object.hasOwn(scope, "fingerprint")) return invalid();
+  if (!Array.isArray(scope.columns) || scope.columns.length < 1 ||
+      scope.columns.length > MAX_SCOPE_COLUMNS ||
+      Array.from(scope.columns).some((column) => typeof column !== "string" || column.length > 63 || !IDENTIFIER.test(column)) ||
+      new Set(scope.columns).size !== scope.columns.length) return invalid();
+  if (!Array.isArray(scope.allowedTuples) || scope.allowedTuples.length > MAX_SCOPE_TUPLES ||
+      typeof scope.fingerprint !== "string" || !/^[!-~]{1,256}$/.test(scope.fingerprint)) return invalid();
+
+  // Canonicalize column order with its corresponding values, then the tuple
+  // set. Reordering the same authority set is not an authority revision.
+  const sourceColumns = Array.from(scope.columns) as string[];
+  const order = sourceColumns.map((column, index) => ({ column, index }))
+    .sort((left, right) => left.column < right.column ? -1 : left.column > right.column ? 1 : 0);
+  const tuples = new Map<string, readonly QueryScalar[]>();
+  let bytes = Buffer.byteLength(JSON.stringify({ columns: sourceColumns, allowedTuples: [], fingerprint: scope.fingerprint }), "utf8");
+  for (const raw of scope.allowedTuples) {
+    if (!Array.isArray(raw) || raw.length !== sourceColumns.length) return invalid();
+    // Array holes are not valid scalar values; Array.every/some would skip them.
+    const values: unknown[] = Array.from(raw);
+    for (const value of values) {
+      if (typeof value === "string") {
+        if (value.includes("\0") || Buffer.byteLength(value, "utf8") > MAX_SCOPE_STRING_BYTES) return invalid();
+      } else if (typeof value === "number") {
+        if (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value))) return invalid();
+      } else if (typeof value !== "boolean") return invalid();
+    }
+    const tuple = Object.freeze(order.map(({ index }) => values[index] as QueryScalar));
+    const key = JSON.stringify(tuple);
+    bytes += Buffer.byteLength(key, "utf8") + 1;
+    if (bytes > MAX_SCOPE_BYTES) return invalid();
+    tuples.set(key, tuple);
+  }
+  return Object.freeze({
+    columns: Object.freeze(order.map(({ column }) => column)),
+    allowedTuples: Object.freeze([...tuples.entries()]
+      .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+      .map(([, tuple]) => tuple)),
+    fingerprint: scope.fingerprint,
+  });
+}
+
+/** Composite equality, not independent IN sets that admit a cross-product. */
+function rowScopeSql<TRow extends Record<string, unknown>, TItem>(
+  resource: PostgresListResource<TRow, TItem>,
+  bindings: Bindings,
+): string | null {
+  const scope = resource.rowScope;
+  if (!scope) return null;
+  if (scope.allowedTuples.length === 0) return "FALSE";
+  const columns = scope.columns.map(identifier).join(", ");
+  // BE-P18 B1: a literal row-IN of N tuples is an OR of N conjunctions, evaluated per candidate row (O(rows x N),
+  // N up to 2000) and it cannot be joined or hashed. When every value is a string, the SAME composite equality is
+  // sent as one text[] bind per column and planned as a semi-join (hash or index nested loop). Mixed scalar
+  // types keep the literal form. Row-wise equality, so there is still no cross-product between columns.
+  const allText = scope.columns.every((_, column) => scope.allowedTuples.every((tuple) => typeof tuple[column] === "string"));
+  if (allText) {
+    const arrays = scope.columns.map((_, column) =>
+      `${bindings.add(scope.allowedTuples.map((tuple) => tuple[column]))}::text[]`);
+    const broad = resource.rowScopeIndexMaxTuples !== undefined && scope.allowedTuples.length > resource.rowScopeIndexMaxTuples;
+    const left = broad ? scope.columns.map((column) => `(${identifier(column)} || '')`).join(", ") : columns;
+    return `(${left}) IN (SELECT * FROM unnest(${arrays.join(", ")}))`;
+  }
+  const tuples = scope.allowedTuples.map((tuple) =>
+    `(${tuple.map((value) => bindings.add(value)).join(", ")})`);
+  return `(${columns}) IN (${tuples.join(", ")})`;
+}
+
 function keysetSql<TRow extends Record<string, unknown>, TItem>(
   resource: PostgresListResource<TRow, TItem>,
   sort: readonly AppliedSort[],
@@ -117,6 +209,16 @@ function keysetSql<TRow extends Record<string, unknown>, TItem>(
 }
 
 function boundaryValue(value: unknown, definition: SortDefinition): QueryScalar {
+  if (definition.timestampPrecision === "microseconds") {
+    // Only the fixed PostgreSQL SELECT projection below supplies this value;
+    // never pass it through Date, which would silently discard microseconds.
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(value)) {
+      return value;
+    }
+    throw new QueryContractError(
+      "QUERY_CURSOR_BOUNDARY_UNAVAILABLE", "A stable cursor cannot be produced for this row.", 500,
+    );
+  }
   if (value instanceof Date) return value.toISOString();
   if (definition.kind === "timestamp" && typeof value === "string") {
     const date = new Date(value);
@@ -137,9 +239,11 @@ function rowBoundary<TRow extends Record<string, unknown>, TItem>(
   sort: readonly AppliedSort[],
   row: TRow,
 ): readonly QueryScalar[] {
-  return sort.map((item) => {
+  return sort.map((item, index) => {
     const definition = resource.sorts[item.field];
-    return boundaryValue(row[definition.column], definition);
+    const column = definition.timestampPrecision === "microseconds"
+      ? `${TIMESTAMP_BOUNDARY_PREFIX}${index}` : definition.column;
+    return boundaryValue(row[column], definition);
   });
 }
 
@@ -165,6 +269,14 @@ function validateResource<TRow extends Record<string, unknown>, TItem>(
   if (resource.allowedRoles.length === 0) throw new Error("query resource requires an RBAC policy");
   for (const definition of Object.values(resource.sorts)) {
     identifier(definition.column);
+    if (definition.timestampPrecision !== undefined &&
+        (definition.kind !== "timestamp" || definition.timestampPrecision !== "microseconds")) {
+      throw new Error("timestamp cursor precision requires a timestamp sort");
+    }
+    if (definition.timestampPrecision &&
+        resource.selectColumns.some(column => column.startsWith(TIMESTAMP_BOUNDARY_PREFIX))) {
+      throw new Error("selected columns collide with the private timestamp cursor namespace");
+    }
     if (!resource.selectColumns.includes(definition.column)) {
       throw new Error("selected columns must include every cursor sort column");
     }
@@ -182,6 +294,14 @@ function validateResource<TRow extends Record<string, unknown>, TItem>(
   if (!Number.isInteger(timeout) || timeout < 50 || timeout > MAX_STATEMENT_TIMEOUT_MS) {
     throw new Error("query statement timeout is outside the safe range");
   }
+  const indexMax = resource.rowScopeIndexMaxTuples;
+  if (indexMax !== undefined && (!Number.isInteger(indexMax) || indexMax < 1 || indexMax > MAX_SCOPE_TUPLES)) {
+    throw new Error("query row scope index threshold is outside the safe range");
+  }
+  const deadline = resource.totalDeadlineMs;
+  if (deadline !== undefined && (!Number.isInteger(deadline) || deadline < timeout || deadline > MAX_TOTAL_DEADLINE_MS)) {
+    throw new Error("query total deadline must be an integer between the statement timeout and 30000 ms");
+  }
 }
 
 function countQuery<TRow extends Record<string, unknown>, TItem>(
@@ -193,9 +313,36 @@ function countQuery<TRow extends Record<string, unknown>, TItem>(
   const where = [`${identifier(resource.workspaceColumn)} = ${bindings.add(workspaceId)}`];
   const visibility = rowVisibilitySql(resource, bindings);
   if (visibility) where.push(visibility);
+  const scope = rowScopeSql(resource, bindings);
+  if (scope) where.push(scope);
   where.push(...filterSql(resource, filters, bindings));
   return {
     sql: `SELECT COUNT(*)::text AS count FROM ${tableIdentifier(resource.table)} WHERE ${where.join(" AND ")}`,
+    values: bindings.values,
+  };
+}
+
+function groupedCountQuery<TRow extends Record<string, unknown>, TItem>(
+  resource: PostgresListResource<TRow, TItem>,
+  workspaceId: string,
+  filters: readonly NormalizedFilter[],
+  spec: GroupedCountSpec,
+): SqlPart {
+  const declared = Object.values(resource.filters).some((definition) => definition.column === spec.column);
+  if (!declared || !Number.isSafeInteger(spec.maxGroups) || spec.maxGroups < 1 || spec.maxGroups > 64 ||
+      spec.excludeFilterFields.some((field) => !(field in resource.filters))) {
+    throw new Error("grouped count must name a declared filter column, declared filters and a small group bound");
+  }
+  const bindings = new Bindings();
+  const where = [`${identifier(resource.workspaceColumn)} = ${bindings.add(workspaceId)}`];
+  const visibility = rowVisibilitySql(resource, bindings);
+  if (visibility) where.push(visibility);
+  const scope = rowScopeSql(resource, bindings);
+  if (scope) where.push(scope);
+  where.push(...filterSql(resource, filters.filter((filter) => !spec.excludeFilterFields.includes(filter.field)), bindings));
+  const column = identifier(spec.column);
+  return {
+    sql: `SELECT ${column}::text AS value, COUNT(*)::text AS count FROM ${tableIdentifier(resource.table)} WHERE ${where.join(" AND ")} GROUP BY ${column} ORDER BY ${column} LIMIT ${bindings.add(spec.maxGroups + 1)}`,
     values: bindings.values,
   };
 }
@@ -213,6 +360,8 @@ function pageQuery<TRow extends Record<string, unknown>, TItem>(input: {
   ];
   const visibility = rowVisibilitySql(input.resource, bindings);
   if (visibility) where.push(visibility);
+  const scope = rowScopeSql(input.resource, bindings);
+  if (scope) where.push(scope);
   where.push(...filterSql(input.resource, input.query.filters, bindings));
   if (input.direction !== "initial" && input.boundary) {
     where.push(
@@ -227,7 +376,21 @@ function pageQuery<TRow extends Record<string, unknown>, TItem>(input: {
     return `${identifier(input.resource.sorts[item.field].column)} ${effective}`;
   });
   const limit = bindings.add(input.query.limit + 1);
-  const projection = input.resource.selectColumns.map(identifier).join(", ");
+  const projectionColumns = input.resource.selectColumns.map(identifier);
+  for (const [index, item] of input.query.sort.entries()) {
+    const definition = input.resource.sorts[item.field];
+    if (definition.timestampPrecision === "microseconds") {
+      const column = identifier(definition.column);
+      projectionColumns.push(
+        // YYYY omits the era: a BC timestamp must never be rebound as AD.
+        // Unsupported eras/extended years/infinity fail closed via NULL;
+        // finite pre-1970 AD dates remain representable. This CASE affects
+        // only SELECT metadata, never the native indexed WHERE/ORDER.
+        `CASE WHEN ${column} >= TIMESTAMPTZ '0001-01-01 00:00:00+00' AND ${column} < TIMESTAMPTZ '10000-01-01 00:00:00+00' THEN to_char(${column} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END AS ${identifier(`${TIMESTAMP_BOUNDARY_PREFIX}${index}`)}`,
+      );
+    }
+  }
+  const projection = projectionColumns.join(", ");
   return {
     sql: `SELECT ${projection} FROM ${tableIdentifier(input.resource.table)} WHERE ${where.join(" AND ")} ORDER BY ${order.join(", ")} LIMIT ${limit}`,
     values: bindings.values,
@@ -247,6 +410,8 @@ function edgeExistenceQuery<TRow extends Record<string, unknown>, TItem>(input: 
   ];
   const visibility = rowVisibilitySql(input.resource, bindings);
   if (visibility) where.push(visibility);
+  const scope = rowScopeSql(input.resource, bindings);
+  if (scope) where.push(scope);
   where.push(
     ...filterSql(input.resource, input.query.filters, bindings),
     keysetSql(input.resource, input.query.sort, input.direction, input.boundary, bindings),
@@ -269,6 +434,34 @@ export class ControlPlaneQueryService {
     actor: QueryActorContext,
     raw: RawKeysetQuery,
   ): Promise<KeysetPage<TItem>> {
+    return (await this.execute(resource, actor, raw)).page;
+  }
+
+  /**
+   * `list` plus read-only work in the page's OWN repeatable-read snapshot, so
+   * counts, links or other aggregates cannot disagree with total/filtered/page.
+   */
+  async listWithSnapshot<TRow extends QueryResultRow, TItem, TExtra>(
+    resource: PostgresListResource<TRow, TItem>,
+    actor: QueryActorContext,
+    raw: RawKeysetQuery,
+    read: PostgresSnapshotRead<TRow, TExtra>,
+  ): Promise<{ page: KeysetPage<TItem>; snapshot: TExtra }> {
+    const result = await this.execute(resource, actor, raw, read);
+    return { page: result.page, snapshot: result.snapshot as TExtra };
+  }
+
+  private async execute<TRow extends QueryResultRow, TItem, TExtra>(
+    resource: PostgresListResource<TRow, TItem>,
+    actor: QueryActorContext,
+    raw: RawKeysetQuery,
+    read?: PostgresSnapshotRead<TRow, TExtra>,
+  ): Promise<{ page: KeysetPage<TItem>; snapshot: TExtra | undefined }> {
+    // Clone only this new optional server-owned policy field. Existing callers
+    // without rowScope retain their previous request and cursor semantics.
+    if (resource.rowScope !== undefined) {
+      resource = { ...resource, rowScope: normalizeRowScope(resource.rowScope) };
+    }
     validateResource(resource);
     if (!resource.allowedRoles.includes(actor.role)) {
       throw new QueryContractError("QUERY_FORBIDDEN", "Access denied.", 403);
@@ -277,13 +470,18 @@ export class ControlPlaneQueryService {
       throw new QueryContractError("QUERY_SCOPE_REQUIRED", "Authenticated workspace scope is required.", 403);
     }
     const query = normalizeKeysetQuery(resource, raw);
-    const fingerprint = queryFingerprint({
+    const queryContextFingerprint = queryFingerprint({
       resourceId: resource.resourceId,
       limit: query.limit,
       filters: query.filters,
       sort: query.sort,
       rowVisibility: resource.rowVisibility ?? null,
     });
+    const fingerprint = resource.rowScope
+      ? createHash("sha256").update("portal-control-query-row-scope-v1\0")
+        .update(queryContextFingerprint).update("\0")
+        .update(JSON.stringify(resource.rowScope)).digest("base64url")
+      : queryContextFingerprint;
     const direction = query.after ? "after" : query.before ? "before" : "initial";
     const token = query.after ?? query.before;
     const boundary = token && direction !== "initial"
@@ -296,15 +494,42 @@ export class ControlPlaneQueryService {
         })
       : null;
 
-    const client = await this.pool.connect();
+    const connection = await this.pool.connect();
     const started = performance.now();
     let inTransaction = false;
+    const statementTimeoutMs = resource.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS;
+    const deadlineAt = resource.totalDeadlineMs === undefined ? null : started + resource.totalDeadlineMs;
+    let armedMs = statementTimeoutMs;
+    // Every statement after BEGIN goes through here. With a total deadline, the
+    // server-side statement_timeout is lowered to the remaining budget (never
+    // raised) and a statement is not even started once the budget is spent.
+    // The total budget starts at BEGIN: it covers the transaction on its own connection and does NOT include the wait for a pool
+    // connection, so it is a bound on read work, not a measure of complete request latency.
+    const remainingBudget = (): number => (deadlineAt === null ? Infinity : Math.ceil(deadlineAt - performance.now()));
+    const assertWithinBudget = (): void => {
+      if (deadlineAt !== null && inTransaction && remainingBudget() < 1) {
+        throw new QueryContractError("QUERY_TIMEOUT", "Query exceeded its bounded execution time.", 503);
+      }
+    };
+    const client: Queryable = {
+      query: async <R extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]) => {
+        if (deadlineAt !== null && inTransaction) {
+          assertWithinBudget();
+          const remaining = remainingBudget();
+          if (remaining < armedMs) {
+            await connection.query("SELECT set_config('statement_timeout', $1, true)", [`${remaining}ms`]);
+            armedMs = remaining;
+            // The arming round trip spends budget too: re-check before the statement itself starts.
+            assertWithinBudget();
+          }
+        }
+        return connection.query<R>(sql, values === undefined ? undefined : [...values]);
+      },
+    };
     try {
-      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await connection.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       inTransaction = true;
-      await client.query("SELECT set_config('statement_timeout', $1, true)", [
-        `${resource.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS}ms`,
-      ]);
+      await connection.query("SELECT set_config('statement_timeout', $1, true)", [`${statementTimeoutMs}ms`]);
       const totalSql = countQuery(resource, actor.workspaceId, []);
       const totalResult = await client.query<{ count: string }>(totalSql.sql, totalSql.values);
       const totalCount = countValue(totalResult.rows[0]?.count);
@@ -350,7 +575,37 @@ export class ControlPlaneQueryService {
             lastBoundary,
           )
         : hasExtra;
-      await client.query("COMMIT");
+      let snapshot: TExtra | undefined;
+      if (read) {
+        let open = true;
+        const lent: PostgresSnapshotReader<TRow> = {
+          rows: Object.freeze([...canonicalRows]),
+          query: async <R extends Record<string, unknown>>(sql: string, values: readonly unknown[]) => {
+            if (!open) throw new Error("snapshot reader used after its transaction");
+            return (await client.query<R & QueryResultRow>(sql, [...values])).rows as readonly R[];
+          },
+          groupedCounts: async (spec) => {
+            if (!open) throw new Error("snapshot reader used after its transaction");
+            const grouped = groupedCountQuery(resource, actor.workspaceId, query.filters, spec);
+            const result = await client.query<{ value: string | null; count: string }>(grouped.sql, grouped.values);
+            if (result.rows.length > spec.maxGroups) {
+              throw new QueryContractError("QUERY_GROUP_BOUND", "Grouped count exceeds its bound.", 503);
+            }
+            const groups = new Map<string, number>();
+            for (const row of result.rows) {
+              if (row.value === null) {
+                throw new QueryContractError("QUERY_GROUP_VALUE_UNAVAILABLE", "A grouped value is unavailable.", 503);
+              }
+              groups.set(row.value, countValue(row.count));
+            }
+            return groups;
+          },
+        };
+        try { snapshot = await read(lent); } finally { open = false; }
+      }
+      // A reader can finish late without issuing another statement; that must not be committed as a success.
+      assertWithinBudget();
+      await connection.query("COMMIT");
       inTransaction = false;
 
       const cursorInput = {
@@ -372,7 +627,17 @@ export class ControlPlaneQueryService {
             boundary: lastBoundary,
           })
         : null;
-      const rows = canonicalRows.map(resource.mapRow);
+      const privateBoundaries = query.sort.flatMap((item, index) =>
+        resource.sorts[item.field].timestampPrecision === "microseconds"
+          ? [`${TIMESTAMP_BOUNDARY_PREFIX}${index}`] : []);
+      const rows = canonicalRows.map(row => {
+        if (privateBoundaries.length === 0) return resource.mapRow(row);
+        // Cursor metadata is not part of the resource row/public DTO, even
+        // when a mapper copies all of its declared source columns.
+        const publicRow = { ...row };
+        for (const column of privateBoundaries) delete publicRow[column];
+        return resource.mapRow(publicRow);
+      });
 
       this.emitTelemetry({
         resource_id: resource.resourceId,
@@ -384,29 +649,32 @@ export class ControlPlaneQueryService {
         page_limit: query.limit,
       });
       return {
-        rows,
-        total_count: totalCount,
-        filtered_count: filteredCount,
-        next_cursor: nextCursor,
-        prev_cursor: previousCursor,
-        has_more: hasMore,
-        has_previous: hasPrevious,
-        applied_filters: query.filters.map(({ field, op, value }) => ({ field, op, value })),
-        applied_sort: query.sort,
+        snapshot,
+        page: {
+          rows,
+          total_count: totalCount,
+          filtered_count: filteredCount,
+          next_cursor: nextCursor,
+          prev_cursor: previousCursor,
+          has_more: hasMore,
+          has_previous: hasPrevious,
+          applied_filters: query.filters.map(({ field, op, value }) => ({ field, op, value })),
+          applied_sort: query.sort,
+        },
       };
     } catch (error) {
-      if (inTransaction) await this.rollback(client);
+      if (inTransaction) await this.rollback(connection);
       if ((error as { code?: string }).code === "57014") {
         throw new QueryContractError("QUERY_TIMEOUT", "Query exceeded its bounded execution time.", 503);
       }
       throw error;
     } finally {
-      client.release();
+      connection.release();
     }
   }
 
   private async filteredCount<TRow extends Record<string, unknown>, TItem>(
-    client: PoolClient,
+    client: Queryable,
     resource: PostgresListResource<TRow, TItem>,
     workspaceId: string,
     filters: readonly NormalizedFilter[],
@@ -417,7 +685,7 @@ export class ControlPlaneQueryService {
   }
 
   private async existsBeyond<TRow extends Record<string, unknown>, TItem>(
-    client: PoolClient,
+    client: Queryable,
     resource: PostgresListResource<TRow, TItem>,
     workspaceId: string,
     query: NormalizedKeysetQuery,
@@ -443,7 +711,7 @@ export class ControlPlaneQueryService {
     }
   }
 
-  private async rollback(client: PoolClient): Promise<void> {
+  private async rollback(client: Pick<import("pg").PoolClient, "query">): Promise<void> {
     try {
       await client.query("ROLLBACK");
     } catch {

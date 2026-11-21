@@ -1,4 +1,11 @@
 import { ResearchRunSyncService } from "../facade/run-sync.service";
+import { checklistEvidenceReference } from "./evidence-reference";
+import { decisionContext } from "./review-context";
+import { computeEvidenceManifestHash } from "./evidence-manifest";
+export { computeEvidenceManifestHash } from "./evidence-manifest";
+import { GovernanceReviewCaptureService } from "./review-capture.service";
+import { approvalRequestLookupOutcome, type ApprovalRequestLookupQuery } from "./approval-request-lookup";
+import { paperExitParentOutcome } from "./paper-exit-parent";
 import { createHash } from "crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { constantTimeEqual } from "../auth/argon";
@@ -8,6 +15,7 @@ import {
   querySigningKeys,
 } from "../config";
 import { AuthSession, PortalUser } from "../domain";
+import type { Pool } from "pg";
 import { newUlid } from "../id";
 import { ControlPlaneQueryService, KeysetCursorCodec, RawKeysetQuery } from "../query";
 import { exactPageReadTruth } from "../query/read-truth";
@@ -50,7 +58,52 @@ export class GovernanceError extends Error {
   }
 }
 
+/** Portal identity/session/workspace fence only; gate grants are checked by
+ * their owning service. No role escalation or read→decision implication. */
+export async function assertGovernanceReadSession(pool: Pick<Pool, "query">, user: PortalUser,
+  session: AuthSession, workspaceId: string): Promise<void> {
+  if (!session?.sessionId || session.userId !== user.userId || session.sessionVersion !== user.sessionVersion)
+    throw new GovernanceError("SESSION_REQUIRED", "Authentication is required.", 401);
+  const current = await pool.query(`SELECT EXISTS(SELECT 1 FROM workspace_members m
+      WHERE m.workspace_id=$4 AND m.user_id=u.user_id) AS member
+    FROM portal_users u JOIN auth_sessions s ON s.user_id=u.user_id
+    WHERE u.user_id=$1 AND u.session_version=$2 AND u.role=$5
+      AND u.status='ACTIVE' AND u.archived_at IS NULL AND NOT u.must_change_password
+      AND s.session_id=$3 AND s.session_version=u.session_version AND s.state='ACTIVE'
+      AND s.idle_expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`,
+    [user.userId, user.sessionVersion, session.sessionId, workspaceId, user.role]);
+  if (!current.rows[0]) throw new GovernanceError("SESSION_REQUIRED", "Authentication is required.", 401);
+  if (!current.rows[0].member) throw new GovernanceError("WORKSPACE_ACCESS_DENIED", "Access denied.", 403);
+}
+
+/** Refusal-only Core policy selector. Missing session on the internal Research
+ * mirror never grants V2 access and is not claimed as an exact-session proof. */
+export async function assertGovernanceParentCompatibility(pool: Pick<Pool, "query">, user: PortalUser,
+  workspaceId: string, branch: string, session?: AuthSession): Promise<void> {
+  if (session) await assertGovernanceReadSession(pool, user, session, workspaceId);
+  const policy = await pool.query(`SELECT (
+    EXISTS(SELECT 1 FROM portal_access_policy_state p WHERE p.workspace_id=$1)
+    OR EXISTS(SELECT 1 FROM portal_access_policy_events e WHERE e.workspace_id=$1)
+    OR EXISTS(SELECT 1 FROM portal_access_grants_v2 g WHERE g.workspace_id=$1)
+  ) AS policy_seen`, [workspaceId]);
+  if (typeof policy.rows[0]?.policy_seen !== "boolean")
+    throw new GovernanceError("GOVERNANCE_READ_AUTHORITY_UNAVAILABLE", "Review authority is unavailable.", 503);
+  if (policy.rows[0].policy_seen) throw new GovernanceError("ELP2_GOVERNANCE_PARENT_READ_NOT_COMMISSIONED",
+    "Scoped governance records are not commissioned.", 503, {
+      branch, dependency: "QUALIFIED_TARGET_LINEAGE_AND_FIELD_PUBLICATION_REQUIRED",
+    });
+  if (session) await assertGovernanceReadSession(pool, user, session, workspaceId);
+}
+
+type PortalDecisionCommand = "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION" | "GOVERNANCE_LIVE_DECISION";
+function decisionRoute(command: PortalDecisionCommand) {
+  return command === "GOVERNANCE_R2_DECISION" ? { gate: "R2", access: "r2", schema: "r2" } as const
+    : command === "GOVERNANCE_LIVE_DECISION" ? { gate: "LIVE_GATE", access: "live", schema: "live" } as const
+      : { gate: "R1", access: "r1", schema: "r1" } as const;
+}
+
 interface PlanInput {
+  commandType?: PortalDecisionCommand;
   workspaceId: string;
   requestKey: string;
   approvalId: string;
@@ -68,6 +121,7 @@ interface CreateApprovalInput {
   evidenceRunId: string;
   methodologyClaimId: string;
   summary: string;
+  expectedArtifactSha256?: string;
 }
 
 function canonical(value: unknown): string {
@@ -91,34 +145,26 @@ function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
-export function computeEvidenceManifestHash(evidence: readonly EvidenceRecord[]): string {
-  return digest(
-    [...evidence]
-      .sort((left, right) => left.ordinal - right.ordinal || left.evidenceId.localeCompare(right.evidenceId))
-      .map((item) => ({
-        evidence_id: item.evidenceId,
-        sha256: item.sha256,
-        schema_version: item.schemaVersion,
-        source_authority: item.sourceAuthority,
-        captured_at: item.capturedAt.toISOString(),
-      })),
-  );
-}
-
 function publicPlan(plan: DecisionPlanRecord, applyToken: string | null) {
+  const command = plan.commandType ?? "GOVERNANCE_R1_DECISION";
+  const route = decisionRoute(command);
   return {
-    schema_version: "governance.r1-decision-plan.v1",
+    schema_version: `governance.${route.schema}-decision-plan.v1`,
     operation_id: plan.operationId,
-    command_type: "GOVERNANCE_R1_DECISION",
+    command_type: command,
     command_version: 1,
     approval_id: plan.approvalId,
     expected_approval_version: plan.expectedApprovalVersion,
     payload_hash: plan.payloadHash,
     evidence_set_hash: plan.evidenceSetHash,
-    risk_tier: "R1",
+    risk_tier: route.gate,
+    ...(route.gate !== "R1" ? { decision_authority: "PORTAL_ONLY", source_side_effect_requested: false } : {}),
     blockers: plan.blockerCodes.map((code) => ({ code })),
     warnings: plan.warningCodes.map((code) => ({ code })),
     required_approvers: [{ role: "ADMIN", count: plan.quorumRequired }],
+    authority_requirements: { capability: `governance.${route.access}.decide`,
+      role_constraint: route.gate === "R2" ? "ADMIN" : null,
+      workspace_membership_required: true, separation_of_duties_required: true },
     fresh_auth_required: false,
     expires_at: plan.expiresAt.toISOString(),
     apply_token: applyToken,
@@ -167,6 +213,7 @@ export class GovernanceService {
     @Inject(ProfileReadService) private readonly profileReads: ProfileReadService,
     @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
     @Optional() @Inject(ResearchRunSyncService) private readonly runSync?: ResearchRunSyncService,
+    @Optional() @Inject(GovernanceReviewCaptureService) private readonly captures?: GovernanceReviewCaptureService,
   ) {
     const keys = querySigningKeys(config);
     this.query = new ControlPlaneQueryService(
@@ -183,7 +230,8 @@ export class GovernanceService {
     );
   }
 
-  async list(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+  async list(user: PortalUser, workspaceId: string, raw: RawKeysetQuery, session?: AuthSession) {
+    await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_INBOX", session);
     /*
      * A4-D14 · read the caller's real authority before building the page.
      *
@@ -201,6 +249,12 @@ export class GovernanceService {
       }, raw),
       this.repository.counts(workspaceId, visibleGates),
     ]);
+    const portfolios = await this.repository.inboxPortfolioIds(workspaceId, page.rows, visibleGates);
+    const enrichedPage = { ...page,
+      rows: page.rows.map(item => ({ ...item, portfolio_id: portfolios.get(item.id) ?? null })),
+    };
+    await this.assertParentListUnchanged(user, workspaceId, visibleGates);
+    await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_INBOX", session);
     return {
       schema_version: "governance.approval-inbox.v1",
       record_authority: "PORTAL",
@@ -221,11 +275,12 @@ export class GovernanceService {
         due_soon: counts.dueSoon,
       },
       read_truth: exactPageReadTruth(page, "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS"),
-      page,
+      page: enrichedPage,
     };
   }
 
-  async history(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+  async history(user: PortalUser, workspaceId: string, raw: RawKeysetQuery, session?: AuthSession) {
+    await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_HISTORY", session);
     const access = await this.ownerAccess.effectiveAccess(user.userId);
     const visibleGates = approvalReadGates(user, access, workspaceId);
     const page = await this.query.list(
@@ -233,6 +288,8 @@ export class GovernanceService {
       { actorId: user.userId, workspaceId, role: user.role },
       raw,
     );
+    await this.assertParentListUnchanged(user, workspaceId, visibleGates);
+    await this.assertParentReadCommissioned(user, workspaceId, "APPROVAL_HISTORY", session);
     return {
       schema_version: "governance.approval-history.v1",
       record_authority: "PORTAL",
@@ -244,7 +301,8 @@ export class GovernanceService {
     };
   }
 
-  async conditions(user: PortalUser, workspaceId: string, raw: RawKeysetQuery) {
+  async conditions(user: PortalUser, workspaceId: string, raw: RawKeysetQuery, session?: AuthSession) {
+    await this.assertParentReadCommissioned(user, workspaceId, "CONDITIONS_REGISTER", session);
     const access = await this.ownerAccess.effectiveAccess(user.userId);
     const visibleGates = approvalReadGates(user, access, workspaceId);
     const page = await this.query.list(
@@ -252,6 +310,8 @@ export class GovernanceService {
       { actorId: user.userId, workspaceId, role: user.role },
       raw,
     );
+    await this.assertParentListUnchanged(user, workspaceId, visibleGates);
+    await this.assertParentReadCommissioned(user, workspaceId, "CONDITIONS_REGISTER", session);
     return {
       schema_version: "governance.conditions-register.v1",
       record_authority: "PORTAL_CONTROL",
@@ -297,7 +357,73 @@ export class GovernanceService {
     if (denial) throw new GovernanceError(denial, GOVERNANCE_DENIAL_MESSAGE[denial], 403);
   }
 
+  /** Final read fence for compositions that await other sources after this
+   * gate's detail. Read capability never inherits the decision capability. */
+  async assertReadAuthority(user: PortalUser, session: AuthSession, workspaceId: string,
+    gate: "r1" | "r2" | "live"): Promise<void> {
+    await this.assertParentReadCommissioned(user, workspaceId, gate.toUpperCase(), session);
+    await assertGovernanceReadSession(this.repository.pool, user, session, workspaceId);
+    await this.assertGovernance(user, gate, "read", workspaceId);
+    await assertGovernanceReadSession(this.repository.pool, user, session, workspaceId);
+  }
+
+  /** Core-owned parents are not qualified Execution tuples. This selector
+   * only refuses an uncommissioned V2 branch; it never mints a capability.
+   * An internal Research mirror currently has no session argument: retain its
+   * accepted legacy gate checks, but NEVER let missing session select legacy
+   * when durable policy/history exists. HTTP/composition callers pass session
+   * and receive an exact lease/role/Core-workspace fence as well. */
+  private async assertParentReadCommissioned(user: PortalUser, workspaceId: string, branch: string,
+    session?: AuthSession): Promise<void> {
+    await assertGovernanceParentCompatibility(this.repository.pool, user, workspaceId, branch, session);
+  }
+
+  private async assertParentListUnchanged(user: PortalUser, workspaceId: string, visibleGates: readonly string[]) {
+    const current = approvalReadGates(user, await this.ownerAccess.effectiveAccess(user.userId), workspaceId);
+    if (!sameStrings([...visibleGates].sort(), [...current].sort()))
+      throw new GovernanceError("GOVERNANCE_READ_ACCESS_CHANGED", "Review access changed.", 409);
+  }
+
+  /**
+   * Internal P22 read of the same RunSync-backed evidence R1 create uses.
+   */
+  async publicationEvidence(user: PortalUser, workspaceId: string, runId: string, refresh = false) {
+    if (refresh) await this.runSync?.refresh(user, workspaceId, runId);
+    const run = await this.repository.approvalEvidenceRun(workspaceId, runId);
+    return run ? {
+      run_id: run.runId, alpha_id: run.alphaId, status: run.status,
+      artifact_sha256: run.artifactSha256, artifact_schema_version: run.artifactSchemaVersion,
+      methodology_claim_ids: run.methodologyClaimIds, captured_at: run.capturedAt.toISOString(),
+    } : null;
+  }
+
+  /**
+   * A publisher can reconcile their own R1 receipt without R1 review rights.
+   * Return only a boolean; the full mirror still uses detail() authorization.
+   */
+  async verifyPublicationPin(
+    user: PortalUser,
+    workspaceId: string,
+    approvalId: string,
+    expected: { alphaId: string; runId: string; sha256: string; schemaVersion: string; evidenceSetHash: string },
+  ): Promise<boolean> {
+    const snapshot = await this.repository.detail(workspaceId, approvalId);
+    if (!snapshot || snapshot.approval.gate !== "R1" || snapshot.approval.requesterUserId !== user.userId
+      || snapshot.approval.subjectId !== expected.alphaId
+      || snapshot.approval.evidenceSetHash !== expected.evidenceSetHash
+      || computeEvidenceManifestHash(snapshot.evidence) !== expected.evidenceSetHash
+      || snapshot.evidence.length !== 1) return false;
+    const pin = snapshot.evidence[0]!;
+    return pin.kind === "ALPHA_ARTIFACT" && pin.artifactId === expected.runId
+      && pin.sha256 === expected.sha256 && pin.schemaVersion === expected.schemaVersion
+      && pin.sourceAuthority === "RESEARCH" && pin.sourceReference === expected.runId
+      && pin.verification === "SERVER_PINNED";
+  }
+
   async createApproval(user: PortalUser, input: CreateApprovalInput, requestId: string) {
+    if (!(await this.repository.isWorkspaceMember(input.workspaceId, user.userId))) {
+      throw new GovernanceError("WORKSPACE_ACCESS_DENIED", "Access denied.", 403);
+    }
     const payloadHash = digest({
       gate: "R1",
       alpha_id: input.alphaId,
@@ -333,6 +459,9 @@ export class GovernanceService {
     const run = await this.repository.approvalEvidenceRun(input.workspaceId, input.evidenceRunId);
     if (!run) {
       throw new GovernanceError("EVIDENCE_RUN_NOT_FOUND", "Evidence run was not found.", 422);
+    }
+    if (input.expectedArtifactSha256 && run.artifactSha256 !== input.expectedArtifactSha256) {
+      throw new GovernanceError("EVIDENCE_ARTIFACT_CHANGED", "Pinned research artifact changed before R1 creation.", 409);
     }
     if (
       run.alphaId !== input.alphaId ||
@@ -445,8 +574,39 @@ export class GovernanceService {
     }
   }
 
-  async detail(user: PortalUser, workspaceId: string, approvalId: string) {
+  /**
+   * FE-069. Read-only answer to "what would replaying this request_key do?" for the
+   * CALLER'S OWN requests (the lookup is keyed by requester, so another actor's
+   * request is indistinguishable from none). Same authority as createApproval's
+   * replay branch (current session + workspace membership; no gate capability, as
+   * for the replay it mirrors). Writes nothing, refreshes no run, calls no source.
+   */
+  async lookupApprovalRequest(user: PortalUser, session: AuthSession, query: ApprovalRequestLookupQuery & { workspace_id: string }) {
+    const fence = () => assertGovernanceReadSession(this.repository.pool, user, session, query.workspace_id);
+    await fence();
+    if (!(await this.repository.isWorkspaceMember(query.workspace_id, user.userId))) {
+      throw new GovernanceError("WORKSPACE_ACCESS_DENIED", "Access denied.", 403);
+    }
+    const stored = await this.repository.findCreatedApproval(query.workspace_id, user.userId, query.request_key);
+    const payloadHash = query.alpha_id === undefined ? null : digest({
+      gate: "R1",
+      alpha_id: query.alpha_id,
+      evidence_run_id: query.evidence_run_id,
+      methodology_claim_id: query.methodology_claim_id,
+      summary: query.summary,
+    });
+    const outcome = approvalRequestLookupOutcome({
+      workspace_id: query.workspace_id, request_key: query.request_key, payloadHash,
+      stored: stored ? { payloadHash: stored.payloadHash, approval: this.publicApproval(stored.approval) as Record<string, unknown> } : null,
+    });
+    // A revocation/demotion during the reads refuses instead of publishing a stale answer.
+    await fence();
+    return outcome;
+  }
+
+  async detail(user: PortalUser, workspaceId: string, approvalId: string, session?: AuthSession) {
     await this.assertGovernance(user, "r1", "read", workspaceId);
+    await this.assertParentReadCommissioned(user, workspaceId, "R1", session);
     const snapshot = await this.repository.detail(workspaceId, approvalId);
     if (!snapshot || snapshot.approval.gate !== "R1") {
       throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
@@ -471,7 +631,7 @@ export class GovernanceService {
     const mayDecideR1 = await this.governance(user, "r1", "decide", workspaceId);
     if (!mayDecideR1 || alreadyDecided) locks.push("NOT_ELIGIBLE");
 
-    return {
+    const response = {
       schema_version: "governance.r1-review.v1",
       record_authority: "PORTAL",
       workspace_id: workspaceId,
@@ -480,6 +640,8 @@ export class GovernanceService {
       data: {
         approval: this.publicApproval(approval),
         actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+        decision_context: decisionContext(approval, evidence, mayDecideR1),
+        ...(this.captures ? { capture_context: await this.captures.context(user, "R2_CREATE", approval) } : {}),
         eligibility: {
           can_approve: approval.status === "PENDING" && locks.length === 0,
           can_approve_with_condition: approval.status === "PENDING" && locks.length === 0,
@@ -521,6 +683,7 @@ export class GovernanceService {
           })),
         },
         checklist: findings.map((item) => ({
+          ...checklistEvidenceReference(item.basisHashes, evidence),
           finding_id: item.findingId,
           ordinal: item.ordinal,
           label: item.label,
@@ -557,6 +720,9 @@ export class GovernanceService {
         ],
       },
     };
+    await this.assertGovernance(user, "r1", "read", workspaceId);
+    await this.assertParentReadCommissioned(user, workspaceId, "R1", session);
+    return response;
   }
 
   /**
@@ -564,9 +730,33 @@ export class GovernanceService {
    * issue a capital-preview request. This is a read model, not an R2 decision
    * or execution authorization.
    */
-  async r2Detail(user: PortalUser, workspaceId: string, approvalId: string) {
+  async r2Detail(user: PortalUser, workspaceId: string, approvalId: string, session?: AuthSession) {
     await this.assertGovernance(user, "r2", "read", workspaceId);
-    return this.r2Payload(user, workspaceId, approvalId);
+    await this.assertParentReadCommissioned(user, workspaceId, "R2", session);
+    const response = await this.r2Payload(user, workspaceId, approvalId);
+    await this.assertGovernance(user, "r2", "read", workspaceId);
+    await this.assertParentReadCommissioned(user, workspaceId, "R2", session);
+    return response;
+  }
+
+  /**
+   * RV-10 · the R2 parent of a deployment, as the capture context the Paper exit request is bound to.
+   *
+   * Authority is the R2 review's own read (`governance.r2.read`, exact session and workspace membership before and after the
+   * reads); the capture predicate inside `context()` then adds the ADMIN role and the capture checks and answers a typed BLOCKED
+   * context. The legacy parent-compatibility refusal is deliberately not applied: it guards the legacy R2 review body, and the
+   * capture route this read feeds (`POST /governance/paper-exit/create`) does not apply it either. Nothing is written.
+   */
+  async paperExitParent(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+    await assertGovernanceReadSession(this.repository.pool, user, session, workspaceId);
+    await this.assertGovernance(user, "r2", "read", workspaceId);
+    if (!this.captures) throw new GovernanceError("REVIEW_CAPTURE_NOT_CONFIGURED", "Review capture is unavailable.", 503);
+    const approvalId = await this.repository.r2ParentOfDeployment(workspaceId, deploymentId);
+    const detail = approvalId === null ? null : await this.repository.r2Detail(workspaceId, approvalId, "R2");
+    const context = detail === null ? null : await this.captures.context(user, "PAPER_EXIT_CREATE", detail.approval,
+      detail.lineage && detail.scope ? { ...detail.lineage, portfolioId: detail.scope.portfolioId } : null);
+    await assertGovernanceReadSession(this.repository.pool, user, session, workspaceId);
+    return paperExitParentOutcome({ workspaceId, deploymentId, context });
   }
 
   /*
@@ -578,13 +768,17 @@ export class GovernanceService {
    * capability; the gate that is being read is the gate that must be granted,
    * and the caller above asserts it.
    */
-  private async r2Payload(user: PortalUser, workspaceId: string, approvalId: string) {
-    const detail = await this.repository.r2Detail(workspaceId, approvalId);
+  private async r2Payload(user: PortalUser, workspaceId: string, approvalId: string,
+    gate: "R2" | "LIVE_GATE" = "R2") {
+    const detail = await this.repository.r2Detail(workspaceId, approvalId, gate);
     if (!detail) {
       throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
     }
-    const { approval, scope, lineage, evidence } = detail;
-    if (lineage && computeEvidenceManifestHash(evidence) !== lineage.r1EvidenceSetHash) {
+    const { approval, scope, lineage, evidence, parentEvidence } = detail;
+    if (computeEvidenceManifestHash(evidence) !== approval.evidenceSetHash) {
+      throw new GovernanceError("EVIDENCE_MANIFEST_INTEGRITY_FAILED", "Evidence manifest integrity check failed.", 409);
+    }
+    if (lineage && computeEvidenceManifestHash(parentEvidence) !== lineage.r1EvidenceSetHash) {
       throw new GovernanceError(
         "R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED",
         "Referenced R1 evidence manifest integrity check failed.",
@@ -594,12 +788,20 @@ export class GovernanceService {
     const self = approval.requesterUserId === user.userId || approval.artifactCreatorUserId === user.userId;
     const alreadyDecided = approval.decisionActorIds.includes(user.userId);
     const expired = approval.expiresAt <= new Date();
-    const mayDecideR2 = await this.governance(user, "r2", "decide", workspaceId);
-    const locks = [
-      ...(self ? ["SELF_APPROVAL"] : []),
+    const mayDecide = await this.governance(user, gate === "R2" ? "r2" : "live", "decide", workspaceId);
+    const commonLocks = [
+      ...(approval.status !== "PENDING" ? ["APPROVAL_NOT_PENDING"] : []),
+      ...(gate === "LIVE_GATE" ? ["LIVE_PARENT_NOT_PUBLISHED"] : []),
+      ...(!mayDecide || alreadyDecided ? ["NOT_ELIGIBLE"] : []),
       ...(expired ? ["EXPIRED"] : []),
-      ...(!mayDecideR2 || alreadyDecided ? ["NOT_ELIGIBLE"] : []),
-      ...(lineage === null ? ["R1_LINEAGE_UNPUBLISHED"] : []),
+      ...(gate === "R2" && user.role !== "ADMIN" ? ["ADMIN_ROLE_REQUIRED"] : []),
+      ...(gate === "R2" && lineage === null ? ["R1_LINEAGE_UNPUBLISHED"] : []),
+    ];
+    const locks = [...commonLocks,
+      ...(self ? ["SELF_APPROVAL"] : []),
+      ...(lineage?.planAuthorUserId === user.userId && !self ? ["SELF_APPROVAL"] : []),
+      ...(!approval.evidenceComplete ? ["EVIDENCE_INCOMPLETE"] : []),
+      ...(approval.blockerCount > 0 ? ["BLOCKING_FINDINGS"] : []),
       ...(lineage !== null && !["APPROVED", "APPROVED_WITH_CONDITION"].includes(lineage.r1Status)
         ? ["R1_NOT_APPROVED"]
         : []),
@@ -609,14 +811,14 @@ export class GovernanceService {
     const r1Reference = lineage === null ? null : {
       approval_id: lineage.r1ApprovalId,
       state: lineage.r1Status,
-      href: `/governance/approvals/${lineage.r1ApprovalId}/r1`,
+      href: `/governance/approvals/${lineage.r1ApprovalId}/r1?workspace_id=${encodeURIComponent(workspaceId)}`,
       expiry: lineage.r1ExpiresAt.toISOString(),
       digest: lineage.r1EvidenceSetHash,
       decided_by: lineage.r1DecidedByUsername,
       decided_at: lineage.r1DecidedAt?.toISOString() ?? null,
     };
     return {
-      schema_version: "governance.r2-review.v1",
+      schema_version: gate === "R2" ? "governance.r2-review.v1" : "governance.live-decision-review.v1",
       record_authority: "PORTAL",
       workspace_id: workspaceId,
       delivery_profile: "fixture",
@@ -624,10 +826,15 @@ export class GovernanceService {
       data: {
         approval: {
           ...this.publicApproval(approval),
-          portfolio_id: scope.portfolioId,
-          currency: scope.currency,
+          portfolio_id: scope?.portfolioId ?? null,
+          currency: scope?.currency ?? null,
         },
         actor: { user_id: user.userId, username: user.username, roles: [user.role] },
+        decision_context: decisionContext(approval, evidence, mayDecide,
+          gate === "R2" && lineage === null ? "R1_LINEAGE_UNPUBLISHED"
+            : gate === "R2" && user.role !== "ADMIN" ? "ADMIN_ROLE_REQUIRED" : null),
+        ...(this.captures && gate === "R2" ? { capture_context: await this.captures.context(user, "PAPER_EXIT_CREATE", approval,
+          lineage && scope ? { ...lineage, portfolioId: scope.portfolioId } : null) } : {}),
         r1_reference: r1Reference,
         r1_state: lineage?.r1Status ?? "MISSING",
         r1_id: lineage?.r1ApprovalId ?? null,
@@ -638,7 +845,7 @@ export class GovernanceService {
         evidence_manifest: lineage === null ? null : {
           manifest_hash: lineage.r1EvidenceSetHash,
           complete: lineage.r1EvidenceComplete,
-          entries: evidence.map((item) => ({
+          entries: parentEvidence.map((item) => ({
             evidence_id: item.evidenceId,
             ordinal: item.ordinal,
             kind: item.kind,
@@ -649,12 +856,17 @@ export class GovernanceService {
             captured_at: item.capturedAt.toISOString(),
           })),
         },
+        decision_evidence_manifest: {
+          manifest_hash: approval.evidenceSetHash, complete: approval.evidenceComplete,
+          entries: evidence.map(item => ({ evidence_id: item.evidenceId, ordinal: item.ordinal,
+            kind: item.kind, label: item.label, sha256: item.sha256, schema_version: item.schemaVersion,
+            source_authority: item.sourceAuthority, captured_at: item.capturedAt.toISOString() })),
+        },
         eligibility: {
           can_approve: approval.status === "PENDING" && locks.length === 0,
           can_approve_with_condition: approval.status === "PENDING" && locks.length === 0,
-          can_deny: approval.status === "PENDING" && !expired && mayDecideR2 && !alreadyDecided,
-          can_request_changes:
-            approval.status === "PENDING" && !expired && mayDecideR2 && !alreadyDecided && !self,
+          can_deny: commonLocks.length === 0,
+          can_request_changes: commonLocks.length === 0 && !self && lineage?.planAuthorUserId !== user.userId,
           locks,
           separation_of_duties: self ? "VIOLATION" : "OK",
         },
@@ -669,7 +881,8 @@ export class GovernanceService {
     approvalId: string,
   ) {
     await this.assertGovernance(user, "live", "read", workspaceId);
-    const backbone = await this.r2Payload(user, workspaceId, approvalId) as Record<string, unknown>;
+    await this.assertParentReadCommissioned(user, workspaceId, "LIVE", session);
+    const backbone = await this.r2Payload(user, workspaceId, approvalId, "LIVE_GATE") as Record<string, unknown>;
     const data = backbone.data as { approval?: { subject_id?: unknown } } | undefined;
     const subjectId = data?.approval?.subject_id;
     if (typeof subjectId !== "string" || subjectId.length < 1 || subjectId.length > 191) {
@@ -690,7 +903,7 @@ export class GovernanceService {
       .reduce((count, key) => count + (Array.isArray(sourceData[key]) ? sourceData[key].length : 0), 0);
     const liveKpiState = currentSource.state === "unavailable" ? "UNAVAILABLE"
       : sourceFacts === 0 ? "EMPTY" : currentSource.completeness === "PARTIAL" ? "PARTIAL" : "AVAILABLE";
-    return {
+    const response = {
       schema_version: "governance.live-review.v1",
       record_authority: "PORTAL_CONTROL",
       workspace_id: workspaceId,
@@ -715,16 +928,33 @@ export class GovernanceService {
       source_side_effect_requested: false,
       production_command_active: false,
     };
+    await this.assertReadAuthority(user, session, workspaceId, "live");
+    return response;
   }
 
   async plan(user: PortalUser, input: PlanInput, requestId: string) {
-    if (!(await this.governance(user, "r1", "decide", input.workspaceId))) {
+    const commandType = input.commandType ?? "GOVERNANCE_R1_DECISION";
+    const route = decisionRoute(commandType);
+    if (!(await this.governance(user, route.access, "decide", input.workspaceId))) {
       await this.rejected(user, input, requestId, "GOVERNANCE_CAPABILITY_REQUIRED", "DENIED");
       throw new GovernanceError("GOVERNANCE_CAPABILITY_REQUIRED", "Access denied.", 403);
     }
+    // Replay can return without createPlan's transaction. It must not reuse a
+    // pre-demotion actor's ADMIN role to issue an R2 apply token.
+    if (route.gate === "R2") await this.assertActorAuthority(user, input.workspaceId, commandType);
     const snapshot = await this.repository.detail(input.workspaceId, input.approvalId);
-    if (!snapshot || snapshot.approval.gate !== "R1") {
+    if (!snapshot) {
       throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
+    }
+    if (snapshot.approval.gate !== route.gate) {
+      const readGate = snapshot.approval.gate === "R2" ? "r2"
+        : snapshot.approval.gate === "LIVE_GATE" ? "live" : null;
+      if (!readGate || !await this.governance(user, readGate, "read", input.workspaceId)) {
+        throw new GovernanceError("APPROVAL_NOT_FOUND", "Approval not found.", 404);
+      }
+      await this.rejected(user, input, requestId, "GOVERNANCE_DECISION_GATE_MISMATCH", "CONFLICT");
+      throw new GovernanceError("GOVERNANCE_DECISION_GATE_MISMATCH", "This command belongs to a different review gate.", 409,
+        { requested_gate: route.gate, actual_gate: snapshot.approval.gate, source_side_effect_requested: false });
     }
     const approval = snapshot.approval;
     if (computeEvidenceManifestHash(snapshot.evidence) !== approval.evidenceSetHash) {
@@ -741,7 +971,7 @@ export class GovernanceService {
     }
     const evidenceHashes = sortedUnique(snapshot.evidence.map((item) => item.sha256));
     const payloadHash = digest({
-      command_type: "GOVERNANCE_R1_DECISION",
+      command_type: commandType,
       command_version: 1,
       approval_id: input.approvalId,
       expected_approval_version: input.expectedApprovalVersion,
@@ -769,6 +999,24 @@ export class GovernanceService {
     if (approval.approvalVersion !== input.expectedApprovalVersion) blockerCodes.push("APPROVAL_VERSION_CONFLICT");
     if (!sameStrings(evidenceHashes, hashes)) blockerCodes.push("EVIDENCE_HASH_MISMATCH");
     if (approval.decisionActorIds.includes(user.userId)) blockerCodes.push("ACTOR_ALREADY_DECIDED");
+    if (route.gate === "LIVE_GATE") blockerCodes.push("LIVE_PARENT_NOT_PUBLISHED");
+    if (route.gate === "R2") {
+      const r2 = await this.repository.r2Detail(input.workspaceId, input.approvalId);
+      const parent = r2?.lineage;
+      if (!parent) blockerCodes.push("R1_LINEAGE_UNPUBLISHED");
+      else {
+        if (user.role !== parent.approverRole) blockerCodes.push("ADMIN_ROLE_REQUIRED");
+        if (input.decision !== "DENY" && parent.planAuthorUserId === user.userId) blockerCodes.push("SELF_APPROVAL_PROHIBITED");
+        if (computeEvidenceManifestHash(r2!.parentEvidence) !== parent.r1EvidenceSetHash) {
+          blockerCodes.push("R1_EVIDENCE_MANIFEST_INTEGRITY_FAILED");
+        }
+        if (["APPROVE", "APPROVE_WITH_CONDITION"].includes(input.decision)) {
+          if (!["APPROVED", "APPROVED_WITH_CONDITION"].includes(parent.r1Status)) blockerCodes.push("R1_NOT_APPROVED");
+          if (parent.r1ExpiresAt <= new Date()) blockerCodes.push("R1_EXPIRED");
+          if (!parent.r1EvidenceComplete) blockerCodes.push("R1_EVIDENCE_INCOMPLETE");
+        }
+      }
+    }
     if (input.decision !== "DENY") {
       if (approval.requesterUserId === user.userId || approval.artifactCreatorUserId === user.userId) {
         blockerCodes.push("SELF_APPROVAL_PROHIBITED");
@@ -790,6 +1038,8 @@ export class GovernanceService {
     try {
       created = await this.repository.createPlan({
         operationId,
+        commandType,
+        actor: user,
         workspaceId: input.workspaceId,
         approvalId: input.approvalId,
         actorUserId: user.userId,
@@ -800,6 +1050,7 @@ export class GovernanceService {
         conditions: input.conditions,
         expectedApprovalVersion: input.expectedApprovalVersion,
         quorumRequired: approval.quorumRequired,
+        policyVersion: approval.policyVersion,
         evidenceSetHash: approval.evidenceSetHash,
         evidenceHashes: hashes,
         blockerCodes: sortedUnique(blockerCodes),
@@ -812,6 +1063,8 @@ export class GovernanceService {
         outboxMessageId: newUlid("msg"),
       });
     } catch (error) {
+      const authority = error as { governanceCode?: string; status?: number };
+      if (authority.governanceCode) throw new GovernanceError(authority.governanceCode, "Operation could not be planned.", authority.status ?? 409);
       if ((error as { code?: string }).code !== "23505") throw error;
       const raced = await this.repository.findPlanByKey(input.workspaceId, user.userId, input.requestKey);
       if (!raced || raced.payloadHash !== payloadHash) {
@@ -825,10 +1078,15 @@ export class GovernanceService {
     return { replayed: false, response: publicPlan(created, applyToken) };
   }
 
-  async apply(user: PortalUser, workspaceId: string, operationId: string, applyToken: string, requestId: string) {
-    await this.assertGovernance(user, "r1", "decide", workspaceId);
+  async apply(user: PortalUser, workspaceId: string, operationId: string, applyToken: string, requestId: string,
+    commandType: PortalDecisionCommand = "GOVERNANCE_R1_DECISION") {
+    const route = decisionRoute(commandType);
+    await this.assertGovernance(user, route.access, "decide", workspaceId);
     const plan = await this.repository.findPlan(workspaceId, user.userId, operationId);
     if (!plan) throw new GovernanceError("OPERATION_NOT_FOUND", "Operation not found.", 404);
+    if ((plan.commandType ?? "GOVERNANCE_R1_DECISION") !== commandType) {
+      throw new GovernanceError("GOVERNANCE_DECISION_GATE_MISMATCH", "This command belongs to a different review gate.", 409);
+    }
     const tokenHash = createHash("sha256").update(applyToken, "utf8").digest("hex");
     if (
       !constantTimeEqual(tokenHash, plan.applyTokenHash) ||
@@ -836,7 +1094,7 @@ export class GovernanceService {
     ) {
       await this.repository.recordRejected({
         eventId: newUlid("evt"),
-        eventType: "governance.r1_decision.apply_denied",
+        eventType: `governance.${route.schema}_decision.apply_denied`,
         actorUserId: user.userId,
         workspaceId,
         requestId,
@@ -851,6 +1109,8 @@ export class GovernanceService {
     try {
       const result = await this.repository.applyDecision({
         workspaceId,
+        commandType,
+        actor: user,
         actorUserId: user.userId,
         actorUsername: user.username,
         operationId,
@@ -862,7 +1122,8 @@ export class GovernanceService {
         limitationIds: plan.conditions.map(() => newUlid("lim")),
       });
       return {
-        schema_version: "governance.r1-decision-apply.v1",
+        schema_version: `governance.${route.schema}-decision-apply.v1`,
+        ...(route.gate !== "R1" ? { decision_authority: "PORTAL_ONLY", source_side_effect_requested: false } : {}),
         operation_id: operationId,
         receipt_id: (result.plan.responseJson?.receipt_id as string | undefined) ?? null,
         status: "PENDING",
@@ -877,7 +1138,7 @@ export class GovernanceService {
       if (!typed.governanceCode) throw error;
       await this.repository.recordRejected({
         eventId: newUlid("evt"),
-        eventType: "governance.r1_decision.apply_rejected",
+        eventType: `governance.${route.schema}_decision.apply_rejected`,
         actorUserId: user.userId,
         workspaceId,
         requestId,
@@ -895,16 +1156,21 @@ export class GovernanceService {
   async operation(user: PortalUser, workspaceId: string, operationId: string) {
     const plan = await this.repository.findPlan(workspaceId, user.userId, operationId);
     if (!plan) throw new GovernanceError("OPERATION_NOT_FOUND", "Operation not found.", 404);
+    const command = plan.commandType ?? "GOVERNANCE_R1_DECISION";
+    const route = decisionRoute(command);
+    await this.assertGovernance(user, route.access, "decide", workspaceId);
+    if (route.gate === "R2") await this.assertActorAuthority(user, workspaceId, command);
     const status = plan.status === "APPLIED"
       ? "SUCCEEDED"
       : plan.expiresAt <= new Date()
         ? "EXPIRED"
         : "PENDING";
     return {
-      schema_version: "governance.r1-decision-operation.v1",
+      schema_version: `governance.${route.schema}-decision-operation.v1`,
       operation_id: plan.operationId,
       approval_id: plan.approvalId,
-      command_type: "GOVERNANCE_R1_DECISION",
+      command_type: command,
+      ...(route.gate !== "R1" ? { decision_authority: "PORTAL_ONLY", source_side_effect_requested: false } : {}),
       status,
       // Workflow settlement and observed verification are separate fields by
       // contract. For this Portal-owned transaction they advance together;
@@ -919,6 +1185,16 @@ export class GovernanceService {
       applied_at: plan.appliedAt?.toISOString() ?? null,
       receipt: plan.responseJson,
     };
+  }
+
+  private async assertActorAuthority(user: PortalUser, workspaceId: string, commandType: PortalDecisionCommand): Promise<void> {
+    try {
+      await this.repository.assertActorAuthority(user, workspaceId, commandType);
+    } catch (error) {
+      const typed = error as { governanceCode?: string; status?: number };
+      if (!typed.governanceCode) throw error;
+      throw new GovernanceError(typed.governanceCode, "Access denied.", typed.status ?? 403);
+    }
   }
 
   private publicApproval(approval: ApprovalRecord) {
@@ -961,7 +1237,7 @@ export class GovernanceService {
   ) {
     await this.repository.recordRejected({
       eventId: newUlid("evt"),
-      eventType: "governance.r1_decision.plan_rejected",
+      eventType: `governance.${decisionRoute(input.commandType ?? "GOVERNANCE_R1_DECISION").schema}_decision.plan_rejected`,
       actorUserId: user.userId,
       workspaceId: input.workspaceId,
       requestId,
@@ -980,11 +1256,11 @@ export class GovernanceService {
  * One entry per gate in `APPROVAL_GATES`, each mirroring the authority that
  * gate's own decision path enforces — measured, not assumed:
  *
- *  - `R1` / `R2` / `LIVE_GATE` — `governance.service` guards their detail and
- *    decision paths with `assertGovernance(user, "r1" | "r2" | "live", ...)`,
- *    so the matching `*.decide` capability is the honest predicate. `LIVE_GATE`
- *    is `live`, not `r2`: it has its own route (`/approvals/:id/live`) and its
- *    own capability, even though Command Center links it at the R2 screen.
+ *  - `R1` has its own local executor. `R2` has a separate Portal-only executor
+ *    with ADMIN + scoped decide grant; each row also requires published R1
+ *    lineage and independent authorship. `LIVE_GATE` has a named command but
+ *    stays blocked until its predecessor policy/lineage is published. Neither
+ *    gate aliases the R1 command or authorizes Execution side effects.
  *  - `PAPER_EXIT` — still role-gated. `paper-exit.service.ts` throws
  *    `APPROVER_ROLE_REQUIRED` for a non-`ADMIN`, so for these rows `ADMIN` is
  *    the correct answer and a capability check would be the wrong one.
@@ -997,7 +1273,7 @@ export class GovernanceService {
  * frozen in A4-1 and does not cover the exit gates; inventing entries for them
  * here would create authority the owner never granted.
  */
-function approvalDecisionPredicate(
+export function approvalDecisionPredicate(
   user: PortalUser,
   access: EffectiveAccess,
   workspaceId: string | null,
@@ -1007,9 +1283,9 @@ function approvalDecisionPredicate(
       case "R1":
         return mayGovern({ access, gate: "r1", mode: "decide", workspaceId });
       case "R2":
-        return mayGovern({ access, gate: "r2", mode: "decide", workspaceId });
+        return user.role === "ADMIN" && mayGovern({ access, gate: "r2", mode: "decide", workspaceId });
       case "LIVE_GATE":
-        return mayGovern({ access, gate: "live", mode: "decide", workspaceId });
+        return false;
       case "PAPER_EXIT":
         return user.role === "ADMIN";
       case "SANDBOX_EXIT":
@@ -1029,7 +1305,7 @@ function approvalDecisionPredicate(
  * capability for it.  SANDBOX_EXIT has no published reader/decision contract,
  * so only the Portal owner can inspect its historical rows until one exists.
  */
-function approvalReadGates(
+export function approvalReadGates(
   user: PortalUser,
   access: EffectiveAccess,
   workspaceId: string,

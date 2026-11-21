@@ -4,12 +4,23 @@ import {
   Inject,
   Injectable,
   UnauthorizedException,
+  Optional,
 } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
-import { AuthService } from "../auth/auth.service";
+import { AuthService, AuthError } from "../auth/auth.service";
 import { sessionTokenFrom } from "../auth/cookies";
 import { PortalUser } from "../domain";
 import { WorkspacesRepository } from "../repos/workspaces";
+import type { ControlApiConfig } from "../config";
+import { retainedReview, coreExecutionRead } from "../execution/retained-read-profile";
+import { ForbiddenException, NotFoundException } from "@nestjs/common";
+import { CONTROL_API_CONFIG } from "../tokens";
+import {isReadStoreUnavailable} from "../db/read-unavailable";
+import { CurrentHumanWorkspaceProvisioner } from "../execution-v2/current-human-workspace";
+import { nativeResearchReview, nativeResearchReadAllowed } from "../execution/native-review-profile";
+import { NativeCurrentAccountScopes } from "../execution-v2/native-current-runtime";
+import { CommandStatusComposition } from "../execution-v2/command-status-composition";
+import { ManagerCurrentAccounts } from "../execution-v2/manager-current-accounts";
 
 /**
  * Authenticated-session guard for façade routes. Attaches the portal user
@@ -21,10 +32,35 @@ export class SessionGuard implements CanActivate {
   constructor(
     @Inject(AuthService) private readonly auth: AuthService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
+    @Optional() @Inject(CurrentHumanWorkspaceProvisioner)
+    private readonly currentHumanWorkspace?: CurrentHumanWorkspaceProvisioner,
+    @Optional() @Inject(NativeCurrentAccountScopes)
+    private readonly nativeCurrentAccount?:NativeCurrentAccountScopes,
+    @Optional() @Inject(CommandStatusComposition)
+    private readonly commandStatus?:CommandStatusComposition,
+    @Optional() @Inject(ManagerCurrentAccounts)
+    private readonly managerCurrentAccount?:ManagerCurrentAccounts,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    try { return await this.authorize(context); }
+    catch(error){
+      if (isReadStoreUnavailable(error))
+        throw new AuthError("PORTAL_AUTHORITY_UNAVAILABLE","Portal identity authority is temporarily unavailable.",503);
+      throw error;
+    }
+  }
+
+  private async authorize(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<FastifyRequest>();
+    // Current actor/grant/source fences also protect negative responses.
+    // Neither scoped nor legacy Execution payloads may be shared by HTTP caches.
+    const executionRead = (request.url ?? "").split("?")[0].startsWith("/api/v1/execution/");
+    const ownAccessRead = ["/api/admin/profile-access/v2/eligibility", "/api/admin/profile-access/v2/eligibility/batch",
+      "/api/admin/profile-access/v2/self-navigation", "/api/admin/profile-access/v2/self-context"]
+      .includes((request.url ?? "").split("?")[0]);
+    if (executionRead || ownAccessRead) context.switchToHttp().getResponse().header("Cache-Control", "private, no-store");
     const token = sessionTokenFrom(request);
     if (!token) {
       throw new UnauthorizedException("Invalid session.");
@@ -37,14 +73,48 @@ export class SessionGuard implements CanActivate {
     if (!user || user.status !== "ACTIVE" || user.mustChangePassword) {
       throw new UnauthorizedException("Invalid session.");
     }
-    const workspaceId = await this.workspaces.ensurePersonal(user.userId, user.username);
+    const nativeReview = nativeResearchReview(this.config) && executionRead;
+    if (nativeReview && !nativeResearchReadAllowed(this.config!, request.method,
+      request.url.split("?")[0], (request.query ?? {}) as Record<string, unknown>,!!this.nativeCurrentAccount,!!this.commandStatus,
+      !!this.managerCurrentAccount))
+      throw new ForbiddenException("NATIVE_RESEARCH_REVIEW_ROUTE_NOT_COMMISSIONED");
+    let workspaceId:string;
+    if(nativeReview){
+      const configured=this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+      if(!await this.workspaces.canReadExecution(configured,user.userId,"paper"))
+        throw new NotFoundException("Workspace not found.");
+      const existing=await this.workspaces.personalWorkspace(user.userId);
+      if(!existing)throw new NotFoundException("Workspace not found.");
+      workspaceId=existing.workspaceId;
+    }else workspaceId = this.currentHumanWorkspace
+        ? await this.currentHumanWorkspace.ensure({ user_id: user.userId,
+            session_id: session.sessionId, session_generation: session.sessionVersion })
+        : await this.workspaces.ensurePersonal(user.userId, user.username);
+    const viewerWorkspaceId = workspaceId;
+    if (nativeReview) {
+      const configured = this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+      workspaceId = configured;
+    }
+    if (retainedReview(this.config) && executionRead) {
+      if (request.method !== "GET" && request.method !== "HEAD") throw new ForbiddenException("UDB_RETAINED_REVIEW_MUTATION_DISABLED");
+      const query = request.query as Record<string, unknown>;
+      const configured = this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+      if (!coreExecutionRead(request.url.split("?")[0]) && ((query.workspace_id !== undefined && query.workspace_id !== configured) ||
+        !await this.workspaces.canReadExecution(configured,user.userId,typeof query.environment === "string" &&
+          ["paper","sandbox","live","all","canary"].includes(query.environment) ? query.environment : undefined))) {
+        throw new NotFoundException("Workspace not found.");
+      }
+      if (!coreExecutionRead(request.url.split("?")[0])) workspaceId = configured;
+    }
     const state = request as unknown as {
       portalUser: PortalUser;
       portalWorkspaceId: string;
+      portalViewerWorkspaceId: string;
       portalSession: typeof session;
     };
     state.portalUser = user;
     state.portalWorkspaceId = workspaceId;
+    state.portalViewerWorkspaceId = viewerWorkspaceId;
     state.portalSession = session;
     return true;
   }

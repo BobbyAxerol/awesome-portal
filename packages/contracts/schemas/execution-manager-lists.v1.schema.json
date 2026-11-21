@@ -45,7 +45,64 @@
         "venue": { "$ref": "#/$defs/Identifier" },
         "state": { "$ref": "#/$defs/Identifier" },
         "credential_state": { "$ref": "#/$defs/Identifier" },
-        "updated_at": { "$ref": "#/$defs/Timestamp" }
+        "updated_at": { "$ref": "#/$defs/Timestamp" },
+        "figures": { "$ref": "#/$defs/BindingFigures" }
+      }
+    },
+    "BindingDecimal": { "type": "string", "maxLength": 128, "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$" },
+    "BindingAmountFigure": {
+      "description": "One exact amount in ONE currency, with the instant the owning source observed it and how much of the owning population it covers. Never a conversion and never a sum across currencies.",
+      "type": "object", "additionalProperties": false,
+      "required": ["currency", "value", "observed_at", "coverage"],
+      "properties": {
+        "currency": { "$ref": "#/$defs/Identifier" },
+        "value": { "$ref": "#/$defs/BindingDecimal" },
+        "observed_at": { "$ref": "#/$defs/Timestamp" },
+        "coverage": { "$ref": "#/$defs/Completeness" }
+      }
+    },
+    "BindingAmountFigures": {
+      "description": "One entry per currency (currencies are distinct). A mixed-currency binding is several entries, never one summed value.",
+      "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/$defs/BindingAmountFigure" }
+    },
+    "BindingSleeveFigure": {
+      "type": "object", "additionalProperties": false,
+      "required": ["count", "observed_at", "coverage"],
+      "properties": {
+        "count": { "type": "integer", "minimum": 0 },
+        "observed_at": { "$ref": "#/$defs/Timestamp" },
+        "coverage": { "$ref": "#/$defs/Completeness" }
+      }
+    },
+    "BindingFigures": {
+      "description": "Optional per-row list figures. A property that is OMITTED means this producer has no owning source for it (the reader keeps its per-row fallback). A property that is null means the owning source did not report it (typed absence, not zero, no fallback). native_equity is the venue's native equity, never the wallet balance.",
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "native_equity": { "oneOf": [{ "$ref": "#/$defs/BindingAmountFigures" }, { "type": "null" }] },
+        "virtual_used": { "oneOf": [{ "$ref": "#/$defs/BindingAmountFigures" }, { "type": "null" }] },
+        "virtual_headroom": { "oneOf": [{ "$ref": "#/$defs/BindingAmountFigures" }, { "type": "null" }] },
+        "sleeve_count": { "oneOf": [{ "$ref": "#/$defs/BindingSleeveFigure" }, { "type": "null" }] }
+      }
+    },
+    "BindingCount": { "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "null" }] },
+    "BindingCounts": {
+      "description": "Optional per-environment counts over the SAME authorized snapshot as the page: rows and fields are authorized first, so a hidden row is in no count. A property that is null was not computable from owning facts; 0 is a counted zero. Omitted when the producer cannot compute any.",
+      "type": "object", "additionalProperties": false,
+      "required": ["basis", "observed_at", "coverage"],
+      "properties": {
+        "basis": { "const": "AUTHORIZED_SNAPSHOT" },
+        "observed_at": { "$ref": "#/$defs/Timestamp" },
+        "coverage": { "$ref": "#/$defs/Completeness" },
+        "all": { "$ref": "#/$defs/BindingCount" },
+        "issues": { "$ref": "#/$defs/BindingCount" },
+        "by_environment": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "paper": { "$ref": "#/$defs/BindingCount" },
+            "sandbox": { "$ref": "#/$defs/BindingCount" },
+            "live": { "$ref": "#/$defs/BindingCount" }
+          }
+        }
       }
     },
     "AppliedFilter": {
@@ -132,7 +189,8 @@
             "schema_version": { "const": "execution.bindings-list.v1" },
             "record_authority": {}, "source_authority": {}, "delivery_profile": {}, "workspace_id": {}, "environment": {},
             "read_at": {}, "source_as_of": {}, "freshness": {}, "completeness": {},
-            "page": { "$ref": "#/$defs/BindingPage" }
+            "page": { "$ref": "#/$defs/BindingPage" },
+            "counts": { "$ref": "#/$defs/BindingCounts" }
           }
         }
       ]

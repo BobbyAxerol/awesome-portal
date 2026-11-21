@@ -2,7 +2,13 @@
 # Runs canonical fixture and generated-type checks after dependencies exist.
 set -eu
 
-./node_modules/.bin/vitest run --no-cache
+# This verifier is invoked from developer worktrees as well as the immutable
+# release image, so it must not assume the image-only `/repo` mount exists.
+contracts_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+repo_root=$(CDPATH= cd -- "$contracts_dir/../.." && pwd)
+cd "$contracts_dir"
+
+./node_modules/.bin/vitest run --no-cache --maxWorkers=2
 node tooling/generate-execution-command-catalog.mjs --check
 
 generate_and_compare() {
@@ -13,7 +19,50 @@ generate_and_compare() {
   diff -q "${temporary}" "${target_file}"
 }
 
-generate_and_compare /repo/apps/portal/registry/openapi/portal-api.openapi.json generated/portal-api.d.ts
+generate_and_compare "$repo_root/apps/portal/registry/openapi/portal-api.openapi.json" generated/portal-api.d.ts
+node tooling/generate-execution-v2-foundation.mjs --check
+generate_and_compare openapi/execution-v2-foundation.openapi.json generated/execution-v2-foundation.d.ts
+node tooling/generate-portal-profile.mjs --check
+generate_and_compare openapi/portal-profile.openapi.json generated/portal-profile.d.ts
+node tooling/generate-execution-access.mjs --check
+generate_and_compare openapi/execution-access.openapi.json generated/execution-access.d.ts
+node tooling/generate-execution-incident-eligibility.mjs --check
+generate_and_compare openapi/execution-incident-eligibility.openapi.json generated/execution-incident-eligibility.d.ts
+node tooling/generate-execution-equity-projection-source.mjs --check
+generate_and_compare openapi/execution-equity-projection-source.openapi.json generated/execution-equity-projection-source.d.ts
+node tooling/generate-governance-requester-reads.mjs --check
+node tooling/generate-execution-publication.mjs --check
+generate_and_compare openapi/execution-publication-catalogue.openapi.json generated/execution-publication-catalogue.d.ts
+node tooling/generate-execution-manager-models.mjs --check
+generate_and_compare openapi/execution-manager-models.openapi.json generated/execution-manager-models.d.ts
+node tooling/generate-execution-manager-series.mjs --check
+generate_and_compare openapi/execution-manager-series.openapi.json generated/execution-manager-series.d.ts
+node tooling/generate-execution-trusted-commands.mjs --check
+generate_and_compare openapi/execution-trusted-commands.openapi.json generated/execution-trusted-commands.d.ts
+node tooling/generate-execution-workflows.mjs --check
+generate_and_compare openapi/execution-workflows.openapi.json generated/execution-workflows.d.ts
+node tooling/generate-execution-scoped-realtime.mjs --check
+generate_and_compare openapi/execution-scoped-realtime.openapi.json generated/execution-scoped-realtime.d.ts
+node tooling/generate-execution-alpha-fleet-realtime.mjs --check
+generate_and_compare openapi/execution-alpha-fleet-realtime.openapi.json generated/execution-alpha-fleet-realtime.d.ts
+node tooling/generate-execution-history.mjs --check
+node tooling/generate-execution-manager-scoped.mjs --check
+node tooling/generate-execution-scoped-records.mjs --check
+node tooling/execution-operation-reader.mjs --check
+node tooling/generate-execution-resource-scoped.mjs --check
+node tooling/generate-execution-retained-scoped.mjs --check
+node tooling/generate-execution-analytics-scoped.mjs --check
+node tooling/generate-execution-stage-drift.mjs --check
+node tooling/generate-execution-stage-facts.mjs --check
+node tooling/generate-execution-served-envelopes.mjs --check
+generate_and_compare openapi/execution-stage-drift.openapi.json generated/execution-stage-drift.d.ts
+node tooling/generate-execution-financial-chart.mjs --check
+generate_and_compare openapi/execution-financial-chart.openapi.json generated/execution-financial-chart.d.ts
+node tooling/generate-execution-serving-reads.mjs --check
+generate_and_compare openapi/execution-serving-reads.openapi.json generated/execution-serving-reads.d.ts
+generate_and_compare openapi/execution-resource-scoped.openapi.json generated/execution-resource-scoped.d.ts
+generate_and_compare openapi/execution-scoped-records.openapi.json generated/execution-scoped-records.d.ts
+generate_and_compare openapi/execution-history.openapi.json generated/execution-history.d.ts
 generate_and_compare openapi/execution-analytics.openapi.json generated/execution-analytics.d.ts
 generate_and_compare openapi/execution-query-analytics.openapi.json generated/execution-query-analytics.d.ts
 generate_and_compare openapi/execution-analytics-series.openapi.json generated/execution-analytics-series.d.ts
@@ -34,3 +83,30 @@ generate_and_compare openapi/execution-profile-read.openapi.json generated/execu
 generate_and_compare openapi/execution-manager-lists.openapi.json generated/execution-manager-lists.d.ts
 generate_and_compare openapi/execution-contract-authority.openapi.json generated/execution-contract-authority.d.ts
 generate_and_compare openapi/execution-market-context.openapi.json generated/execution-market-context.d.ts
+generate_and_compare openapi/research-alpha-import.openapi.json generated/research-alpha-import.d.ts
+generate_and_compare openapi/research-preflight.openapi.json generated/research-preflight.d.ts
+node tooling/generate-research-dataset-index.mjs --check
+generate_and_compare openapi/research-dataset-index.openapi.json generated/research-dataset-index.d.ts
+node tooling/generate-research-run-setup.mjs --check
+node tooling/generate-research-execution-recipes.mjs --check
+generate_and_compare openapi/research-run-setup.openapi.json generated/research-run-setup.d.ts
+generate_and_compare openapi/research-foundation.openapi.json generated/research-foundation.d.ts
+generate_and_compare openapi/research-run-create.openapi.json generated/research-run-create.d.ts
+generate_and_compare openapi/research-progress.openapi.json generated/research-progress.d.ts
+node tooling/generate-research-engine-qualification.mjs --check
+generate_and_compare openapi/research-run-library.openapi.json generated/research-run-library.d.ts
+generate_and_compare openapi/research-evidence.openapi.json generated/research-evidence.d.ts
+generate_and_compare openapi/research-split.openapi.json generated/research-split.d.ts
+generate_and_compare openapi/research-search.openapi.json generated/research-search.d.ts
+generate_and_compare openapi/research-freeze.openapi.json generated/research-freeze.d.ts
+generate_and_compare openapi/research-replay.openapi.json generated/research-replay.d.ts
+generate_and_compare openapi/research-current-source.openapi.json generated/research-current-source.d.ts
+node tooling/generate-research-replay-continuity.mjs --check
+generate_and_compare openapi/research-report.openapi.json generated/research-report.d.ts
+generate_and_compare openapi/research-attempt-lineage.openapi.json generated/research-attempt-lineage.d.ts
+generate_and_compare openapi/research-compare.openapi.json generated/research-compare.d.ts
+generate_and_compare openapi/research-release-candidate.openapi.json generated/research-release-candidate.d.ts
+node tooling/generate-research-final-audit.mjs --check
+generate_and_compare openapi/research-final-audit.openapi.json generated/research-final-audit.d.ts
+node tooling/generate-research-window-execution.mjs --check
+generate_and_compare openapi/research-window-execution.openapi.json generated/research-window-execution.d.ts

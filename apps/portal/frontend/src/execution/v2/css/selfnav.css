@@ -1,0 +1,97 @@
+/* Execution V2 · the "Navigation unavailable" line in the left rail (W3, FE-057/058).
+ *
+ * Shown only while the rail is shut because the self-navigation read expired or failed. Type only through the `--exec-font-*`
+ * roles, colour only through tokens, one fg/bg pair per rule. Focus ring is the shell's own (outline on :focus-visible), so the
+ * Retry control reads like every other control in the rail. Never animated, never positioned over the entries. */
+
+.exec-selfnav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--warn-bg);
+  color: var(--ink);
+  border-left: 3px solid var(--warn);
+  overflow-wrap: anywhere;
+}
+
+.exec-selfnav-text {
+  margin: 0;
+  font: var(--exec-font-body);
+}
+
+.exec-selfnav-lead {
+  font-weight: 600;
+}
+
+.exec-selfnav-retry {
+  font: var(--exec-font-label);
+  padding: var(--space-1) var(--space-3);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+
+.exec-selfnav-retry:hover {
+  background: var(--paper-raised);
+}
+
+.exec-selfnav-retry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* A read that is already being repeated: the control stays enabled (a disabled control would drop focus) and says so in text. */
+.exec-selfnav-retry[aria-busy="true"] {
+  cursor: progress;
+}
+
+/* Workspace chooser (BE-P7 AMBIGUOUS): the candidates as plain buttons, in the order published. Nothing is chosen for the member. */
+.exec-selfnav-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-self: stretch;
+}
+
+.exec-selfnav-choice {
+  font: var(--exec-font-label);
+  padding: var(--space-1) var(--space-3);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exec-selfnav-choice:hover:not(:disabled) {
+  background: var(--paper-raised);
+}
+
+.exec-selfnav-choice:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.exec-selfnav-choice:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+/* Collapsed rail: the control alone; the sentence is its accessible name and tooltip. */
+.exec-selfnav[data-collapsed="true"] {
+  align-items: center;
+  margin: 0 var(--space-1) var(--space-3);
+  padding: var(--space-1);
+  border-left-width: 2px;
+}
+
+.exec-selfnav[data-collapsed="true"] .exec-selfnav-retry {
+  padding: var(--space-1) var(--space-2);
+}

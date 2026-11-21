@@ -14,11 +14,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /opt/portal
 
-# The stack constraint pins quantbt-engine==1.0.8 from PyPI, so the image
+# The stack constraint pins quantbt-engine==1.1.1 from PyPI, so the image
 # never depends on a sibling QuantBT source checkout.
 COPY constraints/portal.txt /tmp/portal-constraints.txt
 COPY apps/portal/backend/pyproject.toml apps/portal/backend/README.md ./
-COPY apps/portal/backend/src ./src
+# A private/self-hosted checkout may be umask-0077. PYTHONPATH uses this copy,
+# not only pip's installed package: keep image-owned code readable by the
+# non-root runtime without granting it write ownership or changing host modes.
+COPY --chmod=0755 apps/portal/backend/src ./src
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir --constraint /tmp/portal-constraints.txt .
 

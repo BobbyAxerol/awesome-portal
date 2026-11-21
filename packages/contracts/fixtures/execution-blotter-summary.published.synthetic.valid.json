@@ -1,0 +1,34 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.blotter-summary.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "environment": "paper",
+    "status_buckets": [
+      {
+        "bucket": "WORKING",
+        "count": 3
+      },
+      {
+        "bucket": "CONDITIONAL",
+        "count": 0
+      },
+      {
+        "bucket": "CANCELLED",
+        "count": 5
+      },
+      {
+        "bucket": "FILLED",
+        "count": 40
+      }
+    ],
+    "funnel": {
+      "submitted": 50,
+      "risk_granted": 48,
+      "venue_acknowledged": 47,
+      "filled": 40
+    }
+  }
+}

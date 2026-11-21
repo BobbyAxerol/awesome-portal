@@ -588,9 +588,6 @@ export function FullBlotter({
           </header>
           {scope ? <div className="exec-blotter-scope">{scope}</div> : null}
           <div className="exec-bl-toolbar" role="group" aria-label="Scope">
-            {["Alpha All ▾", "Deployment All ▾", "Venue All ▾", "24h ▾"].map((label) => (
-              <button key={label} type="button" className="exec-bl-chip" disabled title="Scope filters are not published by the blotter contract (BR-EX-24) — the list is the full scope">{label}</button>
-            ))}
             <span className="exec-bl-spacer" />
             <details className="exec-blotter-columns exec-bl-columns">
               <summary className="exec-bl-chip">Columns ▾</summary>

@@ -167,7 +167,7 @@ describe("EX-BE-06 same-origin realtime boundary", () => {
     const response = new EventEmitter();
     const upstream = Object.assign(new EventEmitter(), {
       closeCalls: [] as Array<number | undefined>,
-      close(code?: number) {
+      close(this: EventEmitter & { closeCalls: Array<number | undefined> }, code?: number) {
         this.closeCalls.push(code);
         this.emit("close");
       },
@@ -200,7 +200,7 @@ describe("EX-BE-06 same-origin realtime boundary", () => {
     });
     const upstream = Object.assign(new EventEmitter(), {
       closeCalls: 0,
-      close() {
+      close(this: EventEmitter & { closeCalls: number }) {
         this.closeCalls += 1;
         this.emit("close");
       },

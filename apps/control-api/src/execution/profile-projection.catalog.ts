@@ -346,6 +346,11 @@ const ACCOUNT_SYNC = [
   "sync_id", "account_id", "mode", "venue", "source", "status", "buying_power",
   "currency", "synced_at", "created_at",
 ] as const;
+// Finite status observations only. Keep snapshot sync_id privately for its
+// declared PK; no buying power, checksum, archive/custody or raw source state.
+// Neither relation is a lifecycle/history ladder or a current-health claim.
+const ACCOUNT_SYNC_CURRENT_STATE = ["account_id", "currency", "mode", "status", "updated_at"] as const;
+const ACCOUNT_SYNC_SNAPSHOTS = ["sync_id", "account_id", "currency", "mode", "status", "created_at"] as const;
 const BROKER_SYNC = [
   "sync_id", "external_account_ref", "mode", "venue", "source", "status",
   "buying_power", "currency", "synced_at", "created_at",
@@ -424,6 +429,18 @@ const LEG = [
   "trigger_reference", "time_in_force", "good_till_date", "reduce_only", "post_only", "state",
   "average_fill_price", "version", "created_at", "updated_at",
 ] as const;
+// Exact existing generated operations, not a dynamic relation/field selector.
+// Parent-only private lineage plus the finite leg reader's current subset.
+// Current observations only: neither binding is a lifecycle/history ladder.
+const BRACKET_PARENT = [
+  "bracket_group_id", "account_id", "strategy_id", "execution_session_id", "mode", "created_at", "updated_at",
+] as const;
+const BRACKET_LEG = [
+  "bracket_group_id", "leg_id", "side", "quantity", "price", "status", "created_at", "updated_at", "submitted_at",
+] as const;
+// Source-observed technical scalars only. No component/health interpretation,
+// instance topology, public-purpose admission or history/stream activation.
+const SERVICE_HEARTBEAT = ["service_name", "last_seen_at", "status"] as const;
 const JOURNAL = [
   "command_id", "command_kind", "contract_revision", "mode", "venue", "alpha_id", "account_id",
   "client_order_id", "aggregate_key", "state", "outcome_class", "accepted_at", "dispatched_at",
@@ -447,6 +464,15 @@ const FLEET: readonly ProfileProjectionBinding[] = [
   bind("reconciliation", "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.reconciliation", "reconciliation_findings", FINDING),
   bind("venue_accounts", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.venue-accounts", "venue_accounts", VENUE_ACCOUNT),
   bind("broker_sync", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC),
+  bind("account_sync_current_state", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-sync-current-state", "account_sync_current_state", ACCOUNT_SYNC_CURRENT_STATE),
+  bind("account_sync_snapshots", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-sync-snapshots", "account_sync_snapshots", ACCOUNT_SYNC_SNAPSHOTS),
+  // Declared source PK plus finite metadata; no fee, leverage, margin or loan
+  // capture. Current account purpose and field grants are enforced at reads.
+  bind("account_policies", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-policies", "account_policies",
+    ["account_policy_id", "account_id", "mode", "venue", "created_at", "updated_at"]),
+  bind("brackets", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-brackets", "order_brackets", BRACKET_PARENT),
+  bind("bracket_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-bracket-legs", "order_bracket_legs", BRACKET_LEG),
+  bind("service_heartbeats", "EXECUTION_COMMAND_CENTER_SCREEN", "manager.current.service-heartbeats", "service_heartbeats", SERVICE_HEARTBEAT),
 ];
 
 const PAPER: readonly ProfileProjectionBinding[] = [

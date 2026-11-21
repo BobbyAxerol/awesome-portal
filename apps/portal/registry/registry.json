@@ -1,7 +1,7 @@
 {
   "schema_version": "portal.registry.v1",
   "registry_id": "portal-default",
-  "revision": 6,
+  "revision": 9,
   "feature_groups": [
     {
       "id": "command",
@@ -493,7 +493,11 @@
         "order": 10,
         "icon_key": "shield-check",
         "show_in_sidebar": true,
-        "show_in_command_palette": true
+        "show_in_command_palette": true,
+        "scoped_v2_replacement": {
+          "read_mode": "SCOPED_V2",
+          "feature_id": "EXECUTION_APPROVALS"
+        }
       }
     },
     {
@@ -699,6 +703,40 @@
         "icon_key": "user-round-cog",
         "show_in_sidebar": true,
         "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "PROFILE_ACCESS_SELF",
+      "group": "administration",
+      "label": "My access",
+      "description": "What you can see and do, and the grants behind it. Only your own.",
+      "canonical_route": "/administration/my-access",
+      "legacy_routes": [],
+      "maturity": "AVAILABLE",
+      "data_mode": "NONE",
+      "permissions": [],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": null,
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [],
+      "concern_ids": [],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": null,
+      "navigation": {
+        "order": 15,
+        "icon_key": "user-round-cog",
+        "show_in_sidebar": false,
+        "show_in_command_palette": false
       }
     },
     {
@@ -932,7 +970,8 @@
       "roadmap_epic_id": "EXECUTION-LOOP",
       "default_task_id": null,
       "screen_ids": [
-        "EXECUTION_PORTFOLIO_360_SCREEN"
+        "EXECUTION_PORTFOLIO_360_SCREEN",
+        "EXECUTION_COMPARE_SCREEN"
       ],
       "concern_ids": [
         "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
@@ -2498,6 +2537,42 @@
       "activation_gate": "Execution Loop Phase 16 packed correlation, sample coverage and capital-ledger contracts pass."
     },
     {
+      "screen_id": "EXECUTION_COMPARE_SCREEN",
+      "contract_revision": 2,
+      "feature_id": "EXECUTION_PORTFOLIOS",
+      "maturity": "COMMISSIONED",
+      "data_mode": "NONE",
+      "delivery_profile": "fixture",
+      "delivery_policy": {
+        "policy_revision": 2,
+        "query_enabled": false,
+        "projection_ingestion_enabled": false,
+        "sse_enabled": false,
+        "governance_write_enabled": false,
+        "paper_commands_enabled": false,
+        "sandbox_commands_enabled": false,
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false
+      },
+      "route": "/deployments/compare",
+      "primary_persona": "portfolio_manager",
+      "primary_decision": "Which two to four portfolios on one currency and domain basis differ, and on which published figures?",
+      "primary_action": null,
+      "permissions": [
+        "live.read"
+      ],
+      "inputs": [],
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "activation_gate": "Execution Loop Phase 16 portfolio list and manager series reads (BE-P4) pass for two to four portfolios on one basis."
+    },
+    {
       "screen_id": "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
       "contract_revision": 2,
       "feature_id": "EXECUTION_ACCOUNTS_BINDINGS",
@@ -2885,6 +2960,7 @@
         "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
         "EXECUTION_ALPHA_360_SCREEN",
         "EXECUTION_PORTFOLIO_360_SCREEN",
+        "EXECUTION_COMPARE_SCREEN",
         "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
         "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
         "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN"

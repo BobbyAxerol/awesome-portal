@@ -1,5 +1,5 @@
-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
-import { FastifyRequest } from "fastify";
+import { Controller, Get, Inject, Optional, Param, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { FastifyRequest, type FastifyReply } from "fastify";
 import { z } from "zod";
 import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
@@ -9,6 +9,10 @@ import {
   MaximumDataOperationService,
 } from "./maximum-data-operation.service";
 import { browserManagerRelationOperationManifest } from "./eds11r-manager-relation.registry";
+import { NativeManagerReadConsumer } from "../execution-v2/native-manager-consumer";
+import { CONTROL_API_CONFIG } from "../tokens";
+import type { ControlApiConfig } from "../config";
+import { nativeResearchReview } from "./native-review-profile";
 
 const DeploymentPageQuerySchema = z.object({
   workspace_id: z.string().trim().min(1).max(96).optional(),
@@ -23,6 +27,7 @@ interface MaximumDataRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalSession: AuthSession;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
 }
 
 /**
@@ -35,18 +40,32 @@ export class MaximumDataOperationController {
   constructor(
     @Inject(MaximumDataOperationService) private readonly operations: MaximumDataOperationService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
+    @Optional() @Inject(NativeManagerReadConsumer) private readonly nativeRead?: NativeManagerReadConsumer,
+    @Optional() @Inject(CONTROL_API_CONFIG) private readonly config?: ControlApiConfig,
   ) {}
 
   @Get("/deployments")
-  async deployments(@Req() request: MaximumDataRequest, @Query() raw: unknown) {
+  async deployments(@Req() request: MaximumDataRequest, @Query() raw: unknown,
+    @Res({passthrough:true}) reply?:FastifyReply) {
     const query = DeploymentPageQuerySchema.safeParse(raw);
     if (!query.success) throw new MaximumDataOperationError("EDS01_OPERATION_QUERY_INVALID", 400);
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new MaximumDataOperationError("WORKSPACE_NOT_FOUND", 404);
     }
+    if(this.nativeRead){
+      if(!reply)throw new MaximumDataOperationError("NATIVE_MANAGER_READ_UNAVAILABLE",503);
+      if(await this.nativeRead.serve({
+        principal:{user:request.portalUser,session:request.portalSession,workspaceId,
+          viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
+        operation:{kind:"DEPLOYMENTS"},query:{environment:query.data.environment,limit:query.data.limit,
+          ...(query.data.cursor?{cursor:query.data.cursor}:{})},
+      },reply))return;
+    }
+    if (nativeResearchReview(this.config)) throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
     return this.operations.deploymentPage(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       {
         environment: query.data.environment,
         limit: query.data.limit,
@@ -74,6 +93,7 @@ export class MaximumDataOperationController {
     @Req() request: MaximumDataRequest,
     @Param("operationId") operationId: string,
     @Query() raw: unknown,
+    @Res({passthrough:true}) reply?:FastifyReply,
   ) {
     if (!RelationRouteSchema.safeParse(operationId).success) {
       throw new MaximumDataOperationError("EDS11R_OPERATION_NOT_FOUND", 404);
@@ -81,11 +101,22 @@ export class MaximumDataOperationController {
     const query = DeploymentPageQuerySchema.safeParse(raw);
     if (!query.success) throw new MaximumDataOperationError("EDS11R_OPERATION_QUERY_INVALID", 400);
     const workspaceId = query.data.workspace_id ?? request.portalWorkspaceId;
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new MaximumDataOperationError("WORKSPACE_NOT_FOUND", 404);
     }
+    if(this.nativeRead){
+      if(!reply)throw new MaximumDataOperationError("NATIVE_MANAGER_READ_UNAVAILABLE",503);
+      if(await this.nativeRead.serve({
+        principal:{user:request.portalUser,session:request.portalSession,workspaceId,
+          viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId},
+        operation:{kind:"RELATION",route_id:operationId},query:{environment:query.data.environment,limit:query.data.limit,
+          ...(query.data.cursor?{cursor:query.data.cursor}:{})},
+      },reply))return;
+    }
+    if (nativeResearchReview(this.config)) throw new MaximumDataOperationError("NATIVE_MANAGER_READ_DENIED",403);
     return this.operations.relationPage(
-      { user: request.portalUser, session: request.portalSession, workspaceId },
+      { user: request.portalUser, session: request.portalSession, workspaceId,
+        viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       operationId,
       {
         environment: query.data.environment,

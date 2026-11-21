@@ -1,0 +1,17 @@
+{
+  "current": {
+    "job_state": "FAILED",
+    "effective_status": "FAILED",
+    "may_cancel": false,
+    "failed_at": {
+      "stage": "S4",
+      "fold": null,
+      "basis": "SOURCE_RUNNING_STAGE"
+    },
+    "terminal_reason": {
+      "code": "P06_RETRY_NOT_DISPATCHED",
+      "message": "the worker lease expired and no dispatcher claimed the scheduled retry within 300 s. There is no in-place retry; start a new run from this run's requested spec.",
+      "origin": "CONTROL"
+    }
+  }
+}

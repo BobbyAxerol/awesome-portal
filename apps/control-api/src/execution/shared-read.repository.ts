@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { ControlApiConfig } from "../config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 
 const SOURCE_ID = /^[a-z][a-z0-9.-]{1,127}$/;
 const PROFILE_ID = /^[A-Z][A-Z0-9_]{2,127}$/;
@@ -15,6 +15,8 @@ const COMPLETENESS = new Set([
 ]);
 
 export interface SharedReadScope {
+  /** Server-only correlation, not a grant or source/currentness permit. */
+  readonly nativeEpochDigest?: string;
   sourceId: string;
   profileId: string;
   workspaceId: string;
@@ -150,7 +152,7 @@ interface SharedReadIdentity {
 @Injectable()
 export class ExecutionSharedReadRepository {
   constructor(
-    @Inject(CONTROL_API_POOL) private readonly pool: Pool,
+    @Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
@@ -292,7 +294,11 @@ export class ExecutionSharedReadRepository {
          ON CONFLICT (cache_key) DO UPDATE SET
            etag=EXCLUDED.etag, authority=EXCLUDED.authority,
            freshness=EXCLUDED.freshness, completeness=EXCLUDED.completeness,
-           as_of=EXCLUDED.as_of, response_body=EXCLUDED.response_body,
+           as_of=EXCLUDED.as_of,
+           -- same etag = same bytes: keep the stored value so an unchanged refresh writes no new TOAST chunks
+           response_body=CASE WHEN execution_shared_read_cache.etag = EXCLUDED.etag
+                              THEN execution_shared_read_cache.response_body
+                              ELSE EXCLUDED.response_body END,
            response_bytes=EXCLUDED.response_bytes, stored_at=EXCLUDED.stored_at,
            expires_at=EXCLUDED.expires_at
          RETURNING response_body,etag,authority,freshness,completeness,as_of,stored_at,expires_at
@@ -633,6 +639,42 @@ export class ExecutionSharedReadRepository {
   }
 
   /**
+   * Return the cache's disk space when its file has outgrown `limitBytes` and nothing in it is still live.
+   * VACUUM only marks space reusable, so a rewrite burst leaves the file at its high-water mark; TRUNCATE is the cheap
+   * way back and is safe here because every row is recomputable. A live entry or a short lock wait defers the reclaim
+   * to the next sweep instead of blocking readers.
+   */
+  async reclaimPhysicalSpace(limitBytes: number): Promise<{ reclaimed: boolean; physicalBytes: number; reason: "WITHIN_LIMIT" | "LIVE_ENTRIES" | "LOCKED" | "RECLAIMED" }> {
+    if (!Number.isInteger(limitBytes) || limitBytes < 1) throw new Error("shared-read cache physical limit is invalid");
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("SET LOCAL lock_timeout = '1s'");
+      const size = await client.query<{ bytes: string }>("SELECT pg_total_relation_size('execution_shared_read_cache')::bigint AS bytes");
+      const physicalBytes = safeCount(size.rows[0]?.bytes ?? "0", "shared-read cache physical bytes");
+      if (physicalBytes <= limitBytes) {
+        await client.query("ROLLBACK");
+        return { reclaimed: false, physicalBytes, reason: "WITHIN_LIMIT" };
+      }
+      await client.query("LOCK TABLE execution_shared_read_cache IN ACCESS EXCLUSIVE MODE");
+      const live = await client.query<{ live: boolean }>("SELECT EXISTS (SELECT 1 FROM execution_shared_read_cache WHERE expires_at > clock_timestamp()) AS live");
+      if (live.rows[0]?.live) {
+        await client.query("ROLLBACK");
+        return { reclaimed: false, physicalBytes, reason: "LIVE_ENTRIES" };
+      }
+      await client.query("TRUNCATE execution_shared_read_cache");
+      await client.query("COMMIT");
+      return { reclaimed: true, physicalBytes, reason: "RECLAIMED" };
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      if ((error as { code?: string }).code === "55P03") return { reclaimed: false, physicalBytes: 0, reason: "LOCKED" };
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
    * `begin()` holds the short advisory lock while calling this method. Each
    * active flight reserves the maximum allowed source response, preventing a
    * cache-cap configuration from breaking leader/follower coalescing later.
@@ -641,6 +683,8 @@ export class ExecutionSharedReadRepository {
     const result = await client.query<{
       reserved_rows: string;
       reserved_bytes: string;
+      active_flights: string;
+      physical_bytes: string;
     }>(
       `WITH reference AS (SELECT clock_timestamp() AS now),
          active_cache AS (
@@ -657,13 +701,26 @@ export class ExecutionSharedReadRepository {
          )
        SELECT (active_cache.row_count + active_flights.row_count)::bigint AS reserved_rows,
               (active_cache.byte_count +
-               active_flights.row_count * $1::bigint)::bigint AS reserved_bytes
+               active_flights.row_count * $1::bigint)::bigint AS reserved_bytes,
+              active_flights.row_count::bigint AS active_flights,
+              pg_total_relation_size('execution_shared_read_cache')::bigint AS physical_bytes
        FROM active_cache CROSS JOIN active_flights`,
       [this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES],
     );
     const row = result.rows[0];
     if (!row) throw new Error("N21 shared-read cache capacity reservation missing");
-    return safeCount(row.reserved_rows, "shared-read cache reserved rows") <=
+    // UDB-01: TTL bounds live bytes, not dead heap/TOAST. If a live key keeps
+    // TRUNCATE deferred, stop admitting new leaders before physical pressure
+    // exhausts disk. Cache hits still work; sweeper/autovacuum can catch up.
+    // Reserve conservative JSONB/TOAST/index expansion and one MiB fixed
+    // slack for all in-flight responses (including this leader). This is a
+    // measured high-water backpressure policy, not a filesystem quota.
+    const physicalLimit = this.config.EXECUTION_SHARED_READ_CACHE_PHYSICAL_LIMIT_BYTES;
+    const physicalReservation = safeCount(row.physical_bytes, "shared-read cache physical bytes") +
+      safeCount(row.active_flights, "shared-read cache active flights") *
+        this.config.EXECUTION_EDGE_CURRENT_SOURCE_MAX_RESPONSE_BYTES * 16 + 1_048_576;
+    return (physicalLimit === 0 || physicalReservation <= physicalLimit) &&
+      safeCount(row.reserved_rows, "shared-read cache reserved rows") <=
       this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_ROWS &&
       safeCount(row.reserved_bytes, "shared-read cache reserved bytes") <=
       this.config.EXECUTION_SHARED_READ_CACHE_MAXIMUM_BYTES;
@@ -690,10 +747,13 @@ export class ExecutionSharedReadRepository {
 
 export function sharedReadIdentity(scope: SharedReadScope): SharedReadIdentity {
   validateScope(scope);
-  const principalDigest = `sha256:${sha256(`${scope.principalId}\0${scope.principalRole}`)}`;
+  const principalDigest = `sha256:${sha256(scope.nativeEpochDigest === undefined
+    ? `${scope.principalId}\0${scope.principalRole}`
+    : `NATIVE_MANAGER_CACHE_V1\0${scope.principalId}\0${scope.principalRole}\0${scope.nativeEpochDigest}`)}`;
   const requestDigest = `sha256:${sha256(scope.requestPath)}`;
   const cacheKey = `sha256:${sha256([
-    "N21", scope.sourceId, scope.profileId, scope.workspaceId, principalDigest,
+    scope.nativeEpochDigest === undefined ? "N21" : "N21_NATIVE_MANAGER_EPOCH_V1",
+    scope.sourceId, scope.profileId, scope.workspaceId, principalDigest,
     scope.adapterRevision, requestDigest,
   ].join("\0"))}`;
   return { cacheKey, requestDigest, principalDigest };
@@ -725,6 +785,7 @@ function validateScope(scope: SharedReadScope): void {
     !IDENTIFIER.test(scope.workspaceId) || !IDENTIFIER.test(scope.principalId) ||
     !IDENTIFIER.test(scope.principalRole) || !IDENTIFIER.test(scope.adapterRevision) ||
     scope.requestPath.length < 1 || Buffer.byteLength(scope.requestPath, "utf8") > 8_192 ||
+    (scope.nativeEpochDigest !== undefined && (typeof scope.nativeEpochDigest !== "string" || scope.nativeEpochDigest.length !== 71 || !/^sha256:[a-f0-9]{64}$/.test(scope.nativeEpochDigest))) ||
     (scope.admission !== undefined && (
       !Number.isInteger(scope.admission.sourceMaximumConcurrency) ||
       !Number.isInteger(scope.admission.profileMaximumConcurrency) ||

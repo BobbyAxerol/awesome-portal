@@ -61,6 +61,10 @@
   --exec-font-id: 400 12px/16px var(--font-mono);
   --exec-font-term: 400 12px/18px var(--font-mono);
   --exec-font-caption: 400 11px/14px var(--font-body);
+  /* Governance titles speak in the Research loop's display voice (owner 2026-10-11: Execution follows the Research look). */
+  --exec-font-display: 300 22px/26px var(--font-display);
+  /* One label role for governance: panel titles, field names, table heads — mono, small, tracked. */
+  --exec-font-label: 500 11px/16px var(--font-mono);
   /* Prose measure (§5.2): a readable line is about 72 characters. */
   --exec-measure: 72ch;
   /* Financial chart colours (`--exec-chart-*`) live in styles/tokens.css with
@@ -140,7 +144,8 @@
   flex-basis: 100%;
 }
 
-.exec-preview-inspector summary { cursor: pointer; color: var(--ink-mute); font: var(--exec-font-meta); }
+.exec-preview-inspector summary { cursor: pointer; color: var(--ink-soft); font: var(--exec-font-meta); }
+.exec-preview-details > summary { color: var(--ink-soft); }
 .exec-preview-inspector[open] { flex-basis: 100%; }
 .exec-preview-inspector-list { margin: 4px 0 0; display: flex; gap: var(--space-3); flex-wrap: wrap; }
 .exec-preview-inspector-list div { display: flex; gap: var(--space-1); }
@@ -153,6 +158,7 @@
   color: var(--ink-soft);
   max-width: 72ch;
 }
+
 
 .exec-preview-banner strong,
 .exec-preview-banner code {
@@ -705,6 +711,7 @@
 
 .exec-state[data-status="denied"] .exec-state-title { color: var(--state-denied); }
 .exec-state[data-status="unavailable"] .exec-state-title { color: var(--state-unavailable); }
+.exec-gov .exec-state[data-status="unavailable"] .exec-state-title { color: var(--ink-soft); }
 .exec-state[data-status="stale"] .exec-state-title { color: var(--fresh-stale); }
 .exec-state[data-status="partial"] .exec-state-title { color: var(--warn); }
 .exec-state[data-status="terminal"] .exec-state-title { color: var(--bad); }
@@ -716,6 +723,14 @@
   color: var(--ink-mute);
   overflow-wrap: anywhere;
 }
+
+/* UI review D12: the machine code behind a plain reason sits in a closed disclosure, one quiet line. */
+.exec-state-code {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-state-code summary { cursor: pointer; }
+.exec-state-code code { margin-left: var(--space-2); overflow-wrap: anywhere; }
 
 /* Last-good values stay readable but visibly demoted, so a reader can use them
  * while knowing they are not current. */
@@ -4940,7 +4955,7 @@
 .exec-strip-figure { white-space: normal; }
 /* KPI figure + unit: the unit wraps under a wide figure instead of overflowing the cell (audit: "125,000 / 200,000 USDT"). */
 .exec-alpha-kpi > div:last-child { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 0.3em; min-width: 0; }
-.exec-alpha-kpi .exec-num { white-space: normal; }
+.exec-alpha-kpi .exec-num { white-space: normal; overflow-wrap: anywhere; }
 .exec-alpha-kpi { border: 0; border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
 .exec-alpha-kpis { gap: var(--space-3); }
 
@@ -5522,7 +5537,9 @@ p.exec-oq-emptyrow { margin: var(--space-3) 0 0; font: 400 10px/14px var(--font-
 .exec-af-table th[data-numeric="true"], .exec-af-table td[data-numeric="true"] { text-align: right; }
 .exec-af-th-mark { width: 26px; } .exec-af-th-go { width: 34px; }
 .exec-af-table tbody td { padding: 8px 10px; vertical-align: top; }
-.exec-af-row[role="button"] { cursor: pointer; }
+.exec-af-row[data-expandable="true"] { cursor: pointer; }
+.exec-af-toggle { appearance: none; border: 0; padding: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.exec-af-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .exec-af-row[data-dim="true"], .exec-af-note[data-dim="true"] { opacity: 0.75; }
 .exec-af-mark { padding-right: 0 !important; color: var(--accent); }
 .exec-af-sub { font: 400 9px/12px var(--font-mono); color: var(--ink-mute); }
@@ -7112,3 +7129,334 @@ tr[data-arrived="true"] > :first-child,
   letter-spacing: 0;
 }
 .exec-empty-frame .exec-state-reason { text-align: left; }
+
+/* The Insight Charts tile facts carry whole sentences (e.g. "sandbox: deployed, but published no equity in the window · …") in an .exec-num cell, which is nowrap by default
+   and pushed the page 113px wider than a 1280 viewport (299px at 660). The sentence wraps; the figures keep their mono, tabular look. */
+.exec-tile-facts { width: 100%; }
+.exec-tile-facts td.exec-num { white-space: normal; overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------------------
+ * Gate frame (components/gateFrame.tsx) — one frame for R1 / R2 / Live / Exit: stepper, verdict first, one absence line, one primary action.
+ * ------------------------------------------------------------------------ */
+.exec-gf-steps { display: flex; flex-wrap: wrap; gap: 0; margin: 0; padding: 0; list-style: none; font: var(--exec-font-meta); color: var(--ink-mute); }
+.exec-gf-steps li { position: relative; padding: 2px 10px 2px 0; margin-right: 10px; }
+.exec-gf-steps li + li::before { content: "›"; position: absolute; left: -10px; color: var(--ink-faint); }
+.exec-gf-steps li[data-state="done"] { color: var(--ink-soft); }
+.exec-gf-steps li[data-state="done"]::after { content: " ✓"; color: var(--good); }
+.exec-gf-steps li[data-state="current"] { color: var(--ink); font-weight: 600; border-bottom: 2px solid var(--accent); }
+
+.exec-gf-verdict { border: 1px solid var(--line); border-left: 3px solid var(--line-strong); background: var(--paper-raised); padding: var(--space-3) var(--space-4); display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-gf-verdict[data-tone="good"] { border-left-color: var(--good); }
+.exec-gf-verdict[data-tone="warn"] { border-left-color: var(--warn); }
+.exec-gf-verdict[data-tone="bad"] { border-left-color: var(--bad); }
+.exec-gf-verdict-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--space-3); }
+.exec-gf-verdict-line { font: 500 16px/22px var(--font-body); color: var(--ink); } /* the verdict is the gate's one figure: Research-voiced 16px (owner 2026-10-11), declared data-hifi-exact in gateFrame.tsx so the §5.2 audit steps aside for it alone */
+.exec-gf-verdict-detail { font: var(--exec-font-body); color: var(--ink-soft); min-width: 0; overflow-wrap: anywhere; }
+.exec-gf-facts { display: flex; flex-wrap: wrap; gap: 2px var(--space-4); margin: 0; padding: 0; list-style: none; font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-gf-facts li { min-width: 0; overflow-wrap: anywhere; }
+.exec-gf-facts [data-tone="bad"] { color: var(--bad); }
+.exec-gf-facts [data-tone="good"] { color: var(--good); }
+.exec-gf-facts [data-tone="warn"] { color: var(--warn); }
+
+.exec-gf-absences { font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-gf-absences summary { cursor: pointer; color: var(--ink-mute); }
+.exec-gf-absences ul { margin: var(--space-2) 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.exec-gf-absences li { overflow-wrap: anywhere; }
+
+.exec-gf-details { font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-gf-details > summary { cursor: pointer; color: var(--ink-mute); }
+
+.exec-gf-actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.exec-gf-more { position: relative; }
+.exec-gf-more > summary { list-style: none; cursor: pointer; }
+.exec-gf-more > summary::-webkit-details-marker { display: none; }
+.exec-gf-menu { position: absolute; right: 0; bottom: calc(100% + 6px); z-index: 10; display: flex; flex-direction: column; gap: var(--space-1); min-width: 220px; padding: var(--space-2); background: var(--surface-2); border: 1px solid var(--line-strong); }
+.exec-gf-menu .exec-role-control { width: 100%; text-align: left; }
+@media (max-width: 767px) {
+  .exec-gf-menu { position: fixed; left: var(--space-3); right: var(--space-3); bottom: var(--space-3); min-width: 0; }
+}
+
+/* the decision dock states every reason on one line beside the buttons; nothing is folded away */
+.exec-decision-bar-reasons { display: flex; flex-wrap: wrap; gap: 2px var(--space-3); }
+
+/* Approval Inbox: subject leads, one "what's next" cell, SLA as a sentence, three filter controls, history folded. */
+.exec-inbox-request { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.exec-inbox-subject { font: 500 14px/20px var(--font-body); color: var(--ink); overflow-wrap: anywhere; }
+.exec-inbox-next { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.exec-inbox-sla-text[data-tone="bad"] { color: var(--bad); font-weight: 600; }
+.exec-inbox-sla-text[data-tone="warn"] { color: var(--warn); }
+.exec-inbox-gateselect { display: inline-flex; align-items: center; gap: var(--space-2); }
+.exec-inbox-gateselect select { font: var(--exec-font-meta); color: var(--ink); background: var(--paper-raised); border: 1px solid var(--line); padding: 4px 8px; }
+.exec-inbox-gateselect[data-active="true"] select { border-color: var(--accent); }
+.exec-inbox-next-step { margin: 0; padding: var(--space-3) var(--space-4); border: 1px dashed var(--line-strong); }
+.exec-inbox-decided > summary { cursor: pointer; list-style: none; }
+.exec-inbox-decided > summary::-webkit-details-marker { display: none; }
+.exec-inbox-decided > summary::before { content: "▸ "; color: var(--ink-mute); }
+.exec-inbox-decided[open] > summary::before { content: "▾ "; }
+
+/* Wireframe markers (WF 4a, WF 1b …) are implementation identity, not content: they stay in the DOM for the preview Inspector and tests, off the surface. */
+.exec-gov-wf { display: none; }
+.exec-gov-grid2:has(> :only-child) { grid-template-columns: minmax(0, 1fr); }
+details.exec-gf-details > summary.exec-gov-panelhead { cursor: pointer; list-style: none; }
+details.exec-gf-details > summary.exec-gov-panelhead::-webkit-details-marker { display: none; }
+details.exec-gf-details > summary.exec-gov-panelhead::before { content: "▸"; color: var(--ink-mute); margin-right: var(--space-2); }
+details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "▾"; }
+.exec-gf-evidence-fold { margin-top: var(--space-4); }
+.exec-gf-evidence-fold > summary { padding: var(--space-2) 0; }
+
+/* ---------------------------------------------------------------------------
+ * Governance in the Research loop's voice: serif display title, softer corners, one 12px rhythm, quieter kicker.
+ * Scoped to .exec-gov (Inbox, R1, R2, Live, Exit, Waivers, New request); the Carbon deployment screens are untouched.
+ * ------------------------------------------------------------------------ */
+.exec-gov { gap: var(--space-3); }
+.exec-gov .exec-gov-h1 { font: var(--exec-font-display); letter-spacing: -0.01em; }
+.exec-gov .exec-gate-kicker { letter-spacing: 0.04em; color: var(--ink-mute); }
+.exec-gov .exec-gov-panel, .exec-gov .exec-gf-verdict, .exec-gov .exec-pf2-panel, .exec-gov .exec-inbox-next-step { border-radius: var(--radius-md); }
+.exec-gov .exec-gf-steps { margin-top: calc(var(--space-1) * -1); }
+.exec-gov .exec-empty-fold { padding: var(--space-2) 0; }
+
+
+/* ---------------------------------------------------------------------------
+ * Governance type system — five voices, no others (owner 2026-10-11: sizes were not in step).
+ *   display  Newsreader 22 · the page title            body   sans 13 · every sentence
+ *   meta     sans 12 · secondary sentences, facts       label  mono 11 tracked · panel titles, field names, column heads
+ *   data     mono 12 · ids, digests, numbers
+ * Prose is never mono; mono is only for labels and data.
+ * ------------------------------------------------------------------------ */
+.exec-gov .exec-gate-note, .exec-gov .exec-gate-checklines, .exec-gov .exec-gov-v, .exec-gov .exec-disabled-reason, .exec-gov .exec-gate-decisionbody,
+.exec-gov .exec-gate-banner, .exec-gov .exec-inbox-next-step, .exec-gov .exec-px-note, .exec-gov .exec-inbox-partial, .exec-gov .exec-gate-obsbody { font: var(--exec-font-body); }
+.exec-gov .exec-gov-meta, .exec-gov .exec-gov-metaline, .exec-gov .exec-inbox-strip, .exec-gov .exec-gate-checkfoot, .exec-gov .exec-decision-bar-foot,
+.exec-gov .exec-inbox-decidedmeta, .exec-gov .exec-gate-criteriafoot, .exec-gov .exec-gov-reglink, .exec-gov .exec-wv-debtrow, .exec-gov .exec-gate-stagechips + .exec-gov-meta { font: var(--exec-font-meta); }
+.exec-gov .exec-gov-k, .exec-gov .exec-gov-paneltitle, .exec-gov .exec-role-th, .exec-gov .exec-px-notelabel, .exec-gov .exec-table thead th, .exec-gov table thead th { font: var(--exec-font-label); letter-spacing: 0.06em; }
+.exec-gov .exec-num, .exec-gov code { font: var(--exec-font-id); }
+.exec-gov .exec-role-control, .exec-gov select, .exec-gov input, .exec-gov textarea, .exec-gov .exec-px-notebox { font: var(--exec-font-control); }
+.exec-gov .exec-gov-chip, .exec-gov .exec-inbox-gate, .exec-gov .exec-gate-stagechip, .exec-gov .exec-gate-policychip { font: var(--exec-font-label); }
+.exec-gov .exec-gov-k { color: var(--ink-mute); text-transform: uppercase; }
+.exec-gov .exec-table table, .exec-gov .exec-gate-criteria { font: var(--exec-font-body); }
+.exec-gov .exec-gov-panelhead { padding: var(--space-2) var(--space-4); }
+.exec-gov .exec-gov-kv { gap: var(--space-2) var(--space-4); padding: var(--space-3) var(--space-4); }
+
+/* Check strip — a segment per check, in the server's own marks */
+.exec-gf-strip { display: flex; align-items: center; gap: var(--space-3); }
+.exec-gf-strip-count { font: var(--exec-font-section); color: var(--ink); font-variant-numeric: tabular-nums; }
+.exec-gf-strip-count b { font-weight: 700; }
+.exec-gf-strip-bar { display: flex; gap: 3px; flex: 1 1 auto; max-width: 360px; }
+.exec-gf-strip-bar i { flex: 1 1 0; height: 8px; border-radius: 2px; background: var(--line-strong); }
+.exec-gf-strip-bar i[data-mark="pass"] { background: var(--good); }
+.exec-gf-strip-bar i[data-mark="watch"] { background: var(--warn); }
+.exec-gf-strip-bar i[data-mark="insufficient"] { background: var(--warn); opacity: 0.45; }
+.exec-gf-strip-bar i[data-mark="fail"] { background: var(--bad); }
+
+/* Provenance chain — the passport as linked facts */
+.exec-gf-chain { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--space-2); margin: 0; padding: var(--space-3) var(--space-4); list-style: none; counter-reset: chain; }
+.exec-gf-chain li { position: relative; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); border-left: 3px solid var(--warn); }
+.exec-gf-chain li[data-verified="true"] { border-left-color: var(--good); }
+.exec-gate-chainlabel { font: var(--exec-font-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-mute); }
+.exec-gf-chain-value { font: var(--exec-font-id); color: var(--ink); overflow-wrap: anywhere; }
+.exec-gf-chain-state { font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-gf-chain li[data-verified="false"] .exec-gf-chain-state { color: var(--warn); }
+
+/* Gate track — where a request sits on the five-gate loop */
+.exec-inbox-gatecell { display: inline-flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.exec-gf-track { display: inline-flex; align-items: center; gap: 4px; }
+.exec-gf-track i { width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--line-strong); background: transparent; }
+.exec-gf-track i + i { margin-left: 2px; }
+.exec-gf-track i[data-state="current"] { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+/* Waivers: the states are the filters */
+.exec-wv-lanes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); align-items: stretch; }
+.exec-wv-lane { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left; padding: var(--space-3) var(--space-4); border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--paper-raised); color: var(--ink); cursor: pointer; border-top: 3px solid var(--line-strong); }
+.exec-wv-lane[data-tone="bad"] { border-top-color: var(--bad); }
+.exec-wv-lane[data-tone="warn"] { border-top-color: var(--warn); }
+.exec-wv-lane[data-tone="good"] { border-top-color: var(--good); }
+.exec-wv-lane[data-active="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.exec-wv-lane-n { font: var(--exec-font-kpi); font-variant-numeric: tabular-nums; }
+.exec-wv-lane-label { font: var(--exec-font-control); }
+.exec-wv-lane-note { font: var(--exec-font-meta); color: var(--ink-mute); }
+.exec-wv-readat { grid-column: 1 / -1; }
+@media (max-width: 767px) { .exec-wv-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.exec-wv-lane-n { min-height: 32px; }
+.exec-gov .exec-gate-criteriafoot { padding: var(--space-3) var(--space-4); margin: 0; border-top: 1px solid var(--line-soft); color: var(--ink-mute); }
+.exec-gov .exec-gf-facts { gap: var(--space-1) var(--space-5); }
+
+/* ---------------------------------------------------------------------------
+ * Governance component kit — drawn controls, one radius language (pill for toggles, 8 for buttons, 10 for cards), sans controls, tokens only.
+ * ------------------------------------------------------------------------ */
+.exec-gov .exec-btn-apply, .exec-gov .exec-btn-ghost, .exec-gov .exec-gov-cta { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 34px; padding: 0 var(--space-4); border-radius: 8px; font: var(--exec-font-control); text-decoration: none; transition: background 120ms, border-color 120ms; }
+/* DEBT-UXM07-001: white on the Carbon accent measured 2.35:1; the surface ink reads above 7:1, and the hover fill is the strong accent, where white is the legible ink. */
+.exec-gov .exec-btn-apply { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.exec-gov .exec-btn-apply:hover:not([disabled]) { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-contrast); }
+.exec-gov .exec-btn-ghost { background: var(--paper-raised); border: 1px solid var(--line-strong); color: var(--ink); }
+.exec-gov .exec-btn-ghost:hover:not([disabled]) { border-color: var(--accent); color: var(--accent); }
+.exec-gov .exec-btn-apply[disabled], .exec-gov .exec-btn-ghost[disabled] { background: var(--surface-2); border-color: var(--line); color: var(--ink-mute); }
+.exec-gov .exec-btn-apply:focus-visible, .exec-gov .exec-btn-ghost:focus-visible, .exec-gov .exec-seg-item:focus-visible, .exec-gov .exec-cm-trigger:focus-visible, .exec-gov .exec-cm-search:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.exec-gov-quiet { font: var(--exec-font-control); color: var(--ink-soft); text-decoration: none; padding: 0 var(--space-2); }
+.exec-gov-quiet:hover { color: var(--accent); }
+.exec-gov .exec-gov-chip { border-radius: var(--radius-pill); padding: 2px 10px; font: var(--exec-font-th); letter-spacing: 0; text-transform: none; }
+
+/* Segmented control */
+.exec-seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: var(--radius-pill); }
+.exec-seg-item { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 14px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--ink-soft); font: var(--exec-font-control); cursor: pointer; }
+.exec-seg-item:hover:not([disabled]):not([data-active]) { color: var(--ink); }
+.exec-seg-item[data-active="true"] { background: var(--paper-raised); color: var(--ink); box-shadow: var(--shadow-e1); }
+.exec-seg-item[disabled] { color: var(--ink-faint); cursor: not-allowed; }
+.exec-seg-count { min-width: 18px; padding: 0 6px; border-radius: var(--radius-pill); background: var(--line-soft); color: var(--ink-soft); font: var(--exec-font-caption); text-align: center; }
+.exec-seg-item[data-tone="bad"] .exec-seg-count { background: var(--bad-bg); color: var(--bad); }
+
+/* Choice menu — a drawn listbox */
+.exec-cm { position: relative; display: inline-block; }
+.exec-cm-trigger { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 34px; max-width: 100%; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--paper-raised); color: var(--ink); font: var(--exec-font-control); cursor: pointer; text-align: left; }
+.exec-cm-trigger:hover:not([disabled]) { border-color: var(--accent); }
+.exec-cm[data-open="true"] .exec-cm-trigger { border-color: var(--accent); }
+.exec-cm-trigger[disabled] { color: var(--ink-faint); cursor: not-allowed; background: var(--surface-2); }
+.exec-cm-trigger[data-empty="true"] .exec-cm-value { color: var(--ink-mute); }
+.exec-cm-prefix { color: var(--ink-mute); font: var(--exec-font-meta); }
+.exec-cm-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.exec-cm-chevron { flex: none; color: var(--ink-mute); }
+.exec-cm-pop { position: absolute; top: calc(100% + 6px); left: 0; z-index: 30; min-width: 100%; width: max-content; max-width: min(440px, 90vw); padding: 6px; background: var(--paper-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-e3); }
+.exec-cm-search { width: 100%; box-sizing: border-box; margin-bottom: 6px; padding: 7px 10px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); color: var(--ink); font: var(--exec-font-control); }
+.exec-cm-list { max-height: 280px; overflow: auto; margin: 0; padding: 0; list-style: none; outline: none; }
+.exec-cm-list li[role="option"] { display: flex; align-items: baseline; gap: var(--space-3); padding: 8px 10px; border-radius: var(--radius-md); font: var(--exec-font-body); color: var(--ink); cursor: pointer; }
+.exec-cm-list li[data-active="true"] { background: var(--accent-soft); }
+.exec-cm-list li[aria-selected="true"] .exec-cm-opt-label { font-weight: 600; }
+.exec-cm-opt-label { min-width: 0; overflow-wrap: anywhere; }
+.exec-cm-opt-hint { margin-left: auto; color: var(--ink-mute); font: var(--exec-font-caption); white-space: nowrap; }
+.exec-cm-tick { margin-left: var(--space-2); color: var(--accent); }
+.exec-cm-none { padding: 10px; color: var(--ink-mute); font: var(--exec-font-meta); }
+
+/* Approval Inbox */
+.exec-inbox-head { display: flex; flex-direction: column; gap: var(--space-1); }
+.exec-inbox-titlerow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.exec-inbox-titlerow .exec-gov-spacer { flex: 1 1 auto; }
+.exec-inbox-policy { margin: 0; }
+.exec-inbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.exec-inbox-card { padding: 0; border-radius: var(--radius-lg); }
+.exec-inbox-card .exec-table { border: 0; }
+.exec-inbox-card .exec-table thead th { background: var(--surface-2); padding: 10px 16px; }
+.exec-inbox-card .exec-table tbody td { padding: 14px 16px; }
+.exec-inbox-card .exec-table tbody tr:hover td { background: var(--surface-2); }
+.exec-inbox-card .exec-inbox-strip { border-top: 1px solid var(--line-soft); padding: 10px 16px; }
+.exec-qe { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: 56px var(--space-5) 48px; text-align: center; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper-raised); }
+.exec-qe-icon { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: var(--space-2); border-radius: 50%; background: var(--accent-soft); color: var(--accent); }
+.exec-qe-title { margin: 0; font: var(--exec-font-display); letter-spacing: -0.01em; color: var(--ink); }
+.exec-qe-line { margin: 0; max-width: 46ch; font: var(--exec-font-body); color: var(--ink-soft); }
+.exec-qe-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); margin-top: var(--space-3); }
+.exec-inbox-quiet { margin: 0; padding: 0 var(--space-1); }
+
+
+/* Governance follows the Research loop's soft geometry (owner 2026-10-11, superseding the 2026-08-25 square-corner rule for these screens only). */
+.exec-gov { --radius-sm: 3px; --radius-md: 6px; --radius-lg: 10px; --radius-pill: 999px; }
+
+/* New approval request — one form column, one "what happens next" aside */
+.exec-nr-head { display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-nr-head .exec-gate-kicker { margin: 0; }
+.exec-nr-lede { margin: 0; max-width: 72ch; font: var(--exec-font-body); color: var(--ink-soft); }
+.exec-nr-steps { margin-top: var(--space-1); }
+.exec-nr { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr); gap: var(--space-4); align-items: start; }
+.exec-nr-form { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5); border-radius: var(--radius-lg); }
+.exec-nr-field { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.exec-nr-field .exec-role-th { color: var(--ink-mute); text-transform: uppercase; letter-spacing: 0.06em; }
+.exec-nr-help { margin: 0; font: var(--exec-font-meta); color: var(--ink-mute); }
+.exec-nr-field .exec-cm { display: block; }
+.exec-nr-field .exec-cm-trigger { width: 100%; min-height: 40px; border-radius: var(--radius-lg); }
+.exec-nr-field .exec-cm-value { flex: 1 1 auto; }
+.exec-nr-field .exec-cm-pop { width: 100%; max-width: none; }
+.exec-gov input.exec-role-control, .exec-gov .exec-px-notebox { width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--paper-raised); color: var(--ink); }
+.exec-gov input.exec-role-control::placeholder, .exec-gov .exec-px-notebox::placeholder { color: var(--ink-faint); }
+.exec-gov input.exec-role-control:focus, .exec-gov .exec-px-notebox:focus { outline: none; border-color: var(--accent); box-shadow: var(--focus-ring); }
+.exec-nr-aside { border-radius: var(--radius-lg); position: sticky; top: var(--space-4); }
+.exec-nr-next { margin: 0; padding: var(--space-3) var(--space-4) var(--space-4); list-style: none; display: flex; flex-direction: column; gap: var(--space-3); counter-reset: nr; }
+.exec-nr-next li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 2px var(--space-2); counter-increment: nr; }
+.exec-nr-next li::before { content: counter(nr); grid-row: 1 / span 2; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font: var(--exec-font-label); }
+.exec-nr-next b { font: var(--exec-font-control); color: var(--ink); }
+.exec-nr-next span { font: var(--exec-font-meta); color: var(--ink-soft); }
+@media (max-width: 900px) { .exec-nr { grid-template-columns: minmax(0, 1fr); } .exec-nr-aside { position: static; } }
+
+/* The decision dock as a floating card */
+.exec-gov .exec-decision-bar { border-radius: var(--radius-lg); background: var(--paper-raised); border: 1px solid var(--line); border-left-width: 3px; border-top-width: 1px; box-shadow: var(--shadow-e2); padding: var(--space-3) var(--space-4); }
+.exec-gov .exec-decision-bar .exec-status-chip, .exec-gov .exec-decision-bar .exec-chip { border-radius: var(--radius-pill); }
+.exec-nr-manual { border: 1px dashed var(--line-strong); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); }
+.exec-nr-manual > summary { cursor: pointer; font: var(--exec-font-meta); color: var(--ink-mute); }
+.exec-nr-manual[open] { display: flex; flex-direction: column; gap: var(--space-3); padding-bottom: var(--space-3); }
+.exec-nr-claim { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--surface-2); }
+.exec-nr-claim-id { font: var(--exec-font-id); color: var(--ink); overflow-wrap: anywhere; }
+.exec-nr-lede { max-width: 90ch; }
+.exec-nr-steps { margin: var(--space-2) 0 var(--space-1); }
+.exec-inbox-card { overflow: hidden; }
+.exec-gov .exec-inbox-gate { border-radius: var(--radius-md); padding: 1px 8px; }
+
+/* Retained review — one pill in the top bar, a panel on demand */
+.exec-ret { position: relative; display: inline-flex; }
+.exec-ret-pill { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--paper-raised); color: var(--ink-soft); font: var(--exec-font-meta); cursor: pointer; }
+.exec-ret-pill:hover, .exec-ret-pill[aria-expanded="true"] { border-color: var(--accent); color: var(--ink); }
+.exec-ret-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+.exec-ret-pop { position: absolute; top: calc(100% + 8px); left: 0; z-index: 60; width: min(380px, 92vw); padding: var(--space-4); background: var(--paper-raised); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow-e3); }
+.exec-ret-panel { display: flex; flex-direction: column; gap: var(--space-3); }
+.exec-ret-title { font: var(--exec-font-label); letter-spacing: 0.06em; color: var(--warn); }
+.exec-ret-line { margin: 0; font: var(--exec-font-meta); color: var(--ink-soft); }
+.exec-ret-list { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-ret-list > div { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: var(--space-2); }
+.exec-ret-list dt { font: var(--exec-font-label); letter-spacing: 0.04em; color: var(--ink-mute); }
+.exec-ret-list dd { margin: 0; font: var(--exec-font-meta); color: var(--ink); overflow-wrap: anywhere; }
+.exec-ret-refresh { align-self: flex-start; min-height: 30px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--paper-raised); color: var(--ink); font: var(--exec-font-control); cursor: pointer; }
+.exec-ret-refresh:hover { border-color: var(--accent); color: var(--accent); }
+.exec-qe-more { margin-top: var(--space-2); font: var(--exec-font-meta); color: var(--ink-mute); max-width: 60ch; }
+.exec-qe-more > summary { cursor: pointer; }
+.exec-qe-more > :not(summary) { margin: var(--space-2) 0 0; text-align: left; overflow-wrap: anywhere; } /* the closed <details> is as wide as "Why?"; its prose is still laid out there, so it must wrap rather than overflow (surface audit: clipped without a way to reach it) */
+.exec-qe-would { font: var(--exec-font-meta); color: var(--ink-mute); }
+
+/* Choice menu — field variant: full width, two-line trigger and options, status mark */
+.exec-cm[data-variant="field"] { display: block; }
+.exec-cm[data-variant="field"] .exec-cm-trigger { width: 100%; min-height: 52px; padding: 8px 14px; border-radius: var(--radius-lg); }
+.exec-cm[data-variant="field"] .exec-cm-value { display: flex; flex-direction: column; flex: 1 1 auto; line-height: 1.25; }
+.exec-cm-sub { font: var(--exec-font-id); color: var(--ink-mute); overflow: hidden; text-overflow: ellipsis; }
+.exec-cm[data-variant="field"] .exec-cm-pop { width: 100%; max-width: none; }
+.exec-cm-icon { display: inline-grid; place-items: center; flex: none; }
+.exec-cm-list li[role="option"] { align-items: center; }
+.exec-cm-opt-text { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.exec-cm-opt-hint { margin-left: 0; font: var(--exec-font-id); color: var(--ink-mute); white-space: normal; overflow-wrap: anywhere; }
+.exec-cm[data-variant="pill"] .exec-cm-opt-text { flex-direction: row; align-items: baseline; gap: var(--space-3); }
+.exec-cm[data-variant="pill"] .exec-cm-opt-hint { margin-left: auto; white-space: nowrap; font: var(--exec-font-caption); }
+.exec-mark { width: 8px; height: 8px; border-radius: 50%; background: var(--good); }
+.exec-mark[data-tone="warn"] { background: var(--warn); }
+.exec-mark[data-tone="mute"] { background: var(--line-strong); }
+
+/* Inbox gate chips */
+.exec-gatechips { display: inline-flex; flex-wrap: wrap; gap: 6px; padding-left: var(--space-3); border-left: 1px solid var(--line); }
+.exec-gatechip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--paper-raised); color: var(--ink-soft); font: var(--exec-font-control); cursor: pointer; }
+.exec-gatechip i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.exec-gatechip[data-gate="PAPER"] i, .exec-gatechip[data-gate="SANDBOX"] i, .exec-gatechip[data-gate="EXIT_REVIEWS"] i { background: var(--gov-exit); }
+.exec-gatechip[data-gate="LIVE_GATES"] i { background: var(--bad); }
+.exec-gatechip:hover:not([disabled]) { border-color: var(--accent); color: var(--ink); }
+.exec-gatechip[data-active="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); font-weight: 600; }
+.exec-gatechip[disabled] { color: var(--ink-faint); cursor: not-allowed; }
+.exec-gatechip:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.exec-wv-head { display: flex; flex-direction: column; gap: var(--space-1); }
+.exec-wv-titlerow { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.exec-wv-titlerow .exec-gov-spacer { flex: 1 1 auto; }
+
+/* The top bar is full at laptop widths: below 1500px the pill is a dot (the name is its tooltip and accessible label). */
+@media (max-width: 1500px) {
+  .exec-ret-pill { width: 26px; padding: 0; justify-content: center; }
+  .exec-ret-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+
+/* Next-step capture (R1 → R2 review, R2 → Paper Exit review) */
+.exec-capnext { display: flex; flex-direction: column; gap: var(--space-3); }
+.exec-capnext-head { display: flex; align-items: center; gap: var(--space-3); }
+.exec-capnext-head strong { font: var(--exec-font-section); color: var(--ink); }
+.exec-capnext-controls { display: flex; flex-direction: column; gap: var(--space-3); }
+section.exec-capnext { padding: var(--space-3) var(--space-4); border: 1px dashed var(--line-strong); border-radius: var(--radius-lg); display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-gov .exec-rc { border-radius: var(--radius-lg); }
+
+/* Decision bar: the one reason that matters is on the line; the rest is one click away. */
+.exec-decision-bar-reasons { align-items: baseline; }
+.exec-decision-bar-reasons [data-reason="main"] { color: var(--ink); }
+.exec-decision-bar-reasons .exec-decision-bar-more { margin: 0; display: inline-block; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary { cursor: pointer; color: var(--ink-mute); font: var(--exec-font-meta); list-style: none; display: inline-flex; align-items: center; gap: 4px; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary::-webkit-details-marker { display: none; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary::before { content: "▸"; }
+.exec-decision-bar-reasons .exec-decision-bar-more[open] > summary::before { content: "▾"; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary:hover { color: var(--ink); text-decoration: underline; }
+.exec-decision-bar-reasons .exec-decision-bar-more > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.exec-decision-bar-reasons .exec-decision-bar-more ul { margin: 4px 0 0; padding-left: 18px; color: var(--ink-soft); }

@@ -2,6 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Pool } from "pg";
 import { CONTROL_API_POOL } from "../tokens";
 import { TypedCondition } from "./contracts";
+import type { AccessResource } from "../execution-v2/access.contract";
+import type { AccessEnvironment } from "../execution-v2/access-current-relations";
 
 export interface ExecutionCommandPlanRecord {
   operationId: string;
@@ -47,6 +49,55 @@ interface PlanRow {
   updated_at: Date;
 }
 
+/** Narrow retained disclosure candidate; all stored values are untrusted until
+ * identity, exact current audit authority and finite public validation pass.
+ * No payload, condition prose, hashes, request key or source status is loaded.
+ */
+export interface F0ReadCandidate {
+  operation_id: unknown;
+  workspace_id: unknown;
+  actor_user_id: unknown;
+  target_type: unknown;
+  target_id: unknown;
+  environment: unknown;
+  command_key: unknown;
+  status: unknown;
+  blocker_codes: unknown;
+  warning_codes: unknown;
+  created_at: unknown;
+  updated_at: unknown;
+}
+
+/** BE-P13: one recorded F0 apply answer. Constant by construction (see migration 146). */
+export interface ExecutionF0ApplyAttemptRecord {
+  workspaceId: string;
+  actorUserId: string;
+  requestKey: string;
+  operationId: string;
+  intentHash: string;
+  createdAt: Date;
+}
+
+interface ApplyAttemptRow {
+  workspace_id: string;
+  actor_user_id: string;
+  request_key: string;
+  operation_id: string;
+  intent_hash: string;
+  created_at: Date;
+}
+
+function applyAttempt(row: ApplyAttemptRow): ExecutionF0ApplyAttemptRecord {
+  return {
+    workspaceId: row.workspace_id,
+    actorUserId: row.actor_user_id,
+    requestKey: row.request_key,
+    operationId: row.operation_id,
+    intentHash: row.intent_hash,
+    createdAt: row.created_at,
+  };
+}
+
 function plan(row: PlanRow): ExecutionCommandPlanRecord {
   return {
     operationId: row.operation_id,
@@ -74,6 +125,78 @@ function plan(row: PlanRow): ExecutionCommandPlanRecord {
 @Injectable()
 export class ExecutionOperationsRepository {
   constructor(@Inject(CONTROL_API_POOL) readonly pool: Pool) {}
+
+  /** Predicates precede the finite census. Hidden creators/targets/environments
+   * never affect page hashes, overflow or corruption. Original plans remain
+   * immutable; planning expiry is not historical-read expiry. */
+  async listF0ReadCandidates(workspace: string, actor: string, resource: AccessResource,
+    environment: AccessEnvironment): Promise<F0ReadCandidate[]> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await client.query("SET LOCAL statement_timeout = '5s'");
+      const result = await client.query<F0ReadCandidate>(
+        `SELECT CASE WHEN octet_length(operation_id) BETWEEN 1 AND 191
+                     THEN operation_id ELSE NULL END AS operation_id,
+                workspace_id, actor_user_id, target_type,
+                CASE WHEN octet_length(target_id) BETWEEN 1 AND 191
+                     THEN target_id ELSE NULL END AS target_id,
+                environment,
+                CASE WHEN octet_length(command_key) BETWEEN 3 AND 128
+                     THEN command_key ELSE NULL END AS command_key,
+                status,
+                CASE WHEN cardinality(blocker_codes) BETWEEN 1 AND 3
+                          AND octet_length(blocker_codes::text) <= 512
+                     THEN blocker_codes ELSE NULL END AS blocker_codes,
+                CASE WHEN cardinality(warning_codes) = 0
+                     THEN warning_codes ELSE NULL END AS warning_codes,
+                created_at, updated_at
+         FROM execution_command_plans_f0
+         WHERE workspace_id = $1 AND actor_user_id = $2 AND target_type = $3
+           AND target_id = $4 AND environment = $5
+         ORDER BY created_at DESC, execution_command_plans_f0.operation_id COLLATE "C" ASC LIMIT 1025`,
+        [workspace, actor, resource.kind, resource.id, environment.toUpperCase()],
+      );
+      await client.query("COMMIT");
+      return result.rows;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally { client.release(); }
+  }
+
+  async findF0ReadCandidate(workspace: string, actor: string, id: string): Promise<F0ReadCandidate | null> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await client.query("SET LOCAL statement_timeout = '5s'");
+      const result = await client.query<F0ReadCandidate>(
+        `SELECT operation_id, workspace_id, actor_user_id, target_type,
+                CASE WHEN octet_length(target_id) BETWEEN 1 AND 191
+                     THEN target_id ELSE NULL END AS target_id,
+                environment,
+                CASE WHEN octet_length(command_key) BETWEEN 3 AND 128
+                     THEN command_key ELSE NULL END AS command_key,
+                status,
+                CASE WHEN cardinality(blocker_codes) BETWEEN 1 AND 3
+                          AND octet_length(blocker_codes::text) <= 512
+                     THEN blocker_codes ELSE NULL END AS blocker_codes,
+                CASE WHEN cardinality(warning_codes) = 0
+                     THEN warning_codes ELSE NULL END AS warning_codes,
+                created_at, updated_at
+         FROM execution_command_plans_f0
+         WHERE workspace_id = $1 AND actor_user_id = $2 AND operation_id = $3`,
+        [workspace, actor, id],
+      );
+      await client.query("COMMIT");
+      return result.rows[0] ?? null;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 
   async findByRequestKey(
     workspaceId: string,
@@ -151,19 +274,13 @@ export class ExecutionOperationsRepository {
                 target_type, target_id, risk_tier, severity, source_authority,
                 source_status, verification_result, triage_state, workflow_version,
                 created_at, updated_at)
-             VALUES ($1, $2, 'EXECUTION_COMMAND', $3, $4, $5, $6, $7,
-                     'WARNING', 'PORTAL', 'BLOCKED', 'NOT_STARTED',
-                     'UNACKNOWLEDGED', 1, $8, $9)`,
+             SELECT operation_id, workspace_id, 'EXECUTION_COMMAND', command_key, environment,
+                    target_type, target_id, risk_tier, 'WARNING', 'PORTAL', 'BLOCKED', 'NOT_STARTED',
+                    'UNACKNOWLEDGED', 1, created_at, updated_at
+             FROM execution_command_plans_f0 WHERE operation_id=$1 AND workspace_id=$2`,
             [
               inserted.rows[0].operation_id,
               inserted.rows[0].workspace_id,
-              inserted.rows[0].command_key,
-              inserted.rows[0].environment,
-              inserted.rows[0].target_type,
-              inserted.rows[0].target_id,
-              inserted.rows[0].risk_tier,
-              inserted.rows[0].created_at,
-              inserted.rows[0].updated_at,
             ],
           );
           await client.query(
@@ -211,5 +328,74 @@ export class ExecutionOperationsRepository {
       }
     }
     throw new Error("execution plan transaction retry budget exhausted");
+  }
+  /** Exact-own lookup by (workspace, actor, key). Authorization of the TARGET happens in the
+   * caller BEFORE this runs; the actor in the predicate is the disclosure ceiling, not permission. */
+  async findApplyAttempt(workspaceId: string, actorUserId: string, requestKey: string):
+    Promise<ExecutionF0ApplyAttemptRecord | null> {
+    const result = await this.pool.query<ApplyAttemptRow>(
+      `SELECT workspace_id, actor_user_id, request_key, operation_id, intent_hash, created_at
+         FROM execution_f0_apply_attempts
+        WHERE workspace_id = $1 AND actor_user_id = $2 AND request_key = $3`,
+      [workspaceId, actorUserId, requestKey],
+    );
+    return result.rows[0] ? applyAttempt(result.rows[0]) : null;
+  }
+
+  /** Records the FIRST use of a key together with its audit event in one transaction, or returns
+   * the stored record. Never updates: the answer for a key is fixed by its first use. The caller
+   * compares `intentHash` to decide REPLAY (equal) versus CONFLICT (different). */
+  async recordApplyAttempt(input: {
+    workspaceId: string;
+    actorUserId: string;
+    requestKey: string;
+    operationId: string;
+    intentHash: string;
+    requestId: string;
+    auditEventId: string;
+  }): Promise<{ record: ExecutionF0ApplyAttemptRecord; created: boolean }> {
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      const inserted = await client.query<ApplyAttemptRow>(
+        `INSERT INTO execution_f0_apply_attempts
+           (workspace_id, actor_user_id, request_key, operation_id, intent_hash)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (workspace_id, actor_user_id, request_key) DO NOTHING
+         RETURNING workspace_id, actor_user_id, request_key, operation_id, intent_hash, created_at`,
+        [input.workspaceId, input.actorUserId, input.requestKey, input.operationId, input.intentHash],
+      );
+      if (inserted.rows[0]) {
+        await client.query(
+          `INSERT INTO product_audit_events
+             (event_id, event_type, actor_user_id, workspace_id, request_id,
+              idempotency_key, aggregate_type, aggregate_id, aggregate_version,
+              result, reason_code, metadata_json)
+           VALUES ($1, 'execution.command.apply_rejected', $2, $3, $4, $5,
+                   'execution_command', $6, 1, 'DENIED', 'COMMAND_RELAY_DISABLED', $7)`,
+          [
+            input.auditEventId, input.actorUserId, input.workspaceId, input.requestId,
+            input.requestKey, input.operationId,
+            JSON.stringify({ source_request_sent: false, retry_allowed: false, replayed: false }),
+          ],
+        );
+        await client.query("COMMIT");
+        return { record: applyAttempt(inserted.rows[0]), created: true };
+      }
+      const existing = await client.query<ApplyAttemptRow>(
+        `SELECT workspace_id, actor_user_id, request_key, operation_id, intent_hash, created_at
+           FROM execution_f0_apply_attempts
+          WHERE workspace_id = $1 AND actor_user_id = $2 AND request_key = $3`,
+        [input.workspaceId, input.actorUserId, input.requestKey],
+      );
+      await client.query("COMMIT");
+      if (!existing.rows[0]) throw new Error("F0 apply attempt vanished between conflict and read");
+      return { record: applyAttempt(existing.rows[0]), created: false };
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }

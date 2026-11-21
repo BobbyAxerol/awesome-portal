@@ -1,0 +1,1482 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { ExecutionApi, InboxResult } from "../../../api/ports";
+import { readLiveReview } from "../../../api/profileRead";
+import { readConditionsPage, readDecidedRow, readGateR1Detail, readGateR2Detail, readPaperExitDetail } from "../../../api/rows";
+import type { ApprovalRow, DecidedRow } from "../../../screens/ApprovalInbox";
+import { readApprovalEvidenceV1 } from "../../readers/approvalEvidence";
+import { v1GovernanceParent, type GovernanceParentKind } from "../../readers/dispatch";
+import { V2_ROLE_PRESETS } from "../../shell/roleNav";
+import Cockpit, { type CockpitProps } from "./index";
+import { whyText } from "../../gapWhyTestUtil";
+
+/** The `Not published (FE-xxx)` cells of a scope: the ids are hidden text in the cell and the full sentence is behind its "?" disclosure. */
+const npCells = (scope: HTMLElement, text: string): HTMLElement[] =>
+  Array.from(scope.querySelectorAll<HTMLElement>(".exec-ck-np")).filter((cell) => cell.textContent === text);
+
+/* ── the session, standing in for useSession ─────────────────────────────── */
+
+const session = vi.hoisted(() => ({
+  current: null as unknown,
+}));
+vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
+
+function signIn(options: { userId: string; username: string; capabilities: Iterable<string> }) {
+  session.current = {
+    principal: { principalId: `p_${options.userId}`, username: options.username, role: "x", sessionId: "s", mustChangePassword: false, authnMethods: [], issuedAt: "", exp: 0 },
+    access: { kind: "ready", access: { userId: options.userId, isOwner: false, ownerState: "NOT_OWNER", capabilities: [...options.capabilities] } },
+  };
+}
+
+/* ── the port: reads answer, anything else is a failure ──────────────────── */
+
+const WRITES = [
+  "planDecision", "applyPlan", "createApprovalRequest", "captureR2", "createPaperExit", "captureSandboxNote",
+  "planCommand", "runOperatorTask", "acknowledgeOperation", "resolveOperation",
+] as const;
+const READS = [
+  "listApprovals", "getApprovalHistory", "getGateR1", "getGateR2", "getLiveReview", "getGovernanceParent", "getPaperExit", "getWaivers", "getReviewCaptureCapabilities", "getApprovalEvidence",
+] as const;
+
+type Handler = (...args: never[]) => unknown;
+
+interface Port {
+  api: ExecutionApi;
+  calls: { name: string; args: unknown[] }[];
+  called(name: string): unknown[][];
+}
+
+function port(handlers: Partial<Record<(typeof READS)[number], Handler>>): Port {
+  const calls: Port["calls"] = [];
+  const api = new Proxy(
+    {},
+    {
+      get(_target, name) {
+        if (typeof name !== "string") return undefined;
+        return (...args: unknown[]) => {
+          calls.push({ name, args });
+          const handler = (handlers as Record<string, Handler | undefined>)[name];
+          // The version-aware read is the cockpit's one evidence call; unless a test answers it itself, it
+          // goes through the V1 handlers of the same port, as the fixture port does.
+          if (!handler && name === "getGovernanceParent") {
+            const [kind, id, workspaceId] = args as [GovernanceParentKind, string, string | undefined];
+            return v1GovernanceParent(api, kind, id, workspaceId);
+          }
+          if (!handler) throw new Error(`unexpected port call: ${name}`);
+          return Promise.resolve(handler(...(args as never[])));
+        };
+      },
+    },
+  ) as ExecutionApi;
+  return { api, calls, called: (name) => calls.filter((call) => call.name === name).map((call) => call.args) };
+}
+
+/* ── data: contract fixtures through the real readers ─────────────────────── */
+
+const FIXTURES = resolve(__dirname, "../../../../../../../../packages/contracts/fixtures");
+function fixture(name: string): unknown {
+  const path = resolve(FIXTURES, name);
+  expect(existsSync(path), path).toBe(true);
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
+function r1Detail() {
+  const detail = readGateR1Detail(fixture("execution-governance.r1-review.valid.json"));
+  if (detail === null) throw new Error("r1 fixture unreadable");
+  return detail;
+}
+function r1WithChecklist() {
+  return {
+    ...r1Detail(),
+    checklist: [
+      { label: "Out-of-sample Sharpe above the floor", outcome: "pass" as const },
+      { label: "Capacity evidence covers the top 3 symbols only", outcome: "watch" as const, suggestion: "Approve with a condition" },
+      { label: "Audit replay matches", outcome: "insufficient" as const },
+    ],
+  };
+}
+function r2Detail() {
+  const detail = readGateR2Detail(fixture("execution-governance.r2-review.valid.json"));
+  if (detail === null) throw new Error("r2 fixture unreadable");
+  return detail;
+}
+function exitDetail() {
+  const detail = readPaperExitDetail(fixture("execution-governance.paper-exit-review.valid.json"));
+  if (detail === null) throw new Error("exit fixture unreadable");
+  return detail;
+}
+function liveReview() {
+  const payload = readLiveReview(fixture("governance-live-review.valid.json"));
+  if (payload === null) throw new Error("live fixture unreadable");
+  return payload;
+}
+function waiverPage() {
+  const page = readConditionsPage(fixture("execution-governance.conditions-register.valid.json"));
+  if (page === null) throw new Error("waiver fixture unreadable");
+  return page;
+}
+
+function v1(id: string, gate: ApprovalRow["gate"], subject: string, over: Partial<ApprovalRow> = {}): ApprovalRow {
+  return {
+    id: id as ApprovalRow["id"],
+    gate,
+    subject,
+    target: "paper · BINANCE",
+    blockerCount: 0,
+    blockerSummary: null,
+    sla: { ageMinutes: 5, budgetMinutes: 240, state: "ON_TRACK" },
+    quorumMet: 0,
+    quorumRequired: 2,
+    inert: null,
+    needsYou: false,
+    ...over,
+  };
+}
+
+function wire(id: string, gate: string, creator: string | null, subject = id, over: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id,
+    gate,
+    subject,
+    status: "PENDING",
+    creator: creator ? { user_id: `usr_${creator}`, username: creator } : null,
+    requester: creator ? { user_id: `usr_${creator}`, username: creator } : null,
+    sla: { state: "ON_TRACK", age_minutes: 5, budget_minutes: 240 },
+    quorum_met: 0,
+    quorum_required: 2,
+    needs_you: false,
+    inert: null,
+    ...over,
+  };
+}
+
+const ROWS = [
+  v1("apr_a", "R1", "Alpha One", { needsYou: true }),
+  v1("apr_b", "R2", "Beta Two", { inert: "SELF" }),
+  v1("apr_c", "PAPER_EXIT", "Gamma Exit", { quorumRequired: 1 }),
+  v1("apr_d", "LIVE_GATE", "Delta Live", { sla: { ageMinutes: 360, budgetMinutes: 240, state: "OVERDUE" } }),
+];
+const RAW = [wire("apr_a", "R1", "stan", "Alpha One", { needs_you: true }), wire("apr_b", "R2", "bobby", "Beta Two", { inert: "SELF" }), wire("apr_c", "PAPER_EXIT", "lan", "Gamma Exit"), wire("apr_d", "LIVE_GATE", "stan", "Delta Live", { sla: { state: "OVERDUE", age_minutes: 360, budget_minutes: 240 } })];
+
+const HISTORY: DecidedRow[] = [
+  { id: "dec_old" as DecidedRow["id"], gate: "R1", subject: "Old Alpha", outcome: "APPROVED", decidedBy: "minh", decidedAt: "2026-10-17T09:12:00Z", policyVersion: "approval.v3" },
+];
+
+function inbox(rows: ApprovalRow[] = ROWS, extra: Partial<InboxResult> & { rawRows?: readonly unknown[] } = {}, page: Partial<InboxResult["page"]> = {}): InboxResult {
+  return {
+    page: { rows, totalCount: rows.length, filteredCount: rows.length, hasMore: false, nextCursor: null, ...page },
+    counts: { pending: rows.length, overdue: 1, dueSoon: null },
+    ...extra,
+  };
+}
+
+function standardPort(over: Partial<Record<(typeof READS)[number], Handler>> = {}, result: InboxResult = { ...inbox(), ...{ rawRows: RAW } }): Port {
+  return port({
+    listApprovals: () => ({ ok: true, value: result }),
+    getApprovalHistory: () => ({ ok: true, value: { rows: HISTORY, totalCount: 1, deliveryProfile: null } }),
+    getGateR1: () => ({ ok: true, value: r1WithChecklist() }),
+    getGateR2: () => ({ ok: true, value: r2Detail() }),
+    getPaperExit: () => ({ ok: true, value: exitDetail() }),
+    getLiveReview: () => ({ ok: true, value: liveReview() }),
+    getWaivers: () => ({ ok: true, value: waiverPage() }),
+    getReviewCaptureCapabilities: () => ({
+      ok: true,
+      value: { schema_version: "governance.review-capture-capabilities.v1", authority: "PORTAL", source_side_effect_requested: false, actions: [{ id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "GRANT_NOT_PUBLISHED" }, { id: "R2_CREATE", state: "UNAVAILABLE", reason_code: "RETAINED_REVIEW_READ_ONLY" }] },
+    }),
+    ...over,
+  });
+}
+
+/* ── mounting ─────────────────────────────────────────────────────────────── */
+
+function Where() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="where">{pathname + search}</output>;
+}
+
+async function settle() {
+  for (let i = 0; i < 4; i += 1) await act(async () => { await new Promise((done) => setTimeout(done, 0)); });
+}
+
+async function mount(p: Port, entry = "/execution/approvals", props: Partial<CockpitProps> = {}) {
+  const view = render(
+    <MemoryRouter initialEntries={[entry]}>
+      <Cockpit api={p.api} {...props} />
+      <Where />
+    </MemoryRouter>,
+  );
+  await settle();
+  return view;
+}
+
+const where = () => screen.getByTestId("where").textContent ?? "";
+const rail = () => screen.getByRole("complementary", { name: "Decision" });
+const queue = () => screen.getByRole("region", { name: "Decision queue" });
+const rowButton = (name: RegExp) => within(queue()).getByRole("button", { name });
+
+beforeEach(() => signIn({ userId: "usr_bobby", username: "bobby", capabilities: V2_ROLE_PRESETS.manager }));
+afterEach(() => {
+  cleanup();
+  delete (window as { matchMedia?: unknown }).matchMedia;
+});
+
+/** Pretend the viewport is (not) at least 1100px wide; jsdom has no matchMedia and the screen then assumes wide. */
+function viewport(wide: boolean) {
+  (window as unknown as { matchMedia: (query: string) => MediaQueryList }).matchMedia = (query: string) =>
+    ({ matches: wide, media: query, addEventListener: () => undefined, removeEventListener: () => undefined }) as unknown as MediaQueryList;
+}
+
+/* ── access ───────────────────────────────────────────────────────────────── */
+
+describe("access states", () => {
+  it("no governance read is the denied state with a My access link, and reads nothing", async () => {
+    signIn({ userId: "usr_lan", username: "lan", capabilities: V2_ROLE_PRESETS.operator });
+    const p = standardPort();
+    await mount(p, "/execution/approvals", { accessHref: "/profile" });
+    expect(screen.getByRole("alert").textContent).toContain("You can't open this page.");
+    expect(screen.getByRole("link", { name: "My access" }).getAttribute("href")).toBe("/profile");
+    expect(p.calls).toEqual([]);
+  });
+
+  it("a session that has not answered is loading, and one that failed is unavailable, not denied", async () => {
+    session.current = { principal: null, access: { kind: "loading" } };
+    const p = standardPort();
+    const view = await mount(p);
+    expect(screen.getByRole("status", { name: "Reading your access" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    view.unmount();
+    session.current = { principal: null, access: { kind: "unavailable", requestId: null } };
+    await mount(p);
+    expect(screen.getByText("Access not read")).toBeTruthy();
+    expect(screen.queryByText("You can't open this page.")).toBeNull();
+    expect(p.calls).toEqual([]);
+  });
+
+  it("a researcher (R1 read only) sees their own requests and nothing to decide", async () => {
+    signIn({ userId: "usr_stan", username: "stan", capabilities: V2_ROLE_PRESETS.researcher });
+    const p = standardPort({}, { ...inbox(), ...{ rawRows: [wire("apr_a", "R1", "stan", "Alpha One"), wire("apr_b", "R2", "bobby", "Beta Two"), wire("apr_c", "PAPER_EXIT", "lan", "Gamma Exit"), wire("apr_d", "LIVE_GATE", "stan", "Delta Live")] } } as InboxResult);
+    await mount(p);
+    expect(screen.getByRole("heading", { name: "My requests" })).toBeTruthy();
+    const table = screen.getByRole("table", { name: "Your requests" });
+    // apr_a and apr_d were created by stan; apr_b is bobby's, apr_c is lan's.
+    expect(within(table).getByText("apr_a")).toBeTruthy();
+    expect(within(table).getByText("apr_d")).toBeTruthy();
+    expect(within(table).queryByText("apr_b")).toBeNull();
+    expect(within(table).queryByText("apr_c")).toBeNull();
+    expect(screen.queryByRole("complementary", { name: "Decision" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Approve|Deny|Other decisions/ })).toBeNull();
+    expect(p.called("getGateR1")).toHaveLength(0);
+    // below 660px the table becomes cards: every cell carries its column label
+    expect([...table.querySelectorAll("tbody tr:first-child td")].map((td) => td.getAttribute("data-l"))).toEqual(["Request", "Status", "Approvers", "Clock"]);
+    // links keep the V1 review paths
+    expect(within(table).getByRole("link", { name: "apr_a" }).getAttribute("href")).toBe("/governance/approvals/apr_a/r1");
+  });
+
+  it("rows whose owner is not published are counted, not guessed as the researcher's", async () => {
+    signIn({ userId: "usr_stan", username: "stan", capabilities: V2_ROLE_PRESETS.researcher });
+    const p = standardPort({}, inbox());
+    await mount(p);
+    // V1 rows only: apr_b is marked SELF by the server, the other three say nothing about their owner.
+    const table = screen.getByRole("table", { name: "Your requests" });
+    expect(within(table).getByText("apr_b")).toBeTruthy();
+    expect(screen.getByText(/3 rows on this page do not say who created them/)).toBeTruthy();
+    expect(screen.getByText(/Creator: Not published/)).toBeTruthy();
+  });
+
+  it("a reviewer holds the full cockpit", async () => {
+    signIn({ userId: "usr_minh", username: "minh", capabilities: V2_ROLE_PRESETS.reviewer });
+    await mount(standardPort());
+    expect(screen.getByRole("heading", { name: "Approvals" })).toBeTruthy();
+    expect(queue()).toBeTruthy();
+  });
+});
+
+/* ── queue, lanes, lenses ─────────────────────────────────────────────────── */
+
+describe("queue, lanes and lenses", () => {
+  it("lists the gate rows in server order and reads the queue once, for all gates", async () => {
+    const p = standardPort();
+    await mount(p);
+    const items = within(queue()).getAllByRole("listitem").map((li) => li.textContent ?? "");
+    expect(items).toHaveLength(4);
+    expect(items[0]).toContain("Alpha One");
+    expect(items[3]).toContain("Delta Live");
+    expect(p.called("listApprovals")).toEqual([[{ filter: "ALL", limit: 50 }]]);
+  });
+
+  it("a lane chip re-reads with that lane's server view and keeps only its gates", async () => {
+    const p = standardPort();
+    await mount(p);
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Exit/ }));
+    await settle();
+    expect(p.called("listApprovals").at(-1)).toEqual([{ filter: "EXIT_REVIEWS", limit: 50 }]);
+    const items = within(queue()).getAllByRole("listitem");
+    expect(items).toHaveLength(1);
+    expect(items[0].textContent).toContain("Gamma Exit");
+    expect(within(queue()).getByRole("button", { name: /^Exit/ }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("lane chips carry an open count taken from the last All page, and keep it while another lane is open (CK-5)", async () => {
+    const p = standardPort();
+    await mount(p);
+    const names = () => [...(queue().querySelector('[aria-label="Lane"]') as HTMLElement).querySelectorAll(".exec-ck-chip")].map((el) => el.textContent?.trim());
+    expect(names().slice(0, 6)).toEqual(["All gates 4", "R1 1", "R2 1", "Exit 1", "Live 1", "Waiver"]);
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Exit/ }));
+    await settle();
+    // The Exit read holds one row, but the other lanes keep the count the All page gave.
+    expect(names().slice(0, 6)).toEqual(["All gates 4", "R1 1", "R2 1", "Exit 1", "Live 1", "Waiver"]);
+  });
+
+  describe("lane chip counts never take another view's rows (finding: stale allPage)", () => {
+    const chipNames = () => [...(queue().querySelector('[aria-label="Lane"]') as HTMLElement).querySelectorAll(".exec-ck-chip")].map((el) => el.textContent?.trim());
+    const laneChip = (name: RegExp) => within(queue().querySelector('[aria-label="Lane"]') as HTMLElement).getByRole("button", { name });
+    const r1Only = (): InboxResult => ({ ...inbox([ROWS[0]!], { rawRows: [RAW[0]!] }) });
+
+    /** First All read answers; R1 answers one row; every later All read is `later`. */
+    function lanePort(later: () => unknown) {
+      let allReads = 0;
+      return standardPort({
+        listApprovals: ((args: { filter: string }) => {
+          if (args.filter === "R1") return { ok: true, value: r1Only() };
+          allReads += 1;
+          return allReads === 1 ? { ok: true, value: { ...inbox(), ...{ rawRows: RAW } } } : later();
+        }) as Handler,
+      });
+    }
+
+    it("going back to All while its read is pending does not show the R1 lane's rows as the All counts", async () => {
+      const p = lanePort(() => new Promise(() => undefined));
+      await mount(p);
+      expect(chipNames().slice(0, 5)).toEqual(["All gates 4", "R1 1", "R2 1", "Exit 1", "Live 1"]);
+      fireEvent.click(laneChip(/^R1/));
+      await settle();
+      fireEvent.click(laneChip(/^All gates/));
+      await settle();
+      // The R1 page held one row: "All 1 · R1 1 · R2 0 ..." would be that page passed off as the All lane.
+      expect(chipNames().slice(0, 5)).toEqual(["All gates", "R1", "R2", "Exit", "Live"]);
+    });
+
+    it("an All read that fails leaves the chips without counts, not with the previous lane's", async () => {
+      const p = lanePort(() => ({ ok: false, status: "unavailable", reason: "Queue is down." }));
+      await mount(p);
+      fireEvent.click(laneChip(/^R1/));
+      await settle();
+      fireEvent.click(laneChip(/^All gates/));
+      await settle();
+      expect(chipNames().slice(0, 5)).toEqual(["All gates", "R1", "R2", "Exit", "Live"]);
+      expect(within(queue()).getByText(/Queue is down/)).toBeTruthy();
+    });
+
+    it("a workspace change drops the old workspace's counts until its own All read answers", async () => {
+      let pending = false;
+      const p = standardPort({
+        listApprovals: (() => (pending ? new Promise(() => undefined) : { ok: true, value: { ...inbox(), ...{ rawRows: RAW } } })) as Handler,
+      });
+      const tree = (workspaceId: string) => (
+        <MemoryRouter initialEntries={["/execution/approvals"]}>
+          <Cockpit api={p.api} workspaceId={workspaceId} />
+        </MemoryRouter>
+      );
+      const view = render(tree("ws_1"));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates 4", "R1 1"]);
+      pending = true;
+      view.rerender(tree("ws_2"));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates", "R1"]);
+    });
+
+    it("a changed api for the same workspace drops the old api's counts, even while another lane is open", async () => {
+      const first = standardPort({
+        listApprovals: ((args: { filter: string }) => (args.filter === "R1" ? { ok: true, value: r1Only() } : { ok: true, value: { ...inbox(), ...{ rawRows: RAW } } })) as Handler,
+      });
+      const second = standardPort({ listApprovals: (() => new Promise(() => undefined)) as Handler });
+      const tree = (api: typeof first.api) => (
+        <MemoryRouter initialEntries={["/execution/approvals"]}>
+          <Cockpit api={api} workspaceId="ws_1" />
+        </MemoryRouter>
+      );
+      const view = render(tree(first.api));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates 4", "R1 1"]);
+      fireEvent.click(laneChip(/^R1/));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates 4", "R1 1"]);
+      view.rerender(tree(second.api));
+      await settle();
+      expect(chipNames().slice(0, 2)).toEqual(["All gates", "R1"]);
+    });
+  });
+
+  it("a lane count is an at-least number when the All page had more rows than it loaded", async () => {
+    const p = standardPort({}, inbox(ROWS, { rawRows: RAW }, { hasMore: true, nextCursor: "c1", totalCount: 48, filteredCount: 48 }));
+    await mount(p);
+    expect(within(queue()).getByRole("button", { name: "All gates 4+" })).toBeTruthy();
+  });
+
+  describe("Archive, Reactivation and Capital are selectable read-only panels (RV-10)", () => {
+    const chip = (name: string) => within(queue()).getByRole("button", { name }) as HTMLButtonElement;
+
+    it("each chip is enabled and opens its panel, with the choice in the URL", async () => {
+      const p = standardPort();
+      await mount(p);
+      for (const [name, view, heading] of [["Archive", "archive", "Archive"], ["Reactivation", "reactivation", "Reactivation"], ["Capital", "capital", "Capital"]] as const) {
+        expect(chip(name).disabled).toBe(false);
+        fireEvent.click(chip(name));
+        await settle();
+        expect(where()).toContain(`view=${view}`);
+        expect(chip(name).getAttribute("aria-pressed")).toBe("true");
+        expect(within(screen.getByRole("region", { name: "Evidence" })).getByRole("heading", { name: heading })).toBeTruthy();
+      }
+      // a gate lane takes the panel away again
+      fireEvent.click(within(queue()).getByRole("button", { name: /^R1/ }));
+      await settle();
+      expect(where()).toContain("view=r1");
+      expect(screen.queryByRole("region", { name: "Capital" })).toBeNull();
+    });
+
+    it("a reload on the URL restores the panel, and the gate counts survive", async () => {
+      const p = standardPort();
+      await mount(p, "/execution/approvals?view=capital");
+      expect(chip("Capital").getAttribute("aria-pressed")).toBe("true");
+      expect(screen.getByRole("region", { name: "Capital" })).toBeTruthy();
+      expect(where()).toContain("view=capital");
+      // the All page was still read for the chip counts
+      expect(within(queue()).getByRole("button", { name: "All gates 4" })).toBeTruthy();
+    });
+
+    it("says what the contract publishes, and only that: typed absences, no invented rows", async () => {
+      await mount(standardPort(), "/execution/approvals?view=archive");
+      const panel = screen.getByRole("region", { name: "Archive" });
+      expect(within(panel).getAllByText("Not published").length).toBeGreaterThanOrEqual(3);
+      expect(within(queue()).queryAllByRole("listitem")).toHaveLength(0);
+      expect(within(queue()).getByText(/No rows: the contract publishes no list for this family/)).toBeTruthy();
+    });
+
+    it("Capital points to where the published recalls live and names the relay as the reason", async () => {
+      await mount(standardPort(), "/execution/approvals?view=capital&workspace_id=ws_other");
+      const link = within(screen.getByRole("region", { name: "Capital" })).getByRole("link", { name: /Operations/ });
+      expect(link.getAttribute("href")).toBe("/execution/operations?workspace_id=ws_other");
+      const request = within(rail()).getByRole("button", { name: "Request capital change" }) as HTMLButtonElement;
+      expect(request.disabled).toBe(true);
+      expect(document.getElementById(request.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Relay is not qualified yet");
+    });
+
+    it("each request control stays disabled with ONE short reason, and nothing is sent or read for a gate", async () => {
+      const p = standardPort();
+      await mount(p, "/execution/approvals?view=reactivation&sel=apr_a");
+      const request = within(rail()).getByRole("button", { name: "Request reactivation" }) as HTMLButtonElement;
+      expect(request.disabled).toBe(true);
+      expect(document.getElementById(request.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Not offered in the portal yet");
+      // a leftover selection reads no gate evidence while a family panel is open
+      expect(p.called("getGateR1")).toHaveLength(0);
+      expect(p.called("getGovernanceParent")).toHaveLength(0);
+      for (const name of ["planDecision", "applyPlan", "createApprovalRequest", "captureR2", "createPaperExit", "captureSandboxNote", "planCommand"]) expect(p.called(name)).toHaveLength(0);
+    });
+
+    it("J and K do not move a hidden selection while a panel is open (keyboard)", async () => {
+      await mount(standardPort(), "/execution/approvals?view=archive");
+      fireEvent.keyDown(document, { key: "j" });
+      await settle();
+      expect(where()).not.toContain("sel=");
+    });
+
+    it("the chips are native buttons: Enter and Space reach them in tab order", async () => {
+      await mount(standardPort());
+      const el = chip("Capital");
+      expect(el.tagName).toBe("BUTTON");
+      expect(el.tabIndex).toBe(0);
+    });
+  });
+
+  it("Needs you narrows the loaded page on the published flag, with counts that never claim the whole queue", async () => {
+    const p = standardPort({}, inbox(ROWS, { ...{ rawRows: RAW } }, { hasMore: true, nextCursor: "c1", totalCount: 48, filteredCount: 48 }));
+    await mount(p);
+    expect(within(queue()).getByRole("button", { name: "Needs you 1+" })).toBeTruthy();
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Needs you/ }));
+    const items = within(queue()).getAllByRole("listitem");
+    expect(items).toHaveLength(1);
+    expect(items[0].textContent).toContain("Alpha One");
+    expect(within(queue()).getByText(/1 shown · 4 loaded of 48/)).toBeTruthy();
+  });
+
+  it("Yours is the signed-in person's own requests: creator match or the server's SELF mark", async () => {
+    await mount(standardPort());
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Yours/ }));
+    const items = within(queue()).getAllByRole("listitem").map((li) => li.textContent ?? "");
+    // apr_b: created by bobby (wire) and marked SELF.
+    expect(items).toHaveLength(1);
+    expect(items[0]).toContain("Beta Two");
+  });
+
+  it("Closed reads the decision history, once, and lists decided requests", async () => {
+    const p = standardPort();
+    await mount(p);
+    fireEvent.click(within(queue()).getByRole("button", { name: "Closed" }));
+    const items = within(queue()).getAllByRole("listitem");
+    expect(items).toHaveLength(1);
+    expect(items[0].textContent).toContain("Old Alpha");
+    expect(items[0].textContent).toContain("Decided by minh");
+    expect(p.called("getApprovalHistory")).toHaveLength(1);
+  });
+
+  it("a history read that fails says so on the Closed lens instead of showing an empty list as truth", async () => {
+    const p = standardPort({ getApprovalHistory: () => ({ ok: false, status: "unavailable", reason: "History is down." }) });
+    await mount(p);
+    fireEvent.click(within(queue()).getByRole("button", { name: "Closed" }));
+    expect(within(queue()).getByText("Decision history not read: History is down.")).toBeTruthy();
+  });
+
+  it("SLA and quorum are exact: 5 of 240 min is 3h 55m left, 360 of 240 is overdue 2h, 0 of 2 stays 0 of 2", async () => {
+    await mount(standardPort());
+    const alpha = rowButton(/Alpha One/);
+    expect(alpha.textContent).toContain("3h 55m left");
+    expect(alpha.textContent).toContain("0 of 2 approvers");
+    expect(within(alpha).getByRole("img").getAttribute("aria-label")).toBe("SLA 3h 55m left, 5 of 240 min used");
+    expect((alpha.querySelector(".exec-ck-sla i") as HTMLElement).style.width).toMatch(/^2\.08333333333333\d*%$/);
+    const delta = rowButton(/Delta Live/);
+    expect(delta.textContent).toContain("overdue 2h");
+    expect(delta.textContent).toContain("Overdue");
+    expect((delta.querySelector(".exec-ck-sla i") as HTMLElement).style.width).toBe("100%");
+  });
+
+  it("a row with no SLA or quorum says so in words, never 0 or a dash", async () => {
+    const bare = v1("apr_z", "R1", "Bare Row", { sla: { ageMinutes: -1, budgetMinutes: -1 }, quorumMet: null, quorumRequired: null });
+    await mount(standardPort({}, inbox([bare])));
+    expect(rowButton(/Bare Row/).textContent).toContain("SLA not published · approvers not published");
+  });
+
+  it("server counts are stated with their gaps: overdue 1, due soon not counted", async () => {
+    await mount(standardPort());
+    expect(screen.getByText(/pending/).textContent).toBe("4 pending · 1 overdue · due soon not counted");
+  });
+
+  it("load more appends the next page by cursor and drops duplicates", async () => {
+    const first = inbox([ROWS[0], ROWS[1]], {}, { hasMore: true, nextCursor: "c1", totalCount: 4, filteredCount: 4 });
+    const second = inbox([ROWS[1], ROWS[2]], {}, { hasMore: false, nextCursor: null, totalCount: 4, filteredCount: 4 });
+    let n = 0;
+    const p = standardPort({ listApprovals: () => ({ ok: true, value: n++ === 0 ? first : second }) });
+    await mount(p);
+    expect(within(queue()).getAllByRole("listitem")).toHaveLength(2);
+    fireEvent.click(within(queue()).getByRole("button", { name: "Load more" }));
+    await settle();
+    expect(p.called("listApprovals").at(-1)).toEqual([{ filter: "ALL", after: "c1", limit: 50 }]);
+    expect(within(queue()).getAllByRole("listitem")).toHaveLength(3);
+    expect(within(queue()).queryByRole("button", { name: "Load more" })).toBeNull();
+  });
+
+  it("a failed queue read is a distinct state, not an empty queue", async () => {
+    const p = standardPort({ listApprovals: () => ({ ok: false, status: "denied", reason: "No approval read." }) });
+    await mount(p);
+    expect(within(queue()).getByText("Withheld")).toBeTruthy();
+    expect(within(queue()).queryByText("Nothing in this view")).toBeNull();
+  });
+
+  it("an empty page is an empty state with its own words", async () => {
+    await mount(standardPort({}, inbox([])));
+    expect(within(queue()).getByText("Nothing in this view")).toBeTruthy();
+  });
+
+  it("V1 reader gaps surface as a partial note", async () => {
+    const p = standardPort({ listApprovals: () => ({ ok: true, value: inbox(), warnings: ["gate=\"X\""] }) });
+    await mount(p);
+    expect(within(queue()).getByRole("status").textContent).toContain('Some rows could not be read: gate="X"');
+  });
+});
+
+/* ── evidence ─────────────────────────────────────────────────────────────── */
+
+describe("evidence frame", () => {
+  // Changed on purpose (UXM-07 CK-1): the first load used to leave the evidence and the rail empty and
+  // this test pinned that. On a wide screen the first request is now open; on a stacked one nothing is.
+  it("on a wide screen the first request is selected on first load, through ?sel= with replace", async () => {
+    viewport(true);
+    await mount(standardPort());
+    expect(where()).toContain("sel=apr_a");
+    expect(screen.queryByText("Nothing selected")).toBeNull();
+    expect(within(rail()).queryByText(/Select a request/)).toBeNull();
+    expect(within(queue()).getByRole("button", { name: /Alpha One/ }).getAttribute("aria-current")).toBeTruthy();
+  });
+
+  it("a stacked screen (under 1100px) selects nothing and says so", async () => {
+    viewport(false);
+    await mount(standardPort());
+    expect(where()).not.toContain("sel=");
+    expect(screen.getByText("Nothing selected")).toBeTruthy();
+    expect(screen.getByText(/Select a request in the queue, or press J/)).toBeTruthy();
+  });
+
+  it("a link's own ?sel= wins over the first row", async () => {
+    viewport(true);
+    await mount(standardPort(), "/execution/approvals?sel=apr_c");
+    expect(where()).toContain("sel=apr_c");
+    expect(where()).not.toContain("apr_a");
+  });
+
+  it("Esc clears the automatic selection and it does not come back", async () => {
+    viewport(true);
+    await mount(standardPort());
+    expect(where()).toContain("sel=apr_a");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    expect(where()).not.toContain("sel=");
+    expect(screen.getByText("Nothing selected")).toBeTruthy();
+  });
+
+  it("selecting a row writes ?sel=, reads the R1 review, and shows the checklist with Not published cells", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals?workspace_id=ws_x", { workspaceId: "ws_x" });
+    fireEvent.click(rowButton(/Alpha One/));
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+    expect(p.called("getGateR1")).toEqual([["apr_a", "ws_x"]]);
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).getByRole("heading", { name: "Alpha One" })).toBeTruthy();
+    const checklist = within(evidence).getByRole("region", { name: "Checklist findings" });
+    // QA1 I-16: the same absence on every row is one line under the table, not a column of three placeholders.
+    expect(within(checklist).queryByRole("columnheader", { name: "Observed and limit" })).toBeNull();
+    expect(npCells(checklist, "Not published").length).toBe(1);
+    expect(within(checklist).getByTestId("ck-observed-absent").textContent).toContain("for every finding");
+    expect(within(checklist).getByText("Capacity evidence covers the top 3 symbols only")).toBeTruthy();
+    expect(within(checklist).getByText("Approve with a condition")).toBeTruthy();
+    expect(within(checklist).getByText("Watch")).toBeTruthy();
+    expect(npCells(evidence, "Not published").length).toBeGreaterThan(0);
+    expect(within(evidence).getByRole("region", { name: "Artifact passport" })).toBeTruthy();
+  });
+
+  it("the verdict carries a segmented meter, one segment per checklist item, coloured by its mark (CK-7)", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    const meter = within(screen.getByRole("region", { name: "Evidence" })).getByRole("img", { name: /criteria:/ });
+    const segments = [...meter.querySelectorAll("i")];
+    expect(segments.length).toBeGreaterThan(0);
+    expect(segments.map((i) => i.getAttribute("data-m"))).toContain("watch");
+    expect(segments.map((i) => i.getAttribute("data-m"))).toEqual(["pass", "watch", "insufficient"]);
+    expect(meter.getAttribute("aria-label")).toBe("3 criteria: 1 within, 1 watch, 0 blocking, 1 insufficient");
+  });
+
+  it("an R1 checklist with an insufficient criterion and nothing failing is never a green verdict, and says insufficient", async () => {
+    const checklist = (outcomes: ("pass" | "insufficient")[]) => ({ ...r1Detail(), checklist: outcomes.map((outcome, i) => ({ label: `Criterion ${i + 1}`, outcome })) });
+    const verdict = () => within(screen.getByRole("region", { name: "Evidence" })).getByText(/^Checklist \d+ of \d+$/).closest(".exec-ck-verdict") as HTMLElement;
+
+    const gaps = await mount(standardPort({ getGateR1: () => ({ ok: true, value: checklist(["pass", "pass", "insufficient"]) }) }), "/execution/approvals?sel=apr_a");
+    expect(verdict().getAttribute("data-tone")).toBe("warn");
+    expect(verdict().textContent).toContain("1 insufficient");
+    expect(within(verdict()).getByRole("img").getAttribute("aria-label")).toBe("3 criteria: 2 within, 0 watch, 0 blocking, 1 insufficient");
+    gaps.unmount();
+
+    await mount(standardPort({ getGateR1: () => ({ ok: true, value: checklist(["pass", "pass"]) }) }), "/execution/approvals?sel=apr_a");
+    expect(verdict().getAttribute("data-tone")).toBe("ok");
+    expect(verdict().textContent).toContain("0 insufficient");
+  });
+
+  it("there is no Open full review link: the review routes render this same screen, so the link went nowhere new (QA4 R3-08)", async () => {
+    await mount(standardPort(), "/execution/approvals?workspace_id=ws_x&sel=apr_a");
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).queryByRole("link", { name: "Open full review" })).toBeNull();
+    fireEvent.click(rowButton(/Beta Two/));
+    expect(within(evidence).queryByRole("link", { name: "Open full review" })).toBeNull();
+    await settle();
+  });
+
+  it("a decided request offers no decision: the rail shows the recorded outcome and no Approve (QA4 R3-04)", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=dec_old");
+    const rail = screen.getByRole("complementary", { name: "Decision" });
+    expect(within(rail).getByTestId("ck-closed-outcome").textContent).toContain("Closed: approved by minh");
+    expect(rail.textContent).not.toMatch(/If approved/);
+    expect(within(rail).queryByRole("button", { name: /Approve/ })).toBeNull();
+    await settle();
+  });
+
+  // UI review F1: the history keys a row by its decision id (`dec_AP-352`) and names the approval apart; a review path opens the approval id.
+  it("a decided request opened by its approval id (a review path) shows its closed view, with no Approve and no live quorum note", async () => {
+    const history: DecidedRow[] = [{ ...HISTORY[0]!, id: "dec_apr_off" as DecidedRow["id"], approvalId: "apr_off" as DecidedRow["id"], gate: "R2", subject: "Off Page R2" }];
+    const p = standardPort({ getApprovalHistory: () => ({ ok: true, value: { rows: history, totalCount: 1, deliveryProfile: null } }) });
+    await mount(p, "/governance/approvals/apr_off/r2", { pathSelection: { id: "apr_off", kind: "r2" } });
+    await settle();
+    const rail = screen.getByRole("complementary", { name: "Decision" });
+    expect(within(rail).getByTestId("ck-closed-outcome").textContent).toContain("Closed: approved by minh");
+    expect(within(rail).queryByRole("button", { name: /Approve/ })).toBeNull();
+    expect(rail.textContent).not.toMatch(/quorum is already met/);
+  });
+
+  it("the history reader keeps the approval a decision closed apart from the decision id", () => {
+    const hit = readDecidedRow({ id: "dec_AP-352", approval_id: "AP-352", gate: "R2", subject: "Carry v3.2", outcome: "APPROVED", decided_by: { username: "minh" }, decided_at: "2026-10-17T09:12:00Z" });
+    expect(hit.row?.id).toBe("dec_AP-352");
+    expect(hit.row?.approvalId).toBe("AP-352");
+    // a wire that names only one id adds nothing
+    expect(readDecidedRow({ id: "AP-9", gate: "R1", subject: "x", outcome: "DENIED", decided_at: "2026-10-17T09:12:00Z" }).row?.approvalId).toBeUndefined();
+  });
+
+  it("the Needs you lens count and the Needs you chips agree: a blocked request that needs you wears both chips", async () => {
+    const raw = RAW.map((row) => (row.id === "apr_a" ? { ...row, needs_you: true, blocker_count: 1, blocker_summary: "A held" } : row));
+    viewport(true);
+    await mount(standardPort({}, { ...inbox(), rawRows: raw }));
+    await settle();
+    const q = queue();
+    const lens = within(q).getByRole("button", { name: /^Needs you \d/ });
+    const counted = Number(/(\d+)/.exec(lens.textContent ?? "")![1]);
+    const chips = Array.from(q.querySelectorAll(".exec-ck-list [data-kind='gate']")).filter((item) => /Needs you/.test(item.textContent ?? "")).length;
+    expect(chips).toBe(counted);
+    const blocked = within(q).getByRole("button", { name: /Alpha One/ });
+    expect(blocked.textContent).toMatch(/Blocker/);
+    expect(blocked.textContent).toMatch(/Needs you/);
+  });
+
+  it("a ?sel=undefined link (a search result built from a missing id) is no selection and the page never prints the word (QA4 R3-01)", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=undefined");
+    expect(document.body.textContent).not.toMatch(/undefined/);
+    await settle();
+  });
+
+  it("R2 shows the capital preview and the published readiness; criteria are Not published", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals?sel=apr_b");
+    expect(p.called("getGateR2")).toHaveLength(1);
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).getByRole("region", { name: "Criteria" }).textContent).toContain("Not published");
+    expect(within(evidence).getByRole("region", { name: "Capital change preview" })).toBeTruthy();
+    expect(within(evidence).getByRole("region", { name: "R1 lineage" })).toBeTruthy();
+  });
+
+  it("exit review shows the published findings per panel", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals?sel=apr_c");
+    expect(p.called("getPaperExit")).toEqual([["apr_c", undefined]]);
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    const detail = exitDetail();
+    for (const panel of detail.panels) expect(within(evidence).getByRole("region", { name: panel.title })).toBeTruthy();
+    expect(within(evidence).getByRole("heading", { name: detail.gateMet ? "Gate met" : "Gate not met" })).toBeTruthy();
+    expect(within(evidence).getByRole("region", { name: "Recommendation" })).toBeTruthy();
+  });
+
+  it("live review decodes the governance backbone and lists the published canary branches", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals?sel=apr_d");
+    expect(p.called("getLiveReview")).toHaveLength(1);
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).getByRole("heading", { name: /Evidence incomplete · .*Live decisions are closed/ })).toBeTruthy();
+    expect(within(evidence).getByRole("region", { name: "Canary evidence branches" })).toBeTruthy();
+    expect(within(evidence).getByRole("region", { name: "Current source · live facts" })).toBeTruthy();
+    const criteria = within(evidence).getByRole("region", { name: "Criteria" });
+    expect(criteria.textContent).toContain("Governance backbone");
+    expect(criteria.textContent).toContain("Not published");
+  });
+
+  it("a failed review read is its own state, and the queue stays", async () => {
+    const p = standardPort({ getGateR1: () => ({ ok: false, status: "denied", reason: "No R1 read." }) });
+    await mount(p, "/execution/approvals?sel=apr_a");
+    expect(within(screen.getByRole("region", { name: "Evidence" })).getByText("Withheld")).toBeTruthy();
+    expect(within(queue()).getAllByRole("listitem")).toHaveLength(4);
+  });
+
+  it("a request that is not on the loaded page and has no path kind says why nothing is shown, and reads nothing", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals?sel=apr_elsewhere");
+    expect(screen.getByText("Request not on this page")).toBeTruthy();
+    expect(p.called("getGateR1")).toHaveLength(0);
+  });
+
+  it("a path selection reads the review for an id the page does not hold", async () => {
+    const p = standardPort();
+    await mount(p, "/governance/approvals/apr_off/r2", { pathSelection: { id: "apr_off", kind: "r2" } });
+    expect(p.called("getGateR2")).toEqual([["apr_off", undefined]]);
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).getByText("apr_off")).toBeTruthy();
+    expect(within(evidence).queryByRole("link", { name: "Open full review" })).toBeNull();
+  });
+});
+
+/* ── the rail ─────────────────────────────────────────────────────────────── */
+
+describe("decision rail", () => {
+  const PREVIEW = "Preview · not recorded";
+
+  function expectEveryButtonDisabledWithPreviewReason(labels: string[]) {
+    // The "?" reason disclosures (GapWhy) are buttons too; this is about the decision controls.
+    const buttons = (within(rail()).getAllByRole("button") as HTMLButtonElement[]).filter((b) => !b.hasAttribute("aria-expanded"));
+    expect(buttons.map((b) => b.textContent)).toEqual(labels);
+    for (const button of buttons) {
+      expect(button.disabled).toBe(true);
+      const reason = document.getElementById(button.getAttribute("aria-describedby") ?? "");
+      expect(reason?.textContent).toBe(PREVIEW);
+    }
+  }
+
+  it("R1: Approve and Other decisions are disabled with the exact reason, and the note is disabled too", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    expectEveryButtonDisabledWithPreviewReason(["Approve", "Other decisions"]);
+    // UXM07-048/6: the page banner says "not recorded" once; no decision repeats it as visible text (it stays each button's description)
+    expect(rail().querySelectorAll(".exec-dock-reason")).toHaveLength(0);
+    expect(within(rail()).getByText("Would offer: Approve with a condition, Request changes, Deny")).toBeTruthy();
+    expect((within(rail()).getByLabelText("Note") as HTMLTextAreaElement).disabled).toBe(true);
+  });
+
+  it("exit review offers its own verbs, all disabled", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_c");
+    expectEveryButtonDisabledWithPreviewReason(["Approve promotion", "Other decisions"]);
+    expect(within(rail()).getByText("Would offer: Extend observation 14 days, Hold at current stage")).toBeTruthy();
+  });
+
+  it("live has no other decisions and says it is closed; its primary is still disabled with the preview reason", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_d");
+    expectEveryButtonDisabledWithPreviewReason(["Approve"]);
+    expect(within(rail()).getByText("Live decisions are closed on this build.")).toBeTruthy();
+  });
+
+  it("a request of the signed-in person also shows a disabled Withdraw", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_b");
+    expectEveryButtonDisabledWithPreviewReason(["Approve", "Other decisions", "Withdraw"]);
+  });
+
+  it("separation of duty: a creator who is the signed-in person blocks and says why", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_b");
+    const line = within(rail()).getByText(/Separation of duty/);
+    expect(line.textContent).toBe("Separation of duty: you created this request, so you cannot decide it.");
+    expect(line.getAttribute("data-state")).toBe("violation");
+  });
+
+  it("separation of duty: another creator is OK and names both people", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    expect(within(rail()).getByText(/Separation of duty/).textContent).toBe("Separation of duty OK · created by stan, you are bobby");
+  });
+
+  it("with no creator on the row the line reads the review's own creator, not a guess", async () => {
+    // V1 rows only: the R1 fixture's creator is usr_stan, the signed-in person is bobby.
+    await mount(standardPort({}, inbox()), "/execution/approvals?sel=apr_a");
+    expect(within(rail()).getByText(/Separation of duty/).textContent).toBe("Separation of duty OK · created by stan, you are bobby");
+    cleanup();
+    signIn({ userId: "usr_stan", username: "stan", capabilities: V2_ROLE_PRESETS.manager });
+    await mount(standardPort({}, inbox()), "/execution/approvals?sel=apr_a");
+    expect(within(rail()).getByText(/Separation of duty/).getAttribute("data-state")).toBe("violation");
+  });
+
+  it("quorum is the true count, with a meter of that many cells", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    expect(within(rail()).getByText(/of \d+ approvers/).textContent).toMatch(/^0 of \d+ approvers$/);
+    const required = Number((within(rail()).getByText(/of \d+ approvers/).textContent ?? "").match(/of (\d+)/)?.[1]);
+    expect(rail().querySelectorAll(".exec-ck-cells i")).toHaveLength(required);
+    expect(rail().querySelectorAll('.exec-ck-cells i[data-filled="true"]')).toHaveLength(0);
+  });
+
+  it("ladder, call and receipt ref are one 'Not available' line (FE-030 behind its disclosure); the receipt is a preview", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    const receipt = within(rail()).getByRole("region", { name: "Receipt" });
+    for (const label of ["Ladder", "Call", "Receipt ref"]) expect(within(receipt).queryByRole("rowheader", { name: label }), label).toBeNull();
+    const line = within(receipt).getByTestId("not-available-line");
+    expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref");
+    expect(line.hasAttribute("title")).toBe(false);
+    expect(whyText(line)).toContain("Receipt ref: Not published: creator, ladder, SLA and needs-you");
+    // The hi-fi's preview rows: nothing chosen, the request and its title, the signed-in person, what an approval would count as, what changes.
+    expect(within(receipt).getByRole("heading", { name: "Preview · not recorded" })).toBeTruthy();
+    expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None chosen");
+    expect(within(receipt).getByRole("rowheader", { name: "Request" }).nextElementSibling?.textContent).toBe("apr_a · Alpha One");
+    expect(within(receipt).getByRole("rowheader", { name: "You" }).nextElementSibling?.textContent).toBe("bobby");
+    expect(within(receipt).getByRole("rowheader", { name: "Counts as" }).nextElementSibling?.textContent).toBe("If approved: 1 of 1 approvals"); // the evidence read's own quorum (1) wins over the queue row's (2)
+    expect(within(receipt).getByRole("rowheader", { name: "What changes" }).nextElementSibling?.textContent).toContain("Not published");
+    // UXM07-048/6: the preview reason is each control's description (hidden text) and the page banner says it once; the rail draws none
+    expect(rail().querySelectorAll(".exec-dock-reason")).toHaveLength(0);
+    expect(within(rail()).getAllByText(PREVIEW).length).toBeGreaterThan(0);
+  });
+
+  it("a decision the history holds is shown as recorded, read only", async () => {
+    const history = [{ ...HISTORY[0], id: "apr_a" as DecidedRow["id"], outcome: "DENIED" as const }];
+    await mount(standardPort({ getApprovalHistory: () => ({ ok: true, value: { rows: history, totalCount: 1, deliveryProfile: null } }) }), "/execution/approvals?sel=apr_a");
+    const receipt = within(rail()).getByRole("region", { name: "Receipt" });
+    expect(within(receipt).getByRole("heading", { name: "Recorded" })).toBeTruthy();
+    expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("denied");
+    expect(within(receipt).getByRole("rowheader", { name: "By" }).nextElementSibling?.textContent).toBe("minh");
+  });
+
+  it("step-up is informational on R2 and live, absent on R1 and exit, and never has a control", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_b");
+    const stepUp = within(rail()).getByLabelText("Step-up confirmation");
+    expect(stepUp.textContent).toContain("Not published");
+    expect(stepUp.textContent).not.toContain("Informational only");
+    // The "?" disclosure of the absence is a button too; there is no decision control.
+    expect(within(stepUp).queryAllByRole("button").filter((b) => !b.hasAttribute("aria-expanded"))).toHaveLength(0);
+    cleanup();
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    expect(within(rail()).queryByLabelText("Step-up confirmation")).toBeNull();
+  });
+
+  it("reads the server's capture capabilities only when the review names a workspace, and lists them read only", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals?sel=apr_a", { workspaceId: "ws_x" });
+    expect(p.called("getReviewCaptureCapabilities")).toEqual([["ws_x"]]);
+    expect(within(rail()).getByText("R2 execution grant")).toBeTruthy();
+    // UXM07-048/4: a code is read as words; an unknown one is humanized with its code behind a disclosure, a known one keeps it in hidden text
+    expect(rail().textContent).toContain("Unavailable · Grant not published");
+    expect(rail().textContent).not.toContain("Grant not published · GRANT_NOT_PUBLISHED");
+    expect(within(rail()).getByRole("button", { name: "Grant not published, code" })).toBeTruthy();
+    expect(within(rail()).getByText("Unavailable · Read-only on this build")).toBeTruthy();
+    expect(rail().textContent).toContain("(RETAINED_REVIEW_READ_ONLY)");
+    cleanup();
+    const q = standardPort();
+    await mount(q, "/execution/approvals?sel=apr_a");
+    expect(q.called("getReviewCaptureCapabilities")).toHaveLength(0);
+    expect(within(rail()).getByText("Workspace not published on this review")).toBeTruthy();
+  });
+
+  it("nothing is ever written: no plan, apply, create or command call, across every gate and the waiver lane", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals", { workspaceId: "ws_x" });
+    for (const name of [/Alpha One/, /Beta Two/, /Gamma Exit/, /Delta Live/]) {
+      fireEvent.click(rowButton(name));
+      await settle();
+      for (const button of within(rail()).getAllByRole("button")) fireEvent.click(button);
+    }
+    fireEvent.click(within(queue()).getByRole("button", { name: "Waiver" }));
+    await settle();
+    fireEvent.click(within(queue()).getAllByRole("listitem")[0].querySelector("button") as HTMLElement);
+    await settle();
+    for (const button of within(rail()).getAllByRole("button")) fireEvent.click(button);
+    for (const key of ["a", "r", "n"]) fireEvent.keyDown(document.body, { key });
+    await settle();
+    const names = p.calls.map((call) => call.name);
+    for (const write of WRITES) expect(names).not.toContain(write);
+    expect(names.filter((name) => !(READS as readonly string[]).includes(name))).toEqual([]);
+  });
+});
+
+/* ── waiver lane ──────────────────────────────────────────────────────────── */
+
+describe("waiver lane", () => {
+  it("reads the register, lists waivers apart from gates, and filters by server state", async () => {
+    const p = standardPort();
+    await mount(p);
+    expect(p.called("getWaivers")).toHaveLength(0);
+    fireEvent.click(within(queue()).getByRole("button", { name: "Waiver" }));
+    await settle();
+    expect(p.called("getWaivers")).toEqual([[{ limit: 50 }]]);
+    const items = within(queue()).getAllByRole("listitem");
+    expect(items).toHaveLength(1);
+    expect(items[0].textContent).toContain("Approved waiver · risk-team");
+    expect(items[0].textContent).not.toContain("Alpha One");
+    expect(within(queue()).queryByRole("group", { name: "Lens" })).toBeNull();
+    fireEvent.click(within(queue()).getByRole("button", { name: "Expiring" }));
+    await settle();
+    expect(p.called("getWaivers").at(-1)).toEqual([{ limit: 50, state: "EXPIRING" }]);
+  });
+
+  it("selecting a waiver shows the condition and a disabled preview decision, with no gate reads", async () => {
+    viewport(false);
+    const p = standardPort();
+    await mount(p);
+    fireEvent.click(within(queue()).getByRole("button", { name: "Waiver" }));
+    await settle();
+    fireEvent.click(within(queue()).getAllByRole("listitem")[0].querySelector("button") as HTMLElement);
+    await settle();
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).getByRole("region", { name: "Condition" }).textContent).toContain("Keep paper exposure below the certified envelope.");
+    // The runway is drawn from the register page (it was a typed absence before WP-E): one line for the open waiver, on the shared axis.
+    expect(within(evidence).getByTestId("ck-runway")).toBeTruthy();
+    expect(within(evidence).getByTestId("ck-waiver-banner").textContent).toContain("Expiring");
+    // The "?" reason disclosures (GapWhy) are buttons too; this is about the decision controls.
+    const buttons = (within(rail()).getAllByRole("button") as HTMLButtonElement[]).filter((b) => !b.hasAttribute("aria-expanded"));
+    expect(buttons.map((b) => b.textContent)).toEqual(["Extend 14 days", "Other decisions"]);
+    expect(buttons.every((b) => b.disabled)).toBe(true);
+    expect(p.called("getGateR1")).toHaveLength(0);
+    expect(within(rail()).getByText(/A waiver has no approver quorum/)).toBeTruthy();
+  });
+
+  it("a failed register read is a state of its own", async () => {
+    const p = standardPort({ getWaivers: () => ({ ok: false, status: "unavailable", reason: "Register down." }) });
+    await mount(p);
+    fireEvent.click(within(queue()).getByRole("button", { name: "Waiver" }));
+    await settle();
+    expect(within(queue()).getByText("Unavailable")).toBeTruthy();
+  });
+});
+
+/* ── keyboard ─────────────────────────────────────────────────────────────── */
+
+describe("keyboard", () => {
+  it("J and K move the selection through the URL, Esc clears it", async () => {
+    viewport(false);
+    await mount(standardPort());
+    fireEvent.keyDown(document.body, { key: "j" });
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+    fireEvent.keyDown(document.body, { key: "J" });
+    await settle();
+    expect(where()).toContain("sel=apr_b");
+    fireEvent.keyDown(document.body, { key: "k" });
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    expect(where()).not.toContain("sel=");
+    expect(screen.getByText("Nothing selected")).toBeTruthy();
+  });
+
+  it("J at the last row stays on it, and K at the first stays on it", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_d");
+    fireEvent.keyDown(document.body, { key: "j" });
+    await settle();
+    expect(where()).toContain("sel=apr_d");
+    cleanup();
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    fireEvent.keyDown(document.body, { key: "k" });
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+  });
+
+  it("A, R and N do nothing but announce the reason, and call nothing", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals?sel=apr_a");
+    const before = p.calls.length;
+    const live = screen.getAllByRole("status").find((el) => el.classList.contains("exec-ck-live")) as HTMLElement;
+    fireEvent.keyDown(document.body, { key: "a" });
+    expect(live.textContent).toBe("Approve (A): Preview · not recorded");
+    fireEvent.keyDown(document.body, { key: "r" });
+    expect(live.textContent).toBe("Deny (R): Preview · not recorded");
+    fireEvent.keyDown(document.body, { key: "n" });
+    expect(live.textContent).toBe("Note (N): Preview · not recorded");
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+    expect(p.calls.length).toBe(before);
+  });
+
+  it("keys typed into a field are not shortcuts, and modified keys are left alone", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    fireEvent.keyDown(input, { key: "j" });
+    fireEvent.keyDown(document.body, { key: "j", ctrlKey: true });
+    fireEvent.keyDown(document.body, { key: "j", metaKey: true });
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+    input.remove();
+  });
+
+  it("Esc with a path selection asks the route to clear it", async () => {
+    const onClear = vi.fn();
+    await mount(standardPort(), "/governance/approvals/apr_a/r1", { pathSelection: { id: "apr_a", kind: "r1" }, onClearPathSelection: onClear });
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+
+  it("the key legend names A, R and N as bound to the preview actions, and is the queue panel's footer (CK-4)", async () => {
+    await mount(standardPort());
+    const legend = document.querySelector(".exec-ck-keys") as HTMLElement;
+    expect(legend.textContent).toContain("approve");
+    expect(legend.textContent).toContain("deny");
+    expect(legend.textContent).toContain("note");
+    expect(legend.textContent).toContain("help");
+    expect(queue().contains(legend)).toBe(true);
+  });
+
+  it("the Keys button and ? open the shortcut list; Esc closes it and keeps the selection (CK-3)", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    expect(screen.queryByRole("dialog", { name: "Keys" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Keys/ }));
+    const dialog = screen.getByRole("dialog", { name: "Keys" });
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    // The list says what A, R and N do in this build; it does not promise a recorded decision.
+    expect(dialog.textContent).toContain("Preview · not recorded");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    expect(screen.queryByRole("dialog", { name: "Keys" })).toBeNull();
+    expect(where()).toContain("sel=apr_a");
+    fireEvent.keyDown(document.body, { key: "?" });
+    expect(screen.getByRole("dialog", { name: "Keys" })).toBeTruthy();
+    // J does not move the selection while the list is open.
+    fireEvent.keyDown(document.body, { key: "j" });
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Keys" })).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog", { name: "Keys" })).toBeNull();
+  });
+
+  it("the shortcut list container is focusable, so a click inside keeps Tab in the trap, and it says where single keys work", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    fireEvent.click(screen.getByRole("button", { name: /Keys/ }));
+    const dialog = screen.getByRole("dialog", { name: "Keys" });
+    expect(dialog.getAttribute("tabindex")).toBe("-1");
+    expect(dialog.textContent).toMatch(/only while the Cockpit is focused/);
+    expect(dialog.textContent).toMatch(/never fire while you are typing/);
+    // A mouse click inside lands focus on the container; Tab from there goes back to Close, not out of the dialog.
+    dialog.focus();
+    expect(document.activeElement).toBe(dialog);
+    fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(document.activeElement).toBe(within(dialog).getByRole("button", { name: "Close" }));
+  });
+});
+
+/* ── honesty of the whole screen ──────────────────────────────────────────── */
+
+describe("no dash stands in for a value", () => {
+  it("no leaf element on any pane reads as a bare dash, N/A or a lone zero", async () => {
+    const p = standardPort();
+    await mount(p, "/execution/approvals", { workspaceId: "ws_x" });
+    const check = () => {
+      const bad = [...document.querySelectorAll("*")]
+        .filter((el) => el.children.length === 0)
+        .map((el) => (el.textContent ?? "").trim())
+        .filter((text) => /^(-|—|–|N\/A|n\/a|null|undefined|NaN)$/.test(text));
+      expect(bad).toEqual([]);
+    };
+    check();
+    for (const name of [/Alpha One/, /Beta Two/, /Gamma Exit/, /Delta Live/]) {
+      fireEvent.click(rowButton(name));
+      await settle();
+      check();
+    }
+    fireEvent.click(within(queue()).getByRole("button", { name: "Waiver" }));
+    await settle();
+    fireEvent.click(within(queue()).getAllByRole("listitem")[0].querySelector("button") as HTMLElement);
+    await settle();
+    check();
+  });
+
+  it("no dash glyph appears as visible text anywhere in the cockpit", async () => {
+    await mount(standardPort(), "/execution/approvals?sel=apr_a");
+    expect(document.body.textContent).not.toMatch(/[—–]/);
+  });
+});
+
+/* ── researcher opens one of their own requests (flow audit #3) ───────────── */
+
+describe("a researcher's own request, opened by path", () => {
+  const stanRows = () => ({ ...inbox(), ...{ rawRows: [wire("apr_a", "R1", "stan", "Alpha One"), wire("apr_b", "R2", "bobby", "Beta Two"), wire("apr_c", "PAPER_EXIT", "lan", "Gamma Exit"), wire("apr_d", "LIVE_GATE", "stan", "Delta Live")] } }) as InboxResult;
+  beforeEach(() => signIn({ userId: "usr_stan", username: "stan", capabilities: V2_ROLE_PRESETS.researcher }));
+
+  it("shows that request's evidence read-only, not the list, and reads only that gate", async () => {
+    const p = standardPort({}, stanRows());
+    await mount(p, "/governance/approvals/apr_a/r1", { pathSelection: { id: "apr_a", kind: "r1" } });
+    const evidence = screen.getByRole("region", { name: "Evidence" });
+    expect(within(evidence).getByRole("heading", { level: 2 })).toBeTruthy();
+    expect(within(evidence).getByText("apr_a")).toBeTruthy();
+    expect(screen.queryByRole("table", { name: "Your requests" })).toBeNull();
+    expect(p.called("getGateR1")).toHaveLength(1);
+    expect(p.called("getGateR2")).toHaveLength(0);
+    // no decision control of any kind, and no decision rail
+    expect(screen.queryByRole("complementary", { name: "Decision" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Approve|Reject|Deny|Other decisions|Extend/ })).toBeNull();
+    expect(screen.getByText(/Read only/)).toBeTruthy();
+  });
+
+  it("a request that is on the page but listed as someone else's is not opened and its evidence is never read", async () => {
+    const p = standardPort({}, stanRows());
+    await mount(p, "/governance/approvals/apr_b/r2", { pathSelection: { id: "apr_b", kind: "r2" } });
+    expect(screen.getByText("Not listed as yours")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Evidence" })).toBeNull();
+    expect(p.called("getGateR2")).toHaveLength(0);
+  });
+
+  it("a request off the loaded page is left to the server's read (its answer is the boundary)", async () => {
+    const p = standardPort({ getGateR1: () => ({ ok: false, status: "denied", reason: "Not yours." }) }, stanRows());
+    await mount(p, "/governance/approvals/apr_zz/r1", { pathSelection: { id: "apr_zz", kind: "r1" } });
+    expect(p.called("getGateR1")).toHaveLength(1);
+    expect(within(screen.getByRole("region", { name: "Evidence" })).getByText("Not yours.")).toBeTruthy();
+  });
+
+  it("the way back and Esc both call onClearPathSelection; without a selection the list is shown", async () => {
+    const clear = vi.fn();
+    const p = standardPort({}, stanRows());
+    const view = await mount(p, "/governance/approvals/apr_a/r1", { pathSelection: { id: "apr_a", kind: "r1" }, onClearPathSelection: clear });
+    fireEvent.click(screen.getByRole("button", { name: "← My requests" }));
+    expect(clear).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(clear).toHaveBeenCalledTimes(2);
+    view.unmount();
+    await mount(standardPort({}, stanRows()), "/governance/approvals", { onClearPathSelection: clear });
+    expect(screen.getByRole("table", { name: "Your requests" })).toBeTruthy();
+  });
+});
+
+/* ── lane, lens and waiver filter live in the URL (route audit M9) ────────── */
+
+describe("lane, lens and waiver filter are the URL's", () => {
+  const query = () => new URLSearchParams(where().split("?")[1] ?? "");
+
+  it("a lane chip writes view= with replace, All removes it, and nothing else in the query moves", async () => {
+    const p = standardPort();
+    await mount(p, "/governance/approvals?workspace_id=ws_x&sel=apr_a");
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Exit/ }));
+    await settle();
+    expect(query().get("view")).toBe("exit-reviews");
+    expect(query().get("workspace_id")).toBe("ws_x");
+    expect(query().get("sel")).toBe("apr_a");
+    fireEvent.click(within(queue()).getByRole("button", { name: /^All gates/ }));
+    await settle();
+    expect(query().has("view")).toBe(false);
+  });
+
+  it("a reload on view=exit-reviews opens the Exit lane and asks the server for that view", async () => {
+    const p = standardPort();
+    await mount(p, "/governance/approvals?view=exit-reviews");
+    expect(within(queue()).getByRole("button", { name: /^Exit/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(p.called("listApprovals")[0]).toEqual([{ filter: "EXIT_REVIEWS", limit: 50 }]);
+  });
+
+  it("the lens is restored from lens= and the default stays out of the URL", async () => {
+    await mount(standardPort(), "/governance/approvals?lens=needs");
+    expect(within(queue()).getByRole("button", { name: /^Needs you/ }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(within(queue()).getByRole("button", { name: /^Open/ }));
+    await settle();
+    expect(query().has("lens")).toBe(false);
+  });
+
+  it("the waiver state is restored from waiver= (any case) and All stays out of the URL", async () => {
+    const w = standardPort();
+    await mount(w, "/governance/approvals?view=waiver&waiver=Expiring");
+    expect(w.called("getWaivers")).toEqual([[{ limit: 50, state: "EXPIRING" }]]);
+    expect(within(queue()).getByRole("button", { name: "Expiring" }).getAttribute("aria-pressed")).toBe("true");
+    expect(query().get("view")).toBe("waiver");
+    expect(query().get("waiver")).toBe("expiring");
+    fireEvent.click(within(queue()).getByRole("button", { name: "All" }));
+    await settle();
+    expect(query().has("waiver")).toBe(false);
+  });
+
+  it("an unknown view, lens or waiver reads as the default and is removed from the URL", async () => {
+    await mount(standardPort(), "/governance/approvals?view=nope&lens=zzz&waiver=qq&q=keep");
+    expect(within(queue()).getByRole("button", { name: /^All gates/ }).getAttribute("aria-pressed")).toBe("true");
+    expect(query().get("q")).toBe("keep");
+    for (const key of ["view", "lens", "waiver"]) expect(query().has(key), key).toBe(false);
+  });
+
+  it("choosing a lane replaces the entry: one Back leaves the page", async () => {
+    const p = standardPort();
+    render(
+      <MemoryRouter initialEntries={["/prev", "/governance/approvals"]} initialIndex={1}>
+        <Cockpit api={p.api} />
+        <Where />
+        <BackButton />
+      </MemoryRouter>,
+    );
+    await settle();
+    fireEvent.click(within(queue().querySelector('[aria-label="Lane"]') as HTMLElement).getByRole("button", { name: /^R1/ }));
+    await settle();
+    expect(query().get("view")).toBe("r1");
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await settle();
+    expect(where()).toBe("/prev");
+  });
+});
+
+function BackButton() {
+  const navigate = useNavigate();
+  return <button type="button" onClick={() => navigate(-1)}>History back</button>;
+}
+
+/* ── New request drawer (S3 W-REQUEST, `?compose=request`) ─────────────────── */
+
+describe("the New request drawer", () => {
+  const stanRows = () => ({ ...inbox(), ...{ rawRows: [wire("apr_a", "R1", "stan", "Alpha One"), wire("apr_b", "R2", "bobby", "Beta Two")] } }) as InboxResult;
+  const fetchCalls: string[] = [];
+  beforeEach(() => {
+    fetchCalls.length = 0;
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      fetchCalls.push(String(input));
+      return new Response(JSON.stringify({ items: [] }), { status: 200, headers: { "content-type": "application/json" } });
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const drawer = () => document.querySelector('[data-screen="new-request-drawer-v2"]');
+  const newRequestButton = () => screen.getByRole("button", { name: "New request" });
+
+  async function mountNav(p: Port, entry: string, props: Partial<CockpitProps> = {}, initial?: string[]) {
+    const view = render(
+      <MemoryRouter initialEntries={initial ?? [entry]} initialIndex={initial ? initial.length - 1 : 0}>
+        <Cockpit api={p.api} {...props} />
+        <Where />
+        <BackButton />
+      </MemoryRouter>,
+    );
+    await settle();
+    return view;
+  }
+
+  it("is mounted closed: no drawer, no run-library read, no write, and the button says it opens a dialog", async () => {
+    const p = standardPort();
+    await mountNav(p, "/governance/approvals");
+    expect(drawer()).toBeNull();
+    expect(fetchCalls).toEqual([]);
+    expect(newRequestButton().getAttribute("aria-haspopup")).toBe("dialog");
+    for (const write of WRITES) expect(p.calls.map((call) => call.name), write).not.toContain(write);
+  });
+
+  it("New request pushes ?compose=request (Back closes it) and shows the form; nothing is sent", async () => {
+    viewport(false);
+    const p = standardPort();
+    await mountNav(p, "/governance/approvals", {}, ["/prev", "/governance/approvals?sel=apr_a"]);
+    fireEvent.click(newRequestButton());
+    await settle();
+    expect(where()).toContain("compose=request");
+    expect(where()).toContain("sel=apr_a");
+    expect(drawer()).not.toBeNull();
+    expect(p.calls.map((call) => call.name)).not.toContain("createApprovalRequest");
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await settle();
+    expect(where()).not.toContain("compose=");
+    expect(where()).toContain("sel=apr_a");
+    expect(drawer()).toBeNull();
+  });
+
+  it("opening the drawer never writes `sel`: the one that appears on a wide screen is the cockpit's own first-load pick, made once and before the click", async () => {
+    // Narrow: nothing is auto-selected, so opening the drawer must leave the URL without a `sel`.
+    viewport(false);
+    const narrow = await mountNav(standardPort(), "/governance/approvals");
+    expect(where()).not.toContain("sel=");
+    fireEvent.click(newRequestButton());
+    await settle();
+    expect(where()).toContain("compose=request");
+    expect(where()).not.toContain("sel=");
+    narrow.unmount();
+    // Wide: the first load picks one request (replace), then the drawer opens and closes without touching it.
+    viewport(true);
+    await mountNav(standardPort(), "/governance/approvals");
+    const picked = new URLSearchParams(where().split("?")[1] ?? "").get("sel");
+    expect(picked).not.toBeNull();
+    fireEvent.click(newRequestButton());
+    await settle();
+    expect(new URLSearchParams(where().split("?")[1] ?? "").get("sel")).toBe(picked);
+    const dialog = document.querySelector(".exec-dock") as HTMLElement;
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await settle();
+    expect(new URLSearchParams(where().split("?")[1] ?? "").get("sel")).toBe(picked);
+  });
+
+  it("the drawer's Close removes the key with replace: Back afterwards does not reopen it", async () => {
+    viewport(false);
+    await mountNav(standardPort(), "/governance/approvals", {}, ["/prev", "/governance/approvals"]);
+    fireEvent.click(newRequestButton());
+    await settle();
+    const dialog = document.querySelector(".exec-dock") as HTMLElement;
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await settle();
+    expect(where()).not.toContain("compose=");
+    fireEvent.click(screen.getByRole("button", { name: "History back" }));
+    await settle();
+    expect(where()).toBe("/governance/approvals");
+    expect(drawer()).toBeNull();
+  });
+
+  it("while it is open the cockpit's own keys do nothing: j, k, n and Esc leave the selection and the announcement alone", async () => {
+    viewport(false);
+    await mountNav(standardPort(), "/governance/approvals?sel=apr_b&compose=request");
+    expect(drawer()).not.toBeNull();
+    const live = screen.getAllByRole("status").find((el) => el.classList.contains("exec-ck-live")) as HTMLElement;
+    // From a button inside the drawer (not an input), where only the guard stops the cockpit.
+    const close = within(document.querySelector(".exec-dock") as HTMLElement).getByRole("button", { name: "Close" });
+    for (const key of ["j", "k", "n", "a", "r"]) fireEvent.keyDown(close, { key });
+    await settle();
+    expect(where()).toContain("sel=apr_b");
+    expect(live.textContent).toBe("");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    // The drawer takes Esc (it closes); the cockpit does not clear the selection.
+    expect(where()).toContain("sel=apr_b");
+    expect(where()).not.toContain("compose=");
+  });
+
+  it("once it is closed the cockpit keys work again", async () => {
+    viewport(false);
+    await mountNav(standardPort(), "/governance/approvals?sel=apr_b&compose=request");
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await settle();
+    expect(where()).not.toContain("compose=");
+    fireEvent.keyDown(document.body, { key: "k" });
+    await settle();
+    expect(where()).toContain("sel=apr_a");
+  });
+
+  it("a link with ?compose=request opens it; the run library is read on that first opening", async () => {
+    await mountNav(standardPort(), "/governance/approvals?compose=request");
+    expect(drawer()).not.toBeNull();
+    expect(fetchCalls.length).toBeGreaterThan(0);
+  });
+
+  it("the drawer posts through requestApi (the New-request screen's policy), never the inbox's: both mounts, source-checked", async () => {
+    // The approval inbox's delivery policy says governance_write_enabled=false, so a port built from it refuses
+    // createApprovalRequest on the client. The route hands the cockpit a second port bound to the request screen's policy.
+    const { readFileSync } = await import("node:fs");
+    const source = readFileSync(`${process.cwd()}/src/execution/v2/screens/cockpit/index.tsx`, "utf8");
+    expect(source.match(/<RequestDrawer api=\{requestApi \?\? api\}/g)?.length).toBe(2);
+    expect(source).not.toMatch(/<RequestDrawer api=\{api\}/);
+    const route = readFileSync(`${process.cwd()}/src/execution/ExecutionPreviewRoute.tsx`, "utf8");
+    expect(route.match(/requestApi=\{requestApi\}/g)?.length).toBe(2);
+    expect(route).toMatch(/governanceWriteBlocked\(requestPolicy\)/);
+  });
+
+  it("the delivery policy's reason reaches the drawer as writeBlockedReason", async () => {
+    await mountNav(standardPort(), "/governance/approvals?compose=request", { writeBlockedReason: "The delivery policy blocks governance writes." });
+    expect(screen.queryAllByText(/delivery policy blocks governance writes/).length).toBeGreaterThan(0);
+  });
+
+  describe("researcher (own requests only)", () => {
+    beforeEach(() => signIn({ userId: "usr_stan", username: "stan", capabilities: V2_ROLE_PRESETS.researcher }));
+
+    it("has the same drawer, and Esc in it does not leave the read-only request", async () => {
+      viewport(false);
+      const clear = vi.fn();
+      const p = standardPort({}, stanRows());
+      await mountNav(p, "/governance/approvals/apr_a/r1?compose=request", { pathSelection: { id: "apr_a", kind: "r1" }, onClearPathSelection: clear });
+      expect(drawer()).not.toBeNull();
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      await settle();
+      expect(clear).not.toHaveBeenCalled();
+      // Closed now: Esc means what it meant before.
+      fireEvent.keyDown(document.body, { key: "Escape" });
+      expect(clear).toHaveBeenCalledTimes(1);
+    });
+
+    it("the list view shows New request and opens the drawer", async () => {
+      viewport(false);
+      await mountNav(standardPort({}, stanRows()), "/governance/approvals");
+      expect(screen.getByRole("heading", { name: "My requests" })).toBeTruthy();
+      fireEvent.click(newRequestButton());
+      await settle();
+      expect(where()).toContain("compose=request");
+      expect(drawer()).not.toBeNull();
+    });
+  });
+});
+
+/* ── WP-K slice 2: the approval evidence read (history, diff, obligations, receipt preview) ─────────────── */
+describe("approval evidence (WP-K)", () => {
+  const evidenceOf = (name: string) => {
+    const read = readApprovalEvidenceV1((fixture(`execution-approval-evidence.${name}.synthetic.valid.json`) as { value: unknown }).value);
+    if (read === null || read.kind !== "approval_evidence") throw new Error("evidence fixture unreadable");
+    return read.evidence;
+  };
+  const withEvidence = (name: string) => standardPort({ getApprovalEvidence: () => ({ ok: true, value: evidenceOf(name) }) } as never);
+  const openExit = async (p: Port) => {
+    await mount(p, "/execution/approvals", { workspaceId: "ws_x" });
+    fireEvent.click(rowButton(/Gamma Exit/));
+    await settle();
+  };
+  const evidencePane = () => screen.getByRole("region", { name: "Evidence" });
+
+  it("a published read fills the history chart, the diff, the five counts (a true zero is a number) and the claim; the rail says what changes", async () => {
+    await openExit(withEvidence("published"));
+    const pane = within(evidencePane());
+    expect(pane.getByTestId("ck-history-caption").textContent).toMatch(/portfolio TEST_ONLY:portfolio-a · NAV in USDT · methodology TEST_ONLY:nav-twr\.v1/);
+    expect(pane.getByTestId("ck-evidence-diff").textContent).toMatch(/Requested capital10,000\.00 \u2192 15,000\.00/);
+    expect(pane.getByTestId("ck-open-openPositions").textContent).toBe("2");
+    expect(pane.getByTestId("ck-open-workingOrders").textContent).toBe("0");
+    expect(pane.getByTestId("ck-obligations-fact").textContent).toBe("3 obligations stay open after approval");
+    expect(within(rail()).getByTestId("ck-what-changes").textContent).toMatch(/Allocation to portfolio A rises by 5000\.00 USDT/);
+  });
+  it.each(["not-read", "no-source"])("%s keeps every panel on its typed absence and makes no claim", async (name) => {
+    await openExit(withEvidence(name));
+    const pane = within(evidencePane());
+    expect(pane.queryByTestId("ck-obligations-fact")).toBeNull();
+    expect(pane.queryByTestId("ck-open-workingOrders")).toBeNull();
+    expect(pane.queryByTestId("ck-history-caption")).toBeNull();
+    expect(within(rail()).queryByTestId("ck-what-changes")).toBeNull();
+    expect(pane.getByText("Still open after approval")).toBeTruthy();
+  });
+  it("a refused or unthrowable read is the same typed absence", async () => {
+    await openExit(standardPort({ getApprovalEvidence: () => ({ ok: false, status: "unavailable", reason: "The approval evidence never reached the Portal." }) } as never));
+    expect(within(evidencePane()).queryByTestId("ck-obligations-fact")).toBeNull();
+    expect(within(evidencePane()).getByText("Still open after approval")).toBeTruthy();
+  });
+});

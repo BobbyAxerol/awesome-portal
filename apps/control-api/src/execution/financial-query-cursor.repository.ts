@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool } from "pg";
 import { ControlApiConfig } from "../config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { ProjectionEnvironment } from "./profile-projection.repository";
 
 const CURSOR_PREFIX = "fqc1.";
@@ -30,7 +30,7 @@ export class FinancialQueryCursorError extends Error {
 @Injectable()
 export class ExecutionFinancialQueryCursorRepository {
   constructor(
-    @Inject(CONTROL_API_POOL) private readonly pool: Pool,
+    @Inject(EXECUTION_DATA_POOL) private readonly pool: Pool,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 

@@ -1,0 +1,37 @@
+{
+  "400": {
+    "error": {
+      "code": "RESEARCH_LINEAGE_INVALID",
+      "message": "Invalid Research Attempt Lineage request."
+    },
+    "request_id": "req-p19-400"
+  },
+  "401": {
+    "error": {
+      "code": "AUTH_REQUIRED",
+      "message": "Authentication required."
+    },
+    "request_id": "req-p19-401"
+  },
+  "403": {
+    "error": {
+      "code": "RESEARCH_LINEAGE_FORBIDDEN",
+      "message": "Access denied."
+    },
+    "request_id": "req-p19-403"
+  },
+  "404": {
+    "error": {
+      "code": "RESEARCH_LINEAGE_NOT_FOUND",
+      "message": "Research Alpha was not found."
+    },
+    "request_id": "req-p19-404"
+  },
+  "503": {
+    "error": {
+      "code": "RESEARCH_LINEAGE_UNAVAILABLE",
+      "message": "Attempt Lineage is temporarily unavailable."
+    },
+    "request_id": "req-p19-503"
+  }
+}

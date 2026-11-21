@@ -1,0 +1,331 @@
+/* Execution V2 shell chrome: context bar, command bar, role-filtered nav.
+ *
+ * Type only through the `--exec-font-*` roles, colour only through carbon
+ * tokens, one fg/bg pair per rule so the pair gate can read it. Radius stays 0
+ * (terminal principle). Uppercase mono labels are limited to .exec-ctxbar-label,
+ * .exec-cmdbar-group and .exec-nav-group-label (v2Hygiene allowlist). */
+
+/* ---- context bar ------------------------------------------------------- */
+
+.exec-ctxbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) 14px;
+  /* The kit's `main{padding:24px}` puts 24px between the bar and the page head.
+   * The bar is a sibling of the screen root inside .exec-preview-shell, so the
+   * space lives here: every screen gets it and none has to know (SYS-2). */
+  margin-bottom: var(--space-5);
+  padding: 7px var(--space-4);
+  background: var(--paper-sunken);
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+/* The bar of the pages mounted outside the preview frame (PageContextBar): its own surface must take only the bar's height, or the
+ * page's surface below it would be pushed down by a second `min-height: 100%`. Two classes beat `.exec-surface` in any load order. */
+.exec-page-ctxbar.exec-surface {
+  min-height: 0;
+}
+
+.exec-ctxbar-label {
+  font: var(--exec-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.exec-ctxbar-seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+}
+
+.exec-ctxbar-seg button {
+  font: var(--exec-font-label);
+  letter-spacing: 0.04em;
+  padding: 7px var(--space-3);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+
+.exec-ctxbar-seg button:last-child {
+  border-right: 0;
+}
+
+.exec-ctxbar-seg button:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.exec-ctxbar-seg button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* Disabled keeps its contrast: colour changes, opacity does not. */
+.exec-ctxbar-seg button:disabled {
+  cursor: not-allowed;
+  background: var(--paper);
+  color: var(--ink-faint);
+}
+
+.exec-ctxbar-seg button[aria-pressed="true"]:disabled {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.exec-ctxbar-lock {
+  font: var(--exec-font-label);
+  padding: 0 var(--space-2);
+  background: var(--warn-bg);
+  color: var(--warn);
+  border: 1px solid var(--warn);
+}
+
+/* Visually hidden: the full lock reason the disabled buttons point at (aria-describedby). */
+.exec-ctxbar-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.exec-ctxbar-reason {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+
+.exec-ctxbar-reason a {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.exec-ctxbar-chip {
+  font: var(--exec-font-data);
+  padding: 0 var(--space-2);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+}
+
+.exec-ctxbar button:focus-visible,
+.exec-ctxbar a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---- command bar -------------------------------------------------------- */
+
+/* The root also carries .exec-surface (for the role vars). That rule paints an
+ * opaque page background and a min-height; the two-class selector wins over it
+ * in any load order, so the page stays visible behind the scrim. */
+.exec-cmdbar.exec-surface {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  min-height: 0;
+  background: var(--scrim);
+}
+
+.exec-cmdbar-panel {
+  width: 640px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 120px);
+  margin: 90px auto 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper-raised);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}
+
+.exec-cmdbar-input {
+  font: var(--exec-font-subtitle);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper);
+  color: var(--ink);
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  outline: none;
+}
+
+.exec-cmdbar-input::placeholder {
+  color: var(--ink-faint);
+}
+
+.exec-cmdbar-input:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.exec-cmdbar-list {
+  overflow-y: auto;
+}
+
+.exec-cmdbar-group {
+  font: var(--exec-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: var(--space-2) var(--space-4) 0;
+  color: var(--ink-faint);
+}
+
+.exec-cmdbar-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.exec-cmdbar-option[aria-selected="true"] {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+  color: var(--ink);
+}
+
+.exec-cmdbar-option[aria-selected="true"] .exec-cmdbar-detail {
+  color: var(--ink-soft);
+}
+
+.exec-cmdbar-detail {
+  margin-left: auto;
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+
+.exec-cmdbar-notice {
+  font: var(--exec-font-meta);
+  padding: var(--space-2) var(--space-4);
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line);
+}
+
+.exec-cmdbar-notes {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  border-bottom: 1px solid var(--line);
+}
+
+.exec-cmdbar-details {
+  border-bottom: 1px solid var(--line);
+}
+
+.exec-cmdbar-details > summary {
+  font: var(--exec-font-meta);
+  padding: var(--space-2) var(--space-4);
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+
+.exec-cmdbar-details .exec-cmdbar-notes {
+  border-bottom: 0;
+}
+
+.exec-cmdbar-empty {
+  font: var(--exec-font-body);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink-faint);
+}
+
+.exec-cmdbar-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--line);
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+.exec-cmdbar-foot kbd {
+  font: var(--exec-font-label);
+  padding: 0 var(--space-2);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border: 1px solid var(--line-strong);
+}
+
+.exec-cmdbar-more {
+  margin-left: auto;
+}
+
+.exec-shell-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---- role-filtered nav -------------------------------------------------- */
+
+.exec-nav {
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-right: 1px solid var(--line);
+  padding: var(--space-3) 0;
+}
+
+.exec-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.exec-nav-group-label {
+  font: var(--exec-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: var(--space-4) var(--space-4) var(--space-1);
+  color: var(--ink-faint);
+}
+
+.exec-nav-item {
+  font: var(--exec-font-body);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-left: 2px solid transparent;
+  text-decoration: none;
+}
+
+.exec-nav-item:hover {
+  color: var(--ink);
+}
+
+.exec-nav-item[aria-current="page"] {
+  background: var(--paper-raised);
+  color: var(--ink);
+  border-left-color: var(--accent);
+}
+
+.exec-nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.exec-nav-badge {
+  font: var(--exec-font-label);
+  padding: 0 var(--space-2);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--line-strong);
+}

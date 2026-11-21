@@ -1088,7 +1088,7 @@ describe("delivery policy — independent flags gate governance and commands", (
   });
 });
 
-describe("registry revision 6 — parsed against the registry actually shipped", () => {
+describe("registry revision 7 — parsed against the registry actually shipped", () => {
   // A contract test across the FE/BE boundary rather than against a fixture of
   // our own making. It is the thing that notices the day the field moves, is
   // renamed, or grows a value this build does not know.
@@ -1111,7 +1111,10 @@ describe("registry revision 6 — parsed against the registry actually shipped",
   });
 
   it("parses every policy and enables only the commissioned Portal governance write", () => {
-    expect(registry.revision).toBe(6);
+    // Revision 7 (Codex e19ad906) adds one thing to revision 6: `scoped_v2_replacement` on the APPROVALS navigation (pinned below).
+    // Revision 8 adds the self-only PROFILE_ACCESS_SELF feature (pinned in the Sidebar/registry tests); no delivery policy changes.
+    // Revision 9 adds the EXECUTION_COMPARE_SCREEN screen row (fixture delivery policy, no flag enabled; pinned in the registry contract test).
+    expect(registry.revision).toBe(9);
     // Not `continue`. A policy this build cannot parse used to skip the check
     // silently, so the loop passed loudest exactly when it understood least —
     // a registry that switched a command on in a shape we could not read would
@@ -1156,6 +1159,15 @@ describe("registry revision 6 — parsed against the registry actually shipped",
         shadow.has(id) ? "shadow" : "fixture",
       );
     }
+  });
+
+  it("publishes revision 7's one addition: the V1 APPROVALS navigation names its SCOPED_V2 replacement, a feature that exists", () => {
+    const features = (registry as unknown as { features: { id: string; navigation: Record<string, unknown> }[] }).features;
+    const withReplacement = features.filter((feature) => "scoped_v2_replacement" in feature.navigation);
+    // Exactly one feature carries it today, and it is the V1 approvals entry.
+    expect(withReplacement.map((feature) => feature.id)).toEqual(["APPROVALS"]);
+    expect(withReplacement[0]!.navigation.scoped_v2_replacement).toEqual({ read_mode: "SCOPED_V2", feature_id: "EXECUTION_APPROVALS" });
+    expect(features.some((feature) => feature.id === "EXECUTION_APPROVALS")).toBe(true);
   });
 
   it("keeps SSE dark and enables only the exact BR-EX-72 read/projection policies", () => {
@@ -1825,9 +1837,9 @@ describe("Approval Inbox", () => {
     );
     // One row is loaded and five are pending. The header chips describe the
     // queue; due-soon lives in the table strip (hi-fi 4a).
-    const header = container.querySelector(".exec-gov-head");
-    expect(header?.textContent).toContain("5 PENDING");
-    expect(header?.textContent).toContain("1 OVERDUE");
+    const header = container.querySelector(".exec-inbox-head");
+    expect(header?.textContent).toContain("5 pending");
+    expect(header?.textContent).toContain("1 overdue");
     expect(container.querySelector(".exec-inbox-strip")?.textContent).toContain("1 due soon");
   });
 
@@ -1839,7 +1851,7 @@ describe("Approval Inbox", () => {
         filter="INBOX"
       />,
     );
-    expect(container.querySelector('.exec-state[data-status="empty"]')).not.toBeNull();
+    expect(container.querySelector(".exec-qe")).not.toBeNull();
     // §8.59: this page carries no `read_truth`, so the screen may say only what
     // came back, never that the inbox is clear.
     expect(screen.getByText(/did not state whether any exist outside this response/)).toBeTruthy();
@@ -1874,7 +1886,7 @@ describe("Approval Inbox", () => {
         actorRoles={["Quant Reviewer", "Ops Approver"]}
       />,
     );
-    expect(screen.getByText(/policy approval\.v3 · you are Lan · Quant Reviewer \+ Ops Approver/)).toBeTruthy();
+    expect(screen.getByText(/You are Lan · Quant Reviewer \+ Ops Approver · policy approval\.v3/)).toBeTruthy();
   });
 
   it("offers the hi-fi's filters and marks the active one", () => {
@@ -1904,7 +1916,7 @@ describe("Approval Inbox", () => {
     // Em dash, matching the hi-fi: "0 — observation gate met" reads as an
     // apposition ("nought, namely: the gate is met"), where the arrow read as
     // a transition into a blocker that is not there.
-    expect(screen.getByText("0 — observation gate met")).toBeTruthy();
+    expect(screen.getByText("no blocker — observation gate met")).toBeTruthy();
   });
 });
 
@@ -2136,7 +2148,7 @@ describe("Approval Inbox — the full state set", () => {
     render(
       <ApprovalInbox onCopyProvenance={vi.fn()} page={inboxPage([inboxRow()])} counts={counts} filter="INBOX" status="partial" />,
     );
-    expect(screen.getByRole("button", { name: "Overdue" })).toHaveProperty("disabled", false);
+    expect(screen.getByRole("button", { name: /^Overdue/ })).toHaveProperty("disabled", false);
   });
 });
 
@@ -2154,7 +2166,9 @@ describe("Gate R1 — the full state set", () => {
     for (const status of ["denied", "unavailable", "empty", "insufficient_data"] as const) {
       const { container } = render(gate({ status, reason: "because" }));
       expect(container.querySelector(".exec-gate-decision"), status).toBeNull();
-      expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe(status);
+      // a refusal draws the shared state box; an absence draws one calm card (the record is not there), never a frame of ghost panels
+      if (status === "denied") expect(container.querySelector(".exec-state")?.getAttribute("data-status")).toBe("denied");
+      else expect(container.querySelector("[data-prominent-empty]"), status).not.toBeNull();
       cleanup();
     }
     // Loading is the same refusal with a different rendering: a skeleton, not a
@@ -3084,7 +3098,7 @@ describe("containers — the port meets the screens", () => {
     expect(await screen.findByText("AP-352")).toBeTruthy();
     // Four rows are on screen and five are pending. The header describes the
     // queue, the rows describe the page, and both are the server's numbers.
-    expect(container.querySelector(".exec-gov-head")?.textContent).toContain("5 PENDING");
+    expect(container.querySelector(".exec-inbox-head")?.textContent).toContain("5 pending");
     // Three rows in the INBOX view and five in the queue: the header describes
     // the queue, the view describes what is mine. The container asks for a full
     // page (100), so the view is not truncated here.
@@ -3375,7 +3389,8 @@ describe("Approval Inbox — the footer strip explains the dimmed rows", () => {
         filter="INBOX"
       />,
     );
-    expect(screen.getByText("visibility ≠ authority")).toBeTruthy();
+    // the internal slogan is gone from the surface; the counts stay
+    expect(screen.queryByText("visibility ≠ authority")).toBeNull();
     expect(screen.getByText(/1 overdue · 1 due soon/)).toBeTruthy();
   });
 
@@ -3637,9 +3652,9 @@ describe("Gate R2 — the blocked banner tells a reviewer what to do", () => {
     }
   });
 
-  it("explains its own conditions model so nobody asks for a free-text box", () => {
+  it("names the policy the decision is recorded against, without a paragraph about the conditions model", () => {
     render(r2({ artifactDigest: "sha256:9f3c…" }));
-    expect(screen.getByText(/typed objects with owner, deadline and expiry, never free text/)).toBeTruthy();
+    expect(screen.queryByText(/never free text/)).toBeNull();
     expect(screen.getByText(/recorded against policy approval\.v3/)).toBeTruthy();
   });
 
@@ -3750,7 +3765,7 @@ describe("Gate R2 and Paper Exit on the port", () => {
     );
     expect((await screen.findAllByText(/not current enough to decide against/)).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "Approve" })).toHaveProperty("disabled", true);
-    // Visible, diagnosable, and refusable.
+    // Visible and diagnosable. Only Approve is held by the preview: Deny rests on the review's own pins and eligibility, which the preview does not touch (FE-GOV-C03).
     expect(screen.getByText(/source balance snapshot is 3h 28m old/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Deny" })).toHaveProperty("disabled", false);
   });
@@ -4119,7 +4134,7 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
         filter="OVERDUE"
       />,
     );
-    expect(screen.getByText(/No record matches Overdue/)).toBeTruthy();
+    expect(screen.getByText(/Nothing matches Overdue/)).toBeTruthy();
     expect(screen.getByText(/5 pending outside this view/)).toBeTruthy();
     // The server's count *is* the scope qualifier here, so the generic one
     // stands down rather than stacking a second "outside this view" beside it.
@@ -4143,9 +4158,10 @@ describe("the filter chips filter (EX-BE-05a §3's eight views)", () => {
         filter="INBOX"
       />,
     );
-    expect(screen.getByText(/No record matches/)).toBeTruthy();
-    expect(screen.getByText(/NO_MATCHING_PORTAL_GOVERNANCE_RECORDS/)).toBeTruthy();
-    expect(screen.getByText(/may exist outside this view/)).toBeTruthy();
+    expect(screen.getByText(/Nothing matches Mine/)).toBeTruthy();
+    // the server's own code is evidence, not copy: it rides on the sentence as a tooltip instead of being printed
+    expect(screen.getByTitle("NO_MATCHING_PORTAL_GOVERNANCE_RECORDS")).toBeTruthy();
+    expect(screen.getByText(/Other views may still have requests/)).toBeTruthy();
   });
 });
 
@@ -4841,7 +4857,7 @@ describe("figures nobody published are stated, not substituted", () => {
         counts={null}
       />,
     );
-    expect(screen.getByText(/quorum not published/)).toBeTruthy();
+    expect(screen.getByText(/approvers not published/)).toBeTruthy();
     expect(screen.queryByText("0/2")).toBeNull();
   });
 

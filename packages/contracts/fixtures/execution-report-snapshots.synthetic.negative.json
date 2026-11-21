@@ -1,0 +1,42 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-report-snapshots.published.synthetic.valid.json",
+    "none": "execution-report-snapshots.none.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "hash-not-sha",
+      "base": "published",
+      "rule": "a content hash is a sha256",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "content_hash"
+          ],
+          "value": "md5:abc"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "no-cut",
+      "base": "published",
+      "rule": "a report names its source cut",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "items",
+            0,
+            "source_cut"
+          ]
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

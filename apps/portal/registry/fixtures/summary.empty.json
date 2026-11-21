@@ -84,7 +84,7 @@
   "registry_counts": {
     "blocking_concerns": 5,
     "by_maturity": {
-      "AVAILABLE": 3,
+      "AVAILABLE": 4,
       "BLOCKED": 0,
       "COMMISSIONED": 15,
       "DEPRECATED": 0,
@@ -92,7 +92,7 @@
       "PROTOTYPE": 5
     }
   },
-  "registry_digest": "sha256:761f85a75d6c349ee800e8168c0e716c560ee4076a83e4dcb6ebf4a3ce47e305",
+  "registry_digest": "sha256:b876d6aecdecb22f8506d61b5abf6b38dd51e1ad57e17215b45682f801a85679",
   "requested_at": "2026-08-15T18:00:00Z",
   "schema_version": "portal.summary.v1",
   "sections": [

@@ -1781,6 +1781,7 @@ bash -n \
 # generated type could change locally and leave the record behind it; nine files
 # had drifted that way before this check existed. Digest-only, no container.
 python3 "${ROOT_DIR}/packages/contracts/tooling/snapshot.py" --check
+"${ROOT_DIR}/scripts/research-loop-v11/test-route-inventory.sh"
 python3 -m py_compile \
   "${ROOT_DIR}/scripts/execution-iam-verify.py" \
   "${ROOT_DIR}/scripts/test_execution_iam_verify.py" \
@@ -1898,6 +1899,7 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-d3-test.sh"
 "${ROOT_DIR}/scripts/execution-be-r2-2-test.sh"
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
+"${ROOT_DIR}/scripts/control-api-image-permissions-test.sh"
 "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh"
 "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh"
 "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh"

@@ -1,0 +1,269 @@
+{
+  "schema_version": "portal.phase-test-dispositions.v1",
+  "tier": "R1",
+  "phase": "ELP2-10",
+  "source_base": "664433587050ab8673fa03318a5e74d8b33b146d",
+  "latest_round_core_base": "6fd7dc3410e2a731b3fc63d8d2ba39ff57e634a0",
+  "latest_round_pm_source": "b9dd32d16d16f43f73b671a7f7088b0359b29451",
+  "latest_round_edge_source": "6d44b52c5c088e2f7ada8fe3aaee94f7599d3266",
+  "latest_round_scope": "SOURCE_ONLY_NO_SHARED_RUNTIME_UPDATE",
+  "delivery": "INTERMEDIATE_SOURCE_AND_RETIRED_ISOLATED_RUNTIME_NOT_R2",
+  "lanes": [
+    {
+      "name": "ordinary-policy-intake",
+      "command": "vitest run test/ordinary-policy-intake.spec.ts --maxWorkers=1 --no-file-parallelism",
+      "status": "PASS",
+      "passed": 31,
+      "scope": "TEST_ONLY filesystem/schema/writer doubles; not actual policy installation"
+    },
+    {
+      "name": "full-production-typescript-attempt",
+      "command": "timeout 150 node --max-old-space-size=1024 node_modules/typescript/lib/tsc.js -p tsconfig.build.json --incremental false --noEmit",
+      "status": "TIMEOUT_NOT_PASS",
+      "exit_code": 124
+    },
+    {
+      "name": "full-production-typescript-bounded-retake",
+      "command": "timeout 300 node --max-old-space-size=1450 node_modules/typescript/lib/tsc.js -p tsconfig.build.json --incremental false --noEmit",
+      "status": "HEAP_OOM_NOT_PASS",
+      "exit_code": 134,
+      "elapsed_seconds_approx": 293
+    },
+    {
+      "name": "affected-production-module-and-transitive-dependencies-typescript",
+      "command": "timeout 300 node --max-old-space-size=1450 node_modules/typescript/lib/tsc.js -p /tmp/elp210-ordinary-intake-tsconfig-20261024.json --noEmit",
+      "status": "PASS",
+      "exit_code": 0,
+      "scope": "Strict existing production compiler options; include ordinary-policy-intake.ts and its real transitive dependencies. Not the full production project or test corpus."
+    },
+    {
+      "name": "PM-financial-output-proof-and-regressions",
+      "source_commit": "02174b3ff947dc5185c8fb641c55034329d2300d",
+      "status": "PASS",
+      "passed": 128,
+      "new_cases": 43,
+      "existing_regressions": 85,
+      "log_sha256": "8d962b4d04d3af0a9f8a10cf4a292e1e1f1c78caeaf6c9917633c81dae85b082",
+      "scope": "Isolated TEST_ONLY financial trust; not source-owner acceptance or runtime APPLIED"
+    },
+    {
+      "name": "Edge-financial-output-proof",
+      "source_commit": "8183b22e174e97ac13cb8f8661beecb3c5cfc96d",
+      "status": "PASS",
+      "passed": 11,
+      "production_clippy_lib_bins": "PASS",
+      "log_sha256": "6d215077314e3f51647e885c9d5921a9cd2499f9b3c4fde3ebc0312dd78295d3",
+      "scope": "Actual Ed25519 verification and Python/Rust golden vector; not installed financial trust"
+    },
+    {
+      "name": "PM-financial-receiver-and-direct-regressions",
+      "source_commit": "d9d132dbcd51cb345ba0465fd03cb8df88691f40",
+      "status": "PASS",
+      "passed": 158,
+      "new_cases": 30,
+      "reused_case_count_not_additive": 128,
+      "log_sha256": "3f8c55483c1a381a238c8f332a697face5fec4630045ecbdd1a33fe17a10e1e6",
+      "scope": "TEST_ONLY receiver transport/composition; not installed trust, actual source APPLIED or durable source ACK"
+    },
+    {
+      "name": "Edge-receiver-and-command-focused-tests",
+      "source_commit": "bd2f42d1de40523f1de79575a2c4b39b35c2b34f",
+      "status": "PASS",
+      "passed": 19,
+      "command_composition": 8,
+      "financial_receiver": 6,
+      "actual_disposable_pg": 4,
+      "actual_command_constructor_pg_mtls": 1,
+      "combined_script_exit_code": 101,
+      "combined_script_disposition": "TESTS_PASS_THEN_STRICT_LINT_FAILED_NOT_OVERALL_PASS",
+      "log_sha256": "caa20f2e5e1c7027f11f6202ae488be1ef4b93f61a65fbd58d3127cdaa3a365d",
+      "scope": "Genuine isolated PG and loopback mTLS; owning source replies/current authority TEST_ONLY, not connected business/command acceptance"
+    },
+    {
+      "name": "receiver-command-initial-db-readiness",
+      "status": "FAILED_SETUP_NOT_PASS",
+      "tests_run": 0,
+      "reason": "Temporary init Unix socket went away before final service; retake waits final TCP readiness",
+      "log_sha256": "f18ee442b4cf890ac7577d29803f90a1d9c7e41b2d22bb807c482e8e2ec952a8"
+    },
+    {
+      "name": "receiver-command-initial-production-lint",
+      "status": "FAILED_NOT_PASS",
+      "reason": "Wildcard import, replacement unused import and doc backtick warning; corrected only imports/docs before final lint",
+      "intermediate_log_sha256": [
+        "798c9ca38b9a4c90d16b5740bb5bc21073a8004eae165679ef638ea7dc50795f",
+        "237ddc42ac3a495795d58a227314f8b811e010723ac8e6d66087bdd7088c31ed"
+      ]
+    },
+    {
+      "name": "receiver-command-final-production-lint",
+      "command": "cargo clippy --offline --locked -p edge-service --lib --bins -- -D warnings",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_sha256": "16b22c8fea57f2af0b8b714495f8a10ed33af885d3df57830bb2f5e25576f470"
+    },
+    {
+      "name": "receiver-final-explicit-test-imports-compile",
+      "command": "cargo test --offline --locked -p projection-store-pg --lib --no-run",
+      "status": "PASS",
+      "exit_code": 0,
+      "log_sha256": "043c3b988e8901f57aa5f1fb693297895347ff1bc44213f53ae43cdee1f2f4d1",
+      "scope": "Compilation only after import correction; no duplicate database test count"
+    },
+    {
+      "name": "PM-held-native-membership-and-reader-regressions",
+      "source_commit": "63e1464c50f0598a21db62e874dae04200cb70d8",
+      "status": "PASS",
+      "passed": 18,
+      "new_cases": 11,
+      "existing_regressions": 7,
+      "elapsed_seconds": 12.33,
+      "log_sha256": "e76a499f324394972504e17a36d9ca1153384c693ca4a9b74933da6ee59b8cec",
+      "scope": "Actual isolated PG dependency fences/revoke/restart/UNKNOWN; Core terminal signatures and complete-root census inputs TEST_ONLY; additive SQL UNINSTALLED",
+      "initial_16_case_run": "SUPERSEDED_NOT_ADDITIVE",
+      "heavy_lock": "FINAL_GATE_HELD; initial serial invocations omitted advisory lock, deviation retained in receipt"
+    },
+    {
+      "name": "PM-original-four-table-held-regressions",
+      "status": "PASS_REUSED_UNCHANGED_HELPER",
+      "passed": 8,
+      "elapsed_seconds": 7.03,
+      "log_sha256": "7c09cd82e4ebf0bf415d686baa9524a4b1550c0bdfaeefa4dd29ca42293bda1c",
+      "scope": "Actual isolated PG original held behavior; shared helper bytes unchanged at final membership freeze"
+    },
+    {
+      "name": "PM-held-membership-strengthened-revoke-oracle",
+      "status": "PASS_REPEATED_CASE_NOT_NEW_COVERAGE",
+      "passed": 1,
+      "elapsed_seconds": 1.45,
+      "log_sha256": "da2232e25d87016b5d5c7d6f7d59aa370262d640db2d1ef6cb88a9fd71f78505",
+      "scope": "Actual MembershipRepository revoke blocked while held, succeeds after matching terminal, original issue then denied"
+    },
+    {
+      "name": "PM-durable-original-publication-ack",
+      "source_commit": "740f313583be6f91c38dd02a359777eb02aad54a",
+      "status": "PASS",
+      "passed": 32,
+      "unit_cases": 28,
+      "actual_disposable_pg": 4,
+      "elapsed_seconds": 0.98,
+      "log_sha256": "8ad87c2fdbc812fb83ddf13887edcd94f34196a62416b1f6b9bb8ad780213540",
+      "source_sha256": "90472c64e02b5f9a82380cfb3122cab7f9468a29aa5593b64cbeaa327f41a919",
+      "scope": "Actual existing SQL receipt writer/PG durability with synthetic publication projection; uninstalled source-owner metadata-ACK purpose; not full financial source/APPLIED qualification",
+      "initial_29_case_run": "SUPERSEDED_NOT_ADDITIVE",
+      "heavy_lock": "HELD_ONLY_FOR_NAMED_ACTUAL_PG_JOB",
+      "cleanup": "BOTH_OWNED_DISPOSABLE_CONTAINERS_REMOVED"
+    },
+    {
+      "name": "PM-ack-strengthened-independent-physical-session-visibility",
+      "status": "PASS_REPEATED_CASE_NOT_NEW_COVERAGE",
+      "passed": 1,
+      "elapsed_seconds": 0.86,
+      "scope": "Fresh independent asyncpg connection with distinct PID sees committed receipt; not a 33rd unique case or network COMMIT-ack fault injection"
+    },
+    {
+      "name": "PM-concrete-durable-receiver-composition",
+      "source_commit": "d7b1bdc707829c47356cf0f8cebf85ea0a3023a2",
+      "status": "PASS",
+      "passed": 51,
+      "new_cases": 21,
+      "existing_receiver_regressions": 30,
+      "elapsed_seconds": 1.96,
+      "log_sha256": "ea0228fc5cf7e3f3a84d73e9c66eda76448b30dd4acfb8008a55772a386ccf2e",
+      "source_sha256": "69d635f69bda9300858da2939ad14fe1b0acaa5b98bd09c121cc4011879dc068",
+      "scope": "Concrete actual authority/ACK classes with TEST_ONLY network/source/SQL fixtures; not installed or connected authority",
+      "pg_retaken": false,
+      "heavy_lock": "NOT_USED_PURE_UNIT_JOB",
+      "cleanup": "OWNED_NO_NETWORK_UNIT_CELL_REMOVED"
+    },
+    {
+      "name": "PM-native-correspondence-codec-and-held-PG",
+      "source_commit": "b9dd32d16d16f43f73b671a7f7088b0359b29451",
+      "command": "run-correspondence-focused-20261024.sh held",
+      "status": "PASS",
+      "passed": 40,
+      "unit_cases": 31,
+      "new_actual_disposable_pg": 9,
+      "elapsed_seconds": 9.35,
+      "log_sha256": "082bf0dd602db5f7f76be5387576efdce2f21324b0a4cd86c279245d96f46c1d",
+      "scope": "Genuine native originals/PG same-RR registry dependencies and epoch CAS; Core policy/root census acceptance and terminal signatures TEST_ONLY; not installed authority",
+      "review": "INDEPENDENT_ACCEPT_SOURCE_ONLY",
+      "cleanup": "OWNED_PG_RUNNER_AND_INTERNAL_NETWORK_REMOVED"
+    },
+    {
+      "name": "PM-native-correspondence-metadata-PG",
+      "source_commit": "b9dd32d16d16f43f73b671a7f7088b0359b29451",
+      "command": "run-correspondence-focused-20261024.sh registry",
+      "status": "PASS",
+      "passed": 4,
+      "elapsed_seconds": 0.79,
+      "log_sha256": "f360318a00c884d39a97bb935d6a7b4df06c7a7eba8a03c81a01d271e4d8d51b",
+      "scope": "Actual metadata COMMIT and read-only loader, narrow role, CAS/immutable history; discarded callback response recovered by exact original status, not injected network COMMIT-ack loss",
+      "cleanup": "OWNED_PG_RUNNER_AND_INTERNAL_NETWORK_REMOVED"
+    },
+    {
+      "name": "PM-correspondence-membership-default-regressions",
+      "source_commit": "b9dd32d16d16f43f73b671a7f7088b0359b29451",
+      "command": "run-correspondence-focused-20261024.sh membership",
+      "status": "PASS",
+      "passed": 18,
+      "elapsed_seconds": 12.09,
+      "log_sha256": "0cd55cb3cb6831051806e11907d00fa817eac5d8c4415799ffe7ae937a6e33ba",
+      "scope": "Existing actual PG membership/held tests rerun because shared catalogue helper and bridge gained opt-in registry support; not new unique coverage",
+      "cleanup": "OWNED_PG_RUNNER_AND_INTERNAL_NETWORK_REMOVED"
+    },
+    {
+      "name": "PM-correspondence-legacy-default-regressions",
+      "source_commit": "b9dd32d16d16f43f73b671a7f7088b0359b29451",
+      "command": "run-correspondence-focused-20261024.sh legacy",
+      "status": "PASS",
+      "passed": 16,
+      "elapsed_seconds": 8.85,
+      "log_sha256": "2625bc256f6edbb5208a64bfc8380e6bf8798463baf67f11782421f460ff3311",
+      "scope": "Existing four-table business-root held module against changed shared catalogue helper; inherited/repeated cases are not added as unique coverage",
+      "cleanup": "OWNED_PG_RUNNER_AND_INTERNAL_NETWORK_REMOVED"
+    },
+    {
+      "name": "Edge-financial-runtime-trust-initial-compile",
+      "status": "FAILED_COMPILE_NOT_PASS",
+      "exit_code": 101,
+      "tests_run": 0,
+      "reason": "String versus CanonicalId workspace comparison; corrected with existing canonical as_str accessor before retake",
+      "log_sha256": "a2554e5f1d48eb786992f7d4631c866da56074e3b269e43047627423e8fb0da2"
+    },
+    {
+      "name": "Edge-financial-runtime-trust-and-TLS-focused",
+      "source_commit": "6d44b52c5c088e2f7ada8fe3aaee94f7599d3266",
+      "command": "cargo test --offline --locked -p edge-service --lib core_scoped_runtime:: -- --test-threads=1; cargo clippy --offline --locked -p edge-service --lib --bins -- -D warnings",
+      "status": "PASS",
+      "passed": 65,
+      "new_cases": 7,
+      "existing_regressions": 58,
+      "existing_TLS_cases_strengthened": 4,
+      "test_execution_seconds": 0.23,
+      "test_compilation_seconds": 15.72,
+      "production_clippy_lib_bins": "PASS",
+      "production_clippy_seconds": 10.71,
+      "log_sha256": "fe38ab73177059aa3c8bd0b2c16e4d751dce7617b44777c4f85dbe813d78d68f",
+      "scope": "Real Ed25519 signature verified through configured concrete verifier with TEST_ONLY financial trust/original; strict TLS configuration tested, not connected DB/source authority",
+      "review": "INDEPENDENT_ACCEPT_SOURCE_ONLY; primary accepted follow-up TLS/CanonicalId correction",
+      "cleanup": "OWNED_NO_NETWORK_RUST_CELL_REMOVED"
+    },
+    {
+      "name": "actual-isolated-TLS-and-refusal-specimens",
+      "status": "PASS_TRANSPORT_NEGATIVES_ONLY",
+      "core_image": "sha256:50939bb5784b58b0bc68121c4920c703abf208da7dfba74541934fe53e48e9b2",
+      "core_to_edge": { "http_status": 404, "code": "RESOURCE_NOT_AVAILABLE" },
+      "edge_to_core": { "http_status": 400, "code": "CURRENT_VIEW_REQUEST_INVALID" },
+      "sessions_issued": 0,
+      "grants_issued": 0,
+      "positive_business_read": "NOT_PROVEN",
+      "stream": "NOT_PROVEN",
+      "cleanup": "OWNED_CONTAINERS_AND_TUNNEL_REMOVED"
+    }
+  ],
+  "full_hook": "NOT_RUN_INTERMEDIATE_R1_CAMPAIGN_10_10C",
+  "six_phase_acceptance": "OPEN",
+  "command_enabled": false,
+  "live_enabled": false
+}

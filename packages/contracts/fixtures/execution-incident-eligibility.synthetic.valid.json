@@ -1,0 +1,184 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "cases": {
+    "open": {
+      "schema_version": "portal.execution.incident-action-eligibility.v1",
+      "workspace_id": "ws_TEST_ONLY",
+      "incident_id": "inc_TEST_ONLY",
+      "environment": "PAPER",
+      "workflow_version": 1,
+      "observed_at_ms": 1792627200000,
+      "current_only": true,
+      "advisory_only": true,
+      "authority_basis": "EXISTING_PORTAL_ADMIN_INCIDENT_WORKFLOW",
+      "family_check": "PORTAL_INCIDENT_WORKFLOW_RECHECK_REQUIRED",
+      "source_side_effect_requested": false,
+      "deployment_resume_requested": false,
+      "actions": [
+        {
+          "action": "incident.acknowledge",
+          "eligible": true,
+          "blocker_codes": [],
+          "required_inputs": []
+        },
+        {
+          "action": "incident.mitigate",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_ACKNOWLEDGEMENT_REQUIRED",
+            "INCIDENT_ASSIGNEE_REQUIRED",
+            "MITIGATION_EVIDENCE_REQUIRED"
+          ],
+          "required_inputs": [
+            "mitigation_evidence_hash"
+          ]
+        },
+        {
+          "action": "incident.resolve",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_NOT_MITIGATED",
+            "CLEAN_DRY_RUN_EVIDENCE_REQUIRED"
+          ],
+          "required_inputs": [
+            "clean_dry_run_evidence_hash",
+            "reason"
+          ]
+        }
+      ]
+    },
+    "mitigation_ready": {
+      "schema_version": "portal.execution.incident-action-eligibility.v1",
+      "workspace_id": "ws_TEST_ONLY",
+      "incident_id": "inc_TEST_ONLY",
+      "environment": "PAPER",
+      "workflow_version": 4,
+      "observed_at_ms": 1792627200000,
+      "current_only": true,
+      "advisory_only": true,
+      "authority_basis": "EXISTING_PORTAL_ADMIN_INCIDENT_WORKFLOW",
+      "family_check": "PORTAL_INCIDENT_WORKFLOW_RECHECK_REQUIRED",
+      "source_side_effect_requested": false,
+      "deployment_resume_requested": false,
+      "actions": [
+        {
+          "action": "incident.acknowledge",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_NOT_ACKNOWLEDGEABLE"
+          ],
+          "required_inputs": []
+        },
+        {
+          "action": "incident.mitigate",
+          "eligible": true,
+          "blocker_codes": [],
+          "required_inputs": [
+            "mitigation_evidence_hash"
+          ]
+        },
+        {
+          "action": "incident.resolve",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_NOT_MITIGATED",
+            "CLEAN_DRY_RUN_EVIDENCE_REQUIRED"
+          ],
+          "required_inputs": [
+            "clean_dry_run_evidence_hash",
+            "reason"
+          ]
+        }
+      ]
+    },
+    "resolution_ready": {
+      "schema_version": "portal.execution.incident-action-eligibility.v1",
+      "workspace_id": "ws_TEST_ONLY",
+      "incident_id": "inc_TEST_ONLY",
+      "environment": "PAPER",
+      "workflow_version": 6,
+      "observed_at_ms": 1792627200000,
+      "current_only": true,
+      "advisory_only": true,
+      "authority_basis": "EXISTING_PORTAL_ADMIN_INCIDENT_WORKFLOW",
+      "family_check": "PORTAL_INCIDENT_WORKFLOW_RECHECK_REQUIRED",
+      "source_side_effect_requested": false,
+      "deployment_resume_requested": false,
+      "actions": [
+        {
+          "action": "incident.acknowledge",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_NOT_ACKNOWLEDGEABLE"
+          ],
+          "required_inputs": []
+        },
+        {
+          "action": "incident.mitigate",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_NOT_MITIGATABLE"
+          ],
+          "required_inputs": [
+            "mitigation_evidence_hash"
+          ]
+        },
+        {
+          "action": "incident.resolve",
+          "eligible": true,
+          "blocker_codes": [],
+          "required_inputs": [
+            "clean_dry_run_evidence_hash",
+            "reason"
+          ]
+        }
+      ]
+    },
+    "resolved": {
+      "schema_version": "portal.execution.incident-action-eligibility.v1",
+      "workspace_id": "ws_TEST_ONLY",
+      "incident_id": "inc_TEST_ONLY",
+      "environment": "PAPER",
+      "workflow_version": 7,
+      "observed_at_ms": 1792627200000,
+      "current_only": true,
+      "advisory_only": true,
+      "authority_basis": "EXISTING_PORTAL_ADMIN_INCIDENT_WORKFLOW",
+      "family_check": "PORTAL_INCIDENT_WORKFLOW_RECHECK_REQUIRED",
+      "source_side_effect_requested": false,
+      "deployment_resume_requested": false,
+      "actions": [
+        {
+          "action": "incident.acknowledge",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_ALREADY_RESOLVED"
+          ],
+          "required_inputs": []
+        },
+        {
+          "action": "incident.mitigate",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_ALREADY_RESOLVED"
+          ],
+          "required_inputs": [
+            "mitigation_evidence_hash"
+          ]
+        },
+        {
+          "action": "incident.resolve",
+          "eligible": false,
+          "blocker_codes": [
+            "INCIDENT_ALREADY_RESOLVED"
+          ],
+          "required_inputs": [
+            "clean_dry_run_evidence_hash",
+            "reason"
+          ]
+        }
+      ]
+    }
+  }
+}

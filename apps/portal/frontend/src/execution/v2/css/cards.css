@@ -1,0 +1,207 @@
+/* Table that becomes cards at 660px (hi-fi v2 kit table.cards). Self-contained:
+ * it does not sit inside .exec-table, so V1's table rules never reach it.
+ *
+ * Numeric cells follow the V1 M6 rule: mono, tabular, right-aligned, and no
+ * text-overflow, so an amount is never ellipsised.
+ * Uppercase (hi-fi kit `th` and `td::before`): the column head and the card label
+ * are mono caps, tracked .10em / .08em, sized by --exec-font-label (never a
+ * font-size). Both selectors are on the v2Hygiene uppercase allowlist. */
+.exec-cards-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  /* The absolutely positioned screen-reader text of a cell (`.exec-blk-sr`, "(FE-021)") needs this wrap as its containing
+   * block: otherwise it escapes the wrap's own horizontal scroll and widens the page by the table's overhang (UXM-10 F-3). */
+  position: relative;
+}
+/* A table wider than its column stops at the scroller's edge; the side that is cut off fades out, so it reads as "goes on"
+ * and not as the end of the table. `data-more` comes from useKeyboardScroll (only while the wrap really overflows). A mask
+ * uses alpha only, so the colour named here is never drawn. */
+.exec-cards-wrap[data-more="end"] {
+  -webkit-mask-image: linear-gradient(to right, var(--ink) calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, var(--ink) calc(100% - 48px), transparent);
+}
+.exec-cards-wrap[data-more="start"] {
+  -webkit-mask-image: linear-gradient(to left, var(--ink) calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to left, var(--ink) calc(100% - 48px), transparent);
+}
+.exec-cards-wrap[data-more="both"] {
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--ink) 48px, var(--ink) calc(100% - 48px), transparent);
+  mask-image: linear-gradient(to right, transparent, var(--ink) 48px, var(--ink) calc(100% - 48px), transparent);
+}
+/* The sentence under a table that goes on to the right (`scrollHint`): printed only while it really overflows, at the table's left edge. */
+.exec-cards-hint {
+  margin: var(--space-1) 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+@media (max-width: 660px) {
+  .exec-cards-hint { display: none; }
+}
+.exec-cards-wrap:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-cards {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+}
+/* One body size per table. The role tokens differ on purpose elsewhere (num 14px mono, data/meta/id 12px), but side by side inside one
+ * table that read as unbalanced: a 14px figure next to a 12px name and a 12px "Not available". Inside a table body every text role
+ * resolves to the same 13px (the `body` size), keeping its face (mono for figures and ids, sans for words) and its colour, so a
+ * placeholder is the same size as the figure it stands in for. The head (`label`, 11px caps) is untouched. Set once here through the
+ * role tokens, so every rule that says `font: var(--exec-font-<role>)` follows without naming a size. */
+.exec-cards tbody td {
+  --exec-font-data: 400 13px/18px var(--font-body);
+  --exec-font-meta: 400 13px/18px var(--font-body);
+  --exec-font-body: 400 13px/18px var(--font-body);
+  --exec-font-num: 400 13px/18px var(--font-mono);
+  --exec-font-id: 400 13px/18px var(--font-mono);
+  --exec-font-term: 400 13px/18px var(--font-mono);
+}
+.exec-cards thead th {
+  padding: 6px var(--space-3);
+  font: var(--exec-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
+  text-align: left;
+  white-space: nowrap;
+}
+/* Sortable head (hi-fi th.s): the button wears the th's voice, an arrow follows the label. */
+.exec-cards-sort {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-cards-sort::after {
+  content: "\2195";
+  content: "\2195" / "";
+  color: var(--ink-faint);
+}
+.exec-cards-sort[data-dir="asc"]::after {
+  content: "\25B2";
+  content: "\25B2" / "";
+  color: var(--accent);
+}
+.exec-cards-sort[data-dir="desc"]::after {
+  content: "\25BC";
+  content: "\25BC" / "";
+  color: var(--accent);
+}
+.exec-cards-sort[data-dir] {
+  color: var(--ink);
+}
+.exec-cards-sort:hover {
+  color: var(--ink);
+}
+.exec-cards-sort:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* Multi-sort priority next to the arrow: a number, same voice as the head. */
+.exec-cards-rank {
+  margin-left: 2px;
+  font: var(--exec-font-label);
+  color: var(--accent);
+}
+.exec-cards-head {
+  display: inline-block;
+  margin-right: var(--space-2);
+  vertical-align: baseline;
+}
+.exec-cards tbody tr {
+  color: var(--ink);
+}
+.exec-cards tbody td {
+  box-sizing: border-box;
+  height: 32px;
+  padding: 6px var(--space-3);
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+.exec-cards th[data-numeric="true"],
+.exec-cards td[data-numeric="true"] {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.exec-cards td[data-numeric="true"] {
+  font: var(--exec-font-num);
+}
+.exec-cards tbody tr[data-interactive="true"] {
+  cursor: pointer;
+}
+.exec-cards tbody tr[data-interactive="true"]:hover {
+  background: var(--surface-2);
+}
+.exec-cards tbody tr[data-selected="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+.exec-cards tbody tr:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-cards-na {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-cards-empty td {
+  height: auto;
+  white-space: normal;
+}
+
+@media (max-width: 660px) {
+  .exec-cards thead {
+    display: none;
+  }
+  .exec-cards,
+  .exec-cards tbody {
+    display: block;
+  }
+  .exec-cards tbody tr {
+    display: block;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .exec-cards tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    height: auto;
+    padding: 3px 12px;
+    border: 0;
+    white-space: normal;
+  }
+  /* The label sits left and every value packs to the right, so a cell with two
+   * spans ("Buy" "Stop limit") reads as one value, not as two ends (BLT-B7). */
+  .exec-cards tbody td[data-l] {
+    justify-content: flex-end;
+    gap: var(--space-2);
+  }
+  .exec-cards td[data-l]::before {
+    content: attr(data-l);
+    flex: none;
+    margin-right: auto;
+    padding-right: var(--space-3);
+    font: var(--exec-font-label);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .exec-cards td[data-numeric="true"] .exec-cards-v {
+    white-space: nowrap;
+  }
+}

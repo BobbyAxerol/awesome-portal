@@ -1,0 +1,33 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "value": null,
+    "unit": "SCORE",
+    "currency": null,
+    "basis": "TEST_ONLY:score-basis",
+    "window": { "from_ms": 1000, "to_ms": 2000 },
+    "denominator": null,
+    "methodology_ref": "qbts_prb_v1_1",
+    "availability": "PARTIAL",
+    "reason_code": "STRESS_INPUTS_NOT_RETAINED_FOR_POLICY",
+    "quality": {
+      "completeness": "UNRESOLVED",
+      "freshness": "FRESH",
+      "reasons": [
+        "TEST_ONLY:original-01", "TEST_ONLY:original-02", "TEST_ONLY:original-03", "TEST_ONLY:original-04",
+        "TEST_ONLY:original-05", "TEST_ONLY:original-06", "TEST_ONLY:original-07", "TEST_ONLY:original-08",
+        "TEST_ONLY:original-09", "TEST_ONLY:original-10", "TEST_ONLY:original-11", "TEST_ONLY:original-12",
+        "TEST_ONLY:original-13", "TEST_ONLY:original-14", "TEST_ONLY:original-15", "TEST_ONLY:original-16",
+        "TEST_ONLY:original-17", "TEST_ONLY:original-18", "TEST_ONLY:original-19", "TEST_ONLY:original-20",
+        "TEST_ONLY:original-21", "TEST_ONLY:original-22", "TEST_ONLY:original-23", "TEST_ONLY:original-24",
+        "TEST_ONLY:original-25", "TEST_ONLY:original-26", "TEST_ONLY:original-27", "TEST_ONLY:original-28",
+        "TEST_ONLY:original-29", "TEST_ONLY:original-30", "TEST_ONLY:original-31", "TEST_ONLY:original-32",
+        "STRESS_INPUTS_NOT_RETAINED_FOR_POLICY"
+      ]
+    },
+    "source_confidence": "VERIFIED",
+    "provenance_refs": ["TEST_ONLY:original-input-digest"],
+    "calculation_revision": "TEST_ONLY:derived-calculation",
+    "policy_revision": "TEST_ONLY:approved-policy"
+  }
+}

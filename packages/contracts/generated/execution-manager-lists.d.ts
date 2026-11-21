@@ -137,7 +137,7 @@ export interface components {
         };
         MetricState: {
             /** @enum {unknown} */
-            state: "AVAILABLE" | "EMPTY" | "UNAVAILABLE";
+            state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
             reason_code: string | null;
         };
         AlphaFleetItem: {
@@ -200,6 +200,94 @@ export interface components {
             summary: components["schemas"]["Summary"];
             page: components["schemas"]["AlphaPage"];
         };
+        ManagerScopedFacts: {
+            alpha_id?: string;
+            alpha_version_id?: string;
+            portfolio_id?: string;
+            deployment_id?: string;
+            account_id?: string;
+            binding_id?: string;
+            name?: string | null;
+            state?: string | null;
+            stage?: string | null;
+            venue?: string | null;
+            currency?: string | null;
+            base_currency?: string | null;
+            allocation?: string | null;
+            balance_total?: string | null;
+            balance_free?: string | null;
+            balance_locked?: string | null;
+            realized_pnl?: string | null;
+            unrealized_pnl?: string | null;
+            net_pnl?: string | null;
+            exposure?: string | null;
+            updated_at_ms?: number | null;
+        };
+        ManagerScopedItem: {
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            identity: components["schemas"]["ManagerScopedFacts"];
+            instances: components["schemas"]["ManagerScopedFacts"][];
+            financial_facts: {
+                /** @enum {unknown} */
+                kind: "ALLOCATION" | "INTERNAL_ACCOUNT_BALANCE" | "POSITION_PNL";
+                facts: components["schemas"]["ManagerScopedFacts"];
+            }[];
+            financial_totals: components["schemas"]["ManagerScopedFacts"][];
+            is_full_resource: boolean;
+            financial_availability: {
+                /** @enum {unknown} */
+                state: "AVAILABLE" | "PARTIAL" | "NOT_PUBLISHED";
+                /** @enum {unknown} */
+                reason_code: "AUTHORIZED_RETAINED_FACTS" | "SCOPED_FINANCIAL_GRAIN_OR_FIELDS_UNAVAILABLE" | "SOURCE_FACTS_NOT_PUBLISHED";
+            };
+        };
+        /** @description Server-selected scoped DTO, never selected by a browser toggle. Current authority before aggregation and delivery. Exact decimal strings; omitted means withheld/unpublished, null means explicit absence. Financial totals only sum authorized facts attributable to this item, partitioned by currency; not complete NAV. Runtime enforces page/count/cursor consistency and 1 MiB response cap. No global count or revision metadata. */
+        ManagerScopedResponse: {
+            /** @constant */
+            schema_version: "portal.execution.manager-scoped.v1";
+            /** @enum {unknown} */
+            surface: "ALPHA_FLEET" | "PORTFOLIOS" | "BINDINGS" | "BINDING_DETAIL";
+            workspace_id: string;
+            /** @enum {unknown} */
+            environment: "all" | "paper" | "sandbox" | "live";
+            /** @constant */
+            record_authority: "PORTAL_PROJECTION";
+            /** @constant */
+            source_authority: "TRADING_SYSTEM";
+            read_at_ms: number;
+            read_scope: {
+                /** @constant */
+                visibility: "SCOPED";
+                /** @constant */
+                coverage: "AUTHORIZED_ONLY";
+                /** @constant */
+                totals_scope: "VISIBLE_ROWS_ONLY";
+                policy_revisions: string[];
+            };
+            profile_dispositions: {
+                /** @enum {unknown} */
+                environment: "paper" | "sandbox" | "live";
+                /** @enum {unknown} */
+                state: "PARTIAL" | "DENIED" | "UNAVAILABLE";
+                reason_code: string | null;
+            }[];
+            /** @constant */
+            completeness: "PARTIAL";
+            /** @constant */
+            reason_code: "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY";
+            page: {
+                visible_count: number;
+                returned_count: number;
+                limit: number;
+                /** @constant */
+                maximum_response_bytes: 1048576;
+                has_more: boolean;
+                next_cursor: string | null;
+                previous_cursor: string | null;
+            };
+            items: components["schemas"]["ManagerScopedItem"][];
+        };
         EnvironmentBranch: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -212,6 +300,21 @@ export interface components {
             currency: components["schemas"]["Identifier"];
             value: components["schemas"]["$defs-Decimal"];
         };
+        /** @description WP-K slice 6 (N3). A typed portfolio health roll-up with its source: the worst health among the portfolio's deployments, with the count of deployments in each class. The lifecycle `state` stays what it is; this is NOT it. OPTIONAL on an item: omitted = this producer has no owning source; NOT_PUBLISHED carries a reason code and no value (never a default of HEALTHY). */
+        PortfolioHealth: {
+            /** @enum {unknown} */
+            state: "PUBLISHED" | "NOT_PUBLISHED";
+            value: ("HEALTHY" | "ATTENTION" | "DEGRADED" | "HALTED") | null;
+            basis: "WORST_OF_DEPLOYMENT_HEALTH" | null;
+            deployments_by_health: {
+                HEALTHY: number;
+                ATTENTION: number;
+                DEGRADED: number;
+                HALTED: number;
+            } | null;
+            as_of: components["schemas"]["Timestamp"] | null;
+            reason_code: string | null;
+        } & unknown;
         PortfolioListItem: {
             portfolio_id: components["schemas"]["Identifier"];
             name: string;
@@ -223,6 +326,11 @@ export interface components {
             deployment_count: number;
             allocated_by_currency: components["schemas"]["$defs-CurrencyValue"][];
             updated_at: components["schemas"]["Timestamp"];
+            health?: components["schemas"]["PortfolioHealth"];
+            /** @description WP-K (GAP-17), OPTIONAL: the capital root this portfolio hangs under; omitted = this producer has no owning source. */
+            root_id?: components["schemas"]["Identifier"];
+            /** @description WP-K (GAP-19), OPTIONAL: the owner as a Portal user id (the link target); `owner` stays the display text. null = the owner has no Portal user; omitted = no owning source. */
+            owner_user_id?: components["schemas"]["Identifier"] | null;
         };
         PortfolioListResponse: {
             /** @constant */
@@ -252,6 +360,8 @@ export interface components {
                 live?: components["schemas"]["EnvironmentBranch"];
             };
             total_portfolios: number;
+            /** @description Present only for q: exact matches among authorized retained rows, not the uncapped source population. Preserve truncated/completeness disclosure. total_portfolios remains the unfiltered source census. */
+            matching_portfolios?: number;
             truncated: boolean;
             items: components["schemas"]["PortfolioListItem"][];
         };
@@ -279,6 +389,28 @@ export interface components {
             freshness_budget_ms?: components["schemas"]["FreshnessBudgetMs"];
             completeness: components["schemas"]["Completeness"];
         };
+        BindingDecimal: string;
+        /** @description One exact amount in ONE currency, with the instant the owning source observed it and how much of the owning population it covers. Never a conversion and never a sum across currencies. */
+        BindingAmountFigure: {
+            currency: components["schemas"]["Identifier"];
+            value: components["schemas"]["BindingDecimal"];
+            observed_at: components["schemas"]["Timestamp"];
+            coverage: components["schemas"]["Completeness"];
+        };
+        /** @description One entry per currency (currencies are distinct). A mixed-currency binding is several entries, never one summed value. */
+        BindingAmountFigures: components["schemas"]["BindingAmountFigure"][];
+        BindingSleeveFigure: {
+            count: number;
+            observed_at: components["schemas"]["Timestamp"];
+            coverage: components["schemas"]["Completeness"];
+        };
+        /** @description Optional per-row list figures. A property that is OMITTED means this producer has no owning source for it (the reader keeps its per-row fallback). A property that is null means the owning source did not report it (typed absence, not zero, no fallback). native_equity is the venue's native equity, never the wallet balance. */
+        BindingFigures: {
+            native_equity?: components["schemas"]["BindingAmountFigures"] | null;
+            virtual_used?: components["schemas"]["BindingAmountFigures"] | null;
+            virtual_headroom?: components["schemas"]["BindingAmountFigures"] | null;
+            sleeve_count?: components["schemas"]["BindingSleeveFigure"] | null;
+        };
         BindingItem: {
             binding_id: components["schemas"]["Identifier"];
             account_id: components["schemas"]["Identifier"];
@@ -286,6 +418,7 @@ export interface components {
             state: components["schemas"]["Identifier"];
             credential_state: components["schemas"]["Identifier"];
             updated_at: components["schemas"]["Timestamp"];
+            figures?: components["schemas"]["BindingFigures"];
         };
         AppliedFilter: {
             field: string;
@@ -308,6 +441,21 @@ export interface components {
             applied_filters: components["schemas"]["AppliedFilter"][];
             applied_sort: components["schemas"]["AppliedSort"][];
         };
+        BindingCount: number | null;
+        /** @description Optional per-environment counts over the SAME authorized snapshot as the page: rows and fields are authorized first, so a hidden row is in no count. A property that is null was not computable from owning facts; 0 is a counted zero. Omitted when the producer cannot compute any. */
+        BindingCounts: {
+            /** @constant */
+            basis: "AUTHORIZED_SNAPSHOT";
+            observed_at: components["schemas"]["Timestamp"];
+            coverage: components["schemas"]["Completeness"];
+            all?: components["schemas"]["BindingCount"];
+            issues?: components["schemas"]["BindingCount"];
+            by_environment?: {
+                paper?: components["schemas"]["BindingCount"];
+                sandbox?: components["schemas"]["BindingCount"];
+                live?: components["schemas"]["BindingCount"];
+            };
+        };
         BindingsResponse: components["schemas"]["EnvelopeBase"] & {
             /** @constant */
             schema_version: "execution.bindings-list.v1";
@@ -321,6 +469,7 @@ export interface components {
             freshness: unknown;
             completeness: unknown;
             page: components["schemas"]["BindingPage"];
+            counts?: components["schemas"]["BindingCounts"];
         };
         BindingDetailResponse: {
             /** @constant */
@@ -375,14 +524,56 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded enriched Fleet page and fleet-wide current-fact summary with exact counts. */
+            /** @description Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AlphaFleetResponse"];
+                    "application/json": components["schemas"]["AlphaFleetResponse"] | components["schemas"]["ManagerScopedResponse"];
                 };
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -391,6 +582,14 @@ export interface operations {
             query?: {
                 workspace_id?: components["parameters"]["Workspace"];
                 environment?: components["parameters"]["AlphaFleetEnvironment"];
+                /** @description Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored. */
+                after?: string;
+                /** @description Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored. */
+                before?: string;
+                /** @description Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored. */
+                limit?: number;
+                /** @description Literal case-insensitive substring of authorized published names only; no trimming/normalization/wildcards. Controls, blank-only and malformed Unicode are refused. Works on legacy retained rows and scoped V2. Exact q binds scoped cursors; reset paging when q changes. Legacy matching_portfolios counts retained matches only, not the uncapped source census. */
+                q?: string;
             };
             header?: never;
             path?: never;
@@ -398,14 +597,56 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded all-profile portfolio identity list with per-environment branch states, membership and exact allocated capital. */
+            /** @description Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PortfolioListResponse"];
+                    "application/json": components["schemas"]["PortfolioListResponse"] | components["schemas"]["ManagerScopedResponse"];
                 };
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -428,14 +669,56 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Bounded binding page with exact counts and no credentials. */
+            /** @description Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BindingsResponse"];
+                    "application/json": components["schemas"]["BindingsResponse"] | components["schemas"]["ManagerScopedResponse"];
                 };
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -453,17 +736,52 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One narrow binding detail. */
+            /** @description Legacy compatibility or scoped V2 selected solely by durable server policy. Scoped page counts and totals cover authorized rows only. private, no-store. */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BindingDetailResponse"];
+                    "application/json": components["schemas"]["BindingDetailResponse"] | components["schemas"]["ManagerScopedResponse"];
                 };
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Binding not found in this workspace/profile projection. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Typed refusal: invalid query, current authority, scope/cursor revision or unavailable qualified publication. No hidden data. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -13,6 +13,7 @@
     "certification_id": "scert_fixture_77",
     "deployment_id": "dep_77",
     "portfolio_id": "pf_crypto",
+    "alpha_id": null, "alpha_name": null, "portfolio_name": null, "alpha_reason_code": "DEPLOYMENT_IDENTITY_NOT_READ", "portfolio_name_reason_code": "DEPLOYMENT_IDENTITY_NOT_READ",
     "venue": "OKX",
     "environment": "SANDBOX",
     "workflow_state": "DRAFT",
@@ -63,6 +64,158 @@
     { "step_key": "CLEANUP", "ordinal": 5, "label": "Cleanup", "strip_state": "PENDING", "evaluation_state": "UNAVAILABLE", "source_authority": "DERIVED", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_CLEANUP_UNAVAILABLE" },
     { "step_key": "EXIT_REVIEW", "ordinal": 6, "label": "Exit review", "strip_state": "PENDING", "evaluation_state": "UNAVAILABLE", "source_authority": "PORTAL", "evidence_hash": null, "evidence_schema_version": null, "source_verification_state": "UNAVAILABLE", "summary": "Source evidence is not available in the current delivery profile.", "as_of": null, "expires_at": null, "blocker_code": "SANDBOX_STEP_EXIT_REVIEW_UNAVAILABLE" }
   ],
+  "stage_facts": {
+    "schema_version": "execution.stage-facts.v1",
+    "runtime": {
+      "runtime_state": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+      },
+      "since": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+      }
+    },
+    "reconciliation": {
+      "basis": "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN",
+      "verdict": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+      },
+      "open_finding_count": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+      },
+      "unknown_order_count": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+      },
+      "as_of": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+      }
+    },
+    "sessions": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "SANDBOX_SOURCE_UNAVAILABLE",
+      "basis": "EXECUTION_SESSIONS_BOUNDED_WINDOW",
+      "rows": [],
+      "returned_count": 0,
+      "omitted_count": 0,
+      "source_complete": null
+    }
+  },
+  "source_figures": {
+    "basis": "SOURCE_RELATIONS_HELD_BY_THE_PORTAL",
+    "figures": [
+      {
+        "key": "equity",
+        "label": "Equity",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_EQUITY_FIELD_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "gross_notional",
+        "label": "Gross notional",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_GROSS_NOTIONAL_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "positions",
+        "label": "Positions",
+        "unit": "COUNT",
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_POSITION_POPULATION_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "open_orders",
+        "label": "Open orders",
+        "unit": "COUNT",
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_OPEN_ORDER_POPULATION_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "fees",
+        "label": "Fees",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "SANDBOX_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_FEE_TOTAL_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      }
+    ]
+  },
   "source_panels": [
     { "panel_id": "internal", "source_authority": "EXECUTION", "as_of": null, "read_at": "2026-08-23T18:00:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": null, "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "SANDBOX_INTERNAL_UNAVAILABLE" }] },
     { "panel_id": "broker", "source_authority": "BROKER", "as_of": null, "read_at": "2026-08-23T18:00:00.000Z", "source_cursor": null, "source_sequence": null, "projection_epoch": null, "projection_sequence": null, "source_completeness": "UNKNOWN", "poll_interval_ms": null, "panel_state": "unavailable", "freshness_state": "UNKNOWN", "age_seconds": null, "lag_ms": null, "formula_version": null, "capability_snapshot_id": null, "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "data": null, "warnings": [{ "code": "SANDBOX_BROKER_UNAVAILABLE" }] },

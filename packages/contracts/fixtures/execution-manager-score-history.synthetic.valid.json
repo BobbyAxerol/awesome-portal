@@ -1,0 +1,16 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.manager-score-history.v1",
+    "target": {"surface": "ALPHA", "id": "TEST_ONLY-alpha"},
+    "workspace_id": "TEST_ONLY-workspace",
+    "environment": "paper",
+    "revision_mode": "RESTATED_CURRENT_POLICY",
+    "purpose": "HISTORICAL_ANALYSIS_ONLY",
+    "operational_current": false,
+    "availability": "NOT_PUBLISHED",
+    "reason_code": "SCOPED_HISTORY_ENUMERATION_NOT_INSTALLED",
+    "page": {"limit": 20, "returned_count": null, "authorized_total_count": null, "next_cursor": null, "previous_cursor": null},
+    "items": []
+  }
+}

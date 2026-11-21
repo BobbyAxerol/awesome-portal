@@ -1,0 +1,85 @@
+{
+  "schema": "research-loop.acceptance-environment.v1",
+  "source_capture_commit": "a402f7b95d4429804f7f51e76540ed2ed3c81828",
+  "lanes": [
+    {
+      "lane": "SOURCE_INSPECTED",
+      "status": "PASS",
+      "evidence": [
+        "source-map.csv",
+        "screen-requirements.csv",
+        "screen-field-matrix.csv",
+        "screen-action-matrix.csv"
+      ],
+      "statement": "Versioned source was parsed and hashed; this is not a browser or runtime claim."
+    },
+    {
+      "lane": "CONTRACT_MAPPED",
+      "status": "PASS",
+      "evidence": [
+        "delta-source-manifest.json",
+        "route-inventory.csv",
+        "protected-surface.json"
+      ],
+      "statement": "Static contracts and protected boundaries were mapped without calling an external service."
+    },
+    {
+      "lane": "BROWSER_VERIFIED",
+      "status": "DISCOVERY_ONLY",
+      "evidence": [
+        "runtime-inventory.md",
+        "source-vs-browser-coverage.md"
+      ],
+      "playwright": {
+        "config": "apps/portal/frontend/playwright.config.ts",
+        "production_true_port": 4174,
+        "preview_port": 4175,
+        "build_flags": [
+          "VITE_ROADMAP_TASK_BOARD_LOCAL_ONLY=true",
+          "VITE_EXECUTION_PREVIEW_ENABLED=false|true"
+        ],
+        "fixture_mode": "Portal endpoints stubbed by e2e fixtures per config comments"
+      },
+      "statement": "No screenshot, trace, DNS, port reservation, deployment helper or browser PASS is claimed in P01."
+    },
+    {
+      "lane": "REAL_DELTA_E2E",
+      "status": "BLOCKED_BY_P04_INPUT",
+      "evidence": [
+        "delta-source-manifest.json"
+      ],
+      "statement": "Current reader/snapshot authorization and QuantBT 1.1.1 are not provisioned; P01 creates no numerical result."
+    },
+    {
+      "lane": "LOCAL_PORTAL_PYTEST",
+      "status": "BLOCKED_BY_WORKTREE_TEST_ENV",
+      "evidence": [
+        "apps/portal/scripts/test_backend.sh"
+      ],
+      "statement": "The P01 worktree intentionally has no apps/portal/.venv; the script reported the missing interpreter before collecting tests. P02 must provision the lockfile-aligned isolated test environment before claiming compatibility tests."
+    },
+    {
+      "lane": "DEPLOYED_RUNTIME",
+      "status": "NOT_MEASURED",
+      "statement": "Repository examples/compose files were inspected only. Runtime flags and deployed schemas are not inferred from them."
+    }
+  ],
+  "bootstrap_request_once": {
+    "owner": "Bobby",
+    "required_before": [
+      "P04 real Delta parity",
+      "P07+ reviewable browser receipt",
+      "P23 deployment acceptance"
+    ],
+    "request": [
+      "Authorized Research dev target identity and non-secret health/feature-profile receipt.",
+      "Immutable historical reader snapshot identifier plus read-only fixture/access receipt.",
+      "Named browser build/DNS/port reservation or an approved isolated equivalent."
+    ],
+    "prohibited": [
+      "deployment helper invocation",
+      "production/Execution runtime mutation",
+      "credential values in Git"
+    ]
+  }
+}

@@ -1,0 +1,44 @@
+import { ReviewedAccessPolicy, ScopedAccessGrant, TsMembershipAcceptance, type ManagerDomainGrant } from "./access.contract";
+import { AccessRelations, unqualifiedAccessRelations } from "./access-policy";
+import type { ExecutionReadPublication, ExecutionReadPublicationRequest } from "./read-publication";
+import type { RootReceiptVerifier } from "./access-root-receipt";
+import type { DelegatedReceiptScope, QualifiedDelegatedMembershipReceipt } from "./access-delegated-receipt";
+import type { NativeCurrentRelationsPort } from "./native-current-relations-port";
+
+export interface ReviewedPolicyArtifact {
+  policy:ReviewedAccessPolicy;
+  root_grants:ScopedAccessGrant[];
+  provenance_ref:string;
+  manager_domain_grants?:ManagerDomainGrant[];
+  manager_commissioning_target?:{
+    database_name:string;database_system_identifier:string;role_name:string;
+    protected_owner_user_id:string;workspace_id:string;
+    principal_workspace_pins:{user_id:string;workspace_id:string}[];
+  };
+}
+/** Internal provider port. Authentication/signature/profile binding happens in a qualified adapter,
+ * never by trusting JSON, a browser boolean or a fixture constant. No HTTP acceptance route exists. */
+export interface AccessTrustProvider {
+  /** Real ordinary CURRENT native READ lifetime, distinct from ROOT intake,
+   * detached relations(), STREAM, HISTORY and command authority. Opt-in only. */
+  currentRelations?:NativeCurrentRelationsPort;
+  verifyPolicy(input:unknown):Promise<ReviewedPolicyArtifact|null>;
+  verifyReceipt(input:unknown):Promise<TsMembershipAcceptance|null>;
+  /** Private reviewed-root intake, not an ordinary delegation or a TS wire.
+   * The verifier resolves source I/O before Core locks and holds its current
+   * mapping/membership revocation fence until release after COMMIT. */
+  verifyRootReceipt?: RootReceiptVerifier;
+  /** Ordinary asynchronous receipt authority, NOT the requester's old login.
+   * All exact Core principal relations/mapping are reacquired outside Core
+   * after drain recovery, then fenced through physical COMMIT/ROLLBACK. This
+   * private optional port does not assert an existing TS wire capability. */
+  qualifyDelegatedReceipt?(input:unknown,scope:DelegatedReceiptScope):Promise<QualifiedDelegatedMembershipReceipt|null>;
+  relations(userId:string,workspaceId:string):Promise<AccessRelations>;
+  verifiedHumanMapping(portalUserId:string,workspaceId:string):Promise<null|{ts_user_id:string;revision:string}>;
+  /** Separate qualified proof: flat current IDs do not attest historical populations/joins. */
+  readPublication?(request:ExecutionReadPublicationRequest):Promise<ExecutionReadPublication|null>;
+}
+export const unqualifiedAccessTrust:AccessTrustProvider={
+  verifyPolicy:async()=>null,verifyReceipt:async()=>null,verifyRootReceipt:async()=>null,qualifyDelegatedReceipt:async()=>null,
+  relations:async()=>unqualifiedAccessRelations(),verifiedHumanMapping:async()=>null,
+};

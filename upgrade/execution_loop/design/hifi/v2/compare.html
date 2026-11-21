@@ -1,0 +1,53 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Compare — V2</title><link rel="stylesheet" href="kit.css"><style>
+[hidden]{display:none!important}.stack>*{min-width:0}.tool{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{flex:1}
+.pick{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pk{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line-strong);background:var(--paper);color:var(--ink-soft);padding:4px 10px;font:500 12px/16px var(--font-mono);cursor:pointer}
+.pk i{width:10px;height:10px;display:inline-block;border:1px solid var(--ink-faint)}.pk[aria-pressed=true]{color:var(--ink);border-color:var(--c);box-shadow:inset 0 -2px 0 var(--c)}.pk[aria-pressed=true] i{background:var(--c);border-color:var(--c)}
+.pk[disabled]{cursor:not-allowed;color:var(--ink-faint);border-style:dashed;background:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 6px)}.pk small{font:400 10px/14px var(--font-mono);color:var(--ink-faint)}
+.hat{min-height:240px;background:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 6px);border:1px dashed var(--line-strong)}
+</style></head>
+<body data-page="Compare" data-nav="portfolios" data-crumb="Execution / Portfolios / Compare">
+<main><div class="stack">
+
+<div class="stack" data-hide-roles="manager">
+ <div class="mast"><div><h1>Compare</h1><div class="sub">Manager view</div></div></div>
+ <div class="panel"><div class="ph">Access</div><div class="empty" style="min-height:160px;text-align:center"><div><div style="font-size:15px;color:var(--ink)">You can't open this page.</div><div style="margin-top:8px"><a href="access.html">See what you can access</a></div></div></div></div>
+</div>
+
+<div class="stack" data-roles="manager">
+<div class="mast"><div><h1>Compare</h1><div class="sub" id="sub">2 to 4 · one currency · Modified Dietz</div></div>
+ <div class="ctrls"><a id="back" href="portfolios.html">Back to Portfolios</a><span class="chipx"><span class="dot" data-data="ok"></span><span class="dot warn" data-data="nq"></span><span data-data="ok">Fresh · 12:04Z</span><span data-data="nq">Source not qualified</span></span></div></div>
+<div class="banner" data-data="nq">Source not qualified. Series and metrics are not available yet.</div>
+<div class="banner info" id="envban" hidden>Compare uses Real-funded figures. Switch the context to Real-funded.</div>
+
+<div id="body" class="stack">
+<div class="panel"><div class="ph"><span class="seg" id="kind"><button data-v="pf" aria-pressed="true">Portfolios</button><button data-v="al" aria-pressed="false">Alphas</button></span>
+  <span class="seg" id="mode"><button data-v="ret" aria-pressed="true">Return</button><button data-v="pnl" aria-pressed="false">Net PnL</button></span></div>
+ <div class="pick" id="pick" style="margin-bottom:6px"></div><div class="why" id="hint" style="margin:0 0 12px"></div>
+ <div class="chart" id="cmp"></div>
+ <div class="cap"><span class="win">90D</span><span>1D</span><span>UTC</span><span>Retained snapshots</span></div></div>
+<div class="panel"><div class="ph">Metrics <span class="r">Square marks the best in a row</span></div><div class="tw"><table id="mt"></table></div></div>
+</div>
+</div>
+</div></main>
+<script src="kit.js"></script><script src="charts.js"></script><script src="modules/compare.js"></script>
+<script>
+(function(){
+var kind="pf",mode="ret",sel={pf:["core","sat","can"],al:["btc","eth","sol"]};
+var qs=new URLSearchParams(location.search);if(qs.get("kind")==="al")kind="al";if(qs.get("items")){var it=qs.get("items").split(",").filter(function(id){var e=Compare.by(kind,id);return e&&!e.dis});if(it.length)sel[kind]=it.slice(0,4)}
+var from=qs.get("from");var back=document.getElementById("back");if(from==="portfolio"){back.href="portfolio.html";back.textContent="Back to Portfolio"}else if(from==="fleet"){back.href="fleet.html";back.textContent="Back to Alpha Fleet"}
+function ents(){return sel[kind].map(function(id){return Compare.by(kind,id)})}
+function sync(){try{history.replaceState(null,"","?kind="+kind+"&items="+sel[kind].join(",")+(from?"&from="+from:""))}catch(e){}}
+function pick(){var h=document.getElementById("pick"),chosen=sel[kind];h.innerHTML="";
+ Compare.list(kind).forEach(function(e){var b=document.createElement("button");b.className="pk";var ci=chosen.indexOf(e.id);b.style.setProperty("--c","var("+Compare.COL[ci<0?0:ci]+")");b.setAttribute("aria-pressed",ci>=0?"true":"false");
+  b.innerHTML="<i></i>"+e.n+(e.cur?" <small>"+e.cur+"</small>":"")+(e.dis?" <small>"+e.dis+"</small>":"");
+  if(e.dis){b.disabled=true;b.title=e.dis+(e.cur?" · cannot be compared on this basis":"")}else if(ci<0&&chosen.length>=4){b.disabled=true;b.title="Max 4"}
+  b.addEventListener("click",function(){var c=sel[kind],i=c.indexOf(e.id);if(i>=0){if(c.length<=1)return;c.splice(i,1)}else if(c.length<4)c.push(e.id);sync();draw()});h.appendChild(b)});
+ document.getElementById("hint").textContent=chosen.length<2?"Pick at least one more to compare.":chosen.length>=4?"Four selected. Remove one to change.":""}
+function draw(){if(KIT.state.role!=="manager")return;var off=KIT.state.env!=="real";document.getElementById("envban").hidden=!off;document.getElementById("body").hidden=off;if(off)return;
+ var nq=KIT.state.data==="nq";pick();var es=ents();Compare.draw(document.getElementById("cmp"),es,{mode:mode,nq:nq});Compare.table(document.getElementById("mt"),es,{kind:kind,nq:nq});
+ var w=Compare.winL();document.querySelectorAll(".win").forEach(function(e){e.textContent=w})}
+document.addEventListener("click",function(e){var b=e.target.closest("#kind button,#mode button");if(!b)return;var g=b.parentNode;g.querySelectorAll("button").forEach(function(x){x.setAttribute("aria-pressed",x===b)});if(g.id==="kind")kind=b.getAttribute("data-v");else mode=b.getAttribute("data-v");sync();draw()});
+KIT.on(function(){setTimeout(draw,0)});window.addEventListener("resize",draw);
+})();
+</script></body></html>

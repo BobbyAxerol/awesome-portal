@@ -1,0 +1,19 @@
+{
+  "schema_version": "research.phase-changes.v1",
+  "phase": "P14",
+  "areas": [
+    "bounded current-P04 three-window source receipt from P10 tape construction",
+    "P11 fsync split sidecar, terminal digest pairing and recovery relay",
+    "additive immutable PostgreSQL source/projection relations",
+    "same-origin Split BFF and generated OpenAPI declaration",
+    "feature-dark compose/example/runbook and route ownership ledger",
+    "focused unit, disposable PostgreSQL and affected Python proofs"
+  ],
+  "excluded": [
+    "frontend TSX/CSS/HiFi changes",
+    "runtime activation/deployment",
+    "raw holdout, snapshot, Parquet, artifact or direct database browsing",
+    "holdout seal/unlock/governance mutation",
+    "Execution Edge, Trading System, broker, Redis or CLI changes"
+  ]
+}

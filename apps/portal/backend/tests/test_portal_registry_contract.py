@@ -342,9 +342,9 @@ def test_canonical_registry_source_and_public_document_validate() -> None:
     _assert_valid("public", public_document)
 
 
-def test_revision_6_commissions_execution_routes_with_bounded_shadow_policy() -> None:
+def test_revision_9_retains_revision_6_routes_and_bounded_shadow_policy() -> None:
     source = _load_json(SOURCE_PATH)
-    assert source["revision"] == 6
+    assert source["revision"] == 9
     assert [group["id"] for group in source["feature_groups"][:4]] == [
         "command",
         "governance",
@@ -409,6 +409,55 @@ def test_revision_6_commissions_execution_routes_with_bounded_shadow_policy() ->
     assert "/execution" not in features["QUANTBT_RESEARCH"]["legacy_routes"]
 
 
+def test_self_access_entry_is_separate_from_the_admin_entry() -> None:
+    # Registry revision 8: the self-only "My access" entry (BE-P7 `self_entry.route`)
+    # is a first-class feature (featureForPath, breadcrumbs) but NOT a static
+    # navigation item: the shell offers it only from a live self-navigation
+    # projection.  It must never borrow the admin capability, and the admin
+    # entry must keep its enforced capability and its own route.
+    source = _load_json(SOURCE_PATH)
+    features = {feature["id"]: feature for feature in source["features"]}
+    own, admin = features["PROFILE_ACCESS_SELF"], features["PROFILE_ACCESS"]
+    assert own["canonical_route"] == "/administration/my-access"
+    assert admin["canonical_route"] == "/administration/profile-access"
+    assert own["legacy_routes"] == [] and own["screen_ids"] == []
+    assert own["group"] == admin["group"] == "administration"
+    assert own["maturity"] == "AVAILABLE" and own["data_mode"] == "NONE"
+    assert own["permissions"] == []
+    assert admin["permissions"] == ["administration.profile_access.manage"]
+    assert own["hidden_for_roles"] == []
+    assert own["summary_source_ids"] == [] and own["source_module"] is None
+    assert own["navigation"]["show_in_sidebar"] is False
+    assert own["navigation"]["show_in_command_palette"] is False
+    assert source["revision"] >= 8
+
+
+def test_compare_is_a_screen_of_portfolios_not_a_feature() -> None:
+    # Registry revision 9 (DEBT-UXM07-006, FE-039/C-5): Compare gets its own route and screen row.  It is a screen
+    # of EXECUTION_PORTFOLIOS (no sidebar item of its own, the rail keeps one Portfolios entry), on the same fixture
+    # delivery contract as the portfolio 360 it was split from: no query, ingestion, stream or command is enabled.
+    source = _load_json(SOURCE_PATH)
+    screens = {screen["screen_id"]: screen for screen in source["screens"]}
+    features = {feature["id"]: feature for feature in source["features"]}
+    compare, portfolio = screens["EXECUTION_COMPARE_SCREEN"], screens["EXECUTION_PORTFOLIO_360_SCREEN"]
+    assert source["revision"] >= 9
+    assert compare["route"] == "/deployments/compare"
+    assert compare["feature_id"] == "EXECUTION_PORTFOLIOS"
+    assert "EXECUTION_COMPARE_SCREEN" in features["EXECUTION_PORTFOLIOS"]["screen_ids"]
+    assert not any(
+        feature["canonical_route"] == "/deployments/compare" or "/deployments/compare" in feature["legacy_routes"]
+        for feature in source["features"]
+    )
+    assert compare["maturity"] == "COMMISSIONED" and compare["data_mode"] == "NONE"
+    assert compare["delivery_profile"] == "fixture"
+    assert compare["delivery_policy"] == portfolio["delivery_policy"]
+    assert not any(
+        value for key, value in compare["delivery_policy"].items() if key.endswith("_enabled")
+    )
+    assert compare["permissions"] == portfolio["permissions"] == ["live.read"]
+    assert compare["inputs"] == [] and compare["backend_dependency_ids"] == []
+
+
 def test_registry_references_routes_and_evidence_are_consistent() -> None:
     source = _load_json(SOURCE_PATH)
     assert not (errors := _invariant_errors(source)), "\n".join(errors)
@@ -425,7 +474,7 @@ def test_only_current_real_capabilities_are_marked_available() -> None:
     # pipeline, so `data_mode` is NONE and it declares no summary source. This
     # set is a reviewed ledger, not an accident; the entry is here so the next
     # promotion is a deliberate edit rather than a silent one.
-    assert available == {"QUANTBT_RESEARCH", "PLANNING", "PROFILE_ACCESS"}
+    assert available == {"QUANTBT_RESEARCH", "PLANNING", "PROFILE_ACCESS", "PROFILE_ACCESS_SELF"}
     # v0.4 P0.6: the Command Center aggregates real counts while the screen
     # itself is still PROTOTYPE — REAL data mode under PROTOTYPE maturity.
     assert real == {

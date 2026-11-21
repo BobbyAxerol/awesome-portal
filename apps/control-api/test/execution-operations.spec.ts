@@ -341,7 +341,17 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
         key: null,
         state: "SUPPORTED_BUT_INACTIVE",
         unlisted_reason: "CATALOG_ENTRY_NOT_PUBLISHED",
+        // FE-056: display metadata is additive; `meta` keeps the source-reference semantics.
+        display_name: "System health",
+        scope_label: "System",
+        meta: "Portal-curated task; source operation not published",
       });
+    expect(response.json().tasks.every(
+      (task: { display_name?: unknown; description?: unknown; scope_label?: unknown }) =>
+        [task.display_name, task.description, task.scope_label].every(
+          (value) => typeof value === "string" && value.length > 0,
+        ),
+    )).toBe(true);
     expect(response.json().tasks.find(
       (task: { task_id: string }) => task.task_id === "redis-inspect",
     )).toMatchObject({
@@ -459,6 +469,12 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
 
   it("runs only the connected R0 subset from the bounded SGP projection and audits its digest", async () => {
     const sourceWorkspace = "ws_phase2_projection";
+    // Core command workspace and source data workspace are distinct. A
+    // projection row alone is not a workspace or a read-access grant.
+    await ctx.pool.query(`INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,$2,$3)
+      ON CONFLICT (workspace_id) DO NOTHING`, [sourceWorkspace, "TEST_ONLY R0 source", bobby.userId]);
+    await ctx.pool.query(`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')
+      ON CONFLICT (workspace_id,user_id) DO NOTHING`, [sourceWorkspace, bobby.userId]);
     const document = {
       schema_version: "portal.execution.profile-projection.v1",
       workspace_id: sourceWorkspace,
@@ -538,6 +554,28 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
       reason_code: "PHASE2_LOCAL_PROJECTION_TASK_ACTIVE",
       metadata_json: expect.objectContaining({ source_request_sent: false, transport: "SGP_LOCAL_PROJECTION" }),
     });
+  });
+
+  it("does not inherit source read access merely from an ADMIN Core task workspace", async () => {
+    const sourceWorkspace = "ws_phase2_projection";
+    await ctx.pool.query(`INSERT INTO workspaces(workspace_id,name,owner_user_id) VALUES($1,$2,$3)
+      ON CONFLICT (workspace_id) DO NOTHING`, [sourceWorkspace, "TEST_ONLY R0 source", bobby.userId]);
+    await ctx.pool.query("DELETE FROM workspace_members WHERE workspace_id=$1 AND user_id=$2", [sourceWorkspace, bobby.userId]);
+    try {
+      const response = await mutation(bobby, "/api/v1/execution/commands/tasks/inspect/run", {
+        schema_version: "execution.command-run-request.v1", workspace_id: workspaceId,
+        request_key: "phase2:inspect:no-source-access", params: { mode: "paper", alpha_id: "alpha_42" },
+      });
+      expect(response.statusCode).toBe(404);
+      expect(response.json()).toMatchObject({ error: { code: "EXECUTION_READ_NOT_AVAILABLE" } });
+      expect(JSON.stringify(response.json())).not.toContain("Bounded alpha");
+      const audit = await ctx.pool.query(`SELECT result,reason_code FROM product_audit_events
+        WHERE idempotency_key='phase2:inspect:no-source-access'`);
+      expect(audit.rows[0]).toMatchObject({ result: "FAILURE", reason_code: "EXECUTION_READ_NOT_AVAILABLE" });
+    } finally {
+      await ctx.pool.query(`INSERT INTO workspace_members(workspace_id,user_id,role) VALUES($1,$2,'MEMBER')
+        ON CONFLICT (workspace_id,user_id) DO NOTHING`, [sourceWorkspace, bobby.userId]);
+    }
   });
 
   it("classifies only the exact N16B current emergency-close primitive and keeps it dark", async () => {
@@ -803,21 +841,39 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
 
     const planned = await mutation(bobby, "/api/v1/execution/commands/plans", payload());
     const operationId = planned.json().operation_id;
-    const apply = await mutation(
-      bobby,
-      `/api/v1/execution/operations/${operationId}/apply`,
-      {
-        schema_version: "execution.command-apply-request.v1",
-        workspace_id: workspaceId,
-        command_type: "EXECUTION_COMMAND",
-      },
-    );
+    const applyBody = (request_key: string) => ({
+      schema_version: "execution.command-apply-request.v1",
+      workspace_id: workspaceId,
+      request_key,
+      command_type: "EXECUTION_COMMAND",
+    });
+    const applyPath = (id: string) => `/api/v1/execution/operations/${id}/apply`;
+    const apply = await mutation(bobby, applyPath(operationId), applyBody("apply:key:0001"));
     expect(apply.statusCode).toBe(409);
     expect(apply.json().error.code).toBe("COMMAND_RELAY_DISABLED");
     expect(apply.json().details).toMatchObject({
       source_request_sent: false,
       retry_allowed: false,
+      decision: "DENIED",
+      request_key: "apply:key:0001",
+      replayed: false,
     });
+    // BE-P13: the same key for the same operation is the same typed answer, replayed.
+    const replay = await mutation(bobby, applyPath(operationId), applyBody("apply:key:0001"));
+    expect(replay.statusCode).toBe(409);
+    expect(replay.json().details).toEqual({ ...apply.json().details, replayed: true });
+    expect((await ctx.pool.query("SELECT 1 FROM execution_f0_apply_attempts")).rowCount).toBe(1);
+    // ...and the same key for another operation is a typed conflict that records nothing.
+    const other = await mutation(bobby, "/api/v1/execution/commands/plans", payload({ request_key: "ops:account-sync:2" }));
+    const conflict = await mutation(bobby, applyPath(other.json().operation_id), applyBody("apply:key:0001"));
+    expect(conflict.statusCode).toBe(409);
+    expect(conflict.json().error.code).toBe("REQUEST_KEY_PAYLOAD_CONFLICT");
+    expect((await ctx.pool.query("SELECT 1 FROM execution_f0_apply_attempts")).rowCount).toBe(1);
+    // A body without the key is a typed 400, never an apply.
+    const { request_key: _omitted, ...keyless } = applyBody("x");
+    const invalid = await mutation(bobby, applyPath(operationId), keyless);
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json().error.code).toBe("INVALID_EXECUTION_COMMAND_APPLY");
     expect((await ctx.pool.query("SELECT 1 FROM outbox_messages")).rowCount).toBe(0);
     expect((await ctx.pool.query(
       "SELECT 1 FROM product_audit_events WHERE reason_code = 'COMMAND_RELAY_DISABLED'",
@@ -901,6 +957,138 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     expect(previous.statusCode).toBe(200);
     expect(previous.json().page.rows.map((item: { operation_id: string }) => item.operation_id))
       .toEqual(first.json().page.rows.map((item: { operation_id: string }) => item.operation_id));
+  });
+
+  it("preserves native F0 source microseconds and round-trips same-millisecond HTTP queue pages", async () => {
+    const timestamps = [
+      "2026-05-01T12:00:00.123900Z",
+      "2026-05-01T12:00:00.123001Z",
+      "2026-05-01T12:00:00.123900Z",
+      "2026-05-01T12:00:00.123500Z",
+      "2026-05-01T12:00:00.123000Z",
+      "2026-05-01T12:00:00.123900Z",
+      "2026-05-01T12:00:00.123500Z",
+      "2026-05-01T12:00:00.123999Z",
+    ];
+    const expectedByOperation = new Map<string, string>();
+    try {
+      // Legal pre-insert fixture, never UPDATE/disable the immutable source or
+      // queue guard. Everything else still goes through the real HTTP planner,
+      // transaction, queue projection and existing product authority checks.
+      await ctx.pool.query(`
+        CREATE FUNCTION test_n04_f0_insert_microseconds() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.request_key ~ '^ops:precision:[0-7]$' THEN
+            NEW.created_at := (ARRAY[
+              timestamptz '2026-05-01T12:00:00.123900Z',
+              timestamptz '2026-05-01T12:00:00.123001Z',
+              timestamptz '2026-05-01T12:00:00.123900Z',
+              timestamptz '2026-05-01T12:00:00.123500Z',
+              timestamptz '2026-05-01T12:00:00.123000Z',
+              timestamptz '2026-05-01T12:00:00.123900Z',
+              timestamptz '2026-05-01T12:00:00.123500Z',
+              timestamptz '2026-05-01T12:00:00.123999Z'
+            ])[split_part(NEW.request_key, ':', 3)::integer + 1];
+            NEW.updated_at := NEW.created_at;
+          END IF;
+          RETURN NEW;
+        END;
+        $$;
+        CREATE TRIGGER test_n04_f0_insert_microseconds
+        BEFORE INSERT ON execution_command_plans_f0
+        FOR EACH ROW EXECUTE FUNCTION test_n04_f0_insert_microseconds();
+      `);
+      for (const [index, timestamp] of timestamps.entries()) {
+        const created = await mutation(bobby, "/api/v1/execution/commands/plans", payload({
+          request_key: `ops:precision:${index}`,
+          target: { type: "ACCOUNT", id: `paper-precision-${index}` },
+        }));
+        expect(created.statusCode).toBe(201);
+        expect(created.json()).toMatchObject({
+          status: "BLOCKED", source_side_effect_requested: false,
+        });
+        expectedByOperation.set(created.json().operation_id, timestamp);
+      }
+      const truth = await ctx.pool.query<{
+        operation_id: string;
+        source_created_at: string;
+        queue_created_at: string;
+        source_updated_at: string;
+        queue_updated_at: string;
+        exact_source_copy: boolean;
+      }>(
+        `SELECT q.operation_id,
+                to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS source_created_at,
+                to_char(q.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS queue_created_at,
+                to_char(p.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS source_updated_at,
+                to_char(q.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS queue_updated_at,
+                (q.created_at = p.created_at AND q.updated_at = p.updated_at) AS exact_source_copy
+         FROM execution_operation_queue_items q
+         JOIN execution_command_plans_f0 p
+           ON p.operation_id = q.operation_id AND p.workspace_id = q.workspace_id
+         WHERE q.workspace_id = $1 AND p.actor_user_id = $2
+           AND p.request_key ~ '^ops:precision:[0-7]$'
+         ORDER BY q.created_at DESC, q.operation_id DESC`,
+        [workspaceId, bobby.userId],
+      );
+      expect(truth.rows).toHaveLength(timestamps.length);
+      expect(new Set(expectedByOperation.keys()).size).toBe(timestamps.length);
+      for (const row of truth.rows) {
+        const expected = expectedByOperation.get(row.operation_id);
+        expect(expected).toBeTypeOf("string");
+        expect(row).toMatchObject({
+          source_created_at: expected, queue_created_at: expected,
+          source_updated_at: expected, queue_updated_at: expected, exact_source_copy: true,
+        });
+      }
+      const base = `/api/v1/execution/operations?workspace_id=${workspaceId}` +
+        "&triage_state=UNACKNOWLEDGED&environment=PAPER&limit=2";
+      type QueuePage = {
+        rows: { operation_id: string; created_at: string; updated_at: string }[];
+        total_count: number; filtered_count: number;
+        next_cursor: string | null; prev_cursor: string | null;
+        has_more: boolean; has_previous: boolean;
+      };
+      const pages: QueuePage[] = [];
+      for (let index = 0; index < timestamps.length / 2; index += 1) {
+        const cursor = index > 0 ? pages[index - 1].next_cursor : null;
+        if (index > 0) expect(cursor).toBeTypeOf("string");
+        const response = await inject(bobby, base + (cursor ? `&after=${encodeURIComponent(cursor)}` : ""));
+        expect(response.statusCode).toBe(200);
+        const page = response.json().page as QueuePage;
+        expect(page).toMatchObject({
+          total_count: timestamps.length, filtered_count: timestamps.length,
+          has_previous: index > 0, has_more: index < timestamps.length / 2 - 1,
+        });
+        expect(page.rows).toHaveLength(2);
+        expect(page.rows.map(row => row.operation_id)).toEqual(truth.rows.slice(index * 2, index * 2 + 2).map(row => row.operation_id));
+        expect(page.rows.every(row => row.created_at === "2026-05-01T12:00:00.123Z" && row.updated_at === row.created_at)).toBe(true);
+        expect(JSON.stringify(response.json())).not.toContain("__query_timestamp_boundary_");
+        pages.push(page);
+      }
+      const forwardIds = pages.flatMap(page => page.rows.map(row => row.operation_id));
+      expect(forwardIds).toEqual(truth.rows.map(row => row.operation_id));
+      expect(new Set(forwardIds).size).toBe(timestamps.length);
+      expect(pages[0].prev_cursor).toBeNull();
+      expect(pages.at(-1)!.next_cursor).toBeNull();
+      let reverse = pages.at(-1)!;
+      for (let index = pages.length - 2; index >= 0; index -= 1) {
+        expect(reverse.prev_cursor).toBeTypeOf("string");
+        const response = await inject(bobby, `${base}&before=${encodeURIComponent(reverse.prev_cursor!)}`);
+        expect(response.statusCode).toBe(200);
+        reverse = response.json().page as QueuePage;
+        expect(reverse.rows).toEqual(pages[index].rows);
+        expect(reverse.has_previous).toBe(index > 0);
+        expect(reverse.has_more).toBe(true);
+      }
+      expect(reverse.prev_cursor).toBeNull();
+    } finally {
+      await ctx.pool.query(`
+        DROP TRIGGER IF EXISTS test_n04_f0_insert_microseconds ON execution_command_plans_f0;
+        DROP FUNCTION IF EXISTS test_n04_f0_insert_microseconds();
+      `);
+    }
   });
 
   it("defines Mine as explicit assignment and publishes the correlated incident id", async () => {

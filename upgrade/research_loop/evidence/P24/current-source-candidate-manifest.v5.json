@@ -1,0 +1,54 @@
+{
+  "schema_version": "research.p24-unsigned-source-candidate.v5",
+  "recorded_date_utc": "2026-10-04",
+  "status": "OWNER_HISTORICAL_SCOPE_ACCEPTED_PUBLIC_SECOND_ENGINE_QUALIFIED_PORTAL_UPGRADE_OPEN",
+  "inherits": {
+    "file": "current-source-candidate-manifest.v4.json",
+    "sha256": "03ba597cbd1e902dcf45f695684c6869f91cf66e6b35eeabd85cb5a05e061a3d",
+    "rule": "Keep all runtime images, original receipts and acceptance limitations unchanged. Add only the exact owner disposition and read-only old-engine experiment."
+  },
+  "full_store_integrity": false,
+  "verified_historical_manifests": 83,
+  "required_historical_manifests": 86,
+  "owner_scope_exception_approved": true,
+  "owner_scope_exception": {
+    "authority": "BOBBY_APPROVED_2026_10_04",
+    "status": "OWNER_SCOPED_EXCEPTION_ACCEPTED_NOT_BYTES_RECOVERED",
+    "scope": "EXACT_THREE_OLD_DISPOSABLE_TEST_RUNS_ONLY",
+    "run_ids": [
+      "rrun_1690a9830787332de93d93d457c8aa0e",
+      "rrun_e2c3a4d31decb9f5d77b77fe49616fdb",
+      "rrun_c93896666b0f3f1647aaa4967ce8c792"
+    ],
+    "artifact_ids": [
+      "rart_0a356b7ee5c8e6f85ebeeb9ca416c1a347229b0f",
+      "rart_64469653604a37d46833ed048ba75c1d7e864b60",
+      "rart_830fa0d721d3817db2c4881b54c1cd84fa3306a0"
+    ],
+    "bytes_recovered": false,
+    "original_metadata_seals_digests_deleted_or_rewritten": false
+  },
+  "second_engine_experiment": {
+    "authority": "BOBBY_SELECTED_ISOLATED_1_1_0_TO_1_1_1_2026_10_04",
+    "status": "REAL_HMD_PUBLIC_FIXED_ROUTE_QUALIFIED_NOT_PORTAL_PROFILE",
+    "engine_versions": ["1.1.0", "1.1.1"],
+    "native_versions": ["0.4.1", "0.4.2"],
+    "old_qualification_only_image": "sha256:9a14f138a7feae74bcab88feaea63d495a5f8312b0d4ed989f9c252571abc717",
+    "current_unchanged_python_image": "sha256:7d68b990005ef504176128c83513fce7103c31b8db725979cfc30dcc75ac9700",
+    "receipt_sha256": "b6668139398f02a5c968450881a0b87718b63d0ebe871eb77bc1a07834561e31",
+    "bars": 636,
+    "equity_difference": "0",
+    "trade_count_difference": "0",
+    "current_portal_gateway_accepts_1_1_0": false,
+    "production_or_shared_profile_changed": false
+  },
+  "actual_second_portal_qualified_engine": false,
+  "full_p23_passed": false,
+  "full_p24_passed": false,
+  "signed_release": false,
+  "open_gates": [
+    "ISOLATED_110_PORTAL_PROFILE_RUNTIME_BINDING_AND_REAL_T07_T13_P24_T05_TRANSITION",
+    "FULL_P24_SCENARIO_FIELD_ACTION_VISUAL_PRINT_OWNER_ACCEPTANCE",
+    "SIGNED_RELEASE_SBOM_PROVENANCE_NOT_DISPATCHED"
+  ]
+}

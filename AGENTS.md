@@ -8,6 +8,48 @@ their own private runtime services.
 
 ## Agent roles
 
+### Execution Loop V2 campaign directive — Bobby, 2026-10-15
+
+For assigned Execution V2 work, start at
+`upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#execution-loop-v2` and read
+`upgrade/execution_loop/README.md` plus `AGENT_WORKING_RULES.md` there.
+These scoped rules incorporate Bobby's latest authority order and Prompt B/C/D:
+Codex backend-first, Claude UI/UX-first; creative manager-first refinement
+must preserve financial/permission semantics and accepted shared surfaces.
+Use Unified §14 as the live index and phase evidence packets for details;
+older §12 tracker/scope instructions remain historical for the old campaign.
+Do not infer implementation or runtime authority from receiving the guides.
+HK access is read-only until the exact change package is approved; current PM
+R2 in its own worktree wins over stale copies. Preserve contributor controls,
+normal hooks, protected data and dev/main/release gates. The onboarding package
+is Markdown-only; a commit hook that builds/tests is pending separate scope,
+not bypassed. Do not overwrite concurrent Research or frontend work.
+
+V2 workflow addendum (Bobby, 2026-10-16): obey campaign rules §§7–8 and
+`upgrade/execution_loop/PHASE_PACKET_TEMPLATE.md`. Every phase needs its own
+assignment; report backend next-ready phases, remaining debt, Claude next-ready
+consumers and bidirectional requests/acknowledgements. Delegate only independent
+approved subtasks with disjoint write ownership; primary owns integration,
+shared docs/contracts, resource scheduling and receipt review. Dependency-ready
+is not approval to begin the next phase; producer delivery is not consumer acceptance.
+
+### Research Loop campaign override — Bobby, 2026-09-19
+
+For Research Loop only, read `upgrade/UNIFIED_IMPLEMENTATION_PLAN.md#research-loop-v11`
+and `upgrade/research_loop/CLAUDE-FOR-thanhvuong.md#research-working-rules`
+before a phase. The Unified Plan is the single live phase index; the 24-phase
+guide and hi-fi/specs remain the detailed implementation/design sources.
+Codex is backend-first and Claude frontend-first, not an exclusive permission
+split: either can implement both when assigned. Before changing the other's
+accepted design, contract, implementation or visual baseline, explain the
+proposed change and obtain Bobby's specific approval/confirmed handoff; do not
+overwrite concurrent work. This scoped directive supersedes the older
+frontend-only prohibition and duplicate tracking instructions below, not
+contributor access controls, protected Execution code or release safeguards.
+The contributor-only parts of the Thanhvuong rules do not restrict Bobby.
+Research UI is English; reports are Vietnamese; QuantBT 1.1.1 is a P04 target,
+not a claim that the current installed engine has already been upgraded.
+
 | Role | Agent | Authority |
 |---|---|---|
 | Owner/maintainer | Bobby | Merge decisions, version releases, workspace provisioning |

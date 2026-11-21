@@ -1,0 +1,34 @@
+{
+  "phase": "P06",
+  "contract": "research.durable-scheduler-policy.v1",
+  "postgresql_authority": {
+    "job_identity": ["workspace_id", "run_id", "logical_work_key", "work_digest"],
+    "command_idempotency": "workspace_id + command_id",
+    "states": ["QUEUED", "CLAIMED", "RUNNING", "RETRY_WAIT", "CANCEL_REQUESTED", "SUCCEEDED", "FAILED", "CANCELLED"],
+    "readiness_classes": ["MANDATORY", "OPTIONAL"],
+    "worker_fence": ["worker_attempt_id", "lease_epoch", "expires_at"],
+    "outbox": "transactional ID-only payload, publisher lease, publish-before-ack",
+    "job_events": "immutable"
+  },
+  "resource_bounds": {
+    "maximum_lease_seconds": 300,
+    "maximum_outbox_claim_seconds": 60,
+    "maximum_heavy_workers_per_workspace": 1,
+    "maximum_memory_bytes": 8589934592,
+    "maximum_cpu_seconds": 86400,
+    "maximum_scratch_bytes": 549755813888,
+    "maximum_io_bytes": 1099511627776,
+    "maximum_retry_attempts": 8,
+    "actual_p04_child_caps": {
+      "address_space_bytes": 4294967296,
+      "cpu_seconds": 45,
+      "file_bytes": 2097152,
+      "fd_limit": 128,
+      "nproc_limit": 128,
+      "scratch_bytes": 67108864,
+      "wall_seconds": 90
+    }
+  },
+  "legacy_compatibility": "Pre-P06 rows retain NULL work_digest and are deliberately not claimable by P06 until P10 supplies canonical identity.",
+  "consumer_boundary": "P10 deploys the named producer/NATS binding; P09/P11 render server authority. P06 exposes no browser or runtime network endpoint."
+}

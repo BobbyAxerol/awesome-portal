@@ -1,0 +1,148 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+← Accounts
+Binance-02 sleeve
+pf_core · USDT · Real-funded
+Sleeve
+Physical binding
+Currency
+USDC
+USDT
+◷
+STALE:
+STALE 14 MIN
+As of 17 Oct 09:00Z
+✓
+APPLIED:
+BROKER SYNC: SYNCED
+✓
+OK:
+ACTIVE
+Refresh
+Shared by 3 sleeves
+LOGICAL SLEEVE
+Internal
+Name
+Binance-02 sleeve
+Portfolio
+pf_core
+Domain
+Real-funded · USDT
+Deployments
+dep_btc_live
+Provenance
+PHYSICAL BINDING
+Native
+Venue
+BINANCE
+Native account
+Withheld
+Product
+Not published
+(A360-4)
+Margin mode
+CROSS
+Environment
+Real-funded
+Credential
+✓
+OK:
+SYNCED
+Open physical binding view
+OVERVIEW
+POSITIONS
+ALLOCATIONS
+FEES & FUNDING
+RECONCILIATION
+ACTIVITY
+INTERNAL LEDGER · THIS SLEEVE
+88,200.00
+USDT
+Account balance
+As of 17 Oct 09:00Z
+Unrealized PnL, current: 
+579.50
+NATIVE CUSTODY · WHOLE ACCOUNT
+301,100.00
+USDT
+Buying power reported by the venue
+Venue report as of 17 Oct 09:00Z
+Native equity: Not available
+BUDGET · THIS SLEEVE
+Not published
+(FE-017)
+Published position rows: 
+2
+SLEEVES ON THIS BINDING
+Physical
+SLEEVE	PORTFOLIO	INTERNAL BALANCE
+Binance-02 sleeve	pf_core	
+88,200.00
+USDT
+Binance-02b sleeve	pf_satellite	
+61,400.00
+USDT
+Binance-02c sleeve	pf_canary	
+47,900.00
+USDT
+Not totalled: native balance is not split among sleeves
+MARGIN
+Whole account
+Margin ratio
+Not published
+(A360-2)
+Initial margin
+4,100.00
+USDT
+Maintenance
+2,050.00
+USDT
+Free balance
+80,000.00
+USDT
+Headroom
+77,950.00
+USDT
+Coverage
+✓
+OK:
+COVERED
+Cross margin
+ACCOUNT EQUITY
+Internal ledger · this sleeve
+Table
+Expand
+Account equity
+Account equity
+No published value
+17 Oct 09:00Z88,200.00 USDT
+Change across the plotted points+700.00 USDT 17 Oct 06:30Z to 17 Oct 09:00Z
+87,400.00
+87,600.00
+87,800.00
+88,000.00
+88,200.00
+88,400.00
+17 Oct 06:30Z
+17 Oct 07:00Z
+17 Oct 07:30Z
+17 Oct 08:00Z
+17 Oct 08:30Z
+17 Oct 09:00Z
+88,200.00 USDT
+5 points, none reduced · 1 gap drawn as a gap, not joined
+Account equity. 5 published points from 17 Oct 06:30Z to 17 Oct 09:00Z. Latest 88,200.00 USDT. High 88,200.00 USDT at 17 Oct 09:00Z. Low 87,500.00 USDT at 17 Oct 06:30Z. 1 gap with no published value.
+Key readings, Account equity
+READING	TIME (UTC)	VALUE
+FIRST	17 Oct 06:30Z	87,500.00 USDT
+HIGH	17 Oct 09:00Z	88,200.00 USDT
+LOW	17 Oct 06:30Z	87,500.00 USDT
+LATEST	17 Oct 09:00Z	88,200.00 USDT

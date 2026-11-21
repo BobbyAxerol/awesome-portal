@@ -1,0 +1,756 @@
+/* Shared V2 blocks: Kpi strip, SectionPanel, Not published, EventFeed,
+ * JourneySpine, Triad, ReplayPanel frame. Layout and type only: colour through
+ * carbon tokens, type through the --exec-font-* roles, every text/background
+ * pair inside one rule so the contrast gate can read it.
+ *
+ * Uppercase (hi-fi kit): the mono label voice of the kit is restored on exactly
+ * the selectors v2Hygiene.test.ts allows by prefix: .exec-blk-kpi-label (kit
+ * `.kpi .l`, .10em), .exec-blk-ph-title (kit `.ph`, .12em), .exec-blk-spine-name
+ * and .exec-blk-triad-title / -row dt (kit tile names, .12em / .06em). The size
+ * stays in the role (--exec-font-label, mono 500 11/16), never a font-size. */
+
+/* ---- Not published / absent values -------------------------------------- */
+
+.exec-blk-np,
+.exec-blk-na {
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+/* A long reason id ("Not available · N28_BROKER_ACK_TIMESTAMP") breaks inside its own box instead of widening the page. */
+.exec-blk-na {
+  overflow-wrap: anywhere;
+}
+.exec-blk-np-word {
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+}
+/* UI review D8: a record that is not there. The id is secondary text, the way back is a plain link. */
+.exec-nf-id {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-nf-id code {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-nf-back {
+  font: var(--exec-font-control);
+  color: var(--accent);
+}
+/* An id never breaks mid-token: "(FE-027/028)" wraps before the "(" at 390px. */
+.exec-blk-np-id {
+  white-space: nowrap;
+}
+/* Compact gap (JourneySpine cards): the full "Not published (id)" is in the text for assistive tech and copy, the short label is the visible part. */
+.exec-blk-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.exec-blk-np[data-compact] {
+  color: var(--ink-soft);
+}
+.exec-blk-np-short {
+  color: var(--ink-soft);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.exec-blk-np-reason {
+  margin-left: var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+  /* "(FE-005/006/013/025)" breaks before the id, never inside it (OV-2). */
+  white-space: nowrap;
+}
+
+/* One line for every unpublished fact of a panel; the request ids and reasons ride on its title. */
+.exec-blk-gaps {
+  margin: 0;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-blk-gaps-lead {
+  color: var(--ink-faint);
+}
+.exec-blk-gaps-why {
+  color: var(--ink-faint);
+}
+
+/* The reason behind a missing fact (GapWhy): a button, so it opens by Enter, Space and touch. As a "?" after a line it is a 16px
+ * mark with a 24px hit area (WCAG 2.5.8); as the words "Not available" it is that text, dotted-underlined. The body opens below it
+ * in the flow and is quiet type, so a panel that lists many gaps stays one short line until someone asks. */
+.exec-blk-why {
+  display: inline;
+}
+.exec-blk-why-btn {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-blk-why-btn:not([data-mark]) {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+.exec-blk-why-btn[data-mark]::before {
+  content: "?";
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  margin-left: var(--space-2);
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+  vertical-align: text-bottom;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+}
+.exec-blk-why-btn[data-mark]::after {
+  content: "";
+  position: absolute;
+  inset: -4px -4px -4px 0;
+}
+.exec-blk-why-btn[data-mark]:hover::before,
+.exec-blk-why-btn[aria-expanded="true"][data-mark]::before {
+  color: var(--ink);
+  border-color: var(--ink-soft);
+}
+.exec-blk-why-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-blk-why-body {
+  display: block;
+  max-width: 64ch;
+  margin-top: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  background: var(--surface-2);
+  border-left: 2px solid var(--line-strong);
+}
+.exec-blk-why-row {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.exec-blk-why-next {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* ---- metric ------------------------------------------------------------- */
+
+.exec-blk-metric {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+.exec-blk-num {
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+/* A column of exact decimals shows one scale: the missing places are invisible room, not digits (the value and data-full are untouched). */
+.exec-blk-num[data-room]::after {
+  content: attr(data-room);
+  visibility: hidden;
+}
+.exec-blk-num[data-tone="positive"] {
+  color: var(--good);
+}
+.exec-blk-num[data-tone="negative"] {
+  color: var(--bad);
+}
+.exec-blk-unit {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-blk-id {
+  font: var(--exec-font-id);
+}
+.exec-blk-link {
+  color: var(--accent);
+}
+
+/* ---- KPI strip ---------------------------------------------------------- */
+
+.exec-blk-kpis {
+  display: grid;
+  grid-template-columns: repeat(var(--exec-kpi-n, 5), minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
+}
+.exec-blk-kpi {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+.exec-blk-kpi-label {
+  font: var(--exec-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.exec-blk-kpi-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-1) 0 0;
+}
+.exec-blk-kpi-value {
+  min-width: 0;
+}
+.exec-blk-kpi-value .exec-blk-num {
+  font: var(--exec-font-kpi);
+}
+.exec-blk-kpi-note {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+@media (max-width: 1100px) {
+  .exec-blk-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* An odd count leaves one cell of the two-column grid empty, and the 1px-gap background showed through it as a grey block. */
+  .exec-blk-kpis > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 660px) {
+  .exec-blk-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* A strip of short counts (Alpha 360 Orders) stays two across: four full-width tiles at 390 px were about 350 px of scrolling for four numbers. */
+  .exec-blk-kpis[data-phone="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---- panel -------------------------------------------------------------- */
+
+.exec-blk-panel {
+  min-width: 0;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-blk-ph {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 9px var(--space-4);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-blk-ph-title {
+  margin: 0;
+  font: var(--exec-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+/* Title + optional lead (a control that belongs to the heading, e.g. a measure switch). */
+.exec-blk-ph-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.exec-blk-ph-aside {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+/* Narrow: the head may wrap; the title keeps its natural width and the aside flows under it. */
+@media (max-width: 660px) {
+  .exec-blk-ph {
+    flex-wrap: wrap;
+  }
+  .exec-blk-ph-title {
+    flex: 0 0 auto;
+  }
+  .exec-blk-ph-aside {
+    min-width: 0;
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+}
+.exec-blk-panel-body {
+  padding: var(--space-4);
+  min-width: 0;
+}
+.exec-blk-panel[data-flush="true"] > .exec-blk-panel-body {
+  padding: 0;
+}
+
+/* ---- state boundary ----------------------------------------------------- */
+
+.exec-blk-boundary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+/* The body of a partial or stale panel keeps the kit's page rhythm (.stack,
+ * 24px): without it a tab bar sits on the panel above it at 0px (S3). */
+.exec-blk-demoted {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  /* Demotion is one ink step, not opacity: .85 took the faint label ink to about 4.0:1 on the panel and 3.7:1 on the
+   * selected-row tint (UXM-10 F-5). Values drop from --ink to --ink-soft; labels keep --ink-faint at full strength. */
+  --ink: var(--ink-soft);
+  color: var(--ink);
+}
+
+/* ---- buttons and chips -------------------------------------------------- */
+
+.exec-blk-btn {
+  padding: var(--space-1) var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-blk-btn:hover {
+  background: var(--surface-2);
+}
+.exec-blk-btn:focus-visible,
+.exec-blk-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-blk-spine-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-blk-btn[aria-busy="true"] {
+  color: var(--ink-faint);
+  cursor: progress;
+}
+.exec-blk-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-blk-chip {
+  padding: 0 var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+.exec-blk-chip-label {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+
+/* ---- event feed --------------------------------------------------------- */
+
+.exec-blk-feed {
+  min-width: 0;
+}
+.exec-blk-feed-np {
+  margin: 0;
+  padding: var(--space-4);
+}
+.exec-blk-feed-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line-soft);
+}
+.exec-blk-feed-error {
+  margin: 0;
+  font: var(--exec-font-data);
+  color: var(--bad);
+}
+
+/* ---- journey spine ------------------------------------------------------ */
+
+.exec-blk-spine {
+  min-width: 0;
+}
+.exec-blk-spine-note {
+  margin: 0 0 var(--space-2);
+}
+.exec-blk-spine-list {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-blk-spine-node {
+  position: relative;
+  min-width: 0;
+  margin-right: -1px;
+}
+/* Connector chevron (kit .sp-nd::after): a rotated square on the seam between full nodes. */
+.exec-blk-spine[data-variant="full"] .exec-blk-spine-node:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: -7px;
+  z-index: 3;
+  width: 12px;
+  height: 12px;
+  background: var(--paper);
+  border-top: 1px solid var(--line-strong);
+  border-right: 1px solid var(--line-strong);
+  transform: translateY(-50%) rotate(45deg);
+  pointer-events: none;
+}
+.exec-blk-spine[data-variant="full"] .exec-blk-spine-node[data-s="cur"]:not(:last-child)::after {
+  border-color: var(--accent);
+  border-width: 2px;
+}
+.exec-blk-spine-btn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 168px;
+  padding: var(--space-3);
+  font: var(--exec-font-body);
+  text-align: left;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+button.exec-blk-spine-btn {
+  cursor: pointer;
+}
+button.exec-blk-spine-btn:hover {
+  background: var(--surface-2);
+}
+.exec-blk-spine-node[data-s="cur"] > .exec-blk-spine-btn {
+  background: var(--accent-soft);
+  border: 2px solid var(--accent);
+}
+.exec-blk-spine-node[data-s="blk"] > .exec-blk-spine-btn {
+  background: var(--f-rejected-bg);
+  border: 2px solid var(--f-rejected);
+}
+.exec-blk-spine-node[data-s="ahead"] > .exec-blk-spine-btn,
+.exec-blk-spine-node[data-s="unknown"] > .exec-blk-spine-btn {
+  border-style: dashed;
+}
+.exec-blk-spine-node[data-sel="true"] > .exec-blk-spine-btn {
+  box-shadow: inset 0 -3px 0 var(--ink);
+}
+.exec-blk-spine-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.exec-blk-spine-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-label);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* 8x8 stage hue (kit stg()): gates grey, Paper and Sandbox filled, Canary hollow, Live solid. */
+.exec-blk-spine[data-variant="full"] .exec-blk-spine-name::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  background: var(--ink-faint);
+  border: 1px solid var(--ink-faint);
+}
+.exec-blk-spine-node[data-stage="paper"] .exec-blk-spine-name::before {
+  background: var(--stage-paper);
+  border-color: var(--stage-paper);
+}
+.exec-blk-spine-node[data-stage="sandbox"] .exec-blk-spine-name::before {
+  background: var(--env-sandbox);
+  border-color: var(--env-sandbox);
+}
+.exec-blk-spine-node[data-stage="canary"] .exec-blk-spine-name::before {
+  background: transparent;
+  border: 2px solid var(--env-canary);
+}
+.exec-blk-spine-node[data-stage="live"] .exec-blk-spine-name::before {
+  background: var(--env-live);
+  border-color: var(--env-live);
+}
+.exec-blk-spine-domain {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-blk-spine-big {
+  font: var(--exec-font-kpi);
+  font-variant-numeric: tabular-nums;
+}
+.exec-blk-spine-big small {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-blk-spine-line {
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+}
+.exec-blk-spine-meter {
+  display: flex;
+  gap: 2px;
+}
+.exec-blk-spine-meter i {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.exec-blk-spine-meter i[data-on="true"] {
+  background: var(--f-ok);
+  border-color: var(--f-ok);
+}
+
+/* compact: a stepper row */
+.exec-blk-spine[data-variant="compact"] {
+  overflow-x: auto;
+}
+.exec-blk-spine[data-variant="compact"] .exec-blk-spine-list {
+  min-width: 400px;
+}
+/* At phone width the six stages share the row (about 50px each) instead of scrolling the last three out of sight. */
+@media (max-width: 660px) {
+  .exec-blk-spine[data-variant="compact"] .exec-blk-spine-list {
+    min-width: 0;
+  }
+  .exec-blk-spine[data-variant="compact"] .exec-blk-spine-short {
+    letter-spacing: 0;
+  }
+}
+/* The -1px overlap closes the seam between bordered nodes; the compact nodes have no border, and the last one's -1px pushed the
+ * row 1px past its box, so it scrolled when it fitted (axe scrollable-region-focusable at 1440 and 1024, UXM-10 F-5). */
+.exec-blk-spine[data-variant="compact"] .exec-blk-spine-node {
+  margin-right: 0;
+}
+.exec-blk-spine[data-variant="compact"] .exec-blk-spine-btn {
+  align-items: center;
+  min-height: 0;
+  padding: var(--space-1);
+  text-align: center;
+  background: none;
+  border: 0;
+}
+.exec-blk-spine[data-variant="compact"] .exec-blk-spine-node[data-s="cur"] > .exec-blk-spine-btn,
+.exec-blk-spine[data-variant="compact"] .exec-blk-spine-node[data-s="blk"] > .exec-blk-spine-btn {
+  background: none;
+  border: 0;
+}
+.exec-blk-spine-q {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font: var(--exec-font-label);
+  color: var(--ink-faint);
+  background: var(--paper);
+  border: 2px solid var(--line-strong);
+}
+.exec-blk-spine-node[data-s="done"] .exec-blk-spine-q {
+  color: var(--paper);
+  background: var(--f-ok);
+  border-color: var(--f-ok);
+}
+.exec-blk-spine-node[data-s="cur"] .exec-blk-spine-q {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-blk-spine-node[data-s="blk"] .exec-blk-spine-q {
+  color: var(--f-rejected);
+  background: var(--f-rejected-bg);
+  border-color: var(--f-rejected);
+}
+.exec-blk-spine-node[data-s="ahead"] .exec-blk-spine-q,
+.exec-blk-spine-node[data-s="unknown"] .exec-blk-spine-q {
+  border-style: dashed;
+}
+.exec-blk-spine-short {
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.exec-blk-spine-node[data-s="done"] .exec-blk-spine-short {
+  color: var(--ink-soft);
+}
+.exec-blk-spine-node[data-s="cur"] .exec-blk-spine-short,
+.exec-blk-spine-node[data-s="blk"] .exec-blk-spine-short {
+  color: var(--ink);
+}
+
+/* mini: a glyph for a table cell */
+.exec-blk-spine-mini {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: middle;
+}
+.exec-blk-spine-mini i {
+  width: 9px;
+  height: 9px;
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-blk-spine-mini i[data-s="done"] {
+  background: var(--f-ok);
+  border-color: var(--f-ok);
+}
+.exec-blk-spine-mini i[data-s="cur"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.exec-blk-spine-mini i[data-s="blk"] {
+  background: var(--f-rejected);
+  border-color: var(--f-rejected);
+}
+.exec-blk-spine-mini i[data-s="ahead"],
+.exec-blk-spine-mini i[data-s="unknown"] {
+  border-style: dashed;
+}
+
+@media (max-width: 1100px) {
+  .exec-blk-spine[data-variant="full"] .exec-blk-spine-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: var(--space-2);
+  }
+  .exec-blk-spine[data-variant="full"] .exec-blk-spine-node::after {
+    display: none;
+  }
+}
+@media (max-width: 660px) {
+  .exec-blk-spine[data-variant="full"] .exec-blk-spine-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---- triad -------------------------------------------------------------- */
+
+.exec-blk-triad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
+}
+.exec-blk-triad-col {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+.exec-blk-triad-title {
+  margin: 0;
+  font: var(--exec-font-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.exec-blk-triad-sub {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-blk-triad-rows {
+  margin: 0;
+}
+.exec-blk-triad-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 30px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-blk-triad-row dt {
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.exec-blk-triad-row dd {
+  margin: 0;
+  text-align: right;
+}
+@media (max-width: 1100px) {
+  .exec-blk-triad {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- replay frame ------------------------------------------------------- */
+
+.exec-blk-replay {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+/* UXM-10 F-12: the replay header's account, symbol and venue chips are <span>s, not controls (V1's shared chip rule gives every chip a
+ * pointer, which promises an action neither the keyboard nor a click has). Only inside this V2 frame and only for spans, so the
+ * chips that ARE controls (buttons, the symbol and interval selects) keep their pointer and V1 keeps its own rule untouched. An
+ * attribute selector, not the V1 class name: a V2 stylesheet must not spell a class that V1 owns (v2Hygiene). */
+.exec-blk-replay span[class~="exec-rp-chip"] {
+  cursor: default;
+}
+.exec-blk-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-data);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px dotted var(--line-strong);
+}
+
+/* One "Not available: A, B" line per panel or screen (NotAvailableLine). */
+.exec-blk-nal {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}

@@ -55,5 +55,10 @@ export default defineConfig({
     exclude: ["e2e/**", "node_modules/**", "dist/**"],
     // N29-FE-01 §5: a React/DOM warning is a defect, not noise.
     setupFiles: ["./src/test/consoleGuard.ts"],
+    // The full suite runs hundreds of jsdom files in parallel; screens that mount several charts and
+    // routes pass alone in under a second and still hit the 5 s default under that load (searchF2,
+    // hubStageExecute, foundation). A realistic budget, not a retry.
+    testTimeout: 20_000,
+    hookTimeout: 20_000,
   },
 });

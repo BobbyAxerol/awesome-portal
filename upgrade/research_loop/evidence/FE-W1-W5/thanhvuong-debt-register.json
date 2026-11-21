@@ -1,0 +1,134 @@
+{
+  "packet": "FE-W1-W5",
+  "date": "2026-10-04 (P24 update)",
+  "head": "0d1b54d7a8d3423fa43d2b531979b6ffe952ef7b",
+  "open_debt": [
+    {
+      "id": "DEBT-S06-CONTRAST",
+      "what": "S06 row 10 contrast: axe probe measured fine, no further fix; S06 page tab-stop count not re-measured beyond budget probe (66/57 recorded)",
+      "state": "CLOSED · real tab stops measured 66/57 (budget 120); axe 0 on 123/123"
+    },
+    {
+      "id": "DEBT-S09-MONTH-DISMISS",
+      "what": "month strip outside-tap dismiss: gap-tap dismiss landed in a226d1d9; outside-tap case not separately evidenced",
+      "state": "CLOSED · month strip dismisses on outside/same/gap tap (touch probe 4/4 on S09)"
+    },
+    {
+      "id": "DEBT-S08-ROUTE-SEQ-TESTS",
+      "what": "route-level tests for retained-lane seq: landed in a226d1d9; not re-measured on preview",
+      "state": "CLOSED · executeRoute.seq.test.tsx (5 tests) + replay reload defect fixed"
+    },
+    {
+      "id": "DEBT-INK-MUTE-DARK",
+      "what": "dark --ink-mute outside .research-screen inherits the light value; no shell use today",
+      "state": "CLOSED · e42d1c9e dark --ink-mute #98a6ba in the operations root, pinned in tokens.test.ts"
+    },
+    {
+      "id": "DEBT-MATURITY-PROTOTYPE",
+      "what": "--maturity-prototype badge colour unresolved",
+      "state": "CLOSED · e42d1c9e --maturity-prototype #8a5f1a (4.5:1 on paper)"
+    },
+    {
+      "id": "DEBT-W4-LEFTOVERS",
+      "what": "ProvenanceStrip collapse, fold_01->F1, tile caption shortening, S12 Routes/Claims tab copy, Claim-tab cleanup; S05-S08 RunNotFound uses scoped :has() stopgap",
+      "state": "CLOSED (text cuts) · F1 fold labels, one-line ProvenanceStrip, S12 Routes/Claims, S13 tiles, S08 once; raw enums 398->141 (rest kept by decision)"
+    },
+    {
+      "id": "DEBT-S07-S03-360",
+      "what": "S07 causal fold rows and S03 claim chip at 360 unconfirmed: no causal fixture",
+      "state": "CLOSED · real causal run R-WFO-027 exists on the preview; 360/390 layout defects fixed in e9b170ad; no baseline change (visual spec uses fixtures)"
+    },
+    {
+      "id": "DEBT-LEGACY-ES",
+      "what": "ImportInbox.tsx:139 Vietnamese string in a removed legacy screen",
+      "state": "OPEN_LOW"
+    },
+    {
+      "id": "DEBT-BUNDLE-VS-HEAD",
+      "what": "gates measured on bundle index-C6w4OUAn.js; a226d1d9, f0346ef8 landed after the W5 gate and are covered by unit tests and legacy run-audit baselines only",
+      "state": "CLOSED · gate 228/228 re-run on index-DKkYLzA8.js at HEAD d2028d13+"
+    },
+    {
+      "id": "DEBT-BASELINE-MIX",
+      "what": "Research baselines mix W5 code and the grey-token change (16 cells re-recorded together); a diff cannot be attributed to one cause",
+      "state": "CAVEAT"
+    },
+    {
+      "id": "DEBT-HARNESS-WRITE",
+      "what": "harness first denied shared-preview writes (seal/publish on :8095); later done after Bobby approved in chat",
+      "state": "RESOLVED_RECORDED"
+    },
+    {
+      "id": "DEBT-STALE-SEALS",
+      "what": "R-WFO-022/023 stay SEALED_LOCAL with two readers giving different blocked reasons; left untouched",
+      "state": "OPEN_CODEX"
+    },
+    {
+      "id": "DEBT-D6-QUEUED-CONSOLE",
+      "what": "queued/cancelled runs sent evidence reads that 409/404",
+      "state": "CLOSED · useEvidenceReadsAllowed; 0 console errors on queued/cancelled"
+    },
+    {
+      "id": "DEBT-D9-RC-NULL",
+      "what": "RC record showed release_candidate_id: null # code",
+      "state": "CLOSED · 'not assigned yet' typed absence, copy yaml verbatim"
+    },
+    {
+      "id": "DEBT-D10-ENUM",
+      "what": "raw uppercase/snake tokens on S04-S11",
+      "state": "CLOSED_BY_DECISION · humanised; names/ids/acronyms kept; raw in title/data-*"
+    },
+    {
+      "id": "DEBT-D12-CHART-KEYBOARD",
+      "what": "QA run D12 claimed charts unreachable by keyboard",
+      "state": "CLOSED · MIS-TEST (agent T verified one focusable region per chart, ArrowRight changes the live node on S04/S06/S08/S09/S13)"
+    },
+    {
+      "id": "DEBT-PRINT-DARK",
+      "what": "dark-theme print (T-D1/T-D2) and Planning board print black columns",
+      "state": "CLOSED · printTheme.ts forces the light theme on print; planning/command-center print baselines re-recorded"
+    },
+    {
+      "id": "DEBT-SKIP-LINK",
+      "what": "T reported skip link not first stop",
+      "state": "CLOSED · not a defect (Tab #1 is the skip link on a fresh load; tests PortalShell/displayMenu)"
+    },
+    {
+      "id": "DEBT-OOS-ZERO",
+      "what": "strict OOS Sharpe prints 0.000",
+      "state": "CLOSED · Bobby delegated; formatMetric/formatValue print ≈0 for a real non-zero value that rounds to zero (f79b3875)"
+    },
+    {
+      "id": "DEBT-PRINT-REALDEVICE",
+      "what": "real browser print dialog and mobile-device print not run (page.pdf + media emulation only)",
+      "state": "OPEN_LOW"
+    },
+    {
+      "id": "DEBT-W8-LEFTOVERS",
+      "what": "null dashes on S06/S07/S09, :has() stopgap, Vietnamese inbox label, S04 exact table, two flaky tests",
+      "state": "CLOSED · a9ff796a; gate 228/228"
+    },
+    {
+      "id": "DEBT-P24-MATRIX",
+      "what": "matrix F-01…F-07",
+      "state": "CLOSED · 0d1b54d7; matrix 613 PASS / 0 FAIL / 69 NA on index-Bu8sUwob.js"
+    },
+    {
+      "id": "DEBT-IMPORTED-EXEC",
+      "what": "imported alpha cannot create a run on this stack (admission PREFLIGHT_ONLY, 409 RESEARCH_RUN_EXECUTION_ADAPTER_UNAVAILABLE); scratch refused likewise",
+      "state": "OPEN_CODEX · §32-4"
+    }
+  ],
+  "codex_dependencies": [
+    "§31-1 stale seal vs publish single reason and lawful path",
+    "§31-2 blocked_action (optional)",
+    "§31-3 RC rail selected_trial_ordinal (optional)",
+    "approval mirror read DENIED for the publisher (question)",
+    "§31-1/2/3/5 CONSUMED from d5d09875 (see backend-requests); remaining: old R-WFO-022/023 seals stay stale by design (CREATE_NEW_RUN_AND_SEAL)"
+  ],
+  "not_verified": [
+    "print acceptance",
+    "full browser acceptance by Bobby",
+    "signed release"
+  ]
+}

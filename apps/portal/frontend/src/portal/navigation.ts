@@ -81,7 +81,7 @@ const ENFORCED_CAPABILITIES = new Set([
   "administration.profile_access.manage",
 ]);
 
-function isNavigable(feature: PortalFeatureDefinition, options: NavOptions): boolean {
+export function isNavigable(feature: PortalFeatureDefinition, options: NavOptions): boolean {
   if (feature.maturity === "HIDDEN") return false;
   const enforced = feature.permissions.filter((permission) =>
     ENFORCED_CAPABILITIES.has(permission),
@@ -201,6 +201,16 @@ export function featureForPath(
   registry: PortalRegistryDocument,
   pathname: string,
 ): PortalFeatureDefinition | null {
+  // A screen can own a path no feature route is a prefix of (Compare, `/deployments/compare`, registry rev 9). Only then does the
+  // screen's feature answer, so a path a feature already claims is resolved exactly as before.
+  return featureByRoutePrefix(registry, pathname) ?? featureForScreenRoute(registry, pathname);
+}
+
+/** The feature whose canonical route is `pathname` or a path prefix of it (longest wins); screens are not consulted. */
+export function featureByRoutePrefix(
+  registry: PortalRegistryDocument,
+  pathname: string,
+): PortalFeatureDefinition | null {
   let best: PortalFeatureDefinition | null = null;
   for (const feature of registry.features) {
     const route = feature.canonical_route;
@@ -209,6 +219,24 @@ export function featureForPath(
     if (!best || route.length > best.canonical_route.length) best = feature;
   }
   return best;
+}
+
+const segmentsOf = (route: string): string[] => route.split("/").filter((part) => part !== "");
+
+/** The feature of the registry screen whose route is exactly `pathname` (`:param` segments match any one segment), else null. */
+export function featureForScreenRoute(
+  registry: PortalRegistryDocument,
+  pathname: string,
+): PortalFeatureDefinition | null {
+  const actual = segmentsOf(pathname);
+  for (const screen of registry.screens) {
+    const pattern = segmentsOf(screen.route);
+    if (pattern.length !== actual.length) continue;
+    if (!pattern.every((part, index) => part.startsWith(":") || part === actual[index])) continue;
+    const owner = registry.features.find((feature) => feature.id === screen.feature_id);
+    if (owner) return owner;
+  }
+  return null;
 }
 
 /** Every legacy route the registry declares, mapped to its owning feature. */

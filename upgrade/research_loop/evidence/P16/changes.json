@@ -1,0 +1,20 @@
+{
+  "schema_version": "research.phase-changes.v1",
+  "phase": "P16",
+  "areas": [
+    "bounded current-source Freeze and retained-digest verifier service",
+    "same-origin session/workspace GET plus origin/CSRF protected explicit re-read POST",
+    "generated Research Freeze OpenAPI declaration and snapshot/verifier integration",
+    "feature-dark Control API/compose/example configuration and route ownership ledger",
+    "focused unit, disposable PostgreSQL and generated-contract proof",
+    "Unified Plan current-source amendment and Claude Screen-07 handoff"
+  ],
+  "excluded": [
+    "frontend TSX/CSS/HiFi changes",
+    "runtime activation/deployment",
+    "source artifact, Parquet, direct database, worker journal or raw market browsing",
+    "optimizer candidate/selection/evaluation implementation",
+    "diagnostic job, what-if grid, sibling draft or any parameter mutation",
+    "Execution Edge, Trading System, broker, Redis or CLI changes"
+  ]
+}

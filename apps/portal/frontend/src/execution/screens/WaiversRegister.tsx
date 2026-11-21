@@ -19,9 +19,10 @@ import { readConditionsPage } from "../api/rows";
 import { CrossEvidence } from "../components/CrossEvidence";
 import type { OperationalComposition } from "../operationalComposition";
 import { useAgeTick } from "../liveTick";
-import { ExecutionDecisionStrip } from "../components/workspace";
 import { PanelState } from "../components/states";
+import { QuietEmpty } from "../components/quietEmpty";
 import { reviewRouteFor, type ApprovalGate } from "./ApprovalInbox";
+import { humanizeCode } from "../v2/displayNames";
 import type { PanelStatus } from "../contracts";
 
 const FILTERS = ["ALL", "OPEN", "EXPIRING", "LAPSED", "WAIVED"] as const;
@@ -177,81 +178,78 @@ export function WaiversRegisterScreen({
 
   return (
     <section className="exec-gate exec-gov" aria-label="Waivers and conditions register" data-hifi-exact="waivers-register">
-      <div className="exec-gate-kicker">GOVERNANCE · Obligations Register</div>
-      <div className="exec-gov-head">
-        <h1 className="exec-gov-h1">Waivers &amp; Conditions <span className="exec-gov-dim">—</span> what the fund owes, fleet-wide</h1>
-      </div>
-      <div className="exec-gov-metaline">
-        {/* The amber fill is the queue's attention role. An OPEN count of zero
-            is not a backlog, so it is drawn plain rather than in the colour
-            that means "something is waiting for you". */}
-        {countOf(open) !== null ? <span className="exec-gov-chip" data-fill={countOf(open)! > 0 ? "warn" : undefined}>{countOf(open)} OPEN</span> : null}
-        {countOf(expiring) ? <span className="exec-gov-chip" data-fill="bad" data-pulse="true">{countOf(expiring)} EXPIRING</span> : null}
-        {countOf(lapsed) ? <span className="exec-gov-chip" data-fill="bad">{countOf(lapsed)} LAPSED · BLOCKING</span> : null}
-        {countOf(waived) ? <span className="exec-gov-chip" data-fill="good">{countOf(waived)} WAIVED</span> : null}
-        {unreadable.length > 0 ? (
-          <span className="exec-gov-chip" title="The count query for these states did not return; the register below is still the server's page.">
-            {unreadable.join(" · ")} not counted
-          </span>
-        ) : null}
-        {status === "partial" ? (
-          <span className="exec-gov-chip" data-fill="warn" title={reason ?? "The source returned part of the register."}>PARTIAL</span>
-        ) : null}
-        <span className="exec-gov-meta">
-          governance.conditions-register.v1 · PORTAL_CONTROL · states computed server-side — this
-          screen renders them and never re-derives · a condition closes only by a decision
-        </span>
-      </div>
+      <header className="exec-wv-head">
+        <div className="exec-wv-titlerow">
+          <h1 className="exec-gov-h1">Waivers &amp; conditions</h1>
+          {countOf(expiring) ? <span className="exec-gov-chip" data-fill="bad" data-pulse="true">{countOf(expiring)} expiring</span> : null}
+          {countOf(lapsed) ? <span className="exec-gov-chip" data-fill="bad">{countOf(lapsed)} lapsed · blocking</span> : null}
+          {unreadable.length > 0 ? (
+            <span className="exec-gov-chip" title="The count query for these states did not return; the register below is still the server's page.">
+              {unreadable.join(" · ")} not counted
+            </span>
+          ) : null}
+          {status === "partial" ? (
+            <span className="exec-gov-chip" data-fill="warn" title={reason ?? "The source returned part of the register."}>partial</span>
+          ) : null}
+          <span className="exec-gov-spacer" />
+          <span className="exec-gov-meta">{readAt ? `Updated ${readAt.slice(11, 16)} UTC` : "Update time not published"}</span>
+        </div>
+        <p className="exec-gov-meta">What the fund owes, fleet-wide. States are computed by the server; a condition closes only by a decision.</p>
+      </header>
 
-      <ExecutionDecisionStrip
-        metrics={[
-          // A cell whose count could not be read stays absent rather than
-          // summing to a number that is missing one of its parts.
-          { label: "Open + expiring", value: countOf(open) !== null && countOf(expiring) !== null ? String(countOf(open)! + countOf(expiring)!) : null, tone: (countOf(open) ?? 0) + (countOf(expiring) ?? 0) > 0 ? "warn" : "good" },
-          { label: "Lapsed (blocking)", value: countOf(lapsed) !== null ? String(countOf(lapsed)) : null, tone: (countOf(lapsed) ?? 0) > 0 ? "bad" : "good" },
-          { label: "Active waivers", value: countOf(waived) !== null ? String(countOf(waived)) : null, tone: "good" },
-          { label: "Register total", value: counts.total !== null ? String(counts.total) : null },
-          { label: "Read at", value: readAt ? readAt.slice(11, 19) + " UTC" : null },
-        ]}
-      />
+      {/* One row: the register's states ARE its filters. Each lane is a count and a button — "what is blocking, what is about to, what is open, what is waived" —
+          instead of a strip of numbers followed by a second row of pills that repeated them. */}
+      <div role="group" aria-label="Filter by state" className="exec-wv-lanes">
+        {([
+          { f: "LAPSED", label: "Lapsed", note: "blocking", n: countOf(lapsed), tone: "bad" },
+          { f: "EXPIRING", label: "Expiring", note: "needs a decision", n: countOf(expiring), tone: "warn" },
+          { f: "OPEN", label: "Open", note: "owed, not yet due", n: countOf(open), tone: "mute" },
+          { f: "WAIVED", label: "Waived", note: "granted by policy", n: countOf(waived), tone: "good" },
+          { f: "ALL", label: "All", note: "the whole register", n: counts.total, tone: "mute" },
+        ] as const).map((lane) => (
+          <button
+            key={lane.f}
+            type="button"
+            className="exec-wv-lane"
+            data-tone={lane.n !== null && lane.n > 0 ? lane.tone : "mute"}
+            aria-pressed={lane.f === filter}
+            data-active={lane.f === filter ? "true" : undefined}
+            onClick={() => onFilter(lane.f)}
+          >
+            <span className="exec-wv-lane-n">{lane.n}</span>
+            <span className="exec-wv-lane-label">{lane.label}</span>
+            <span className="exec-wv-lane-note">{lane.n === null ? "not counted" : lane.note}</span>
+          </button>
+        ))}
+      </div>
 
       {status !== "ok" && status !== "partial" ? (
         <PanelState status={status} reason={reason} />
       ) : (
         <>
-          <Runway rows={rows} readAt={readAt} tick={tick} />
+          {rows.length > 0 ? <Runway rows={rows} readAt={readAt} tick={tick} /> : null}
 
+          {bySubject.length > 0 ? (
           <div className="exec-wv-debtrow" role="group" aria-label="Obligations by subject">
             <span className="exec-gov-meta">on this page, the debt sits with:</span>
             {bySubject.map(([label, n]) => (
               <span className="exec-wv-debtchip" key={label}>{label} <b>{n}</b></span>
             ))}
-            <span className="exec-gov-meta">· WAIVED excluded · exact fleet totals live in the strip above</span>
+            <span className="exec-gov-meta">· WAIVED excluded · exact fleet totals are the lanes above</span>
           </div>
+          ) : null}
 
-          {/* The hi-fi puts the state filters on their own row between the header
-              and the table, where the Approval Inbox already puts them. Inside
-              the panel head they were pushed to the far right and read as a
-              property of the panel's title rather than of the register. */}
-          <div role="group" aria-label="Filter by state" className="exec-inbox-filters">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                className="exec-inbox-filter"
-                aria-pressed={f === filter}
-                data-active={f === filter ? "true" : undefined}
-                onClick={() => onFilter(f)}
-              >
-                {f === "ALL" ? `All${counts.total !== null ? ` (${counts.total})` : ""}` : f}
-              </button>
-            ))}
-          </div>
-
+          {rows.length === 0 && !page?.hasMore && !page?.hasPrevious ? (
+            <QuietEmpty
+              icon="scale"
+              label="Register"
+              title="No conditions"
+              line={filter === "ALL" ? "Nothing is on the register." : `Nothing is ${filter.toLowerCase()}.`}
+            />
+          ) : (
           <div className="exec-gov-panel">
             <div className="exec-gov-panelhead">
-              <span className="exec-gov-paneltitle">Register</span>
-              <span className="exec-gov-meta">click a row for its source decision</span>
+              <span className="exec-gov-paneltitle" title="A WAIVED row names the policy revision that granted it and expires with a policy change. LAPSED is blocking and enters Command Center today as CONDITION_EXPIRY — never a quiet default.">Register</span>
             </div>
             <div className="exec-gate-criteriawrap">
               <table className="exec-360-sync exec-gate-criteria exec-gate-wvtable">
@@ -283,7 +281,7 @@ export function WaiversRegisterScreen({
                               {r.statement}
                             </button>
                           </th>
-                          <td><a href={sourceHref(r)}>{r.approvalId} · {r.gate}</a></td>
+                          <td><a href={sourceHref(r)} title={r.gate} data-gate={r.gate}>{r.approvalId} · {humanizeCode(r.gate)}</a></td>
                           <td>{r.subjectLabel}</td>
                           <td><span className="exec-gov-chip" data-fill="good">{r.environment}</span></td>
                           <td className="exec-num"><span className="exec-wv-duenum" data-live={r.state === "EXPIRING" ? "true" : undefined} data-tone={due.tone}>{due.text}</span></td>
@@ -311,11 +309,6 @@ export function WaiversRegisterScreen({
                       </Fragment>
                     );
                   })}
-                  {rows.length === 0 ? (
-                    <tr>
-                      <th scope="row" colSpan={7}>no conditions in this state — an empty filter is a fact, not a failure</th>
-                    </tr>
-                  ) : null}
                 </tbody>
               </table>
             </div>
@@ -326,22 +319,19 @@ export function WaiversRegisterScreen({
                 plainly rather than pretending to quote the server. */}
             {page ? (
               <div className="exec-wv-pager">
-                <button type="button" className="exec-inbox-filter" disabled={!page.hasPrevious} onClick={onPrev}
+                <button type="button" className="exec-btn-ghost" disabled={!page.hasPrevious} onClick={onPrev}
                   title={page.hasPrevious ? undefined : "this is the newest page in this filter"}>← newer</button>
                 <span className="exec-role-meta">
-                  {rows.length} of {page.filteredCount ?? "?"} in this state · register total {page.totalCount ?? "?"} · exact server counts, keyset paged
+                  {rows.length} of {page.filteredCount ?? "?"} shown
                 </span>
-                <button type="button" className="exec-inbox-filter" disabled={!page.hasMore} onClick={onNext}
+                <button type="button" className="exec-btn-ghost" disabled={!page.hasMore} onClick={onNext}
                   title={page.hasMore ? undefined : "no older page — the register ends here for this filter"}>older →</button>
               </div>
             ) : (
               <p className="exec-role-meta">No page was returned for this filter{reason ? ` — ${reason}` : ""}.</p>
             )}
-            <p className="exec-role-meta exec-gate-criteriafoot">
-              a WAIVED row names the policy revision that granted it and expires with a policy change ·
-              LAPSED is blocking and enters Command Center today as CONDITION_EXPIRY — never a quiet default
-            </p>
           </div>
+          )}
         </>
       )}
     </section>
@@ -415,7 +405,6 @@ export function WaiversRegisterContainer({ api }: { api: ExecutionApi }) {
           authority that explains why every waiver control is dark, the redacted
           journal of what has run, per-profile source health and the canary twin
           comparison — all four were being fetched and none shown. */}
-      <CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />
     <WaiversRegisterScreen
       page={page}
       counts={counts}
@@ -429,6 +418,11 @@ export function WaiversRegisterContainer({ api }: { api: ExecutionApi }) {
       status={status}
       reason={reason}
     />
+      {/* The register is what this page is for; the command authority and source health that explain why its controls are dark come second, folded. */}
+      <details className="exec-gf-details exec-gf-evidence-fold">
+        <summary>Command authority, source health and journal</summary>
+        <CrossEvidence composition={composition} label="Command authority, journal and cross-profile evidence" />
+      </details>
     </>
   );
 }

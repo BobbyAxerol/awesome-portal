@@ -359,6 +359,7 @@ describe("EX-BE-07b analytics screen boundary", () => {
     // infering a synthetic event sequence or duplicating the prior page.
     expect(entries.map((entry) => entry.source_record.id)).toEqual(["ord_a", "ord_a", "fill_a"]);
     const order = entries.find((entry) => entry.source_record.id === "ord_a");
+    if (!order) throw new Error("TEST_ONLY_EXPECTED_ORDER_ENTRY");
     expect(order.values).toMatchObject({ price: null, quantity: "0.100000000000000001" });
     expect(order.rejected_exact_value_fields).toContain("price");
     expect(entries.every((entry) => entry.observation_type !== "EVENT")).toBe(true);

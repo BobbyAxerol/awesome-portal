@@ -1,0 +1,52 @@
+# UDB-01 owned cache-fixture lane; internal-only network, no host Docker socket,
+# no business/auth/artifact/source volume and no public listener. Only its own
+# named PG volume is removed by the collect helper after evidence retention.
+services:
+  postgres:
+    image: postgres:16.15-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+    restart: "no"
+    command: ["postgres", "-c", "config_file=/etc/postgresql/p23.conf"]
+    mem_limit: 900000000
+    memswap_limit: 900000000
+    cpus: 2
+    pids_limit: 128
+    shm_size: 64m
+    environment:
+      POSTGRES_USER: udb
+      POSTGRES_PASSWORD: disposable-udb-fixture
+      POSTGRES_DB: udb_cache_test
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./deploy/postgres/portal.conf:/etc/postgresql/portal.conf:ro
+      - ./deploy/postgres/p23.conf:/etc/postgresql/p23.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U udb -d udb_cache_test"]
+      interval: 2s
+      retries: 20
+      timeout: 2s
+    networks: [udb]
+  writer:
+    image: ${UDB_WRITER_IMAGE:?exact qualified Control API image ID}
+    restart: "no"
+    command: ["node", "/udb/soak.cjs"]
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 2
+    pids_limit: 64
+    read_only: true
+    tmpfs: [/tmp:size=16m]
+    environment:
+      DATABASE_URL: postgres://udb:disposable-udb-fixture@postgres:5432/udb_cache_test
+      UDB_DURATION_SECONDS: ${UDB_DURATION_SECONDS:-1200}
+      UDB_REPORT_DIR: /report
+      UDB_PHASE: UDB-01
+    volumes:
+      - ${UDB_SCRIPT_DIR:?immutable private script copy}:/udb:ro
+      - ${UDB_REPORT_DIR:?owned report directory}:/report:rw
+    depends_on:
+      postgres: {condition: service_healthy}
+    networks: [udb]
+networks:
+  udb: {internal: true}
+volumes:
+  pg-data: {}

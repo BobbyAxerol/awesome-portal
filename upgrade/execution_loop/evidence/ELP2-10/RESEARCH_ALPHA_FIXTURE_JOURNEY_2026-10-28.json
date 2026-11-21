@@ -1,0 +1,616 @@
+{
+ "generated": "2026-10-28T11:16:51.242Z",
+ "base": "http://127.0.0.1:34915",
+ "profile": "populated",
+ "results": [
+  {
+   "scenario": "positive",
+   "screens": [
+    {
+     "id": "overview",
+     "url": "/execution",
+     "screen": "overview-v2",
+     "heading": "Overview",
+     "absences": 0,
+     "absenceTexts": [],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [
+       "27 Oct 12:04Z"
+      ],
+      "laterThanAsOf": [
+       "12:04Z"
+      ],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/api/v1/portal/registry.concerns[].status=PARTIAL",
+       2
+      ],
+      [
+       "/api/v1/portal/registry.concerns[].status=BLOCKED",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_id.availability.state=unavailable",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_name.availability.state=unavailable",
+       1
+      ],
+      [
+       "/compositions/command-center.canary_twin_comparison.state=UNAVAILABLE",
+       1
+      ],
+      [
+       "/manager/fund-overview.scores.regime.status=unavailable",
+       1
+      ],
+      [
+       "/manager/fund-overview.scores.reason_code=RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED",
+       1
+      ],
+      [
+       "/manager/fund-overview.query_options.window.presets[].reason_code=ALL_HISTORY_WINDOW_NOT_PUBLISHED",
+       1
+      ]
+     ]
+    },
+    {
+     "id": "fleet",
+     "url": "/deployments/alphas",
+     "via": "page",
+     "from": "overview",
+     "screen": "alpha-fleet-v2",
+     "heading": "Alpha Fleet",
+     "absences": 7,
+     "absenceTexts": [
+      "Not applied: Environment, Window",
+      "Not available",
+      "Not published: readiness",
+      "Not available",
+      "Not published: archived list",
+      "Not available: Window, Readiness, Compare, Archived list",
+      "Not published"
+     ],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [],
+      "laterThanAsOf": [],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/manager/fleet.query_options.window.presets[].reason_code=EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+       9
+      ],
+      [
+       "/manager/fleet.scores.regime.status=unavailable",
+       3
+      ],
+      [
+       "/manager/fleet.scores.reason_code=RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED",
+       3
+      ],
+      [
+       "/manager/fleet.query_options.window.presets[].reason_code=ALL_HISTORY_WINDOW_NOT_PUBLISHED",
+       3
+      ],
+      [
+       "/alphas.page.rows[].metrics_availability.equity_series_30d.state=UNAVAILABLE",
+       1
+      ],
+      [
+       "/alphas.page.rows[].metrics_availability.equity_series_30d.reason_code=SOURCE_LATEST_WINDOW_NOT_PUBLISHED",
+       1
+      ],
+      [
+       "/alphas.page.rows[].metrics_availability.max_drawdown_30d.state=UNAVAILABLE",
+       1
+      ],
+      [
+       "/alphas.page.rows[].metrics_availability.max_drawdown_30d.reason_code=SOURCE_LATEST_WINDOW_NOT_PUBLISHED",
+       1
+      ]
+     ],
+     "backLink": "OK"
+    },
+    {
+     "id": "portfolio",
+     "url": "/deployments/portfolios/pf_TEST_ONLY_core",
+     "via": "page",
+     "from": "fleet",
+     "screen": "portfolio-360-v2",
+     "heading": "Core",
+     "absences": 2,
+     "absenceTexts": [
+      "Not available:",
+      "Not published"
+     ],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [],
+      "laterThanAsOf": [],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/manager/fleet.query_options.window.presets[].reason_code=EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+       3
+      ],
+      [
+       "/manager/portfolios/:id/overview.scores.regime.status=unavailable",
+       2
+      ],
+      [
+       "/manager/portfolios/:id/overview.scores.reason_code=RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED",
+       2
+      ],
+      [
+       "/manager/portfolios/:id/overview.query_options.window.presets[].reason_code=ALL_HISTORY_WINDOW_NOT_PUBLISHED",
+       2
+      ],
+      [
+       "/manager/fleet.scores.regime.status=unavailable",
+       1
+      ],
+      [
+       "/manager/fleet.scores.reason_code=RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED",
+       1
+      ],
+      [
+       "/manager/fleet.query_options.window.presets[].reason_code=ALL_HISTORY_WINDOW_NOT_PUBLISHED",
+       1
+      ],
+      [
+       "/views/equity-chart.panel.data.benchmark.state=UNAVAILABLE",
+       1
+      ]
+     ],
+     "backLink": "OK"
+    },
+    {
+     "id": "alpha",
+     "url": "/deployments/alphas/alpha_a?from=fleet",
+     "via": "hub:/deployments/alphas",
+     "from": "portfolio",
+     "screen": "alpha-360-v2",
+     "heading": "Carry Av1.0•Informational: QBTS 57.54 · Neutral",
+     "absences": 7,
+     "absenceTexts": [
+      "Not applied: Window",
+      "Not published. Requests cannot be recorded yet.",
+      "Not available",
+      "Not available",
+      "Not available",
+      "Not available",
+      "Not available:"
+     ],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [],
+      "laterThanAsOf": [],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/resources/alphas/:id.capabilities[].state=PARTIAL",
+       11
+      ],
+      [
+       "/resources/alphas/:id.unavailable_branches[].state=PARTIAL",
+       11
+      ],
+      [
+       "/manager/fleet.query_options.window.presets[].reason_code=EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+       9
+      ],
+      [
+       "/manager/fleet.scores.regime.status=unavailable",
+       3
+      ],
+      [
+       "/manager/fleet.scores.reason_code=RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED",
+       3
+      ],
+      [
+       "/manager/fleet.query_options.window.presets[].reason_code=ALL_HISTORY_WINDOW_NOT_PUBLISHED",
+       3
+      ],
+      [
+       "/views/observed-timeline.observed_timeline.data.unavailable_segments[].state=UNAVAILABLE",
+       3
+      ],
+      [
+       "/manager/alphas/:id/overview.query_options.window.presets[].reason_code=EXACT_METRIC_WINDOW_NOT_PUBLISHED",
+       3
+      ],
+      [
+       "/api/v1/portal/registry.concerns[].status=PARTIAL",
+       2
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_id.availability.state=unavailable",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_name.availability.state=unavailable",
+       1
+      ],
+      [
+       "/api/v1/portal/registry.concerns[].status=BLOCKED",
+       1
+      ]
+     ],
+     "backLink": "n/a (hub)"
+    },
+    {
+     "id": "account",
+     "url": "/deployments/accounts/acc_scale_033?from=accounts",
+     "via": "hub:/deployments/accounts",
+     "from": "alpha",
+     "screen": "account-360-v2",
+     "heading": "BYBIT 033",
+     "absences": 6,
+     "absenceTexts": [
+      "Not applied: Window",
+      "Not available",
+      "Not available",
+      "Not available",
+      "No source",
+      "Not available"
+     ],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [],
+      "laterThanAsOf": [],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/api/v1/portal/registry.concerns[].status=PARTIAL",
+       2
+      ],
+      [
+       "/api/v1/portal/registry.concerns[].status=BLOCKED",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_id.availability.state=unavailable",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_name.availability.state=unavailable",
+       1
+      ]
+     ],
+     "backLink": "n/a (hub)"
+    },
+    {
+     "id": "deployment",
+     "url": "/deployments/live/dep_scale_053",
+     "via": "page",
+     "from": "account",
+     "screen": "live-v2",
+     "heading": "Live operations",
+     "absences": 1,
+     "absenceTexts": [
+      "Not available:"
+     ],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [],
+      "laterThanAsOf": [],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/deployments/:id/live.lineage[].state=UNAVAILABLE",
+       3
+      ],
+      [
+       "/deployments/:id/live.positions.typed.not_published_columns[].reason_code=POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION",
+       1
+      ],
+      [
+       "/deployments/:id/live.orders.typed.not_published_columns[].reason_code=ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION",
+       1
+      ]
+     ],
+     "backLink": "OK"
+    },
+    {
+     "id": "approval",
+     "missing": true
+    },
+    {
+     "id": "operation",
+     "url": "/execution/operations",
+     "via": "page",
+     "from": "deployment",
+     "screen": "exec-surface",
+     "heading": "Operations",
+     "absences": 6,
+     "absenceTexts": [
+      "Not published",
+      "Not available:",
+      "Not available",
+      "Not available",
+      "Not available",
+      "Not available"
+     ],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [],
+      "laterThanAsOf": [],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/governance/review-capture-capabilities.actions[].state=UNAVAILABLE",
+       5
+      ],
+      [
+       "/governance/review-capture-capabilities.actions[].reason_code=SOURCE_OWNED_NOT_PORTAL_AUTHORED",
+       3
+      ],
+      [
+       "/portfolios.items[].health.reason_code=DEPLOYMENT_HEALTH_NOT_PUBLISHED",
+       3
+      ],
+      [
+       "/api/v1/portal/registry.concerns[].status=PARTIAL",
+       2
+      ],
+      [
+       "/api/v1/portal/registry.concerns[].status=BLOCKED",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_id.availability.state=unavailable",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_name.availability.state=unavailable",
+       1
+      ],
+      [
+       "/compositions/operations.canary_twin_comparison.state=UNAVAILABLE",
+       1
+      ]
+     ],
+     "backLink": "OK"
+    },
+    {
+     "id": "incident",
+     "url": "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch",
+     "via": "page",
+     "from": "operation",
+     "screen": "exec-surface",
+     "heading": "Critical incident on portfolio Canary",
+     "absences": 9,
+     "absenceTexts": [
+      "Not applied: Window · Own filter below",
+      "Not available",
+      "Not available",
+      "Not published: per-row eligibility and the reason a control is off. AD",
+      "Not published: creator, ladder, SLA and needs-you. No assignee is publ",
+      "Not published: per-row eligibility and the reason a control is off. AD",
+      "Not published: event feed. No evidence attach route is published.",
+      "Not published: per-row eligibility and the reason a control is off. AD",
+      "Not published: per-row eligibility and the reason a control is off. AD"
+     ],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [],
+      "laterThanAsOf": [],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/portfolios.items[].health.reason_code=DEPLOYMENT_HEALTH_NOT_PUBLISHED",
+       3
+      ]
+     ],
+     "backLink": "OK"
+    },
+    {
+     "id": "audit",
+     "url": "/execution/operations?view=audit",
+     "via": "hub:/execution/operations",
+     "from": "incident",
+     "screen": "exec-surface",
+     "heading": "Operations",
+     "absences": 1,
+     "absenceTexts": [
+      "Not published"
+     ],
+     "overflow1280": 0,
+     "overflow660": 0,
+     "notFound": false,
+     "badText": [],
+     "guards": {
+      "jargon": [],
+      "stamps": [],
+      "laterThanAsOf": [],
+      "dualIds": [],
+      "deadEnd": []
+     },
+     "apiBad": [],
+     "apiDenied": 0,
+     "consoleErrors": [],
+     "pageErrors": [],
+     "future": [],
+     "degraded": [
+      [
+       "/portfolios.items[].health.reason_code=DEPLOYMENT_HEALTH_NOT_PUBLISHED",
+       3
+      ],
+      [
+       "/api/v1/portal/registry.concerns[].status=PARTIAL",
+       2
+      ],
+      [
+       "/api/v1/portal/registry.concerns[].status=BLOCKED",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_id.availability.state=unavailable",
+       1
+      ],
+      [
+       "/api/v1/portal/summary.sections[].metrics.current_phase_name.availability.state=unavailable",
+       1
+      ],
+      [
+       "/compositions/operations.canary_twin_comparison.state=UNAVAILABLE",
+       1
+      ]
+     ],
+     "backLink": "n/a (hub)"
+    }
+   ],
+   "problems": [
+    "approval: NO_LINK_FOUND (after deployment)"
+   ],
+   "sweep": [
+    {
+     "href": "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch",
+     "from": "overview",
+     "ok": true,
+     "badText": [],
+     "bad": [],
+     "notFound": false,
+     "errors": 0,
+     "firstError": null
+    },
+    {
+     "href": "/execution/operations/incidents/inc_TEST_ONLY_fx_recon",
+     "from": "overview",
+     "ok": true,
+     "badText": [],
+     "bad": [],
+     "notFound": false,
+     "errors": 0,
+     "firstError": null
+    },
+    {
+     "href": "/execution/operations/incidents/inc_TEST_ONLY_fx_budget",
+     "from": "overview",
+     "ok": true,
+     "badText": [],
+     "bad": [],
+     "notFound": false,
+     "errors": 0,
+     "firstError": null
+    }
+   ],
+   "sweepTotal": 92,
+   "guards": {
+    "jargon": {
+     "offences": 0,
+     "screens": {}
+    },
+    "stamps": {
+     "offences": 0,
+     "screens": {}
+    },
+    "later": {
+     "offences": 0,
+     "screens": {}
+    },
+    "dual": {
+     "offences": 0,
+     "screens": {}
+    },
+    "dead": {
+     "offences": 0,
+     "screens": {}
+    }
+   },
+   "worldClockIso": "2026-10-27T12:04:00.000Z"
+  }
+ ]
+}

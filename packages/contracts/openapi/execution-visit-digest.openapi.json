@@ -1,0 +1,581 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution visit digest",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/visit-digest": {
+      "get": {
+        "operationId": "executionVisitDigestGetV1",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current authorized observations compared to this actor’s baseline.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields; no user selector accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current permission or Origin/CSRF refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace unavailable or feature disabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VISIT_DIGEST_SNAPSHOT_CHANGED / VISIT_DIGEST_BASELINE_CHANGED / authorization changed: refetch, do not blindly retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Source/store unavailable: baseline not advanced.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/visit-digest/seen": {
+      "post": {
+        "operationId": "executionVisitDigestSeenV1",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "x-portal-csrf",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VisitDigestSeen"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Current authorized observations compared to this actor’s baseline.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid fields; no user selector accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current permission or Origin/CSRF refusal.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace unavailable or feature disabled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "VISIT_DIGEST_SNAPSHOT_CHANGED / VISIT_DIGEST_BASELINE_CHANGED / authorization changed: refetch, do not blindly retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Source/store unavailable: baseline not advanced.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitDigestProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "VisitDigest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "state",
+          "workspace_id",
+          "may_mark_seen",
+          "mark_seen_reason",
+          "reason_code",
+          "snapshot_revision",
+          "observed_at",
+          "coverage",
+          "baseline",
+          "items",
+          "unseen_count",
+          "mark_seen"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.visit-digest.v1"
+          },
+          "state": {
+            "enum": [
+              "NO_BASELINE",
+              "READY",
+              "EMPTY"
+            ]
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "may_mark_seen": {
+            "type": "boolean"
+          },
+          "mark_seen_reason": {
+            "enum": [
+              "READ_ONLY_PROFILE",
+              null
+            ]
+          },
+          "reason_code": {
+            "enum": [
+              "NO_COMPARISON_BASELINE",
+              null
+            ]
+          },
+          "snapshot_revision": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "observed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "coverage": {
+            "const": "BOUNDED_OBSERVATIONS"
+          },
+          "baseline": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "version",
+                  "seen_at",
+                  "snapshot_revision"
+                ],
+                "properties": {
+                  "version": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483646
+                  },
+                  "seen_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "snapshot_revision": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "kind",
+                "label",
+                "value",
+                "href",
+                "as_of",
+                "change",
+                "seen"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "kind": {
+                  "enum": [
+                    "INCIDENT",
+                    "APPROVAL",
+                    "OPERATION",
+                    "RECONCILIATION",
+                    "REVIEW_DUE",
+                    "CONDITION_EXPIRY",
+                    "VERIFIED_OPERATION",
+                    "JOURNAL_COMMAND",
+                    "SOURCE",
+                    "STAGE"
+                  ]
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "value": {
+                  "type": "string",
+                  "maxLength": 1024
+                },
+                "href": {
+                  "type": "string",
+                  "pattern": "^/(?:execution|governance|deployments)(?:/|\\?|$)",
+                  "maxLength": 2048
+                },
+                "as_of": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "change": {
+                  "enum": [
+                    "NEW_OBSERVATION",
+                    "CHANGED"
+                  ]
+                },
+                "seen": {
+                  "const": false
+                }
+              }
+            }
+          },
+          "unseen_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "mark_seen": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "snapshot_revision",
+              "expected_baseline_version"
+            ],
+            "properties": {
+              "snapshot_revision": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "expected_baseline_version": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483646
+              }
+            }
+          }
+        },
+        "description": "Portal-owned per-user/workspace last-seen observation baseline. GET has no writes. No complete event-history claim: absent rows are never inferred as resolved/deleted. Every read reapplies current authorization. NEW_OBSERVATION may be newly visible, not newly created. Mark seen explicitly with the supplied revision/version; stale source or another-tab baseline returns 409. First visit returns NO_BASELINE until acknowledged; no fabricated history. Real producer currently covers authorized bounded command-center triage/today/source facts, not NAV deltas or lifecycle event history.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "may_mark_seen": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "mark_seen_reason": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "mark_seen_reason": {
+                  "const": "READ_ONLY_PROFILE"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "NO_BASELINE"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "baseline": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "const": "NO_COMPARISON_BASELINE"
+                },
+                "items": {
+                  "maxItems": 0
+                },
+                "unseen_count": {
+                  "const": 0
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "baseline": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "version",
+                    "seen_at",
+                    "snapshot_revision"
+                  ],
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2147483646
+                    },
+                    "seen_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "snapshot_revision": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{64}$"
+                    }
+                  }
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "READY"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "items": {
+                  "minItems": 1
+                },
+                "unseen_count": {
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "EMPTY"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "items": {
+                  "maxItems": 0
+                },
+                "unseen_count": {
+                  "const": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      "VisitDigestSeen": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "snapshot_revision",
+          "expected_baseline_version"
+        ],
+        "properties": {
+          "snapshot_revision": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "expected_baseline_version": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483646
+          }
+        }
+      },
+      "VisitDigestProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "phase": "P06",
+  "status": "PASS_REAL_CLAIMED_CHILD",
+  "source": {
+    "engine": "quantbt-engine==1.1.1",
+    "operation": "P04_DELTA_SMOKE",
+    "market_fixture": "apps/portal/backend/tests/fixtures/golden_market.parquet",
+    "bars": 500
+  },
+  "chain": [
+    "PostgreSQL enqueue durable logical job",
+    "PostgreSQL claim/lease epoch and RUNNING transition",
+    "P06 namespace-isolated Python child",
+    "QuantBT Delta calculation",
+    "same worker-attempt lease-fenced SUCCEEDED terminal commit"
+  ],
+  "observed": {
+    "engine_version": "1.1.1",
+    "bars": 500,
+    "num_trades": 8,
+    "final_equity": 20589.74597203475,
+    "worker_attempts": 1,
+    "terminal_state": "SUCCEEDED"
+  },
+  "boundary_receipts": {
+    "pid_user_mount_network_namespace": "PASS",
+    "credential_environment_clean": "PASS",
+    "address_space_cpu_file_fd_nproc_tmpfs_scratch_caps": "PASS",
+    "database_broker_execution_cli_credentials_in_child": "ABSENT_BY_CONTRACT"
+  },
+  "not_claimed": [
+    "P05 artifact sealing from this child",
+    "runtime NATS deployment or browser submission",
+    "real user alpha/imported strategy execution",
+    "browser or visual acceptance"
+  ]
+}

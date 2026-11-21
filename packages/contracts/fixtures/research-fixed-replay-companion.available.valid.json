@@ -1,0 +1,82 @@
+{
+  "schema_version": "research.fixed-replay-companion-page.v1",
+  "run_id": "fixed-replay-fixture-run",
+  "scope": "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXECUTION_LEDGER",
+  "execution_profile": {
+    "id": "p04.fixed-qualification.v1",
+    "digest": null
+  },
+  "next_cursor": null,
+  "availability": {
+    "state": "AVAILABLE",
+    "reason_code": null
+  },
+  "custody": "FRESH_FIXED_OOS_RETAINED",
+  "revision": "72e0f1a51434dfc3cdfeed007b5dc65e3ddcf00c576511b719d450e2c3c09789",
+  "manifest": {
+    "schema_version": "research.fixed-replay-companion-manifest.v1",
+    "workspace_id": "fixed-replay-fixture-workspace",
+    "run_id": "fixed-replay-fixture-run",
+    "artifact_id": "fixed-replay-fixture-artifact",
+    "artifact_revision": 1,
+    "manifest_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "requested_spec_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "effective_spec_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "dataset_binding_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "execution_profile_id": "p04.fixed-qualification.v1",
+    "execution_profile_digest": null,
+    "market_symbol": "BTCUSDT",
+    "source": {
+      "schema_version": "research.fixed-replay-source.v1",
+      "state": "AVAILABLE",
+      "reason_code": null,
+      "file_name": "fixed-replay.parquet",
+      "file_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "byte_count": 256,
+      "normalized_rows_sha256": "eee1c0f9c968e846ac3d471244fc9104eae64269841575600d420d7416b4da6b",
+      "row_count": 2,
+      "oos_start_utc_ms": 1700000000000,
+      "oos_end_exclusive_utc_ms": 1700000120000,
+      "first_observed_utc_ms": 1700000000000,
+      "last_observed_utc_ms": 1700000060000
+    },
+    "scope": "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXECUTION_LEDGER"
+  },
+  "counts": {
+    "full_source_retained": 2,
+    "matching_filter": 2,
+    "returned": 2
+  },
+  "rows": [
+    {
+      "source_ordinal": 0,
+      "at_utc_ms": 1700000000000,
+      "open": "100",
+      "high": "102",
+      "low": "99",
+      "close": "101",
+      "volume": "2",
+      "equity": "1000",
+      "return_fraction": "0",
+      "drawdown_fraction": "0",
+      "positions": {
+        "DEFAULT": "0.25"
+      }
+    },
+    {
+      "source_ordinal": 1,
+      "at_utc_ms": 1700000060000,
+      "open": "100",
+      "high": "102",
+      "low": "99",
+      "close": "101",
+      "volume": "2",
+      "equity": "1000",
+      "return_fraction": "0",
+      "drawdown_fraction": "0",
+      "positions": {
+        "DEFAULT": "0.25"
+      }
+    }
+  ]
+}

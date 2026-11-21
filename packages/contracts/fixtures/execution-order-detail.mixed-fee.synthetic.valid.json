@@ -1,0 +1,14 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.order-detail.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "order_id": "TEST_ONLY:ord-3",
+    "filled_quantity": "2",
+    "average_fill_price": "100",
+    "fee_absence": "MIXED_FEE_CURRENCIES",
+    "ack_latency_ms": 7
+  }
+}

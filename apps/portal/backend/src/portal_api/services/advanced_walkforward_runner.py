@@ -11,16 +11,18 @@ semantics are taken from QuantBT metadata, never inferred from the last fold
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 from datetime import UTC, datetime
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Literal, Mapping
 
 import pandas as pd
 
 from portal_api import __version__ as portal_version
 from portal_api.adapters.market_data import PreparedMarketData, slice_market_range
 from portal_api.adapters.quantbt import QuantBTGateway
-from portal_api.domain.enums import OptimizationMode, RunProtocol
+from portal_api.domain.enums import OptimizationMode, OptimizationSchedule, RunProtocol
 from portal_api.domain.requests import (
     AdvancedWalkForwardConfig,
     PortalRunRequest,
@@ -43,25 +45,48 @@ class AdvancedWalkForwardError(RuntimeError):
     pass
 
 
+FOLD_TABLE_V1_COLUMNS = (
+    "fold_id",
+    "train_start",
+    "train_end",
+    "test_start",
+    "test_end",
+    "train_bars",
+    "test_bars",
+)
+
+
+# QuantBT 1.1.1 accepts this bounded metadata cap. Its default 2,000 rows
+# drops late OOS-generation records on admitted 400-trial WFO runs. The
+# admitted profile is at most 400 trials x 16 folds; 20,000 covers that
+# lifecycle without an unbounded engine-side list.
+LIFECYCLE_LEDGER_MAX_ROWS = 20_000
+
+
 def _utc_now_iso() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def _config_fields(config: AdvancedWalkForwardConfig) -> dict[str, Any]:
+def _config_fields(
+    config: AdvancedWalkForwardConfig,
+    *,
+    target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
+) -> dict[str, Any]:
     opt = config.optimization
-    return {
+    fields = {
         "split_mode": config.split_mode,
         "split_frequency": config.split_frequency,
         "window_mode": config.window_mode,
         "train_window": config.train_window,
         "min_train_bars": config.min_train_bars,
         "min_test_bars": config.min_test_bars,
-        "target_mode": "pct_equity",
+        "target_mode": target_mode,
         "fill_value": config.fill_value,
         "optimization_mode": config.optimization_mode.value,
         "optimization_schedule": config.optimization_schedule.value,
         "fold_boundary_position_policy": config.fold_boundary_position_policy,
         "optuna_trials": config.optuna_trials,
+        "metadata": {"lifecycle_ledger_max_rows": LIFECYCLE_LEDGER_MAX_ROWS},
         "optuna_early_stopping": config.optuna_early_stopping,
         "random_seed": config.random_seed,
         "decay_lambda": opt.decay_lambda,
@@ -105,6 +130,15 @@ def _config_fields(config: AdvancedWalkForwardConfig) -> dict[str, Any]:
         "trade_penalty_factor": opt.trade_penalty_factor,
         "use_numba": opt.use_numba,
     }
+    # Emit only explicit temporal v2 values. V1's config bytes/defaults remain
+    # unchanged; an admitted non-zero guard must reach QuantBT, never a caption.
+    for name in ("label_horizon_bars", "purge_bars", "embargo_bars"):
+        if name in config.model_fields_set or getattr(config, name):
+            fields[name] = getattr(config, name)
+    if config.inner_split_frequency is not None:
+        for name in ("inner_split_frequency", "inner_window_mode", "inner_train_window", "inner_min_folds"):
+            fields[name] = getattr(config, name)
+    return fields
 
 
 class AdvancedWalkForwardRunner:
@@ -117,17 +151,17 @@ class AdvancedWalkForwardRunner:
         self._gateway = gateway
         self._artifacts = artifacts
 
-    def validate_capabilities(self) -> None:
-        """Matrix-driven gate: pct_equity must be a supported target mode."""
+    def validate_capabilities(self, target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity") -> None:
+        """Require the selected target mode in the pinned engine support matrix."""
         rows = self._gateway.walkforward_capabilities()
         supported = {
             str(row.get("target_mode"))
             for row in rows
             if str(row.get("status")).strip().lower() == "supported"
         }
-        if "pct_equity" not in supported:
+        if target_mode not in supported:
             raise AdvancedWalkForwardError(
-                "pct_equity is not a supported walk-forward target mode in this QuantBT build"
+                f"{target_mode} is not a supported walk-forward target mode in this QuantBT build"
             )
 
     def run(
@@ -136,6 +170,12 @@ class AdvancedWalkForwardRunner:
         market: PreparedMarketData,
         run_id: str,
         progress: Callable[[str], None] | None = None,
+        *,
+        target_mode: Literal["pct_equity", "signal_notional"] = "pct_equity",
+        strategy_callable: Callable[..., Any] | None = None,
+        retain_mode_evidence: bool = False,
+        retain_window_execution: bool = False,
+        strategy_specification: Any | None = None,
     ) -> dict[str, Any]:
         if request.protocol != RunProtocol.ADVANCED_WALK_FORWARD:
             raise AdvancedWalkForwardError("AdvancedWalkForwardRunner requires protocol=advanced_walk_forward")
@@ -146,14 +186,22 @@ class AdvancedWalkForwardRunner:
             if progress is not None:
                 progress(name)
 
-        self.validate_capabilities()
+        if request.execution.target_mode != target_mode:
+            raise AdvancedWalkForwardError("requested execution target mode does not match the server-selected WFO adapter")
+        self.validate_capabilities(target_mode)
         config = request.calibration
         active_market = slice_market_range(
             market,
             start=config.data_start,
             end_exclusive=config.data_end_exclusive,
         )
-        fields = _config_fields(config)
+        fields = _config_fields(config, target_mode=target_mode)
+        if retain_mode_evidence:
+            # Only bounded FULL-04 recipes opt into the public native audit.
+            # No candidate replay or additional legacy-profile memory cost.
+            fields["metadata"].update(research_retention="full_trial_ledger",
+                research_audit_chunk_rows=256, research_audit_max_chunks=64,
+                research_audit_max_materialized_frames=1)
         self._gateway.validate_advanced_walkforward(config_fields=fields)
         wf_config = self._gateway.build_advanced_walkforward_config(config_fields=fields)
 
@@ -175,7 +223,7 @@ class AdvancedWalkForwardRunner:
         started_at = _utc_now_iso()
         stage("OPTIMIZING_IS")
         endpoint, wf = self._gateway.run_advanced_walkforward(
-            strategy_fn=_strategy_callable,
+            strategy_fn=_strategy_callable if strategy_callable is None else strategy_callable,
             data=active_market.frame,
             wf_config=wf_config,
             optimization_config=dict(fields),
@@ -184,11 +232,25 @@ class AdvancedWalkForwardRunner:
             ),
             fixed_params=fixed_params,
             account_kwargs=account_kwargs,
+            target_mode=target_mode,
         )
         completed_at = _utc_now_iso()
 
         self._write_wfo_artifacts(run_id, wf)
+        self._write_wfo_source_facts(run_id, wf, getattr(endpoint.result, "metadata", None))
+        if retain_mode_evidence:
+            self._write_mode_evidence(run_id, wf, endpoint)
         selected = _freeze_deployment_selection(wf, config)
+        if retain_mode_evidence:
+            selected["selection_target"] = _native_selection_target(wf.get("best_trial"))
+            if selected["selection_target"]["kind"] == "SYNTHETIC_CENTROID":
+                selected["native_trial_id"] = selected["trial_id"]
+                selected["trial_id"] = None
+            if config.optimization_schedule == OptimizationSchedule.PER_FOLD_CAUSAL:
+                table = wf.get("fold_selection_table")
+                if not isinstance(table, pd.DataFrame) or table.empty:
+                    raise AdvancedWalkForwardError("causal source did not publish per-fold selection")
+                selected.update(scope="LAST_FOLD_DEPLOYMENT", fold_id=str(int(table.iloc[-1]["fold_id"])))
         self._artifacts.write_json(
             run_id,
             "selection/selected_params.json",
@@ -204,8 +266,31 @@ class AdvancedWalkForwardRunner:
             endpoint, trading_days=int(config.optimization.scoring_trading_days)
         )
         result = endpoint.result
+        from portal_api.services.research_retained_analytics import retained_analytics
+
+        # Source-time calculation inside the confined writer, never on GET.
+        self._artifacts.write_json(
+            run_id, "wfo/retained_analytics.v1.json",
+            with_portal_provenance("retained_analytics.v1.json", retained_analytics(result=result, mode="WFO")),
+        )
+        from portal_api.services.research_portal_analytics import MAX_BLOCK_BYTES, portal_analytics_v2
+        self._artifacts.write_json(
+            run_id, "wfo/retained_analytics.v2.json",
+            with_portal_provenance("retained_analytics.v2.json", portal_analytics_v2(
+                result=result, mode="WFO", market_close=active_market.frame["close"],
+                benchmark_locator=f"P08.snapshot:{active_market.content_hash}:{request.symbol}:{request.timeframe}:close:OOS",
+                # P05 replaces OOS presentation labels with longer FULL_SAMPLE
+                # labels. Reserve their bounded size, never widen the16KiB DTO.
+                maximum_block_bytes=MAX_BLOCK_BYTES - 1024
+                    if config.optimization_mode == OptimizationMode.MODE_5_FULL_ROBUST else MAX_BLOCK_BYTES,
+            )),
+        )
         series = _stitched_series(active_market.frame, result)
         self._artifacts.write_frame(run_id, "series/stitched.parquet", series)
+        self._write_account_ledger(run_id, active_market.frame, result, wf)
+        if retain_window_execution and config.optimization_mode != OptimizationMode.MODE_5_FULL_ROBUST:
+            self._write_training_diagnostics(run_id, market.frame, wf, account_kwargs, target_mode,
+                _strategy_callable if strategy_callable is None else strategy_callable)
         non_finite: list[str] = []
         clean_metrics = _sanitize({"stitched": metrics}, non_finite=non_finite)
         warnings = [f"non-finite metric field: {path}" for path in non_finite]
@@ -226,7 +311,9 @@ class AdvancedWalkForwardRunner:
         )
         # Parity with the three-window runner: strategy.json feeds the audit
         # endpoint, which 404s without it (v0.1.1 bugfix).
-        spec = StrategyRegistry().get(request.strategy_id).specification
+        if strategy_specification is not None and (strategy_callable is None or strategy_specification.strategy_id != request.strategy_id):
+            raise AdvancedWalkForwardError("Imported strategy specification requires its confined callable and exact identity")
+        spec = strategy_specification if strategy_specification is not None else StrategyRegistry().get(request.strategy_id).specification
         self._artifacts.write_json(
             run_id,
             "strategy.json",
@@ -251,6 +338,7 @@ class AdvancedWalkForwardRunner:
                     "analysis_content_hash": active_market.content_hash,
                     "config_hash": request.config_hash(),
                     "random_seed": config.random_seed,
+                    "target_mode": target_mode,
                     "started_at": started_at,
                     "completed_at": completed_at,
                     "warnings": warnings,
@@ -268,6 +356,94 @@ class AdvancedWalkForwardRunner:
             "params_semantics": wf.get("params_semantics"),
         }
 
+    def _write_training_diagnostics(self, run_id, history, wf, account_kwargs, target_mode, strategy):
+        """Post-selection diagnostic accounts, never another search or OOS path.
+
+        Exact engine fold boundaries and params_by_fold are used. Aggregate
+        custody is bounded; omitted oversized training accounts remain typed.
+        Public QuantBT accounting, not a Portal PnL implementation.
+        """
+        table = wf.get("fold_table")
+        if not isinstance(table, pd.DataFrame):
+            return
+        from types import SimpleNamespace
+        remaining = 190_000 - len(history)  # reserve full OOS + analytics + finite journal
+        disclosure = {}
+        for _, source in table.iterrows():
+            fold_id = int(source["fold_id"])
+            params = _training_params_for_fold(wf, fold_id)
+            start, end = pd.Timestamp(source["train_start"]), pd.Timestamp(source["train_end"])
+            frame = history.loc[(history.index >= start) & (history.index <= end)]
+            if not isinstance(params, Mapping) or not 2 <= len(frame) <= remaining:
+                disclosure[str(fold_id)] = "SELECTED_FOLD_PARAMETERS_NOT_PUBLISHED" if not isinstance(params, Mapping) \
+                    else "TRAINING_WINDOW_TOO_FEW_OBSERVATIONS" if len(frame) < 2 else "TRAINING_DIAGNOSTIC_RETENTION_BUDGET_EXCEEDED"
+                continue  # no sample promoted to a complete source account
+            fold = SimpleNamespace(**source.to_dict())
+            # Same engine scoring-slice convention as optimization. The
+            # confined strategy closure supplies its real predecessor warmup;
+            # passing the warmup tape itself would make that closure seek
+            # predecessors before the beginning of its source history.
+            output = strategy(frame, params, frame.index, frame.index, fold)
+            signal = output["pos_weight"] if isinstance(output, pd.DataFrame) else output
+            if not isinstance(signal, pd.Series) or signal.reindex(frame.index).isna().any():
+                raise AdvancedWalkForwardError("training diagnostic requires an exact finite source signal")
+            endpoint = self._gateway.run_frozen_replay(evaluation_frame=frame, signal=signal.reindex(frame.index),
+                account_kwargs=account_kwargs, target_mode=target_mode)
+            result = endpoint.result
+            if len(result.positions.columns) != 1:
+                raise AdvancedWalkForwardError("training diagnostic requires its actual single-symbol account")
+            series = frame[["open", "high", "low", "close", "volume"]].copy()
+            series["signal_target"] = signal.reindex(frame.index)
+            series["equity"] = result.equity.reindex(frame.index)
+            series["returns"] = result.returns.reindex(frame.index)
+            series["accepted_position"] = result.positions.iloc[:, 0].reindex(frame.index)
+            series["drawdown"] = series.equity / series.equity.cummax() - 1
+            self._artifacts.write_frame(run_id, f"series/training-{fold_id}.parquet", series)
+            remaining -= len(frame)
+        self._artifacts.write_json(run_id, "series/training-disclosure.v1.json", {"schema_version":"research.training-disclosure.v1", "absences":disclosure})
+
+    def _write_mode_evidence(self, run_id: str, wf: Mapping[str, Any], endpoint: Any) -> None:
+        """Retain bounded native mode evidence; never reconstruct methodology."""
+        audit = getattr(endpoint, "research_audit", None)
+        if audit is None or not callable(getattr(audit, "to_pandas", None)):
+            raise AdvancedWalkForwardError("FULL-04 requires the native public research audit")
+        from portal_api.services.three_window_runner import _structured_json_cell
+        tables: dict[str, dict[str, Any]] = {}
+        total = 0
+        for name in ("trials", "analysis", "evaluations", "selection", "objective_components"):
+            frame = audit.to_pandas(name)
+            if not isinstance(frame, pd.DataFrame) or len(frame) > 4096:
+                raise AdvancedWalkForwardError("FULL-04 native audit exceeds its table row bound")
+            total += len(frame)
+            if total > 8192:
+                raise AdvancedWalkForwardError("FULL-04 native audit exceeds its total row bound")
+            # Columnar custody, not large JSON carried through P05 ingress.
+            # Preserve nested native values as canonical structured cells.
+            encoded = frame.copy()
+            for column in encoded.columns:
+                if encoded[column].map(lambda value: isinstance(value, (Mapping, list, tuple))).any():
+                    encoded[column] = encoded[column].map(_structured_json_cell)
+            relative = f"wfo/mode_audit_{name}.v1.parquet"
+            self._artifacts.write_frame(run_id, relative, encoded)
+            path = self._artifacts.run_directory(run_id) / relative
+            tables[name] = {"path": relative, "rows": len(frame),
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
+        document = with_portal_provenance("mode_evidence.v1.json", canonicalize(_sanitize({
+            "schema_version": "portal.wfo-mode-evidence.v1",
+            "source": "QuantBT 1.1.1 public research_audit and walk_forward metadata",
+            "optimization_mode": wf.get("optimization_mode"),
+            "optimization_schedule": wf.get("optimization_schedule"),
+            "selection_target": _native_selection_target(wf.get("best_trial")),
+            "best_trial": wf.get("best_trial"),
+            "source_tables": tables,
+            "row_counts": {name: table["rows"] for name, table in tables.items()},
+            "bounds": {"table_rows": 4096, "total_rows": 8192, "bytes": 256 * 1024},
+            "audit_summary": audit.metadata(),
+        })))
+        if len(json.dumps(document, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")) > 256 * 1024:
+            raise AdvancedWalkForwardError("FULL-04 native mode evidence exceeds its byte bound")
+        self._artifacts.write_json(run_id, "wfo/mode_evidence.v1.json", document)
+
     def _write_wfo_artifacts(self, run_id: str, wf: Mapping[str, Any]) -> None:
         from portal_api.services.three_window_runner import _flatten_frame
 
@@ -275,17 +451,21 @@ class AdvancedWalkForwardRunner:
             ("folds", "fold_table"),
             ("fold_selection", "fold_selection_table"),
             ("fold_boundary", "fold_boundary_table"),
+            ("inner_folds", "inner_fold_table"),
         ):
             table = wf.get(key)
             if isinstance(table, pd.DataFrame) and not table.empty:
-                self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", table)
+                if name == "folds":
+                    self._write_compatible_fold_tables(run_id, table)
+                else:
+                    self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", table)
         params_by_fold = wf.get("params_by_fold")
         if params_by_fold:
             self._artifacts.write_json(
                 run_id,
                 "wfo/params_by_fold.json",
                 with_portal_provenance(
-                    "params_by_fold.json", canonicalize(params_by_fold)
+                    "params_by_fold.json", canonicalize({str(fold_id): params for fold_id, params in params_by_fold.items()})
                 ),
             )
         for name, key in (("trials", "trial_table"), ("candidates", "candidate_table")):
@@ -295,7 +475,306 @@ class AdvancedWalkForwardRunner:
                     from portal_api.services.three_window_runner import _search_trials_only
 
                     table = _search_trials_only(table)
+                    if wf.get("optimization_mode") in {"mode_2_sbb", "mode_3_flat_minima", "mode_4_is_only_robust", "mode_5_full_robust"}:
+                        # Native candidate replays may add centroid -1 rows.
+                        # They are evaluations, not sampled Optuna identities.
+                        table = _native_optuna_trials(table)
                 self._artifacts.write_frame(run_id, f"wfo/{name}.parquet", _flatten_frame(table))
+
+    def _write_wfo_source_facts(
+        self,
+        run_id: str,
+        wf: Mapping[str, Any],
+        account_metadata: Mapping[str, Any] | None,
+        *, engine_operation: str = "walk_forward",
+    ) -> None:
+        """Retain two small, additive QuantBT fact documents (W3, CG-P13-07/08).
+
+        ``wfo/selected_fold_metrics.v1.json`` keeps the per-fold score rows
+        QuantBT computed for the *selected* parameter set (``best_trial``);
+        the compact trial ledger drops them.  ``wfo/source_contract.v1.json``
+        keeps the claim, temporal-guard, search and execution-contract facts
+        QuantBT published for this run, verbatim.  Neither replaces an
+        existing artifact, and no value is inferred: a key QuantBT did not
+        publish is simply absent.
+        """
+
+        best = wf.get("best_trial")
+        fold_metrics = best.get("fold_metrics") if isinstance(best, Mapping) else None
+        if isinstance(fold_metrics, list) and fold_metrics:
+            self._artifacts.write_json(
+                run_id,
+                "wfo/selected_fold_metrics.v1.json",
+                with_portal_provenance(
+                    "selected_fold_metrics.v1.json",
+                    canonicalize({
+                        "schema_version": "portal.wfo-selected-fold-metrics.v1",
+                        "source": "QuantBT walk_forward best_trial.fold_metrics",
+                        "trial_id": _sanitize(best.get("trial_id")),
+                        "fold_metrics": [
+                            _sanitize({str(key): value for key, value in row.items()})
+                            for row in fold_metrics
+                            if isinstance(row, Mapping)
+                        ],
+                    }),
+                ),
+            )
+        wf_keys = (
+            "validation_claim",
+            "causality_claim",
+            "chronological_validation_claim",
+            "oos_used_for_selection",
+            "full_sample_used_for_selection",
+            "params_semantics",
+            "causality_schedule_v2",
+            "signal_causality_scope",
+            "optimization_mode",
+            "optimization_schedule",
+            "label_horizon_bars",
+            "purge_bars",
+            "embargo_bars",
+            "warmup_policy",
+            "warmup_bars",
+            "inner_validation",
+            "fold_account_policy",
+            "fold_boundary_position_policy",
+            "account_execution",
+            "n_folds",
+            "n_studies",
+            "optuna_trials_scope",
+            "optuna_trials_configured_per_study",
+            "n_optuna_trial_rows",
+            "trial_ledger_mode",
+            "full_trial_metrics_retained",
+            "top_is_fraction",
+            "top_is_k",
+            "candidate_selection_metric",
+            "scoring_backend",
+            "min_trades_per_year",
+            "trade_penalty_factor",
+        )
+        if wf.get("optimization_mode") in {"mode_2_sbb", "mode_3_flat_minima", "mode_4_is_only_robust", "mode_5_full_robust"}:
+            wf_keys += ("sbb_simulation", "sbb_samples", "sbb_block_length",
+                "is_subperiods", "plateau_quantile", "plateau_median_weight",
+                "plateau_std_penalty", "plateau_size_bonus", "q25_weight",
+                "dispersion_penalty", "temporal_weight", "plateau_weight")
+        walk_forward = {key: _sanitize(wf.get(key)) for key in wf_keys if key in wf}
+        native = wf.get("native_prepared_wfo")
+        if isinstance(native, Mapping):
+            walk_forward["native_prepared_wfo"] = _sanitize({
+                key: native.get(key)
+                for key in ("requested_policy", "resolved_policy", "execution_clock", "reason")
+                if key in native
+            })
+        account: dict[str, Any] = {}
+        if isinstance(account_metadata, Mapping):
+            for key in ("backend", "engine_id", "target_runtime", "kernel_version", "signal_phase", "fill_phase"):
+                if key in account_metadata:
+                    account[key] = _sanitize(account_metadata.get(key))
+            contract = account_metadata.get("execution_contract")
+            if isinstance(contract, Mapping):
+                account["execution_contract"] = _sanitize(dict(contract))
+        self._artifacts.write_json(
+            run_id,
+            "wfo/source_contract.v1.json",
+            with_portal_provenance(
+                "source_contract.v1.json",
+                canonicalize({
+                    "schema_version": "portal.wfo-source-contract.v1",
+                    "source": f"QuantBT {engine_operation} metadata and final account metadata",
+                    **({"engine_operation": engine_operation} if engine_operation != "walk_forward" else {}),
+                    "walk_forward": walk_forward,
+                    "final_account": account,
+                }),
+            ),
+        )
+
+    def _write_account_ledger(
+        self,
+        run_id: str,
+        market_frame: pd.DataFrame,
+        result: Any,
+        wf: Mapping[str, Any],
+    ) -> None:
+        """Retain the final account's per-bar cost/turnover series (W5b, P17).
+
+        ``BacktestResultV2`` publishes ``fees``, ``funding`` and the
+        ``diagnostics`` frame (turnover, rejected orders, reject code) for
+        every bar of the stitched account, plus order/fill/trade tuples. On the
+        ``close_target_v2`` route those tuples are empty — the engine rebalances
+        a target at the bar close and emits no order or fill object — so this
+        artifact records the counts it saw instead of inventing records.
+
+        Two additive, versioned files; ``series/stitched.parquet`` keeps its
+        exact v1 shape. Nothing here is derived: every column is a QuantBT
+        series reindexed to the analysed market bars.
+        """
+
+        index = market_frame.index
+        ledger = pd.DataFrame(index=index)
+
+        def series(value: Any) -> pd.Series | None:
+            return value if isinstance(value, pd.Series) and len(value) else None
+
+        fees = series(getattr(result, "fees", None))
+        funding = series(getattr(result, "funding", None))
+        diagnostics = getattr(result, "diagnostics", None)
+        if fees is not None:
+            ledger["fee"] = fees.reindex(index).astype(float)
+        if funding is not None:
+            ledger["funding"] = funding.reindex(index).astype(float)
+        if isinstance(diagnostics, pd.DataFrame) and not diagnostics.empty:
+            for column in ("turnover", "rejected_orders", "reject_code"):
+                if column in diagnostics.columns:
+                    ledger[column] = diagnostics[column].reindex(index)
+        if len(ledger.columns):
+            self._artifacts.write_frame(run_id, "series/account_ledger.v1.parquet", ledger)
+
+        # P17-T14: QuantBT's own strategy-isolation audit, one row per child
+        # strategy instance (candidate × fold × context), verbatim. Written
+        # only when the engine published it; nothing is derived here. Legacy
+        # pct-equity results may omit per-bar fee/diagnostics series. Lifecycle
+        # evidence is independent of that optional accounting ledger.
+        lifecycle = wf.get("strategy_lifecycle_table")
+        if isinstance(lifecycle, pd.DataFrame) and not lifecycle.empty:
+            self._artifacts.write_frame(run_id, "wfo/strategy_lifecycle.v1.parquet", lifecycle.reset_index(drop=True))
+            self._artifacts.write_json(
+                run_id,
+                "wfo/strategy_lifecycle_contract.v1.json",
+                with_portal_provenance("strategy_lifecycle_contract.v1.json", canonicalize({
+                    "schema_version": "portal.wfo-strategy-lifecycle-contract.v1",
+                    "source": "QuantBT walk_forward strategy_lifecycle_table",
+                    "policy": _sanitize(wf.get("strategy_lifecycle_policy")),
+                    "records_dropped": _sanitize(wf.get("strategy_lifecycle_records_dropped")),
+                    "rows": int(len(lifecycle)),
+                })),
+            )
+
+        metadata = getattr(result, "metadata", None)
+        metadata = metadata if isinstance(metadata, Mapping) else {}
+        run_config = metadata.get("run_config") if isinstance(metadata.get("run_config"), Mapping) else {}
+        execution = run_config.get("execution") if isinstance(run_config.get("execution"), Mapping) else {}
+        account = run_config.get("account") if isinstance(run_config.get("account"), Mapping) else {}
+        plan = wf.get("account_execution_plan")
+        boundary_events = []
+        if isinstance(plan, Mapping) and isinstance(plan.get("boundary_events"), (list, tuple)):
+            for event in plan["boundary_events"]:
+                if isinstance(event, Mapping):
+                    boundary_events.append(_sanitize({
+                        key: event.get(key)
+                        for key in (
+                            "previous_fold_id", "fold_id", "boundary_timestamp",
+                            "next_test_start", "gap_bars", "policy", "event",
+                        )
+                        if key in event
+                    }))
+        contract = {
+            "schema_version": "portal.wfo-account-contract.v1",
+            "source": "QuantBT walk_forward final account result (BacktestResultV2) and account_execution_plan",
+            # What the result object actually carried, counted — not assumed.
+            "orders_published": len(result.orders or ()) if hasattr(result, "orders") else None,
+            "fills_published": len(result.fills or ()) if hasattr(result, "fills") else None,
+            "trades_published": len(result.trades or ()) if hasattr(result, "trades") else None,
+            "account_execution_plan": None if not isinstance(plan, Mapping) else _sanitize({
+                "schema": plan.get("schema"),
+                "policy": plan.get("policy"),
+                "execution_mode": plan.get("execution_mode"),
+                "boundary_events": boundary_events,
+            }),
+        }
+        for key in (
+            "orders_count", "fills_count", "target_intent_kind", "first_bar_target_policy",
+            "intrabar_exit_model", "slippage_bps", "fee_rate_oneway", "use_funding",
+        ):
+            if key in metadata:
+                contract[key] = _sanitize(metadata.get(key))
+        for key in ("fill_price_policy", "same_bar_policy", "allow_partial_fill"):
+            if key in execution:
+                contract[key] = _sanitize(execution.get(key))
+        for key in ("oms_mode", "margin_mode"):
+            if key in account:
+                contract[key] = _sanitize(account.get(key))
+        for key in ("report_level", "portfolio_mode"):
+            if key in run_config:
+                contract[key] = _sanitize(run_config.get(key))
+        self._artifacts.write_json(
+            run_id,
+            "wfo/account_contract.v1.json",
+            with_portal_provenance("account_contract.v1.json", canonicalize(contract)),
+        )
+
+    def _write_compatible_fold_tables(self, run_id: str, table: pd.DataFrame) -> None:
+        """Preserve the v1 consumer table across a QuantBT metadata expansion.
+
+        QuantBT 1.1.1 adds useful fold context (warm-up/purge/embargo, etc.).
+        Existing Portal readers contractually consume the seven v1 columns, so
+        silently widening that parquet shape would be a breaking change.  The
+        stable table remains exact; additive 1.1.1 fields are retained in a
+        separately versioned extension artifact for a later admitted reader.
+        """
+        missing = [
+            column for column in FOLD_TABLE_V1_COLUMNS if column not in table.columns
+        ]
+        if missing:
+            raise AdvancedWalkForwardError(
+                "QuantBT fold table is missing required v1 columns: " + ", ".join(missing)
+            )
+        stable = table.loc[:, list(FOLD_TABLE_V1_COLUMNS)].copy()
+        self._artifacts.write_frame(run_id, "wfo/folds.parquet", stable)
+        extension_columns = [
+            column for column in table.columns if column not in FOLD_TABLE_V1_COLUMNS
+        ]
+        if extension_columns:
+            extension = table.loc[:, ["fold_id", *extension_columns]].copy()
+            self._artifacts.write_frame(
+                run_id, "wfo/folds_extension.v1.parquet", extension
+            )
+
+
+def _native_selection_target(best: object) -> dict[str, Any]:
+    if not isinstance(best, Mapping):
+        raise AdvancedWalkForwardError("native mode has no selected parameter target")
+    trial_id = best.get("trial_id")
+    if type(trial_id) is not int or trial_id < -1:
+        raise AdvancedWalkForwardError("native mode selected target has an invalid trial identity")
+    metadata = best.get("selection_metadata")
+    metadata = metadata if isinstance(metadata, Mapping) else {}
+    if trial_id == -1 and metadata.get("selector") != "centroid":
+        raise AdvancedWalkForwardError("native synthetic target is not a declared centroid")
+    return {"kind": "SYNTHETIC_CENTROID" if trial_id == -1 else "OPTUNA_TRIAL",
+        "source_trial_id": None if trial_id == -1 else trial_id,
+        "native_trial_id": trial_id, "params": _sanitize(best.get("params")),
+        "selection_metadata": _sanitize(dict(metadata))}
+
+
+def _native_optuna_trials(table: pd.DataFrame) -> pd.DataFrame:
+    def sampled(row: pd.Series) -> bool:
+        trial_id = row.get("trial_id")
+        if isinstance(trial_id, bool) or not isinstance(trial_id, (int, float)) or trial_id < 0:
+            return False
+        metadata = row.get("selection_metadata")
+        return bool(row.get("pruned", False)) or (
+            isinstance(metadata, Mapping) and metadata.get("stage") in {"is_search", "sbb_search"})
+    return table.loc[table.apply(sampled, axis=1)].reset_index(drop=True)
+
+
+def _training_params_for_fold(wf: Mapping[str, Any], fold_id: int):
+    """Global binds the actual global selection; local binds only its own fold.
+
+    QuantBT intentionally publishes an empty params_by_fold for global WFO.
+    Never use the last-fold deployment selection as another local fold's input.
+    """
+    by_fold = wf.get("params_by_fold")
+    if isinstance(by_fold, Mapping):
+        params = by_fold.get(fold_id, by_fold.get(str(fold_id)))
+        if isinstance(params, Mapping) and params:
+            return params
+    best = wf.get("best_trial")
+    if wf.get("optimization_schedule") == "global" and isinstance(best, Mapping):
+        params = best.get("params")
+        if isinstance(params, Mapping) and params:
+            return params
+    return None
 
 
 def _freeze_deployment_selection(
@@ -306,7 +785,7 @@ def _freeze_deployment_selection(
         raise AdvancedWalkForwardError("walk-forward metadata has no selected trial params")
     params = {key: canonicalize(value) for key, value in best["params"].items()}
     semantics = wf.get("params_semantics") or "quantbt_declared"
-    return {
+    result = {
         "params": params,
         "trial_id": _sanitize(best.get("trial_id")),
         "objective": _sanitize(best.get("objective")),
@@ -328,6 +807,13 @@ def _freeze_deployment_selection(
             "capabilities": {"per_trial_selection_breakdown": False},
         },
     }
+    if config.optimization_schedule.value in {"per_fold_causal", "per_fold_decay"} and config.optimization_mode.value == "mode_1_decay":
+        table = wf.get("fold_selection_table")
+        if not isinstance(table, pd.DataFrame) or table.empty:
+            raise AdvancedWalkForwardError("per-fold source did not publish per-fold selection")
+        result["scope"] = "LAST_FOLD_DEPLOYMENT"
+        result["fold_id"] = str(int(table.iloc[-1]["fold_id"]))
+    return result
 
 
 def _stitched_series(market_frame: pd.DataFrame, result) -> pd.DataFrame:

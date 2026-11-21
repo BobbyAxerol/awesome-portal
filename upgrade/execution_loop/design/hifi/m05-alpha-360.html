@@ -1,0 +1,197 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M05 Alpha 360 — HIFI</title><link rel="stylesheet" href="hifi.css">
+<style>
+[hidden]{display:none!important}
+.stack>*,.lay>*{min-width:0}
+.why{display:block;font-size:11px;line-height:14px;color:var(--ink-faint)}
+.back{font-size:12px;line-height:16px;display:inline-block;margin-bottom:4px}
+.meta{display:flex;flex-wrap:wrap;gap:2px 16px;margin-top:6px;font:400 12px/16px var(--font-mono);color:var(--ink-faint)}.meta b{font-weight:400;color:var(--ink-soft)}
+.mast .sub .stage{margin-right:12px}.stage.off{opacity:.45}
+.lay{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+.lay.open{grid-template-columns:minmax(0,1fr) 380px}
+@media(max-width:1100px){.lay.open{grid-template-columns:minmax(0,1fr)}}
+.drawer{width:auto;position:sticky;top:44px;max-height:calc(100vh - 56px);overflow:auto}
+@media(max-width:1100px){.drawer{position:static;max-height:none}}
+.morew{position:relative;display:inline-block}.menu{position:absolute;right:0;top:100%;background:var(--cell);border:1px solid var(--line-strong);z-index:6;min-width:180px;padding:4px 0}.menu a{display:block;padding:6px 16px;color:var(--ink-soft)}.menu a:hover{background:var(--panel);text-decoration:none;color:var(--ink)}
+.tabs{overflow-x:auto;overflow-y:visible}.tabs button{white-space:nowrap}
+.xs{display:flex;gap:2px;height:14px}.xs i{display:block;min-width:0}
+.xs .p{background:repeating-linear-gradient(135deg,var(--stage-paper) 0 2px,transparent 2px 6px);box-shadow:inset 0 0 0 1px var(--stage-paper)}
+.xs .s{background:repeating-linear-gradient(45deg,var(--stage-sandbox) 0 2px,transparent 2px 6px);box-shadow:inset 0 0 0 1px var(--stage-sandbox)}
+.xs .c{background:transparent;box-shadow:inset 0 0 0 2px var(--stage-live)}.xs .l{background:var(--stage-live)}
+.xs .g{background:var(--line)}
+.br{display:flex;gap:2px;margin-top:6px;font:400 11px/14px var(--font-mono);color:var(--ink-faint)}.br span{border-top:1px solid var(--line-strong);padding-top:3px;overflow:hidden;white-space:nowrap}.br .a{border-top-color:var(--ink);color:var(--ink-soft)}
+.facet{outline:1px dashed var(--line-strong);outline-offset:-1px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:24px}@media(max-width:660px){.duo{grid-template-columns:1fr}}
+.fig .l{font:500 11px/16px var(--font-sans);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}.fig .v{font:400 24px/32px var(--font-mono);margin:4px 0 6px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:24px}@media(max-width:900px){.two{grid-template-columns:1fr}}
+.states{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px}.states .tagu.on{background:var(--accent-soft);color:var(--accent)}
+.band{display:flex;gap:2px;height:8px;margin-top:12px;position:relative}.band i{display:block;background:var(--cell)}.band i.on{background:var(--accent)}
+.bl{display:flex;gap:2px;font:400 10px/14px var(--font-mono);color:var(--ink-faint);margin-top:2px;white-space:nowrap}
+.bar{height:6px;background:var(--cell);margin:4px 0 8px}.bar i{display:block;height:100%;background:var(--ink-faint)}
+.fut{outline:1px dashed var(--line-strong);outline-offset:-1px;padding:12px}
+.big{font:400 24px/32px var(--font-mono)}
+.drawer table td{white-space:normal}.drawer table td.n{white-space:nowrap}
+.tw table{min-width:520px}
+</style></head>
+<body data-state="healthy">
+<div class="strip"><span>Design preview · M05</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / <a href="#">Alpha Fleet</a> / <b>BTC-Trend v3</b></span></header>
+<nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a aria-current="page" href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+
+<div class="mast"><div>
+ <a class="back" href="#" title="?stage=live&portfolio=core&sort=-allocation">← Fleet results</a>
+ <h1>BTC-Trend <span class="tagu">v3</span> <span class="tagu good">ACTIVE</span></h1>
+ <div class="sub"><span class="stage live"><i></i>Live</span><span class="stage paper"><i></i>Paper</span><span class="stage canary off"><i></i>Canary</span><span class="stage sandbox off"><i></i>Sandbox</span></div>
+ <div class="meta"><span>Owner <b>asmith</b></span><span>Run <b>run_0412</b></span><span>Params <b>9c1e…b7</b></span><span>Evidence <b>rev 2</b></span></div></div>
+ <div class="ctrls">
+  <button class="btn" data-s="researcher" title="A manager approves it in Operations">Request archive</button>
+  <span class="seg" data-local="dom"><button data-v="rf" aria-pressed="true">Real-funded</button><button data-v="paper" aria-pressed="false">Paper</button><button data-v="sbx" aria-pressed="false">Sandbox</button></span>
+  <span class="seg" data-local="win"><button data-v="7" aria-pressed="false">7D</button><button data-v="30" aria-pressed="true">30D</button><button data-v="90" aria-pressed="false">90D</button></span>
+  <span class="fresh" data-s="healthy researcher"><i class="dot"></i>Fresh · 12:04Z</span><span class="fresh" data-s="sparse"><i class="dot warn"></i>Identity only</span></div></div>
+
+<div class="banner info" data-s="researcher">Your slice only. Peers and fund totals are hidden.</div>
+<div class="banner" data-s="sparse">Source not qualified. Figures are not available yet.</div>
+
+<div class="kpis" data-s="healthy researcher">
+ <div class="kpi"><div class="l">Net PnL</div><div class="v pos">+4,120.80 <small>USDT</small></div><div class="n">Actual · 10D of 30D</div></div>
+ <div class="kpi"><div class="l">Return</div><div class="v pos">+3.4%</div><div class="n">Modified Dietz</div></div>
+ <div class="kpi"><div class="l">Max drawdown</div><div class="v neg" id="kdd">−2.1%</div><div class="n">10D</div></div>
+ <div class="kpi"><div class="l">QBTS</div><div class="v na">Pending</div><div class="n">Policy not set · <a href="#" data-act="explain">Explain</a></div></div>
+ <div class="kpi"><div class="l">Regime fit</div><div class="v"><span class="tagu warn">INSUFFICIENT DATA</span></div><div class="n">Not part of score · <a href="#" data-goto="rf">Open</a></div></div></div>
+<div class="kpis" data-s="sparse">
+ <div class="kpi"><div class="l">Net PnL</div><div class="v na">Not available</div><div class="n">Source not qualified</div></div>
+ <div class="kpi"><div class="l">Return</div><div class="v na">Not available</div><div class="n">Method not certified</div></div>
+ <div class="kpi"><div class="l">Max drawdown</div><div class="v na">Not available</div><div class="n">No equity series</div></div>
+ <div class="kpi"><div class="l">QBTS</div><div class="v na">Pending</div><div class="n">Policy not set · <a href="#" data-act="explain">Explain</a></div></div>
+ <div class="kpi"><div class="l">Regime fit</div><div class="v na">Not available</div><div class="n">Source not qualified</div></div></div>
+
+<div>
+<div class="tabs" role="tablist" id="tabs">
+ <button role="tab" data-tab="perf" aria-selected="true">Performance</button><button role="tab" data-tab="dep" aria-selected="false">Deployments</button><button role="tab" data-tab="evi" aria-selected="false">Research Evidence</button><button role="tab" data-tab="rf" aria-selected="false">Regime Fit</button><button role="tab" data-tab="ord" aria-selected="false">Orders &amp; Fills</button><button role="tab" data-tab="act" aria-selected="false">Activity &amp; Decisions</button>
+ <span class="morew"><button id="morebtn" aria-haspopup="true">More ▾</button><span class="menu" id="menu" hidden><a href="#">Trade Replay</a><a href="#">Positions</a><a href="#">Risk</a><a href="#">Sessions</a><a href="#">Accounting</a><a href="#">Reconciliation</a><a href="#">Audit</a><a href="#">Insight Charts</a></span></span></div>
+
+<div class="lay" id="lay"><div class="stack">
+
+<!-- PERFORMANCE -->
+<div class="stack" data-pane="perf">
+ <div class="panel"><div class="ph"><span class="seg" data-local="fac"><button data-v="act" aria-pressed="true">Actual</button><button data-v="sim" aria-pressed="false">Forward simulated</button><button data-v="oos" aria-pressed="false">Research OOS</button></span><span class="r" data-s="healthy researcher">30D requested · 10D effective</span></div>
+  <div data-fac="act"><div class="chart" id="eq" data-s="healthy researcher"></div><div class="empty na" data-s="sparse">No series published</div>
+   <div class="cap" data-s="healthy researcher"><span>10D</span><span>1D</span><span>USDT</span><span>Real-funded</span><span>Canary → Live</span></div></div>
+  <div data-fac="sim" hidden><div class="tw"><table><thead><tr><th>Stage</th><th></th><th class="n">Days</th><th class="n">Return</th><th>Path</th></tr></thead><tbody>
+   <tr><td><span class="stage paper"><i></i>Paper</span></td><td><span class="tagu">SIMULATED</span></td><td class="n">40</td><td class="n pos">+5.9%</td><td><span id="sp1"></span></td></tr>
+   <tr><td><span class="stage sandbox"><i></i>Sandbox</span></td><td><span class="tagu">SIMULATED</span></td><td class="n">20</td><td class="n pos">+2.2%</td><td><span id="sp2"></span></td></tr></tbody></table></div><div class="cap"><span>Modified Dietz</span><span>Own path per stage</span></div></div>
+  <div data-fac="oos" hidden><table><tbody><tr><td>Bound run</td><td class="n">run_0412</td></tr><tr><td>OOS return</td><td class="n"><span class="na">Not available</span><span class="why">Series not published</span></td></tr><tr><td>Artifact available</td><td class="n">2026-07-02 09:00Z</td></tr></tbody></table></div></div>
+
+ <div class="panel"><div class="ph">Cross-stage <span class="r">Paper → Sandbox → Canary → Live</span></div>
+  <div data-s="healthy researcher"><div class="xs" role="img" aria-label="Paper 40 days, Sandbox 20, Canary 4, Live 6"><i class="p" style="flex:40"></i><i class="s" style="flex:20"></i><i class="c" style="flex:4"></i><i class="l" style="flex:6"></i></div>
+   <div class="br"><span style="flex:60">Simulated · 60D</span><span class="a" style="flex:10">Actual · 10D</span></div>
+   <div class="tw" style="margin-top:12px"><table><thead><tr><th>Stage</th><th>Period (UTC)</th><th class="n">Days</th><th class="n">Return</th><th>Source</th></tr></thead><tbody>
+    <tr><td><span class="stage paper"><i></i>Paper</span></td><td class="mono">Aug 08 – Sep 17</td><td class="n">40</td><td class="n pos">+5.9%</td><td>Simulated fills</td></tr>
+    <tr><td><span class="stage sandbox"><i></i>Sandbox</span></td><td class="mono">Sep 17 – Oct 07</td><td class="n">20</td><td class="n pos">+2.2%</td><td>Venue testnet</td></tr>
+    <tr><td><span class="stage canary"><i></i>Canary</span></td><td class="mono">Oct 07 – Oct 11</td><td class="n">4</td><td class="n pos">+1.1%</td><td>Exchange fills</td></tr>
+    <tr><td><span class="stage live"><i></i>Live</span></td><td class="mono">Oct 11 – Oct 17</td><td class="n">6</td><td class="n pos">+2.3%</td><td>Exchange fills</td></tr></tbody></table></div>
+   <details><summary>Continuity rules</summary><div class="cap" style="display:block">Canary → Live keeps one account, sleeve and config, so the path is continuous. Paper monitor since Oct 12 is not on this line.</div></details></div>
+  <div class="na" data-s="sparse" style="padding:12px 0">Not available · source not qualified</div></div>
+
+ <div class="panel facet" data-s="healthy researcher"><div class="ph">Forward observation <span class="tagu warn">NOT ACTUAL TRACK RECORD</span></div>
+  <div class="duo"><div class="fig"><div class="l">Forward</div><div class="v">70D</div><div class="xs"><i class="p" style="flex:40"></i><i class="s" style="flex:20"></i><i class="l" style="flex:10"></i></div></div>
+   <div class="fig"><div class="l">Actual</div><div class="v">10D</div><div class="xs"><i class="g" style="flex:60"></i><i class="l" style="flex:10"></i></div></div></div>
+  <table style="margin-top:12px"><tbody><tr><td>Mixed return</td><td class="n"><span class="na">Not available</span><span class="why">Manifest not verified</span></td></tr><tr><td>Mixed score</td><td class="n"><span class="na">Not available</span><span class="why">Never in headline score</span></td></tr></tbody></table>
+  <details><summary>Manifest conditions</summary><div class="cap" style="display:block">Same version and params · one source per interval · no overlap or backfill · compatible grid, currency, costs.</div></details></div>
+
+ <div class="panel"><div class="ph">Contribution by venue <span class="r">USDT</span></div><div id="venue" data-s="healthy researcher"></div><div class="na" data-s="sparse">Not available</div></div>
+</div>
+
+<!-- DEPLOYMENTS -->
+<div class="panel" data-pane="dep" hidden><div class="tw"><table><thead><tr><th>Stage</th><th>Deployment</th><th>Account · portfolio</th><th>Runtime</th><th>Native profile</th><th>Dates (UTC)</th><th>Deployed by</th><th class="n">Receipts</th></tr></thead><tbody>
+ <tr><td><span class="stage live"><i></i>Live</span></td><td><a href="#">live-0192</a></td><td>Binance-02 sleeve · Core</td><td><i class="dot"></i> Running</td><td>USDT-M · hedge · cross</td><td class="mono">Oct 11 →</td><td><span data-s="healthy sparse">bjones</span><span class="na" data-s="researcher">Not available</span></td><td class="n">2</td></tr>
+ <tr><td><span class="stage paper"><i></i>Paper</span></td><td><a href="#">paper-0044</a></td><td>Paper-sim-01 · Core</td><td><i class="dot"></i> Running</td><td>Simulated</td><td class="mono">Oct 12 →</td><td>asmith</td><td class="n">1</td></tr>
+ <tr class="kid"><td><span class="stage canary"><i></i>Canary</span></td><td><a href="#">can-0007</a></td><td>Binance-02 sleeve · Core</td><td>Ended · promoted</td><td>USDT-M · hedge · cross</td><td class="mono">Oct 07 – Oct 11</td><td>bjones</td><td class="n">3</td></tr>
+ <tr class="kid"><td><span class="stage sandbox"><i></i>Sandbox</span></td><td><a href="#">sbx-0031</a></td><td>Testnet-01</td><td>Ended · promoted</td><td>Testnet</td><td class="mono">Sep 17 – Oct 07</td><td>asmith</td><td class="n">2</td></tr></tbody></table></div></div>
+
+<!-- EVIDENCE -->
+<div class="panel" data-pane="evi" hidden><table><tbody>
+ <tr><td>Bound run</td><td class="n">run_0412</td></tr><tr><td>Version</td><td class="n">av-0003</td></tr>
+ <tr><td>Params digest</td><td class="n">9c1e…b7 <span class="tagu good">MATCH</span></td></tr>
+ <tr><td>Parameter bundle</td><td class="n">bundle-b · 14 params</td></tr>
+ <tr><td>Evidence</td><td class="n">rev 1 original · rev 2 revised</td></tr>
+ <tr><td>Provenance</td><td class="n">IS · OOS · holdout</td></tr>
+ <tr><td>Artifact available</td><td class="n">2026-07-02 09:00Z</td></tr></tbody></table></div>
+
+<!-- REGIME FIT -->
+<div class="stack" data-pane="rf" hidden>
+ <div class="panel"><div class="ph">Regime fit <span class="r">Historical support · not a forecast</span></div>
+  <div class="states"><span class="tagu">SUPPORTED</span><span class="tagu">WEAK</span><span class="tagu">OUT OF SUPPORT</span><span class="tagu on" id="st-ins">INSUFFICIENT DATA</span><span class="tagu">STALE</span><span class="tagu" id="st-unb">UNBOUND</span></div>
+  <span class="seg" data-local="rfv"><button data-v="ins" aria-pressed="true">Insufficient data</button><button data-v="unb" aria-pressed="false">Unbound</button><button data-v="sup" aria-pressed="false">Supported · future</button></span>
+  <div data-rfv="ins" style="margin-top:12px"><div class="two"><table><tbody>
+   <tr><td>Volatility</td><td class="n"><span class="na">Not available</span><span class="why">Profile not published</span></td></tr>
+   <tr><td>Trend</td><td class="n"><span class="na">Not available</span><span class="why">Profile not published</span></td></tr>
+   <tr><td>Liquidity</td><td class="n"><span class="na">Not available</span><span class="why">Source insufficient</span></td></tr></tbody></table>
+   <table><thead><tr><th>Stage</th><th class="n">Outcome</th></tr></thead><tbody>
+   <tr><td>Research OOS</td><td class="n"><span class="na">Not available</span><span class="why">No matched windows</span></td></tr>
+   <tr><td>Paper</td><td class="n"><span class="na">Not available</span><span class="why">No matched windows</span></td></tr>
+   <tr><td>Sandbox</td><td class="n"><span class="na">Not available</span><span class="why">No matched windows</span></td></tr>
+   <tr><td>Live</td><td class="n"><span class="na">Not available</span><span class="why">No matched windows</span></td></tr></tbody></table></div></div>
+  <div data-rfv="unb" hidden style="margin-top:12px"><table><tbody><tr><td>Deployed digest</td><td class="n">77ab…e1</td></tr><tr><td>Bound run digest</td><td class="n">9c1e…b7</td></tr><tr><td>Result</td><td class="n"><span class="tagu bad">MISMATCH</span></td></tr><tr><td>Regime fit</td><td class="n"><span class="na">Not evaluated</span><span class="why">No exact run mapping</span></td></tr></tbody></table></div>
+  <div data-rfv="sup" hidden style="margin-top:12px"><div class="fut"><span class="tagu acc">FUTURE · ILLUSTRATION</span>
+   <div class="two" style="margin-top:12px"><table><tbody><tr><td>Volatility</td><td class="n">High · in range</td></tr><tr><td>Trend</td><td class="n">Up · in range</td></tr></tbody></table>
+   <table><thead><tr><th>Window</th><th class="n">Distance</th><th class="n">Episodes</th></tr></thead><tbody><tr><td>OOS · Mar 2025</td><td class="n">0.31</td><td class="n">4</td></tr><tr><td>Paper · Aug 2026</td><td class="n">0.44</td><td class="n">2</td></tr></tbody></table></div></div></div></div>
+ <div class="panel"><div class="ph">TradeState <span class="r">Engine fact</span></div><span class="tagu" style="background:var(--cell);color:var(--long)">LONG</span> <span class="why" style="display:inline;margin-left:8px">live-0192</span></div>
+</div>
+
+<!-- ORDERS -->
+<div class="panel" data-pane="ord" hidden><div class="tw"><table><thead><tr><th>Deployment</th><th>Venue order</th><th>Client ID</th><th>State</th><th class="n">Fees USDT</th><th></th></tr></thead><tbody>
+ <tr><td>live-0192</td><td class="mono">8830012945</td><td class="mono">c-0192-0771</td><td><i class="dot"></i> Filled</td><td class="n">1.84</td><td><a href="#">Open ↗</a></td></tr>
+ <tr><td>live-0192</td><td class="mono">8830012981</td><td class="mono">c-0192-0772</td><td><i class="dot warn"></i> Partial</td><td class="n">0.92</td><td><a href="#">Open ↗</a></td></tr>
+ <tr><td>live-0192</td><td class="mono">8830013004</td><td class="mono">c-0192-0773</td><td><i class="dot bad"></i> Unknown</td><td class="n"><span class="na">Not available</span></td><td><a href="#">Open ↗</a></td></tr></tbody></table></div></div>
+
+<!-- ACTIVITY -->
+<div class="panel" data-pane="act" hidden><div class="tw"><table><thead><tr><th>Time (UTC)</th><th>Event</th><th>Actor</th><th>Rev</th><th>Receipt</th></tr></thead><tbody>
+ <tr><td class="mono">Oct 11 09:00</td><td>Stage · Canary → Live</td><td>bjones</td><td class="mono">r4</td><td class="mono">rc-8812</td></tr>
+ <tr><td class="mono">Oct 09 14:20</td><td>Allocation · Core</td><td>bjones</td><td class="mono">r3</td><td class="mono">rc-8790</td></tr>
+ <tr><td class="mono">Oct 07 08:00</td><td>Stage · Sandbox → Canary</td><td>bjones</td><td class="mono">r2</td><td class="mono">rc-8745</td></tr></tbody></table></div></div>
+
+</div>
+
+<!-- SCORE DRAWER -->
+<aside class="drawer" id="drawer" hidden><div class="ph">Score <button class="btn" data-act="close">Close</button></div>
+ <span class="seg" data-local="sd"><button data-v="now" aria-pressed="true">Today</button><button data-v="fut" aria-pressed="false">Future layout</button></span>
+ <div data-sd="now" style="margin-top:12px">
+  <div style="display:flex;gap:12px;align-items:center"><span class="big na">Pending</span><span class="tagu warn">POLICY NOT SET</span></div>
+  <table style="margin-top:8px"><tbody>
+   <tr><td>QBTS</td><td class="n"><span class="na">Not available</span><span class="why">Policy not set</span></td></tr>
+   <tr><td>Contribution w × q</td><td class="n"><span class="na">Not available</span><span class="why" data-s="healthy sparse">Needs QBTS and weight</span><span class="why" data-s="researcher">Not shown to your role</span></td></tr>
+   <tr><td>Band</td><td class="n"><span class="na">No band</span><span class="why">No score</span></td></tr>
+   <tr><td>Coverage</td><td class="n"><span class="na">Not available</span><span class="why">No QBTS</span></td></tr>
+   <tr><td>Sample</td><td class="n"><span data-s="healthy researcher">10D actual</span><span class="na" data-s="sparse">Not available</span></td></tr></tbody></table>
+  <details><summary>P · R · B components</summary><table><tbody>
+   <tr><td>P · 0.45</td><td class="n na">Not available</td></tr><tr class="kid"><td>Excess return 0.70</td><td class="n na">Not available</td></tr><tr class="kid"><td>Period Sharpe 0.30</td><td class="n na">Not available</td></tr>
+   <tr><td>R · 0.30</td><td class="n na">Not available</td></tr><tr class="kid"><td>MDD 0.60</td><td class="n na">Not available</td></tr><tr class="kid"><td>ADD 0.40</td><td class="n na">Not available</td></tr>
+   <tr><td>B · 0.25</td><td class="n na">Not available</td></tr><tr class="kid"><td>Positive blocks 0.50</td><td class="n na">Not available</td></tr><tr class="kid"><td>Stress excess 0.50</td><td class="n na">Not available</td></tr></tbody></table></details>
+  <div class="ph" style="margin-top:16px;font-size:13px">Raw economics</div>
+  <table><tbody><tr><td>Net PnL</td><td class="n"><span data-s="healthy researcher">+4,120.80</span><span class="na" data-s="sparse">Not available</span></td></tr><tr><td>Max drawdown</td><td class="n"><span data-s="healthy researcher">−2.1%</span><span class="na" data-s="sparse">Not available</span></td></tr><tr><td>Fees + funding</td><td class="n"><span data-s="healthy researcher">612.40</span><span class="na" data-s="sparse">Not available</span></td></tr></tbody></table>
+  <div class="ph" style="margin-top:16px;font-size:13px">Policy</div>
+  <table><tbody><tr><td>Version</td><td class="n"><span class="na">Not available</span><span class="why">Not published</span></td></tr><tr><td>Calibration</td><td class="n"><span class="na">Not available</span></td></tr><tr><td>Window</td><td class="n"><span data-s="healthy researcher">30D req · 10D eff</span><span class="na" data-s="sparse">Not available</span></td></tr></tbody></table></div>
+ <div data-sd="fut" hidden style="margin-top:12px"><div class="fut"><span class="tagu acc">FUTURE · ILLUSTRATION</span>
+  <div style="display:flex;gap:12px;align-items:center;margin-top:12px"><span class="big">68.4</span><span class="tagu acc">FAIR</span><span class="tagu warn">PROVISIONAL</span></div>
+  <div class="band"><i style="flex:40"></i><i style="flex:20"></i><i class="on" style="flex:15"></i><i style="flex:15"></i><i style="flex:10"></i></div>
+  <div class="bl"><span style="flex:40">Weak</span><span style="flex:20">Neutral</span><span style="flex:15">Fair</span><span style="flex:15">Good</span><span style="flex:10;text-align:right">Very good</span></div>
+  <table style="margin-top:12px"><tbody><tr><td>P · 0.45</td><td class="n">72.0</td></tr><tr><td colspan="2" style="height:auto;padding:0"><div class="bar"><i style="width:72%"></i></div></td></tr><tr><td>R · 0.30</td><td class="n">68.0</td></tr><tr><td colspan="2" style="height:auto;padding:0"><div class="bar"><i style="width:68%"></i></div></td></tr><tr><td>B · 0.25</td><td class="n">62.4</td></tr><tr><td colspan="2" style="height:auto;padding:0"><div class="bar"><i style="width:62.4%"></i></div></td></tr>
+   <tr><td>Weight w</td><td class="n">0.12</td></tr><tr><td>Contribution w × q</td><td class="n">8.2</td></tr><tr><td>Coverage</td><td class="n">6 / 6</td></tr><tr><td>Policy</td><td class="n">v1.1 · CAL-XXXX</td></tr></tbody></table></div></div>
+</aside>
+</div></div>
+</div></main></div>
+<script src="hifi.js"></script>
+<script>
+function $(s,r){return (r||document).querySelector(s)}function $$(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))}
+function showGroup(attr,v){$$("["+attr+"]").forEach(function(e){e.hidden=e.getAttribute(attr)!==v})}
+function draw(){var h=$("#eq");if(h&&h.offsetParent){var r=equityChart(h,{mode:"pnl",n:11,data:[0,700,1500,2900,2200,1400,380,1600,2800,3600,4120.8],end:4120.8,base:120000,label:"Actual net PnL",h:230});var m=Math.min.apply(0,r.dd);$("#kdd").textContent="−"+Math.abs(m).toFixed(1)+"%"}
+ var v=$("#venue");if(v&&v.offsetParent)divBars(v,[{n:"Binance",v:4120}]);
+ var a=$("#sp1"),b=$("#sp2");if(a&&a.offsetParent){spark(a,[0,2,1,4,5,4,7,9,8,11],getComputedStyle(document.documentElement).getPropertyValue("--stage-paper"),96,20);spark(b,[0,1,3,2,4,6,5,7,8,9],getComputedStyle(document.documentElement).getPropertyValue("--stage-sandbox"),96,20)}}
+$("#tabs").addEventListener("click",function(e){var t=e.target.closest("[data-tab]");if(!t)return;$$("#tabs [data-tab]").forEach(function(x){x.setAttribute("aria-selected",x===t?"true":"false")});showGroup("data-pane",t.getAttribute("data-tab"));$("#menu").hidden=true;setTimeout(draw,0)});
+$("#morebtn").addEventListener("click",function(){var m=$("#menu");m.hidden=!m.hidden});
+document.addEventListener("click",function(e){if(!e.target.closest(".morew"))$("#menu").hidden=true;var g=e.target.closest("[data-goto]");if(g){e.preventDefault();$('[data-tab="'+g.getAttribute("data-goto")+'"]').click()}var x=e.target.closest("[data-act]");if(x){e.preventDefault();var d=$("#drawer"),l=$("#lay"),open=x.getAttribute("data-act")==="explain";d.hidden=!open;l.classList.toggle("open",open);setTimeout(draw,0)}});
+window.onseg=function(k,v){if(k==="fac"){showGroup("data-fac",v);setTimeout(draw,0)}if(k==="rfv"){showGroup("data-rfv",v);$("#st-ins").className="tagu"+(v==="ins"?" on":"");$("#st-unb").className="tagu"+(v==="unb"?" on":"")}if(k==="sd")showGroup("data-sd",v)};
+window.onctl=function(){setTimeout(draw,0)};draw();window.addEventListener("resize",draw);
+</script></body></html>

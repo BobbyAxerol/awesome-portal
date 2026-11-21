@@ -1,0 +1,2126 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Portal Research Report API",
+    "version": "1.4.0",
+    "description": "P18 same-origin immutable Research report and bounded reproducible JSON/CSV export. Report assembly reads only sealed P13--P17 Portal projections; no operation starts QuantBT, reads a worker/artifact path, opens a source data store, or exposes source cursors/credentials. Approval annotation is intentionally outside the frozen core. X2 (additive, 1.2.0): FrozenCoreV2 may carry `final_audit` (P18-T10: reused original vs linked child with source refs) and a failed/cancelled run is sealed as FrozenCoreFailedV1 (spec 09 T06). PARQUET stays unavailable (P18_CONTROL_API_HAS_NO_PINNED_PARQUET_WRITER) and ARCHIVE stays unavailable (P18_ARCHIVE_WOULD_EXPOSE_PRIVATE_P05_BYTES_AND_RAW_MARKET_ROWS)."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
+  "paths": {
+    "/api/v1/quantbt/runs/{runId}/report": {
+      "get": {
+        "operationId": "researchReportDetailGetV1",
+        "summary": "Read the latest sealed immutable report core for a run",
+        "description": "Known native execution runs without a sealed Report return 200 ReportUnavailable (NOT_PUBLISHED / NATIVE_REPORT_NOT_DELIVERED), authorized by the exact immutable execution-profile id and digest. Existing sealed Reports return ReportDetail unchanged. Unknown or foreign runs answer 404 RESEARCH_REPORT_NOT_FOUND. No engine call, seal, repair claim or export is made for native absence. Narrow schema_version before accessing frozen_core. Only export creation/download can answer 409.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "$ref": "#/components/parameters/IfNoneMatch"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sealed Report or typed native absence, with a private representation ETag.",
+            "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ReportEtag"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReportRead"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Exact authorized Report/absence representation remains current; authorization precedes revalidation."
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/quantbt/runs/{runId}/report/exports": {
+      "post": {
+        "operationId": "researchReportExportCreateV1",
+        "summary": "Create or return one durable bounded export job for the caller",
+        "description": "Requires same-origin CSRF/origin checks. A request persists a JSON/CSV transform job only; it does not rerun an engine or touch a source/artifact filesystem.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Durable queued/running/ready export job.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/quantbt/runs/{runId}/report/exports/{jobId}": {
+      "get": {
+        "operationId": "researchReportExportStatusGetV1",
+        "summary": "Read the caller-owned export job status",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          },
+          {
+            "$ref": "#/components/parameters/JobId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded job status; download link exists only at READY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportJob"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/quantbt/runs/{runId}/report/exports/{jobId}/download": {
+      "get": {
+        "operationId": "researchReportExportDownloadGetV1",
+        "summary": "Download one caller-owned completed bounded export",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RunId"
+          },
+          {
+            "$ref": "#/components/parameters/JobId"
+          },
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated JSON or CSV attachment; max 512 KiB and generated filename only.",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Content-Type-Options": {
+                "schema": {
+                  "const": "nosniff"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
+    "headers": {
+      "ReportEtag": {"description":"Quoted private validator of the authorized Report or typed absence representation. A native absence has p18a1, not a forged sealed-core p18r1 identity. Authorization precedes revalidation.","schema":{"type":"string","pattern":"^\"p18(?:r|a)1_[0-9a-f]{64}\"$"}}
+    },
+    "parameters": {
+      "RunId": {
+        "name": "runId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/RunId"
+        }
+      },
+      "JobId": {
+        "name": "jobId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/JobId"
+        }
+      },
+      "WorkspaceId": {
+        "name": "workspace_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/WorkspaceId"
+        }
+      },
+      "IfNoneMatch": {
+        "name": "If-None-Match",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "maxLength": 96
+        }
+      }
+    },
+    "responses": {
+      "Problem": {
+        "description": "Typed same-origin refusal. No source relation, cursor, worker/artifact path, source credentials or compute authority is disclosed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "NativeReport": {"type":"object","additionalProperties":false,"properties":{"schema_version":{"const":"research.native-report.v1"},"kind":{"type":"string","enum":["NATIVE_OPTIMIZED","NATIVE_FIXED"]},"execution":{"type":"object","additionalProperties":false,"properties":{"schema_version":{"const":"research.native-route-result.v1"},"execution_route":{"type":"string","enum":["intrabar_bracket","reactive","event_driven"]},"authority":{"const":"PINNED_QUANTBT_ACCOUNTING_NOT_PORTAL_PNL"},"input_protocol":{"type":"string","enum":["DELTA_CLOSE_BRACKET_INTENTS_V1","DELTA_CLOSE_STATEFUL_CALLBACK_V1","DELTA_CLOSE_ORDER_COMMANDS_V1","DELTA_CLOSE_LIMIT_OCO_COMMANDS_V1","DELTA_CLOSE_MULTICYCLE_LIMIT_OCO_COMMANDS_V1"]},"clock":{"type":"string","enum":["KNOWN_CLOSE_NEXT_BAR_INTRABAR","KNOWN_CLOSE_NEXT_BAR_CLOSE"]},"position_unit":{"const":"CONTRACT_QUANTITY"},"target_notional":{"const":"2000"},"fees":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED"]},"total":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"reason_code":{"anyOf":[{"type":"string","enum":["NATIVE_RESULT_SERIES_NOT_PUBLISHED"]},{"type":"null"}]}},"required":["state","total","reason_code"]},"funding":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED"]},"total":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"reason_code":{"anyOf":[{"type":"string","enum":["NATIVE_RESULT_SERIES_NOT_PUBLISHED"]},{"type":"null"}]}},"required":["state","total","reason_code"]},"cost_scope":{"const":"FULL_CHILD_TAPE"},"fills_count":{"type":"integer","minimum":0,"maximum":100000},"orders_count":{"anyOf":[{"type":"integer","minimum":0,"maximum":100000},{"type":"null"}]},"replay_authority":{"const":"RETAINED_ENGINE_AUDIT_ONLY_NOT_BROKER_EVENTS"},"optimization":{"type":"object","additionalProperties":false,"properties":{"schema_version":{"const":"research.native-optimization.v1"},"authority":{"const":"PINNED_QUANTBT_NATIVE_IS_SHARPE"},"scope":{"const":"P08_WARMUP_PLUS_IS_ONLY"},"objective_name":{"const":"sharpe"},"selection_method":{"const":"QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1"},"requested_trials":{"type":"integer","minimum":2,"maximum":400},"completed_trials":{"type":"integer","minimum":1,"maximum":400},"retained_trials":{"type":"integer","minimum":1,"maximum":400},"distinct_parameter_sets":{"type":"integer","minimum":1,"maximum":400},"selected_trial_number":{"type":"integer","minimum":0,"maximum":399},"selected_parameters":{"type":"object","propertyNames":{"type":"string"},"additionalProperties":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96}},"selected_objective":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"train_start_utc_ms":{"type":"integer","minimum":0},"train_end_exclusive_utc_ms":{"type":"integer","minimum":0},"holdout_used":{"const":false},"table_kind":{"const":"native_optimizer_trials"},"table_schema_version":{"const":"research.native-optimizer-trial-table.v1"},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"}},"required":["schema_version","authority","scope","objective_name","selection_method","requested_trials","completed_trials","retained_trials","distinct_parameter_sets","selected_trial_number","selected_parameters","selected_objective","train_start_utc_ms","train_end_exclusive_utc_ms","holdout_used","table_kind","table_schema_version","sha256"]}},"required":["schema_version","execution_route","authority","input_protocol","clock","position_unit","target_notional","fees","funding","cost_scope","fills_count","orders_count","replay_authority"]},"optimization":{"anyOf":[{"type":"object","additionalProperties":false,"properties":{"schema_version":{"const":"research.native-optimization.v1"},"authority":{"const":"PINNED_QUANTBT_NATIVE_IS_SHARPE"},"scope":{"const":"P08_WARMUP_PLUS_IS_ONLY"},"objective_name":{"const":"sharpe"},"selection_method":{"const":"QUANTBT_GENERIC_ROBUST_PLATEAU_NOT_SCALAR_WFO_V1"},"requested_trials":{"type":"integer","minimum":2,"maximum":400},"completed_trials":{"type":"integer","minimum":1,"maximum":400},"retained_trials":{"type":"integer","minimum":1,"maximum":400},"distinct_parameter_sets":{"type":"integer","minimum":1,"maximum":400},"selected_trial_number":{"type":"integer","minimum":0,"maximum":399},"selected_parameters":{"type":"object","propertyNames":{"type":"string"},"additionalProperties":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96}},"selected_objective":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"train_start_utc_ms":{"type":"integer","minimum":0},"train_end_exclusive_utc_ms":{"type":"integer","minimum":0},"holdout_used":{"const":false},"table_kind":{"const":"native_optimizer_trials"},"table_schema_version":{"const":"research.native-optimizer-trial-table.v1"},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"}},"required":["schema_version","authority","scope","objective_name","selection_method","requested_trials","completed_trials","retained_trials","distinct_parameter_sets","selected_trial_number","selected_parameters","selected_objective","train_start_utc_ms","train_end_exclusive_utc_ms","holdout_used","table_kind","table_schema_version","sha256"]},{"type":"null"}]},"freeze":{"anyOf":[{"type":"object","additionalProperties":false,"properties":{"schema_version":{"const":"research.native-freeze.v1"},"selection_evidence":{"anyOf":[{"type":"object","additionalProperties":false,"properties":{"selector":{"const":"robust_plateau"},"objective_index":{"const":0},"medoid_trial_number":{"type":"integer","minimum":0,"maximum":399},"cluster_center_trial":{"type":"integer","minimum":0,"maximum":399},"top_trials":{"type":"integer","minimum":1,"maximum":400},"feasible_trials":{"type":"integer","minimum":1,"maximum":400},"neighbor_count":{"type":"integer","minimum":1,"maximum":400},"min_neighbor_count":{"type":"integer","minimum":1,"maximum":400},"seed_consensus":{"type":"integer","minimum":0},"seed_consensus_count":{"type":"integer","minimum":0},"top_quantile":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"neighborhood_radius":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"plateau_score":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"median_objective":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"worst_objective":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"objective_std":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"param_names":{"type":"array","items":{"type":"string","pattern":"^[A-Za-z_][A-Za-z0-9_]{0,63}$"},"maxItems":32},"fallback_reasons":{"type":"array","items":{"type":"string","maxLength":160},"maxItems":16}},"required":["selector","objective_index","medoid_trial_number","cluster_center_trial","top_trials","feasible_trials","neighbor_count","min_neighbor_count","seed_consensus","seed_consensus_count","top_quantile","neighborhood_radius","plateau_score","median_objective","worst_objective","objective_std","param_names","fallback_reasons"]},{"type":"null"}]},"authority":{"const":"SEALED_NATIVE_SELECTED_PARAMETERS_NOT_SCALAR_WFO_CERTIFICATE"},"revision":{"type":"string","pattern":"^[a-f0-9]{64}$"},"selected_parameters":{"type":"object","propertyNames":{"type":"string"},"additionalProperties":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96}},"selected_parameters_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"selected_trial_number":{"type":"integer","minimum":0,"maximum":399},"selected_trial_ordinal":{"type":"integer","minimum":0,"maximum":400},"selected_trial_scope":{"const":"NATIVE_IS_STUDY"},"selected_objective":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"execution_profile":{"type":"object","additionalProperties":false,"properties":{"id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"},"digest":{"type":"string","pattern":"^[a-f0-9]{64}$"}},"required":["id","digest"]},"artifact":{"type":"object","additionalProperties":false,"properties":{"revision":{"type":"integer","minimum":0},"manifest_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_parts":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"ordinal":{"type":"integer","minimum":0},"sha256":{"type":"string","pattern":"^[a-f0-9]{64}$"},"rows":{"type":"integer","minimum":0},"bytes":{"type":"integer","minimum":0,"maximum":8388608}},"required":["ordinal","sha256","rows","bytes"]},"minItems":1,"maxItems":4},"source_table_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_table_digest_scope":{"const":"ORIGINAL_CHILD_PARQUET_BYTES_NOT_REWRITTEN_P05_PARTS"}},"required":["revision","manifest_digest","source_parts","source_table_digest","source_table_digest_scope"]},"integrity":{"type":"object","additionalProperties":false,"properties":{"state":{"const":"MATCH_AT_PREPARATION"},"verification_scope":{"const":"P05_MANIFEST_ALL_PARTS_AND_DOCUMENTS_AT_PREPARATION"},"checked_at_utc_ms":{"type":"integer","minimum":0},"current_bytes_rechecked":{"const":false},"selected_identity_match":{"const":true},"selected_parameter_digest_match":{"const":true}},"required":["state","verification_scope","checked_at_utc_ms","current_bytes_rechecked","selected_identity_match","selected_parameter_digest_match"]},"scalar_wfo_certificate":{"type":"object","additionalProperties":false,"properties":{"state":{"const":"NOT_APPLICABLE"},"reason_code":{"const":"NATIVE_PROTOCOL_IS_NOT_SCALAR_WFO"}},"required":["state","reason_code"]},"chronology":{"type":"object","additionalProperties":false,"properties":{"state":{"const":"NOT_PUBLISHED"},"reason_code":{"const":"NATIVE_SOURCE_DID_NOT_RETAIN_FREEZE_WALL_CLOCK_EVENTS"}},"required":["state","reason_code"]}},"required":["schema_version","authority","revision","selected_parameters","selected_parameters_digest","selected_trial_number","selected_trial_ordinal","selected_trial_scope","selected_objective","execution_profile","artifact","integrity","scalar_wfo_certificate","chronology"]},{"type":"null"}]},"population":{"anyOf":[{"type":"object","additionalProperties":false,"properties":{"total":{"type":"integer","minimum":1,"maximum":400},"digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"detail_operation":{"const":"researchSearchDetailGetV1"},"pagination":{"const":"NATIVE_CURSOR_200_ROW_BOUND"}},"required":["total","digest","detail_operation","pagination"]},{"type":"null"}]},"windows":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"window":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"availability":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string"},{"type":"null"}]}},"required":["state","reason_code"]},"analysis":{"anyOf":[{"type":"object","additionalProperties":false,"properties":{"schema_version":{"const":"research.window-analytics.v1"},"window":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"fold_id":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"},{"type":"null"}]},"basis":{"const":"ALL_TIME"},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"observation_count":{"type":"integer","minimum":2,"maximum":200000},"start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"end_exclusive_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"first_observed_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"last_observed_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"metrics":{"type":"object","additionalProperties":false,"properties":{"sharpe":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"sortino":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"cagr_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"profit_factor":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"long_hit_rate_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"short_hit_rate_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"volatility_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"skew":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"excess_kurtosis":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"beta":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"correlation":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"benchmark_return_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"max_drawdown_duration_days":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"sharpe_decay":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"exposure_long_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"exposure_short_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"exposure_flat_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"win_rate":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"payoff_ratio":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"average_hold_seconds":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"max_consecutive_losses":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"turnover_notional":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"return_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"max_drawdown_fraction":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]},"trade_count":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"value":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"origin":{"type":"string","enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"type":"string","enum":["IS","OOS","HOLDOUT","FULL_SAMPLE"]},"input_digest":{"type":"string","pattern":"^[a-f0-9]{64}$"},"source_ref":{"const":"FULL_RETAINED_WINDOW_ACCOUNT_V1"}},"required":["state","reason_code","value","origin","scope","input_digest","source_ref"]}},"required":["sharpe","sortino","cagr_fraction","profit_factor","long_hit_rate_fraction","short_hit_rate_fraction","volatility_fraction","skew","excess_kurtosis","beta","correlation","benchmark_return_fraction","max_drawdown_duration_days","sharpe_decay","exposure_long_fraction","exposure_short_fraction","exposure_flat_fraction","win_rate","payoff_ratio","average_hold_seconds","max_consecutive_losses","turnover_notional","return_fraction","max_drawdown_fraction","trade_count"]},"curves":{"type":"object","additionalProperties":false,"properties":{"sampling":{"type":"object","additionalProperties":false,"properties":{"source_observation_count":{"type":"integer","minimum":0,"maximum":200000},"emitted_point_count":{"type":"integer","minimum":0,"maximum":64},"method":{"const":"EXTREMA_BUCKET_V1"}},"required":["source_observation_count","emitted_point_count","method"]},"strategy_rebased_100":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"at_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"value":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96}},"required":["at_utc_ms","value"]},"maxItems":64},"benchmark_rebased_100":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"at_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"value":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96}},"required":["at_utc_ms","value"]},"maxItems":64},"drawdown_fraction":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"at_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"value":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96}},"required":["at_utc_ms","value"]},"maxItems":64}},"required":["sampling","strategy_rebased_100","benchmark_rebased_100","drawdown_fraction"]},"monthly_returns":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"origin":{"const":"PORTAL_DERIVED"},"includes_partial_months":{"const":true},"sampling":{"type":"string","enum":["FULL","TAIL_WINDOW_V1"]},"total_period_count":{"type":"integer","minimum":0,"maximum":200000},"omitted_transport_period_count":{"type":"integer","minimum":0,"maximum":200000},"definition_id":{"const":"WINDOW_MONTH_CLOSE_OVER_FIRST_WINDOW_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"},"values":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"month_start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"return_fraction":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"observation_count":{"type":"integer","minimum":0,"maximum":200000},"expected_observation_count":{"type":"integer","minimum":0,"maximum":200000},"partial":{"type":"boolean"},"basis":{"type":"string","enum":["FIRST_WINDOW_CLOSE","PREVIOUS_OBSERVED_MONTH_CLOSE"]},"base_at_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"close_at_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991}},"required":["month_start_utc_ms","return_fraction","observation_count","expected_observation_count","partial","basis","base_at_utc_ms","close_at_utc_ms"]},"maxItems":120}},"required":["state","reason_code","origin","includes_partial_months","sampling","total_period_count","omitted_transport_period_count","definition_id","values"]},"return_distribution":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"origin":{"const":"PORTAL_DERIVED"},"sampling":{"const":"UTC_DAY"},"observation_count":{"type":"integer","minimum":0,"maximum":200000},"bucket_basis":{"const":"ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"},"statistics_policy":{"type":"object","additionalProperties":false,"properties":{"quantile_method":{"const":"LINEAR_TYPE_7"},"probability":{"const":"0.95"},"risk_variable":{"const":"LOSS_FRACTION_NEGATIVE_RETURN"},"risk_sign":{"const":"SIGNED_LOSS_FRACTION"},"tail":{"const":"LOSS_GTE_VAR_INCLUSIVE"},"minimum_observations":{"const":2}},"required":["quantile_method","probability","risk_variable","risk_sign","tail","minimum_observations"]},"buckets":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"lower_inclusive":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"upper":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"upper_inclusive":{"type":"string","enum":["true","false"]},"count":{"type":"integer","minimum":0,"maximum":200000}},"required":["lower_inclusive","upper","upper_inclusive","count"]},"maxItems":12}},"required":["state","reason_code","origin","sampling","observation_count","bucket_basis","statistics_policy","buckets"]},"drawdown_episodes":{"type":"object","additionalProperties":false,"properties":{"state":{"type":"string","enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},{"type":"null"}]},"origin":{"const":"PORTAL_DERIVED"},"total":{"type":"integer","minimum":0,"maximum":200000},"open_episode_present":{"type":"boolean"},"longest_open":{"type":"boolean"},"values":{"type":"array","items":{"type":"object","additionalProperties":false,"properties":{"start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"trough_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"recovery_utc_ms":{"anyOf":[{"type":"integer","minimum":0,"maximum":9007199254740991},{"type":"null"}]},"depth_fraction":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"duration_seconds":{"type":"integer","minimum":0,"maximum":9007199254740991},"label":{"type":"string","maxLength":96}},"required":["start_utc_ms","trough_utc_ms","recovery_utc_ms","depth_fraction","duration_seconds"]},"maxItems":10}},"required":["state","reason_code","origin","total","open_episode_present","longest_open","values"]}},"required":["schema_version","window","fold_id","basis","input_digest","observation_count","start_utc_ms","end_exclusive_utc_ms","first_observed_utc_ms","last_observed_utc_ms","metrics","curves","monthly_returns","return_distribution","drawdown_episodes"]},{"type":"null"}]}},"required":["window","availability","analysis"]},"minItems":3,"maxItems":3},"authority":{"const":"RETAINED_NATIVE_ENGINE_ACCOUNT_AND_IS_OPTIMIZATION_NOT_BROKER_OR_SCALAR_WFO"}},"required":["schema_version","optimization","freeze","population","windows","authority"]},
+      "ReportRead": {"oneOf":[{"$ref":"#/components/schemas/ReportDetail"},{"$ref":"#/components/schemas/ReportUnavailable"}],"discriminator":{"propertyName":"schema_version","mapping":{"research.report-detail.v1":"#/components/schemas/ReportDetail","research.report-unavailable.v1":"#/components/schemas/ReportUnavailable"}},"description":"Narrow schema_version before reading frozen_core. A missing native Report is a typed 200, not an invented seal. Existing immutable Reports take precedence. Unknown/foreign runs remain 404; permissions and feature refusal remain unchanged."},
+      "ReportUnavailable": {"type":"object","additionalProperties":false,"required":["schema_version","read_authority","run_id","display_label","run_state","availability","execution_profile","as_of_utc_ms","etag","may_export"],"properties":{"schema_version":{"const":"research.report-unavailable.v1"},"read_authority":{"const":"PORTAL_PERSISTED_RESEARCH"},"run_id":{"$ref":"#/components/schemas/RunId"},"display_label":{"anyOf":[{"type":"string","pattern":"^R-[A-Z0-9]{1,8}-[0-9]{3,6}$"},{"type":"null"}]},"run_state":{"enum":["DRAFT","QUEUED","RUNNING","SEALING","READY","FAILED","CANCELLED","RECOVERY_REQUIRED"]},"availability":{"type":"object","additionalProperties":false,"required":["state","reason_code"],"properties":{"state":{"const":"NOT_PUBLISHED"},"reason_code":{"const":"NATIVE_REPORT_NOT_DELIVERED"}}},"execution_profile":{"type":"object","additionalProperties":false,"required":["id","digest"],"properties":{"id":{"type":"string","minLength":1,"maxLength":192},"digest":{"type":"string","pattern":"^[0-9a-f]{64}$"}}},"as_of_utc_ms":{"$ref":"#/components/schemas/UtcMilliseconds"},"etag":{"type":"string","pattern":"^\"p18a1_[0-9a-f]{64}\"$"},"may_export":{"const":false}}},
+      "OptimizerDisclosure": {"type":"object","additionalProperties":false,"required":["schema_version","optimization_mode","optimization_schedule","selection_target","calibration_sample","oos_used_for_selection","full_sample_used_for_selection","mode_evidence"],"properties":{"schema_version":{"const":"research.current-source-optimizer-disclosure.v1"},"optimization_mode":{"enum":["mode_2_sbb","mode_3_flat_minima","mode_4_is_only_robust","mode_5_full_robust"]},"optimization_schedule":{"enum":["global","per_fold_causal"]},"selection_target":{"type":"object","additionalProperties":false,"required":["kind","trial_id","objective_kind","selection_score","selection_score_kind"],"properties":{"kind":{"enum":["TRIAL","STUDY_LOCAL_TRIAL","SYNTHETIC_CENTROID"]},"trial_id":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"objective_kind":{"enum":["IS_MEAN_SHARPE","MODE_1_DECAY_J","INNER_VALIDATION_DECAY_J","OUTER_FOLD_DECAY_J","SBB_BOOTSTRAP_ROBUST_J","PLATEAU_ROBUST_J","IS_ONLY_ROBUST_J","FULL_SAMPLE_ROBUST_J","FULL_SAMPLE_MEAN_SHARPE","NOT_PUBLISHED"]},"selection_score":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"selection_score_kind":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]}}},"calibration_sample":{"enum":["IS_ONLY","IS_OOS","FULL_SAMPLE","BOOTSTRAP_PROXY"]},"oos_used_for_selection":{"type":"boolean"},"full_sample_used_for_selection":{"type":"boolean"},"mode_evidence":{"$ref":"#/components/schemas/OptimizerModeEvidence"},"centroid":{"type":"object","additionalProperties":false,"required":["state","parameters","medoid_trial_id","cluster_size","cluster_method","requires_evaluation"],"properties":{"state":{"const":"AVAILABLE"},"parameters":{"type":"object","maxProperties":24,"propertyNames":{"pattern":"^[A-Za-z][A-Za-z0-9_]{0,63}$"},"additionalProperties":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96}},"medoid_trial_id":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"cluster_size":{"anyOf":[{"type":"integer","minimum":0,"maximum":1000000},{"type":"null"}]},"cluster_method":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"requires_evaluation":{"type":"boolean"}}}},"description":"Source-retained optimizer evidence. Native objective and selector ranking score are separate. Bootstrap statistics are synthetic proxy, not realized OOS. A centroid has parameters and null trial identity; Mode 4 uses IS only without fabricated inner folds; Mode 5 is full-sample calibration, never untouched OOS.","allOf":[{"if":{"properties":{"selection_target":{"properties":{"kind":{"const":"SYNTHETIC_CENTROID"}}}}},"then":{"required":["centroid"],"properties":{"optimization_mode":{"const":"mode_3_flat_minima"},"selection_target":{"properties":{"trial_id":{"type":"null"}}}}},"else":{"not":{"required":["centroid"]},"properties":{"selection_target":{"properties":{"trial_id":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"}}}}}},{"if":{"properties":{"optimization_mode":{"const":"mode_5_full_robust"}}},"then":{"properties":{"calibration_sample":{"const":"FULL_SAMPLE"},"full_sample_used_for_selection":{"const":true},"oos_used_for_selection":{"const":false}}},"else":{"properties":{"full_sample_used_for_selection":{"const":false}}}},{"if":{"properties":{"optimization_mode":{"const":"mode_4_is_only_robust"}}},"then":{"properties":{"calibration_sample":{"const":"IS_ONLY"},"oos_used_for_selection":{"const":false}}}},{"if":{"properties":{"optimization_schedule":{"const":"per_fold_causal"}}},"then":{"properties":{"optimization_mode":{"const":"mode_4_is_only_robust"}}}},{"if":{"properties":{"optimization_mode":{"const":"mode_2_sbb"}}},"then":{"properties":{"mode_evidence":{"properties":{"kind":{"const":"BOOTSTRAP_PROXY"}}}}}},{"if":{"properties":{"optimization_mode":{"const":"mode_3_flat_minima"}}},"then":{"properties":{"mode_evidence":{"properties":{"kind":{"const":"PLATEAU"}}}}}},{"if":{"properties":{"optimization_mode":{"const":"mode_4_is_only_robust"}}},"then":{"properties":{"mode_evidence":{"properties":{"kind":{"const":"IS_ONLY_DISPERSION"}}}}}},{"if":{"properties":{"optimization_mode":{"const":"mode_5_full_robust"}}},"then":{"properties":{"mode_evidence":{"properties":{"kind":{"const":"FULL_SAMPLE_ROBUST"}}}}}}]},
+      "OptimizerModeEvidence": {"oneOf":[{"type":"object","additionalProperties":false,"required":["kind","source_locator","reason_code","selector","cluster_method","cluster_size","top_trials","medoid_trial_id","cluster_mean_objective","cluster_best_objective"],"properties":{"kind":{"const":"PLATEAU"},"source_locator":{"type":"string","minLength":1,"maxLength":256},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"selector":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"cluster_method":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"cluster_size":{"anyOf":[{"type":"integer","minimum":0,"maximum":1000000},{"type":"null"}]},"top_trials":{"anyOf":[{"type":"integer","minimum":0,"maximum":1000000},{"type":"null"}]},"medoid_trial_id":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"cluster_mean_objective":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"cluster_best_objective":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]}}},{"type":"object","additionalProperties":false,"required":["kind","source_locator","reason_code","scoring_backend","sbb_samples","sbb_block_length","sbb_simulation","synthetic_oos_mean","synthetic_oos_std"],"properties":{"kind":{"const":"BOOTSTRAP_PROXY"},"source_locator":{"type":"string","minLength":1,"maxLength":256},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"scoring_backend":{"const":"proxy"},"sbb_samples":{"type":"integer","minimum":0,"maximum":1000000},"sbb_block_length":{"type":"integer","minimum":0,"maximum":1000000},"sbb_simulation":{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},"synthetic_oos_mean":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"synthetic_oos_std":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]}}},{"type":"object","additionalProperties":false,"required":["kind","source_locator","reason_code","selector","is_subperiods","temporal_score","temporal_q25","temporal_mad","temporal_count","is_only_robust_score"],"properties":{"kind":{"const":"IS_ONLY_DISPERSION"},"source_locator":{"type":"string","minLength":1,"maxLength":256},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"selector":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"is_subperiods":{"type":"integer","minimum":0,"maximum":1000000},"temporal_score":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"temporal_q25":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"temporal_mad":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"temporal_count":{"anyOf":[{"type":"integer","minimum":0,"maximum":1000000},{"type":"null"}]},"is_only_robust_score":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]}}},{"type":"object","additionalProperties":false,"required":["kind","source_locator","reason_code","selector","is_subperiods","temporal_score","temporal_q25","temporal_mad","temporal_count","is_only_robust_score","selection_sample_bars"],"properties":{"kind":{"const":"FULL_SAMPLE_ROBUST"},"source_locator":{"type":"string","minLength":1,"maxLength":256},"reason_code":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"selector":{"anyOf":[{"type":"string","pattern":"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"},{"type":"null"}]},"is_subperiods":{"type":"integer","minimum":0,"maximum":1000000},"temporal_score":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"temporal_q25":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"temporal_mad":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"temporal_count":{"anyOf":[{"type":"integer","minimum":0,"maximum":1000000},{"type":"null"}]},"is_only_robust_score":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]},"selection_sample_bars":{"type":"integer","minimum":0,"maximum":1000000}}}],"discriminator":{"propertyName":"kind"}},
+      "ProtocolDisclosure": {"type":"object","additionalProperties":false,"required":["schema_version","protocol","engine_operation","calibration_scope","observation_scope","independent_holdout","windows","window_series"],"properties":{"schema_version":{"const":"research.current-source-protocol-disclosure.v1"},"protocol":{"const":"three_window_decay"},"engine_operation":{"const":"train_test_split"},"calibration_scope":{"const":"IS_OOS_ONLY"},"observation_scope":{"const":"OOS_SELECTION_INPUT"},"independent_holdout":{"type":"object","additionalProperties":false,"required":["start_utc_ms","end_exclusive_utc_ms","bar_count","state","holdout_used_for_selection","selected_params_digest","freeze_before_holdout"],"properties":{"start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"end_exclusive_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"bar_count":{"type":"integer","minimum":1,"maximum":100000},"state":{"const":"AVAILABLE"},"holdout_used_for_selection":{"const":false},"selected_params_digest":{"type":"string","pattern":"^[0-9a-f]{64}$"},"freeze_before_holdout":{"const":true}}},"windows":{"type":"object","additionalProperties":false,"required":["is","oos","holdout"],"properties":{"is":{"type":"object","additionalProperties":false,"required":["start_utc_ms","end_exclusive_utc_ms","bar_count"],"properties":{"start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"end_exclusive_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"bar_count":{"type":"integer","minimum":1,"maximum":100000}}},"oos":{"type":"object","additionalProperties":false,"required":["start_utc_ms","end_exclusive_utc_ms","bar_count"],"properties":{"start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"end_exclusive_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"bar_count":{"type":"integer","minimum":1,"maximum":100000}}},"holdout":{"type":"object","additionalProperties":false,"required":["start_utc_ms","end_exclusive_utc_ms","bar_count"],"properties":{"start_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"end_exclusive_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"bar_count":{"type":"integer","minimum":1,"maximum":100000}}}}},"window_series":{"type":"object","additionalProperties":false,"required":["is","oos","holdout"],"properties":{"is":{"type":"array","minItems":1,"maxItems":192,"items":{"type":"object","additionalProperties":false,"required":["at_utc_ms","equity","return_fraction","accepted_position","drawdown_fraction","signal_target"],"properties":{"at_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"equity":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"return_fraction":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"accepted_position":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"drawdown_fraction":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"signal_target":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]}}}},"oos":{"type":"array","minItems":1,"maxItems":192,"items":{"type":"object","additionalProperties":false,"required":["at_utc_ms","equity","return_fraction","accepted_position","drawdown_fraction","signal_target"],"properties":{"at_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"equity":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"return_fraction":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"accepted_position":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"drawdown_fraction":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"signal_target":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]}}}},"holdout":{"type":"array","minItems":1,"maxItems":192,"items":{"type":"object","additionalProperties":false,"required":["at_utc_ms","equity","return_fraction","accepted_position","drawdown_fraction","signal_target"],"properties":{"at_utc_ms":{"type":"integer","minimum":0,"maximum":9007199254740991},"equity":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"return_fraction":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"accepted_position":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"drawdown_fraction":{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},"signal_target":{"anyOf":[{"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},{"type":"null"}]}}}}}},"window_series_metadata":{"type":"object","additionalProperties":false,"required":["is","oos","holdout"],"properties":{"is":{"type":"object","additionalProperties":false,"required":["source_observation_count","emitted_point_count","sampling"],"properties":{"source_observation_count":{"type":"integer","minimum":1,"maximum":100000},"emitted_point_count":{"type":"integer","minimum":1,"maximum":192},"sampling":{"enum":["FULL","MULTI_SERIES_EXTREMA_V1"]}}},"oos":{"type":"object","additionalProperties":false,"required":["source_observation_count","emitted_point_count","sampling"],"properties":{"source_observation_count":{"type":"integer","minimum":1,"maximum":100000},"emitted_point_count":{"type":"integer","minimum":1,"maximum":192},"sampling":{"enum":["FULL","MULTI_SERIES_EXTREMA_V1"]}}},"holdout":{"type":"object","additionalProperties":false,"required":["source_observation_count","emitted_point_count","sampling"],"properties":{"source_observation_count":{"type":"integer","minimum":1,"maximum":100000},"emitted_point_count":{"type":"integer","minimum":1,"maximum":192},"sampling":{"enum":["FULL","MULTI_SERIES_EXTREMA_V1"]}}}}}},"description":"Native Three Window facts: calibration uses IS and OOS only; independent holdout runs after frozen selection. UTC half-open windows are contiguous. Runtime verifies every emitted series point stays inside its own window. Observation/analytics rows are calibration OOS, never relabelled untouched holdout. No filesystem locator or engine input is exposed."},
+      "EnrichedAnalysis": {"type":"object","additionalProperties":false,"required":["schema_version","service","basis","lane","run_id","input_digest","source_tables","scope","windows","facts","curves","monthly_returns","return_distribution","drawdown_episodes","library_summary","rolling"],"properties":{"schema_version":{"const":"research.enriched-analysis.v1"},"service":{"const":"enrich_analysis"},"basis":{"const":"ALL_TIME"},"lane":{"enum":["FIXED","WFO"]},"run_id":{"type":"string","pattern":"^rrun_[a-f0-9]{32}$"},"input_digest":{"$ref":"#/components/schemas/EnrichedAnalysisDigest"},"source_tables":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["name","row_count","digest"],"properties":{"name":{"type":"string","pattern":"^[A-Z0-9_]{1,64}$"},"row_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"digest":{"$ref":"#/components/schemas/EnrichedAnalysisDigest"}}},"maxItems":8,"minItems":1},"scope":{"type":"object","additionalProperties":false,"required":["window","first_at_utc_ms","last_at_utc_ms","observation_count","fold_count","locator","benchmark_locator","coverage","source_observation_count"],"properties":{"window":{"enum":["OOS","FULL_SAMPLE"]},"first_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"last_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"observation_count":{"type":"integer","minimum":2,"maximum":2000000},"fold_count":{"type":"integer","minimum":1,"maximum":32},"locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"benchmark_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"coverage":{"enum":["FULL_RETAINED_OOS","SAMPLED_RETAINED_EQUITY","FULL_RETAINED_FULL_SAMPLE"]},"source_observation_count":{"type":"integer","minimum":2,"maximum":2000000}}},"windows":{"type":"object","additionalProperties":false,"required":["is","oos","holdout"],"properties":{"is":{"type":"object","additionalProperties":false,"required":["state","reason_code"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"start_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"end_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"bounds_semantics":{"const":"START_INCLUSIVE_END_EXCLUSIVE"}},"dependentRequired":{"start_ms":["end_ms","source_locator","bounds_semantics"],"end_ms":["start_ms","source_locator","bounds_semantics"],"source_locator":["start_ms","end_ms","bounds_semantics"],"bounds_semantics":["start_ms","end_ms","source_locator"]}},"oos":{"type":"object","additionalProperties":false,"required":["state","reason_code"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"start_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"end_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"bounds_semantics":{"const":"START_INCLUSIVE_END_EXCLUSIVE"}},"dependentRequired":{"start_ms":["end_ms","source_locator","bounds_semantics"],"end_ms":["start_ms","source_locator","bounds_semantics"],"source_locator":["start_ms","end_ms","bounds_semantics"],"bounds_semantics":["start_ms","end_ms","source_locator"]}},"holdout":{"type":"object","additionalProperties":false,"required":["state","reason_code"],"properties":{"state":{"enum":["NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"start_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"end_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"bounds_semantics":{"const":"START_INCLUSIVE_END_EXCLUSIVE"}},"dependentRequired":{"start_ms":["end_ms","source_locator","bounds_semantics"],"end_ms":["start_ms","source_locator","bounds_semantics"],"source_locator":["start_ms","end_ms","bounds_semantics"],"bounds_semantics":["start_ms","end_ms","source_locator"]}},"full_sample":{"type":"object","additionalProperties":false,"required":["state","reason_code"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"start_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"end_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"bounds_semantics":{"const":"START_INCLUSIVE_END_EXCLUSIVE"}},"dependentRequired":{"start_ms":["end_ms","source_locator","bounds_semantics"],"end_ms":["start_ms","source_locator","bounds_semantics"],"source_locator":["start_ms","end_ms","bounds_semantics"],"bounds_semantics":["start_ms","end_ms","source_locator"]}}}},"facts":{"type":"object","additionalProperties":false,"required":["metrics","behaviour"],"properties":{"metrics":{"type":"object","additionalProperties":false,"required":["sharpe","sortino","cagr_fraction","profit_factor","long_hit_rate_fraction","short_hit_rate_fraction","volatility_fraction","skew","excess_kurtosis","beta","correlation","benchmark_return_fraction","max_drawdown_duration_days","sharpe_decay"],"properties":{"sharpe":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"sortino":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"cagr_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"profit_factor":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"long_hit_rate_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"short_hit_rate_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"volatility_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"skew":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"excess_kurtosis":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"beta":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"correlation":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"benchmark_return_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"max_drawdown_duration_days":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"sharpe_decay":{"$ref":"#/components/schemas/EnrichedAnalysisFact"}}},"behaviour":{"type":"object","additionalProperties":false,"required":["exposure_long_fraction","exposure_short_fraction","exposure_flat_fraction","win_rate","payoff_ratio","average_hold_seconds","max_consecutive_losses","turnover_notional"],"properties":{"exposure_long_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"exposure_short_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"exposure_flat_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"win_rate":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"payoff_ratio":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"average_hold_seconds":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"max_consecutive_losses":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"turnover_notional":{"$ref":"#/components/schemas/EnrichedAnalysisFact"}}}}},"curves":{"type":"object","additionalProperties":false,"required":["sampling","strategy_rebased_100","benchmark_rebased_100","drawdown_fraction"],"properties":{"sampling":{"type":"object","additionalProperties":false,"required":["source_observation_count","emitted_point_count","method"],"properties":{"source_observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"emitted_point_count":{"type":"integer","minimum":0,"maximum":64},"method":{"const":"EXTREMA_BUCKET_V1"}}},"strategy_rebased_100":{"$ref":"#/components/schemas/EnrichedAnalysisCurve"},"benchmark_rebased_100":{"$ref":"#/components/schemas/EnrichedAnalysisCurve"},"drawdown_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisCurve"}}},"monthly_returns":{"type":"object","additionalProperties":false,"required":["state","reason_code","origin","includes_partial_months","sampling","total_period_count","omitted_transport_period_count","definition_id","values"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"origin":{"const":"PORTAL_DERIVED"},"includes_partial_months":{"const":true},"sampling":{"enum":["FULL","TAIL_WINDOW_V1"]},"total_period_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"omitted_transport_period_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"definition_id":{"enum":["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1","FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"]},"values":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["month_start_utc_ms","return_fraction","observation_count","expected_observation_count","partial","basis","base_at_utc_ms","close_at_utc_ms"],"properties":{"month_start_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"return_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"expected_observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"partial":{"type":"boolean"},"basis":{"enum":["FIRST_OOS_CLOSE","FIRST_FULL_SAMPLE_CLOSE","PREVIOUS_OBSERVED_MONTH_CLOSE"]},"base_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"close_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"}}},"maxItems":120}}},"return_distribution":{"type":"object","additionalProperties":false,"required":["state","reason_code","origin","sampling","observation_count","bucket_basis","buckets"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"origin":{"const":"PORTAL_DERIVED"},"sampling":{"const":"UTC_DAY"},"observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"bucket_basis":{"const":"ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"},"buckets":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["lower_inclusive","upper","upper_inclusive","count"],"properties":{"lower_inclusive":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"upper":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"upper_inclusive":{"enum":["true","false"]},"count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"}}},"maxItems":12},"statistics_policy":{"type":"object","additionalProperties":false,"required":["quantile_method","probability","risk_variable","risk_sign","tail","minimum_observations"],"properties":{"quantile_method":{"const":"LINEAR_TYPE_7"},"probability":{"const":"0.95"},"risk_variable":{"const":"LOSS_FRACTION_NEGATIVE_RETURN"},"risk_sign":{"const":"SIGNED_LOSS_FRACTION"},"tail":{"const":"LOSS_GTE_VAR_INCLUSIVE"},"minimum_observations":{"const":2}}},"mean":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"median":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"var_95":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"cvar_95":{"$ref":"#/components/schemas/EnrichedAnalysisFact"}},"dependentRequired":{"statistics_policy":["mean","median","var_95","cvar_95"],"mean":["statistics_policy","median","var_95","cvar_95"],"median":["statistics_policy","mean","var_95","cvar_95"],"var_95":["statistics_policy","mean","median","cvar_95"],"cvar_95":["statistics_policy","mean","median","var_95"]}},"drawdown_episodes":{"type":"object","additionalProperties":false,"required":["state","reason_code","origin","total","open_episode_present","longest_open","values"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"origin":{"const":"PORTAL_DERIVED"},"total":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"open_episode_present":{"type":"boolean"},"longest_open":{"type":"boolean"},"values":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["start_utc_ms","trough_utc_ms","recovery_utc_ms","depth_fraction","duration_seconds"],"properties":{"start_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"trough_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"recovery_utc_ms":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},{"type":"null"}]},"depth_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"duration_seconds":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"label":{"type":"string","minLength":1,"maxLength":96},"regime":{"type":"object","additionalProperties":false,"required":["state","reason_code","value","source_locator","input_digest"],"properties":{"state":{"const":"NOT_PUBLISHED"},"reason_code":{"const":"SOURCE_DID_NOT_PUBLISH_MARKET_REGIME"},"value":{"type":"null"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"input_digest":{"$ref":"#/components/schemas/EnrichedAnalysisDigest"}}}}},"maxItems":10}}},"library_summary":{"$ref":"#/components/schemas/EnrichedAnalysisLibrarySummary"},"rolling":{"type":"null"},"by_window":{"type":"object","additionalProperties":false,"required":["is"],"properties":{"is":{"$ref":"#/components/schemas/EnrichedAnalysisISPayload"}}}},"allOf":[{"if":{"properties":{"by_window":{}},"required":["by_window"]},"then":{"properties":{"lane":{"const":"FIXED"},"scope":{"type":"object","properties":{"coverage":{"const":"FULL_RETAINED_OOS"}}},"windows":{"type":"object","properties":{"is":{"type":"object","required":["start_ms","end_ms","source_locator","bounds_semantics"],"properties":{"state":{"const":"AVAILABLE"},"reason_code":{"type":"null"},"start_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"end_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"bounds_semantics":{"const":"START_INCLUSIVE_END_EXCLUSIVE"}}}}},"source_tables":{"type":"array","contains":{"type":"object","properties":{"name":{"const":"OBSERVATION_IS"}},"required":["name"]},"minContains":1,"maxContains":1}}},"else":{"properties":{"windows":{"type":"object","properties":{"is":{"type":"object","properties":{"state":{"enum":["NOT_PUBLISHED","NOT_APPLICABLE"]}}}}},"source_tables":{"type":"array","not":{"contains":{"type":"object","properties":{"name":{"const":"OBSERVATION_IS"}},"required":["name"]}}}}}},{"if":{"type":"object","properties":{"scope":{"type":"object","properties":{"window":{"const":"FULL_SAMPLE"}},"required":["window"]}},"required":["scope"]},"then":{"type":"object","properties":{"windows":{"type":"object","required":["full_sample"],"properties":{"full_sample":{"type":"object","required":["start_ms","end_ms","source_locator","bounds_semantics"],"properties":{"state":{"const":"AVAILABLE"},"reason_code":{"type":"null"},"start_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"end_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"bounds_semantics":{"const":"START_INCLUSIVE_END_EXCLUSIVE"}}},"oos":{"type":"object","properties":{"state":{"const":"NOT_APPLICABLE"},"reason_code":{"const":"FULL_SAMPLE_CALIBRATION_HAS_NO_UNTOUCHED_OOS"}}}}}}},"else":{"type":"object","properties":{"windows":{"type":"object","properties":{"full_sample":false}}}}}]},
+      "EnrichedAnalysisMonthlyPoint": {"type":"object","additionalProperties":false,"required":["month_start_utc_ms","return_fraction","partial","observation_count","basis","base_at_utc_ms","close_at_utc_ms"],"properties":{"month_start_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"return_fraction":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"partial":{"type":"boolean"},"observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisPositiveCount"},"basis":{"enum":["FIRST_OOS_CLOSE","FIRST_FULL_SAMPLE_CLOSE","PREVIOUS_OBSERVED_MONTH_CLOSE"]},"base_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"close_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"}}},
+      "EnrichedAnalysisDistributionBucket": {"type":"object","additionalProperties":false,"required":["lower_inclusive","upper","upper_inclusive","count"],"properties":{"lower_inclusive":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"upper":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"upper_inclusive":{"enum":["true","false"]},"count":{"type":"string","pattern":"^[0-9]+$","maxLength":7}}},
+      "EnrichedAnalysisDistributions": {"title":"ResearchAllTimeDistributions","type":"object","additionalProperties":false,"description":"Additive precomputed OOS companion, including a partial leading month. Daily histogram is all-time, not a trade or per-bar histogram. Original seals remain immutable.","required":["schema_version","origin","scope","scope_locator","input_digest","oos_observation_count","monthly_definition","distribution_definition","monthly_returns","return_distribution"],"properties":{"schema_version":{"const":"research.all-time-distributions.v1"},"origin":{"const":"PORTAL_DERIVED"},"scope":{"enum":["OOS","FULL_SAMPLE"]},"scope_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"input_digest":{"$ref":"#/components/schemas/EnrichedAnalysisDigest"},"oos_observation_count":{"type":"integer","minimum":2,"maximum":2000000},"monthly_definition":{"enum":["OOS_MONTH_CLOSE_OVER_FIRST_OOS_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1","FULL_SAMPLE_MONTH_CLOSE_OVER_FIRST_OR_PREVIOUS_OBSERVED_MONTH_CLOSE_V1"]},"distribution_definition":{"const":"ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"},"monthly_returns":{"type":"object","additionalProperties":false,"required":["state","reason_code","source_observation_count","emitted_point_count","total_period_count","omitted_leading_period_count","omitted_transport_period_count","sampling","values"],"properties":{"state":{"enum":["AVAILABLE","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"source_observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"emitted_point_count":{"type":"integer","minimum":0,"maximum":32},"total_period_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"omitted_leading_period_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"omitted_transport_period_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"sampling":{"enum":["FULL","TAIL_WINDOW_V1"]},"values":{"type":"array","maxItems":32,"items":{"$ref":"#/components/schemas/EnrichedAnalysisMonthlyPoint"}}}},"return_distribution":{"type":"object","additionalProperties":false,"required":["state","reason_code","source_observation_count","emitted_point_count","sampling","values"],"properties":{"state":{"enum":["AVAILABLE","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"source_observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"emitted_point_count":{"type":"integer","minimum":0,"maximum":12},"sampling":{"enum":["FULL_RETURN_HISTOGRAM_V2","NOT_APPLICABLE"]},"values":{"type":"array","maxItems":12,"items":{"$ref":"#/components/schemas/EnrichedAnalysisDistributionBucket"}}}}}},
+      "EnrichedAnalysisDecimal": {"type":"string","pattern":"^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$","maxLength":96},
+      "EnrichedAnalysisDigest": {"type":"string","pattern":"^[0-9a-f]{64}$"},
+      "EnrichedAnalysisUtcMs": {"type":"integer","minimum":0,"maximum":9007199254740991},
+      "EnrichedAnalysisCount": {"type":"integer","minimum":0,"maximum":2000000},
+      "EnrichedAnalysisPositiveCount": {"type":"integer","minimum":1,"maximum":2000000},
+      "EnrichedAnalysisLocator": {"type":"string","minLength":1,"maxLength":256},
+      "EnrichedAnalysisReason": {"type":"string","pattern":"^[A-Z][A-Z0-9_]{2,159}$"},
+      "EnrichedAnalysisFact": {"type":"object","additionalProperties":false,"required":["state","reason_code","value","origin","scope","source_locator","input_digest"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"value":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},{"type":"null"}]},"origin":{"enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"enum":["OOS","FULL_SAMPLE"]},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"input_digest":{"$ref":"#/components/schemas/EnrichedAnalysisDigest"}},"allOf":[{"if":{"properties":{"state":{"const":"AVAILABLE"}}},"then":{"properties":{"value":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"reason_code":{"type":"null"}}},"else":{"properties":{"value":{"type":"null"},"reason_code":{"$ref":"#/components/schemas/EnrichedAnalysisReason"}}}}]},
+      "EnrichedAnalysisCurve": {"type":"array","maxItems":64,"items":{"type":"object","additionalProperties":false,"required":["at_utc_ms","value"],"properties":{"at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"value":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"}}}},
+      "EnrichedAnalysisLibrarySummary": {"type":"object","additionalProperties":false,"required":["state","reason_code","label","basis","sparkline","sampling","source_observation_count","coverage","return_fraction","sharpe","max_drawdown_fraction","input_digest"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"label":{"const":"all time"},"basis":{"const":"ALL_TIME"},"sparkline":{"$ref":"#/components/schemas/EnrichedAnalysisCurve"},"sampling":{"const":"EXTREMA_BUCKET_V1"},"source_observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"coverage":{"enum":["FULL_RETAINED_OOS","SAMPLED_RETAINED_EQUITY","FULL_RETAINED_FULL_SAMPLE"]},"return_fraction":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},{"type":"null"}]},"sharpe":{"$ref":"#/components/schemas/EnrichedAnalysisFact"},"max_drawdown_fraction":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},{"type":"null"}]},"input_digest":{"$ref":"#/components/schemas/EnrichedAnalysisDigest"},"return_basis":{"type":"object","additionalProperties":false,"required":["definition_id","scope","first_at_utc_ms","last_at_utc_ms","start_equity","end_equity","source_locator"],"properties":{"definition_id":{"enum":["FIRST_LAST_RETAINED_OOS_EQUITY_V1","FIRST_LAST_RETAINED_FULL_SAMPLE_EQUITY_V1"]},"scope":{"enum":["RETAINED_OOS_OBSERVATIONS","RETAINED_FULL_SAMPLE_OBSERVATIONS"]},"first_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"last_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"start_equity":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"end_equity":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"}}}}},
+      "EnrichedAnalysisISFact": {"type":"object","additionalProperties":false,"required":["state","reason_code","value","origin","scope","source_locator","input_digest"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"value":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},{"type":"null"}]},"origin":{"enum":["ENGINE_DIRECT","PORTAL_DERIVED"]},"scope":{"const":"IS"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"input_digest":{"$ref":"#/components/schemas/EnrichedAnalysisDigest"}},"allOf":[{"if":{"properties":{"state":{"const":"AVAILABLE"}}},"then":{"properties":{"value":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"reason_code":{"type":"null"}}},"else":{"properties":{"value":{"type":"null"},"reason_code":{"$ref":"#/components/schemas/EnrichedAnalysisReason"}}}}]},
+      "EnrichedAnalysisISPayload": {"type":"object","additionalProperties":false,"required":["state","reason_code","basis","scope","facts","return_basis","benchmark","curves","return_distribution"],"properties":{"state":{"const":"AVAILABLE"},"reason_code":{"type":"null"},"basis":{"const":"ALL_TIME"},"scope":{"type":"object","additionalProperties":false,"required":["window","coverage","start_ms","end_ms","source_locator","bounds_semantics","first_at_utc_ms","last_at_utc_ms","observation_count","source_table","locator"],"properties":{"window":{"const":"IS"},"coverage":{"const":"FULL_SOURCE_IS"},"start_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"end_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"bounds_semantics":{"const":"START_INCLUSIVE_END_EXCLUSIVE"},"first_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"last_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"observation_count":{"type":"integer","minimum":2,"maximum":2000000},"source_table":{"const":"OBSERVATION_IS"},"locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"}}},"facts":{"type":"object","additionalProperties":false,"required":["metrics"],"properties":{"metrics":{"type":"object","additionalProperties":false,"required":["sharpe","return_fraction","max_drawdown_fraction"],"properties":{"sharpe":{"allOf":[{"$ref":"#/components/schemas/EnrichedAnalysisISFact"},{"type":"object","properties":{"origin":{"const":"ENGINE_DIRECT"}}}]},"return_fraction":{"allOf":[{"$ref":"#/components/schemas/EnrichedAnalysisISFact"},{"type":"object","properties":{"origin":{"const":"PORTAL_DERIVED"}}}]},"max_drawdown_fraction":{"allOf":[{"$ref":"#/components/schemas/EnrichedAnalysisISFact"},{"type":"object","properties":{"origin":{"const":"ENGINE_DIRECT"}}}]}}}}},"return_basis":{"type":"object","additionalProperties":false,"required":["definition_id","start_equity","end_equity","first_at_utc_ms","last_at_utc_ms","source_locator"],"properties":{"definition_id":{"const":"FIRST_LAST_DECLARED_IS_EQUITY_V1"},"start_equity":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"end_equity":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"first_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"last_at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"}}},"benchmark":{"type":"object","additionalProperties":false,"required":["state","reason_code","definition_id","source_locator","input_digest"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"definition_id":{"const":"DECLARED_IS_SOURCE_CLOSE_REBASED_100_V1"},"source_locator":{"$ref":"#/components/schemas/EnrichedAnalysisLocator"},"input_digest":{"$ref":"#/components/schemas/EnrichedAnalysisDigest"}}},"curves":{"type":"object","additionalProperties":false,"required":["sampling","strategy_rebased_100","benchmark_rebased_100","drawdown_fraction"],"properties":{"sampling":{"type":"object","additionalProperties":false,"required":["source_observation_count","emitted_point_count","method"],"properties":{"source_observation_count":{"type":"integer","minimum":2,"maximum":2000000},"emitted_point_count":{"type":"integer","minimum":2,"maximum":24},"method":{"const":"EXTREMA_BUCKET_V1"}}},"strategy_rebased_100":{"type":"array","maxItems":24,"items":{"type":"object","additionalProperties":false,"required":["at_utc_ms","value"],"properties":{"at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"value":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"}}},"minItems":2},"benchmark_rebased_100":{"type":"array","maxItems":24,"items":{"type":"object","additionalProperties":false,"required":["at_utc_ms","value"],"properties":{"at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"value":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"}}}},"drawdown_fraction":{"type":"array","maxItems":24,"items":{"type":"object","additionalProperties":false,"required":["at_utc_ms","value"],"properties":{"at_utc_ms":{"$ref":"#/components/schemas/EnrichedAnalysisUtcMs"},"value":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"}}},"minItems":2}}},"return_distribution":{"type":"object","additionalProperties":false,"required":["state","reason_code","origin","sampling","observation_count","bucket_basis","statistics_policy","mean","median","var_95","cvar_95","buckets"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/EnrichedAnalysisReason"},{"type":"null"}]},"origin":{"const":"PORTAL_DERIVED"},"sampling":{"const":"UTC_DAY"},"observation_count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"},"bucket_basis":{"const":"ALL_TIME_SOURCE_UTC_DAILY_RETURNS_12_BIN_V1"},"statistics_policy":{"type":"object","additionalProperties":false,"required":["quantile_method","probability","risk_variable","risk_sign","tail","minimum_observations"],"properties":{"quantile_method":{"const":"LINEAR_TYPE_7"},"probability":{"const":"0.95"},"risk_variable":{"const":"LOSS_FRACTION_NEGATIVE_RETURN"},"risk_sign":{"const":"SIGNED_LOSS_FRACTION"},"tail":{"const":"LOSS_GTE_VAR_INCLUSIVE"},"minimum_observations":{"const":2}}},"mean":{"allOf":[{"$ref":"#/components/schemas/EnrichedAnalysisISFact"},{"type":"object","properties":{"origin":{"const":"PORTAL_DERIVED"}}}]},"median":{"allOf":[{"$ref":"#/components/schemas/EnrichedAnalysisISFact"},{"type":"object","properties":{"origin":{"const":"PORTAL_DERIVED"}}}]},"var_95":{"allOf":[{"$ref":"#/components/schemas/EnrichedAnalysisISFact"},{"type":"object","properties":{"origin":{"const":"PORTAL_DERIVED"}}}]},"cvar_95":{"allOf":[{"$ref":"#/components/schemas/EnrichedAnalysisISFact"},{"type":"object","properties":{"origin":{"const":"PORTAL_DERIVED"}}}]},"buckets":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["lower_inclusive","upper","upper_inclusive","count"],"properties":{"lower_inclusive":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"upper":{"$ref":"#/components/schemas/EnrichedAnalysisDecimal"},"upper_inclusive":{"enum":["true","false"]},"count":{"$ref":"#/components/schemas/EnrichedAnalysisCount"}}},"maxItems":12}}}}},
+      "EnrichedAnalysisAvailability": {"oneOf":[{"type":"object","additionalProperties":false,"required":["state","reason_code"],"properties":{"state":{"const":"AVAILABLE"},"reason_code":{"type":"null"}}},{"type":"object","additionalProperties":false,"required":["state","reason_code"],"properties":{"state":{"const":"NOT_PUBLISHED"},"reason_code":{"enum":["SEALED_ENRICHMENT_NOT_COMPUTED","SOURCE_EVIDENCE_NOT_SEALED"]}}}]},
+      "WorkspaceId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]{1,128}$"
+      },
+      "RunId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+      },
+      "JobId": {
+        "type": "string",
+        "pattern": "^rpex_[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "Revision": {
+        "type": "string",
+        "pattern": "^p18r1_[0-9a-f]{64}$"
+      },
+      "Digest": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      },
+      "UtcMilliseconds": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "ExactDecimal": {
+        "type": "string",
+        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$",
+        "maxLength": 96
+      },
+      "ReasonCode": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{2,159}$"
+      },
+      "Availability": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reason_code"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED",
+              "PENDING_SOURCE_CALLBACK",
+              "LEGACY_METADATA_ONLY",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ReportFact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "text",
+          "reason_code",
+          "availability"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED",
+              "NOT_ASSERTED",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "IdentityQualifier": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "E14 (9.7): what an identity value does not say on its own. A fixed-profile run still carries the optimizer its request declared, so the value reads as if a search had run; this is the same fact Screen 06 publishes as requested_optimizer = DECLARED_NOT_EXECUTED.",
+        "required": [
+          "state",
+          "text",
+          "reason_code"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "DECLARED_NOT_EXECUTED"
+            ]
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 96
+          },
+          "reason_code": {
+            "$ref": "#/components/schemas/ReasonCode"
+          }
+        }
+      },
+      "IdentityField": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "label",
+          "value",
+          "availability"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          },
+          "qualifier": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdentityQualifier"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Metric": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "label",
+          "unit",
+          "scope",
+          "origin",
+          "definition_id",
+          "value",
+          "availability"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "CURRENCY",
+              "FRACTION",
+              "COUNT"
+            ]
+          },
+          "scope": {
+            "enum": [
+              "OOS",
+              "IS_PLUS_OOS",
+              "CHILD_TAPE",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "origin": {
+            "enum": [
+              "ENGINE_DIRECT",
+              "SOURCE_DERIVED",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "definition_id": {
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExactDecimal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "Headline": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "label",
+          "value",
+          "availability"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "NET_RETURN",
+              "OOS_SHARPE",
+              "DECAY_MEAN",
+              "MAX_DRAWDOWN",
+              "TRADES",
+              "WIN_RATE",
+              "FUNDING"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExactDecimal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "Equity": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "source_observation_count",
+          "emitted_point_count",
+          "sampling",
+          "points",
+          "availability"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED"
+            ]
+          },
+          "source_observation_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "emitted_point_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 600
+          },
+          "sampling": {
+            "anyOf": [
+              {
+                "enum": [
+                  "FULL",
+                  "EXTREMA_BUCKET_V1"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "points": {
+            "type": "array",
+            "maxItems": 600,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "at_utc_ms",
+                "equity",
+                "drawdown_fraction"
+              ],
+              "properties": {
+                "at_utc_ms": {
+                  "$ref": "#/components/schemas/UtcMilliseconds"
+                },
+                "equity": {
+                  "$ref": "#/components/schemas/ExactDecimal"
+                },
+                "drawdown_fraction": {
+                  "$ref": "#/components/schemas/ExactDecimal"
+                }
+              }
+            }
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "FoldRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fold_id",
+          "start_utc_ms",
+          "end_exclusive_utc_ms",
+          "verdict"
+        ],
+        "properties": {
+          "fold_id": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "start_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "end_exclusive_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "verdict": {
+            "enum": [
+              "PASS",
+              "WARN",
+              "DRAG"
+            ]
+          }
+        }
+      },
+      "Folds": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "reason_code",
+          "rows",
+          "availability"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rows": {
+            "type": "array",
+            "maxItems": 256,
+            "items": {
+              "$ref": "#/components/schemas/FoldRow"
+            }
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "Stage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "state",
+          "started_at_utc_ms",
+          "completed_at_utc_ms"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "S5"
+            ]
+          },
+          "state": {
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "DONE"
+            ]
+          },
+          "started_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completed_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Artifact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "digest",
+          "state",
+          "availability"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "RUN_SPEC",
+              "SELECTION_TRACE",
+              "FOLD_PLAN",
+              "FILL_LEDGER",
+              "METRICS_SUMMARY",
+              "CLAIM",
+              "BUNDLE"
+            ]
+          },
+          "digest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "SEALED",
+              "NOT_PUBLISHED",
+              "NOT_APPLICABLE",
+              "ABORTED"
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "Warning": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "definition_id",
+          "state",
+          "reason_code",
+          "copy"
+        ],
+        "properties": {
+          "definition_id": {
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "ACTIVE",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "copy": {
+            "type": "string",
+            "maxLength": 512
+          }
+        }
+      },
+      "Promotion": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "line",
+          "availability"
+        ],
+        "properties": {
+          "state": {
+            "const": "NOT_PUBLISHED"
+          },
+          "line": {
+            "type": "string",
+            "maxLength": 512
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "Provenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "line",
+          "metric_registry_version",
+          "data_signature",
+          "read_model_revision",
+          "verdict_rule_revision"
+        ],
+        "properties": {
+          "line": {
+            "type": "string",
+            "maxLength": 1024
+          },
+          "metric_registry_version": {
+            "enum": [
+              "research.metric-registry.v1",
+              "research.metric-registry.v2"
+            ]
+          },
+          "data_signature": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "read_model_revision": {
+            "const": "research.report-read-model.v1"
+          },
+          "verdict_rule_revision": {
+            "const": "research.report-verdict-rule.v1"
+          }
+        }
+      },
+      "UnavailableExportFormat": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "format",
+          "reason_code"
+        ],
+        "properties": {
+          "format": {
+            "enum": [
+              "PARQUET",
+              "ARCHIVE"
+            ]
+          },
+          "reason_code": {
+            "$ref": "#/components/schemas/ReasonCode"
+          }
+        }
+      },
+      "ExportCapabilities": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "formats",
+          "maximum_bytes",
+          "unavailable_formats"
+        ],
+        "properties": {
+          "formats": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "enum": [
+                "REPORT_JSON",
+                "REPORT_CSV"
+              ]
+            }
+          },
+          "maximum_bytes": {
+            "type": "integer",
+            "minimum": 16384,
+            "maximum": 524288
+          },
+          "unavailable_formats": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "$ref": "#/components/schemas/UnavailableExportFormat"
+            }
+          }
+        }
+      },
+      "FrozenCoreV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "report_source",
+          "source_revisions",
+          "source_digests",
+          "passport",
+          "identity",
+          "metrics",
+          "headline",
+          "headline_footnote",
+          "equity",
+          "folds",
+          "stages",
+          "artifacts",
+          "warnings",
+          "promotion",
+          "provenance",
+          "source_absences"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.report-frozen-core.v1"
+          },
+          "report_source": {
+            "const": "P13_P17_FIXED_PROFILE"
+          },
+          "source_revisions": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "evidence_revision",
+              "split_revision",
+              "search_revision",
+              "freeze_revision",
+              "replay_revision"
+            ],
+            "properties": {
+              "evidence_revision": {
+                "type": "string"
+              },
+              "split_revision": {
+                "type": "string"
+              },
+              "search_revision": {
+                "type": "string"
+              },
+              "freeze_revision": {
+                "type": "string"
+              },
+              "replay_revision": {
+                "type": "string"
+              }
+            }
+          },
+          "source_digests": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_transform_digest",
+              "requested_spec_digest",
+              "effective_spec_digest",
+              "dataset_binding_digest",
+              "manifest_digest"
+            ],
+            "properties": {
+              "source_transform_digest": {
+                "$ref": "#/components/schemas/Digest"
+              },
+              "requested_spec_digest": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Digest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "effective_spec_digest": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Digest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "dataset_binding_digest": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Digest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "manifest_digest": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Digest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          "passport": {
+            "type": "array",
+            "minItems": 6,
+            "maxItems": 6,
+            "items": {
+              "$ref": "#/components/schemas/ReportFact"
+            }
+          },
+          "identity": {
+            "type": "array",
+            "minItems": 12,
+            "maxItems": 12,
+            "items": {
+              "$ref": "#/components/schemas/IdentityField"
+            }
+          },
+          "metrics": {
+            "type": "array",
+            "minItems": 8,
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/components/schemas/Metric"
+            }
+          },
+          "headline": {
+            "type": "array",
+            "minItems": 6,
+            "maxItems": 7,
+            "items": {
+              "$ref": "#/components/schemas/Headline"
+            }
+          },
+          "headline_footnote": {
+            "type": "string"
+          },
+          "equity": {
+            "$ref": "#/components/schemas/Equity"
+          },
+          "folds": {
+            "$ref": "#/components/schemas/Folds"
+          },
+          "stages": {
+            "type": "array",
+            "minItems": 5,
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/Stage"
+            }
+          },
+          "artifacts": {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "items": {
+              "$ref": "#/components/schemas/Artifact"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/components/schemas/Warning"
+            }
+          },
+          "promotion": {
+            "$ref": "#/components/schemas/Promotion"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "source_absences": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ReportFact"
+            }
+          }
+        }
+      },
+      "EquityPoint": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "at_utc_ms",
+          "equity",
+          "drawdown_fraction"
+        ],
+        "properties": {
+          "at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "equity": {
+            "$ref": "#/components/schemas/ExactDecimal"
+          },
+          "drawdown_fraction": {
+            "$ref": "#/components/schemas/ExactDecimal"
+          }
+        }
+      },
+      "ReportFactV2": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "label",
+          "state",
+          "text",
+          "reason_code",
+          "availability"
+        ],
+        "properties": {
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{2,63}$"
+          },
+          "label": {
+            "type": "string",
+            "maxLength": 96
+          },
+          "state": {
+            "enum": [
+              "AVAILABLE",
+              "NOT_PUBLISHED",
+              "NOT_ASSERTED",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1024
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "MetricV2": {"type":"object","additionalProperties":false,"required":["key","label","unit","scope","origin","definition_id","value","availability"],"properties":{"key":{"type":"string"},"label":{"type":"string"},"unit":{"enum":["CURRENCY","FRACTION","COUNT","RATIO"]},"scope":{"enum":["OOS","IS_PLUS_OOS","CHILD_TAPE","NOT_PUBLISHED","OOS_MEAN_OF_FOLDS","OOS_SUM_OF_FOLDS","FULL_SAMPLE"]},"origin":{"enum":["ENGINE_DIRECT","SOURCE_DERIVED","PORTAL_DERIVED","NOT_PUBLISHED"]},"definition_id":{"type":"string","pattern":"^research\\.metric\\.v[12]\\.[a-z0-9_.-]{2,96}$"},"value":{"anyOf":[{"$ref":"#/components/schemas/ExactDecimal"},{"type":"null"}]},"availability":{"$ref":"#/components/schemas/Availability"}}},
+      "HeadlineV2": {"type":"object","additionalProperties":false,"required":["key","label","value","availability","scope"],"properties":{"key":{"enum":["NET_RETURN","OOS_SHARPE","DECAY_MEAN","MAX_DRAWDOWN","TRADES","WIN_RATE","FUNDING"]},"label":{"type":"string"},"value":{"anyOf":[{"$ref":"#/components/schemas/ExactDecimal"},{"type":"null"}]},"availability":{"$ref":"#/components/schemas/Availability"},"scope":{"enum":["OOS","IS_PLUS_OOS","CHILD_TAPE","NOT_PUBLISHED","OOS_MEAN_OF_FOLDS","OOS_SUM_OF_FOLDS","FULL_SAMPLE"]}}},
+      "EquityV2": {"type":"object","additionalProperties":false,"required":["state","scope","source_observation_count","emitted_point_count","sampling","points","availability"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED"]},"scope":{"enum":["P13_OOS_EQUITY","RS02_STITCHED_OUTER_TEST_WINDOWS","RS02_FINAL_ACCOUNT_BEFORE_FIRST_OUTER_TEST","NOT_PUBLISHED","THREE_WINDOW_CALIBRATION_OOS","THREE_WINDOW_CALIBRATION_IS","FULL_SAMPLE_CALIBRATION"]},"source_observation_count":{"anyOf":[{"type":"integer","minimum":0,"maximum":2000000},{"type":"null"}]},"emitted_point_count":{"anyOf":[{"type":"integer","minimum":0,"maximum":600},{"type":"null"}]},"sampling":{"anyOf":[{"enum":["FULL","EXTREMA_BUCKET_V1","OBSERVATION_EXTREMA_BUCKET_V2"]},{"type":"null"}]},"points":{"type":"array","maxItems":600,"items":{"$ref":"#/components/schemas/EquityPoint"}},"digest":{"anyOf":[{"$ref":"#/components/schemas/Digest"},{"type":"null"}]},"digest_scope":{"anyOf":[{"enum":["FULL_STITCHED_SOURCE_SERIES","OOS_CALIBRATION_REPLAY_SERIES"]},{"type":"null"}]},"logical_name":{"anyOf":[{"const":"series/stitched.parquet"},{"type":"null"}]},"digest_availability":{"$ref":"#/components/schemas/Availability"},"availability":{"$ref":"#/components/schemas/Availability"}}},
+      "FoldFact": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "value",
+          "availability"
+        ],
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExactDecimal"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "FoldRowV2": {"type":"object","additionalProperties":false,"required":["fold_id","source_ordinal","test_start_utc_ms","test_last_bar_utc_ms","verdict","failed_criteria","drag_target","params","is_sharpe","oos_sharpe","decay","contribution_fraction","max_drawdown_fraction","oos_trades"],"properties":{"fold_id":{"type":"string","maxLength":128},"source_ordinal":{"type":"integer","minimum":0,"maximum":4096},"test_start_utc_ms":{"anyOf":[{"$ref":"#/components/schemas/UtcMilliseconds"},{"type":"null"}]},"test_last_bar_utc_ms":{"anyOf":[{"$ref":"#/components/schemas/UtcMilliseconds"},{"type":"null"}]},"verdict":{"enum":["PASS","WARN","DRAG","NOT_EVALUATED"]},"failed_criteria":{"type":"array","maxItems":3,"items":{"enum":["OOS_SHARPE","DECAY","MAX_DRAWDOWN"]}},"drag_target":{"anyOf":[{"type":"string","pattern":"^[a-z][a-z0-9_]{1,31}$"},{"type":"null"}]},"params":{"type":"object","additionalProperties":false,"required":["text","availability"],"properties":{"text":{"anyOf":[{"type":"string","maxLength":1024},{"type":"null"}]},"availability":{"$ref":"#/components/schemas/Availability"}}},"is_sharpe":{"$ref":"#/components/schemas/FoldFact"},"oos_sharpe":{"$ref":"#/components/schemas/FoldFact"},"decay":{"$ref":"#/components/schemas/FoldFact"},"contribution_fraction":{"$ref":"#/components/schemas/FoldFact"},"max_drawdown_fraction":{"$ref":"#/components/schemas/FoldFact"},"oos_trades":{"$ref":"#/components/schemas/FoldFact"},"score_basis":{"const":"INNER_VALIDATION_IS_MEAN_AND_OUTER_FOLD_OOS"}}},
+      "FoldsV2": {"type":"object","additionalProperties":false,"required":["state","reason_code","rule","order","params_handoff","rows","availability"],"properties":{"state":{"enum":["AVAILABLE","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/ReasonCode"},{"type":"null"}]},"rule":{"anyOf":[{"type":"object","additionalProperties":false,"required":["version","pass","warn"],"properties":{"version":{"const":"research.fold-verdict.v1"},"pass":{"type":"object","additionalProperties":false,"required":["oos_sharpe_min","decay_max","max_drawdown_min"],"properties":{"oos_sharpe_min":{"$ref":"#/components/schemas/ExactDecimal"},"decay_max":{"$ref":"#/components/schemas/ExactDecimal"},"max_drawdown_min":{"$ref":"#/components/schemas/ExactDecimal"}}},"warn":{"type":"object","additionalProperties":false,"required":["oos_sharpe_min","decay_max","max_drawdown_min"],"properties":{"oos_sharpe_min":{"$ref":"#/components/schemas/ExactDecimal"},"decay_max":{"$ref":"#/components/schemas/ExactDecimal"},"max_drawdown_min":{"$ref":"#/components/schemas/ExactDecimal"}}}}},{"type":"null"}]},"order":{"const":"SOURCE_ORDINAL_ASC"},"params_handoff":{"type":"object","additionalProperties":false,"required":["scope","text","availability"],"properties":{"scope":{"enum":["GLOBAL_SELECTION_APPLIES_TO_EVERY_FOLD","NOT_PUBLISHED","PER_FOLD_SELECTION_APPLIES_TO_OWN_OOS"]},"text":{"anyOf":[{"type":"string","maxLength":1024},{"type":"null"}]},"availability":{"$ref":"#/components/schemas/Availability"}}},"rows":{"type":"array","maxItems":256,"items":{"$ref":"#/components/schemas/FoldRowV2"}},"availability":{"$ref":"#/components/schemas/Availability"}}},
+      "StageCheck": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "result",
+          "text",
+          "source_key",
+          "availability"
+        ],
+        "properties": {
+          "result": {
+            "enum": [
+              "PASS",
+              "CAVEAT",
+              "FAIL",
+              "NOT_PUBLISHED",
+              "NOT_APPLICABLE"
+            ]
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_key": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_.-]{2,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "StageV2": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "state",
+          "started_at_utc_ms",
+          "completed_at_utc_ms",
+          "check"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "S1",
+              "S2",
+              "S3",
+              "S4",
+              "S5"
+            ]
+          },
+          "state": {
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "DONE"
+            ]
+          },
+          "started_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completed_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "check": {
+            "$ref": "#/components/schemas/StageCheck"
+          }
+        }
+      },
+      "ArtifactV2": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "filename",
+          "digest",
+          "state",
+          "part_count",
+          "download",
+          "availability"
+        ],
+        "properties": {
+          "key": {
+            "enum": [
+              "RUN_SPEC",
+              "SELECTION_TRACE",
+              "FOLD_PLAN",
+              "FILL_LEDGER",
+              "METRICS_SUMMARY",
+              "CLAIM",
+              "BUNDLE",
+              "SEARCH_TRACE",
+              "CANDIDATES",
+              "OBSERVATIONS"
+            ]
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^tables/[a-z_]{2,40}/part-[0-9]{6}\\.parquet$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "digest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "SEALED",
+              "NOT_PUBLISHED",
+              "NOT_APPLICABLE",
+              "ABORTED"
+            ]
+          },
+          "part_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4096
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "download": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "reason_code"
+            ],
+            "properties": {
+              "state": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason_code": {
+                "$ref": "#/components/schemas/ReasonCode"
+              }
+            }
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "ReportTitle": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "strategy",
+          "symbol",
+          "timeframe",
+          "availability"
+        ],
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 320
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 240
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "timeframe": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "Certification": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "grade",
+          "reason_code",
+          "availability"
+        ],
+        "properties": {
+          "state": {
+            "const": "NOT_PUBLISHED"
+          },
+          "grade": {
+            "type": "null"
+          },
+          "reason_code": {
+            "$ref": "#/components/schemas/ReasonCode"
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "FrozenCoreV2": {"type":"object","additionalProperties":false,"required":["schema_version","report_source","source_revisions","source_digests","title","certification","passport","identity","metrics","headline","headline_footnote","equity","equity_is","folds","stages","artifacts","warnings","promotion","provenance","source_absences"],"properties":{"schema_version":{"const":"research.report-frozen-core.v2"},"report_source":{"enum":["P13_P17_FIXED_PROFILE","RS02_RETAINED_CURRENT_SOURCE","NATIVE_RETAINED_ENGINE_AUDIT"]},"source_revisions":{"type":"object","additionalProperties":false,"required":["evidence_revision","split_revision","search_revision","freeze_revision","replay_revision"],"properties":{"evidence_revision":{"type":"string","pattern":"^(?:p1[3-7]r1_[0-9a-f]{64}|rs02_[a-z][a-z-]{2,40}_[0-9a-f]{64})$"},"split_revision":{"type":"string","pattern":"^(?:p1[3-7]r1_[0-9a-f]{64}|rs02_[a-z][a-z-]{2,40}_[0-9a-f]{64})$"},"search_revision":{"type":"string","pattern":"^(?:p1[3-7]r1_[0-9a-f]{64}|rs02_[a-z][a-z-]{2,40}_[0-9a-f]{64})$"},"freeze_revision":{"type":"string","pattern":"^(?:p1[3-7]r1_[0-9a-f]{64}|rs02_[a-z][a-z-]{2,40}_[0-9a-f]{64})$"},"replay_revision":{"type":"string","pattern":"^(?:p1[3-7]r1_[0-9a-f]{64}|rs02_[a-z][a-z-]{2,40}_[0-9a-f]{64})$"}}},"source_digests":{"type":"object","additionalProperties":false,"required":["source_transform_digest","requested_spec_digest","effective_spec_digest","dataset_binding_digest","manifest_digest"],"properties":{"source_transform_digest":{"anyOf":[{"$ref":"#/components/schemas/Digest"},{"type":"null"}]},"requested_spec_digest":{"anyOf":[{"$ref":"#/components/schemas/Digest"},{"type":"null"}]},"effective_spec_digest":{"anyOf":[{"$ref":"#/components/schemas/Digest"},{"type":"null"}]},"dataset_binding_digest":{"anyOf":[{"$ref":"#/components/schemas/Digest"},{"type":"null"}]},"manifest_digest":{"anyOf":[{"$ref":"#/components/schemas/Digest"},{"type":"null"}]}}},"title":{"$ref":"#/components/schemas/ReportTitle"},"certification":{"$ref":"#/components/schemas/Certification"},"passport":{"type":"array","minItems":6,"maxItems":6,"items":{"$ref":"#/components/schemas/ReportFactV2"}},"identity":{"type":"array","minItems":12,"maxItems":24,"items":{"$ref":"#/components/schemas/IdentityField"}},"metrics":{"type":"array","minItems":1,"maxItems":40,"items":{"$ref":"#/components/schemas/MetricV2"}},"headline":{"type":"array","minItems":6,"maxItems":7,"items":{"$ref":"#/components/schemas/HeadlineV2"}},"headline_footnote":{"type":"string","maxLength":512},"equity":{"$ref":"#/components/schemas/EquityV2"},"equity_is":{"$ref":"#/components/schemas/EquityV2"},"folds":{"$ref":"#/components/schemas/FoldsV2"},"stages":{"type":"array","minItems":5,"maxItems":5,"items":{"$ref":"#/components/schemas/StageV2"}},"artifacts":{"type":"array","minItems":7,"maxItems":12,"items":{"$ref":"#/components/schemas/ArtifactV2"}},"warnings":{"type":"array","maxItems":8,"items":{"$ref":"#/components/schemas/Warning"}},"promotion":{"$ref":"#/components/schemas/Promotion"},"provenance":{"type":"object","additionalProperties":false,"required":["line","metric_registry_version","data_signature","read_model_revision","verdict_rule_revision"],"properties":{"line":{"type":"string","maxLength":1024},"metric_registry_version":{"enum":["research.metric-registry.v1","research.metric-registry.v2","research.current-source-metrics.v1"]},"data_signature":{"anyOf":[{"$ref":"#/components/schemas/Digest"},{"type":"null"}]},"read_model_revision":{"const":"research.report-read-model.v2"},"verdict_rule_revision":{"enum":["research.report-verdict-rule.v1","research.fold-verdict.v1"]}}},"source_absences":{"type":"object","additionalProperties":{"$ref":"#/components/schemas/ReportFact"}},"final_audit":{"$ref":"#/components/schemas/FinalAudit"},"protocol_disclosure":{"$ref":"#/components/schemas/ProtocolDisclosure"},"optimizer_disclosure":{"$ref":"#/components/schemas/OptimizerDisclosure"},"native_report":{"$ref":"#/components/schemas/NativeReport"}}},
+      "FinalAudit": {"type":"object","additionalProperties":false,"required":["schema_version","kind","reason_code","audit_target_kind","final_audit_run_id","audited_run_id","relationship","optimizer_reinvoked","optimizer_basis","source_refs","folds"],"properties":{"schema_version":{"const":"research.report-final-audit.v1"},"kind":{"enum":["REUSED_ORIGINAL","LINKED_CHILD","NOT_PUBLISHED","NOT_APPLICABLE"]},"reason_code":{"anyOf":[{"$ref":"#/components/schemas/ReasonCode"},{"type":"null"}]},"audit_target_kind":{"anyOf":[{"enum":["SINGLE_PARAMETER_SET","FIXED_PARAMETER_PROFILE","PER_FOLD_PARAMETER_SELECTIONS"]},{"type":"null"}]},"final_audit_run_id":{"anyOf":[{"$ref":"#/components/schemas/RunId"},{"type":"null"}]},"audited_run_id":{"anyOf":[{"$ref":"#/components/schemas/RunId"},{"type":"null"}]},"relationship":{"anyOf":[{"enum":["PRIMARY","AUDIT_OF_SELECTION"]},{"type":"null"}]},"optimizer_reinvoked":{"anyOf":[{"type":"boolean"},{"type":"null"}]},"optimizer_basis":{"anyOf":[{"$ref":"#/components/schemas/ReasonCode"},{"type":"null"}]},"source_refs":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["key","ref"],"properties":{"key":{"type":"string","pattern":"^[a-z][a-z0-9_.:-]{2,95}$"},"ref":{"type":"string","minLength":1,"maxLength":256}}},"maxItems":16},"folds":{"type":"array","items":{"type":"object","additionalProperties":false,"required":["fold_id","audit_ordinal","candidate_id","state"],"properties":{"fold_id":{"type":"string","minLength":1,"maxLength":160},"audit_ordinal":{"anyOf":[{"type":"integer","minimum":0},{"type":"null"}]},"candidate_id":{"anyOf":[{"type":"string","pattern":"^[0-9a-f]{24}$"},{"type":"null"}]},"state":{"enum":["MATCH","MISMATCH","NOT_RETAINED","NOT_PUBLISHED","NOT_COMPUTABLE"]}}},"maxItems":256}},"description":"X2 · P18-T10 (guide §5.6): the report's final audit. REUSED_ORIGINAL — the run is its own audit; on the retained WFO lane each fold's out-of-sample generation child is checked to be the frozen candidate (QuantBT child audit), so `optimizer_reinvoked` is false only when every fold matched. LINKED_CHILD — a READY AUDIT_OF_SELECTION run in the P19 lineage. NOT_PUBLISHED when the lineage relation was not read."},
+      "FrozenCoreFailedV1": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "report_source",
+          "outcome",
+          "title",
+          "identity",
+          "stages",
+          "artifacts",
+          "mandatory_bundle",
+          "equity",
+          "promotion",
+          "provenance"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.report-failed-core.v1"
+          },
+          "report_source": {
+            "const": "P11_TERMINAL_FAILURE"
+          },
+          "outcome": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "failed_stage",
+              "failed_stage_label",
+              "headline",
+              "failure_code",
+              "failure_message",
+              "failed_at_utc_ms",
+              "terminal_sequence"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "FAILED",
+                  "CANCELLED"
+                ]
+              },
+              "failed_stage": {
+                "enum": [
+                  "S1",
+                  "S2",
+                  "S3",
+                  "S4",
+                  "S5",
+                  "SEAL"
+                ]
+              },
+              "failed_stage_label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "headline": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "failure_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+              },
+              "failure_message": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "failed_at_utc_ms": {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              "terminal_sequence": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              }
+            }
+          },
+          "title": {
+            "$ref": "#/components/schemas/ReportTitle"
+          },
+          "identity": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdentityField"
+            },
+            "minItems": 4,
+            "maxItems": 24
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StageV2"
+            },
+            "minItems": 5,
+            "maxItems": 5
+          },
+          "artifacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "state",
+                "size",
+                "digest"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "state": {
+                  "enum": [
+                    "PENDING",
+                    "WRITING",
+                    "SEALED",
+                    "ABORTED"
+                  ]
+                },
+                "size": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[0-9]+$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "digest": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/Digest"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            },
+            "maxItems": 128
+          },
+          "mandatory_bundle": {
+            "enum": [
+              "PENDING",
+              "SEALING",
+              "SEALED",
+              "FAILED"
+            ]
+          },
+          "equity": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "availability"
+            ],
+            "properties": {
+              "state": {
+                "const": "NOT_PUBLISHED"
+              },
+              "availability": {
+                "$ref": "#/components/schemas/Availability"
+              }
+            }
+          },
+          "promotion": {
+            "$ref": "#/components/schemas/Promotion"
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "line",
+              "read_model_revision",
+              "source"
+            ],
+            "properties": {
+              "line": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "read_model_revision": {
+                "const": "research.report-read-model.v2"
+              },
+              "source": {
+                "const": "P11_TERMINAL_PROGRESS_SNAPSHOT"
+              }
+            }
+          }
+        },
+        "description": "X2 · spec 09 T06: the sheet of a run that FAILED or was cancelled. No claim: sealed from the P11 terminal snapshot (stages, artifacts — ABORTED stays ABORTED — and the bounded failure), with no metric, equity or fold row. The headline reads `no claim — run failed at {stage}`; the failing stage's check is FAIL with the failure code, earlier stages carry no sealed check, later ones are NOT_APPLICABLE."
+      },
+      "FrozenCore": {
+        "description": "A sealed core is served under the schema it was sealed with. v1 cores stay byte-identical; every report sealed after W6a is v2 (P04 fixed profile or the retained Delta WFO lane). X2: a run that FAILED or was cancelled is sealed as FrozenCoreFailedV1 (spec 09 T06).",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/FrozenCoreV1"
+          },
+          {
+            "$ref": "#/components/schemas/FrozenCoreV2"
+          },
+          {
+            "$ref": "#/components/schemas/FrozenCoreFailedV1"
+          }
+        ]
+      },
+      "Annotation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "text",
+          "source_updated_at_utc_ms",
+          "availability"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "NOT_PUBLISHED",
+              "AVAILABLE"
+            ]
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_updated_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "$ref": "#/components/schemas/Availability"
+          }
+        }
+      },
+      "ReportDetail": {"type":"object","additionalProperties":false,"required":["schema_version","read_authority","run_id","display_label","report_revision","etag","sealed_at_utc_ms","presentation_revision","frozen_core","approval_annotation","exports"],"properties":{"enriched_analysis_availability":{"$ref":"#/components/schemas/EnrichedAnalysisAvailability"},"enriched_analysis":{"$ref":"#/components/schemas/EnrichedAnalysis"},"schema_version":{"const":"research.report-detail.v1"},"read_authority":{"const":"PORTAL_PERSISTED_RESEARCH"},"run_id":{"$ref":"#/components/schemas/RunId"},"display_label":{"anyOf":[{"type":"string","pattern":"^R-[A-Z0-9]{1,8}-[0-9]{3,6}$"},{"type":"null"}]},"report_revision":{"$ref":"#/components/schemas/Revision"},"etag":{"type":"string"},"sealed_at_utc_ms":{"$ref":"#/components/schemas/UtcMilliseconds"},"presentation_revision":{"const":"research.report-presentation.v1"},"frozen_core":{"$ref":"#/components/schemas/FrozenCore"},"approval_annotation":{"$ref":"#/components/schemas/Annotation"},"exports":{"$ref":"#/components/schemas/ExportCapabilities"},"linked_final_audit":{"$ref":"#/components/schemas/VerifiedPinnedAudit"},"source_revision_scope":{"const":"CAPTURED_READ_REPRESENTATION","description":"Frozen source_revisions are archived response-revision pins at capture time, including then-current presentation. Never compare them unconditionally with a newer live read or rewrite an old seal. Compare immutable source_digests for source identity."},"final_audit_applicable":{"anyOf":[{"type":"boolean"},{"type":"null"}],"description":"Installed linked-audit target compatibility: true for a typed SINGLE_PARAMETER_SET, false for FIXED_PARAMETER_PROFILE or PER_FOLD_PARAMETER_SELECTIONS, null when unpublished. Not feature enablement, RBAC or may_create. The linked audit GET remains the permission authority; do not probe when false/null."}}},
+      "ExportCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "format"
+        ],
+        "properties": {
+          "format": {
+            "enum": [
+              "REPORT_JSON",
+              "REPORT_CSV"
+            ]
+          }
+        }
+      },
+      "ExportJob": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "job_id",
+          "run_id",
+          "report_revision",
+          "format",
+          "state",
+          "requested_at_utc_ms",
+          "completed_at_utc_ms",
+          "size_bytes",
+          "sha256",
+          "content_type",
+          "filename",
+          "download_href",
+          "failure_code"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.report-export.v1"
+          },
+          "job_id": {
+            "$ref": "#/components/schemas/JobId"
+          },
+          "run_id": {
+            "$ref": "#/components/schemas/RunId"
+          },
+          "report_revision": {
+            "$ref": "#/components/schemas/Revision"
+          },
+          "format": {
+            "enum": [
+              "REPORT_JSON",
+              "REPORT_CSV"
+            ]
+          },
+          "state": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "READY",
+              "FAILED"
+            ]
+          },
+          "requested_at_utc_ms": {
+            "$ref": "#/components/schemas/UtcMilliseconds"
+          },
+          "completed_at_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMilliseconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size_bytes": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 524288
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Digest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "application/json",
+                  "text/csv"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "download_href": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^/api/v1/quantbt/runs/[A-Za-z0-9][A-Za-z0-9._-]{0,127}/report/exports/rpex_[0-9A-HJKMNP-TV-Z]{26}/download\\?workspace_id=[A-Za-z0-9._-]{1,128}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "failure_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReasonCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      },
+      "PinnedAuditResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "run_id",
+          "parent_run_id",
+          "target_digest",
+          "parameters_digest",
+          "engine_release_id",
+          "engine_version",
+          "snapshot_id",
+          "snapshot_content_hash",
+          "source_selection_digest",
+          "source_selection_kind",
+          "source_selection_part_digest",
+          "source_config_digest",
+          "audit_target_kind",
+          "optimizer_reinvoked",
+          "optimizer_trials",
+          "n_folds",
+          "bars"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.pinned-selection-audit-result.v1"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "parent_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "target_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "parameters_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "engine_release_id": {
+            "const": "er_quantbt_111"
+          },
+          "engine_version": {
+            "const": "1.1.1"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^dss_[a-f0-9]{32}$"
+          },
+          "snapshot_content_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_selection_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_selection_kind": {
+            "const": "P05_SELECTION_PARAMETERS_JSON"
+          },
+          "source_selection_part_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_config_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "audit_target_kind": {
+            "const": "SINGLE_PARAMETER_SET"
+          },
+          "optimizer_reinvoked": {
+            "const": false
+          },
+          "optimizer_trials": {
+            "const": 0
+          },
+          "n_folds": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 16
+          },
+          "bars": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000
+          }
+        }
+      },
+      "VerifiedPinnedAudit": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "child_run_id",
+          "child_attempt_id",
+          "artifact_id",
+          "artifact_revision",
+          "manifest_digest",
+          "result_digest",
+          "verified_at_utc_ms",
+          "result"
+        ],
+        "properties": {
+          "child_run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "child_attempt_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,159}$"
+          },
+          "artifact_revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "manifest_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "result_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "verified_at_utc_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "result": {
+            "$ref": "#/components/schemas/PinnedAuditResult"
+          }
+        },
+        "description": "Immutable, worker-fenced receipt whose child and original target/parts were byte-verified. result_digest hashes canonical result; child_run_id=result.run_id. No raw config, params, data, artifact locator or transport secrets."
+      }
+    }
+  }
+}

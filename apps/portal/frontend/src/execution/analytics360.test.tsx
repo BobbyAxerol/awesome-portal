@@ -101,16 +101,18 @@ describe("Portfolio 360 — heatmap, lens and influence from the published matri
     expect(screen.getAllByText(/episode = peak-to-recovery/).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/SMOKE DATA — the ρ timeline and drawdown overlap/)).toBeTruthy();
   });
-  it("Rebalance plan and Report pack are live controls that open previews with a disabled apply", () => {
+  it("Rebalance plan and Report pack are live controls that open previews with nothing to press — no dead Apply or Generate", () => {
     render(<PortfolioThreeSixty {...portfolioHandlers()} {...portfolio360()} />);
     fireEvent.click(screen.getByRole("button", { name: /Rebalance plan/ }));
     const plan = screen.getByLabelText("PLAN · portfolio rebalance");
     expect(within(plan).getAllByText(/plan → apply → verify/).length).toBeGreaterThanOrEqual(1);
-    expect((within(plan).getByRole("button", { name: "Apply" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(plan).queryByRole("button", { name: "Apply" })).toBeNull();
+    expect(within(plan).getByText(/nothing is applied from here/)).toBeTruthy();
     fireEvent.click(within(plan).getByRole("button", { name: "Close" }));
     fireEvent.click(screen.getByRole("button", { name: "Report pack" }));
     const pack = screen.getByLabelText("Report pack — preview");
-    expect((within(pack).getByRole("button", { name: "Generate" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(within(pack).queryByRole("button", { name: "Generate" })).toBeNull();
+    expect(within(pack).getByText(/nothing is produced here/)).toBeTruthy();
   });
 });
 

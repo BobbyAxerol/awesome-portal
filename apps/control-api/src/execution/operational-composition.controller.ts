@@ -1,14 +1,14 @@
-import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
+import { Controller, Get, Header, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { ControlApiConfig } from "../config";
+import { coreExecutionRead } from "./retained-read-profile";
 import type { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { OperationalCompositionService } from "./operational-composition.service";
 import { PortalDerivationError } from "./portal-derivations.service";
-import { OperationQueueQuerySchema } from "../operations/contracts";
 
 /** The raw query as an object; the guards below decide what any of it means. */
 function asQuery(raw: unknown): Record<string, unknown> {
@@ -18,6 +18,7 @@ function asQuery(raw: unknown): Record<string, unknown> {
 interface CompositionRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
+  portalViewerWorkspaceId?: string;
   portalSession: AuthSession;
 }
 
@@ -49,6 +50,7 @@ export class OperationalCompositionController {
   ) {}
 
   @Get("/approvals/:approval_id")
+  @Header("Cache-Control", "private, no-store")
   async approval(@Req() request: CompositionRequest, @Param("approval_id") approvalId: string, @Query() raw: unknown) {
     this.assertId(approvalId);
     const principal = await this.principal(request, raw);
@@ -56,6 +58,7 @@ export class OperationalCompositionController {
   }
 
   @Get("/exit-reviews/:review_id")
+  @Header("Cache-Control", "private, no-store")
   async exitReview(@Req() request: CompositionRequest, @Param("review_id") reviewId: string, @Query() raw: unknown) {
     this.assertId(reviewId);
     return this.compositions.exitReview(await this.principal(request, raw), reviewId);
@@ -75,16 +78,15 @@ export class OperationalCompositionController {
 
   /** Same substitution rule; the queue's triage filter and keyset come through. */
   @Get("/operations")
+  @Header("Cache-Control", "private, no-store")
   async operations(@Req() request: CompositionRequest, @Query() raw: unknown) {
     const principal = await this.principal(request, raw, PrincipalOnlySchema);
-    const parsed = OperationQueueQuerySchema.safeParse(asQuery(raw));
-    if (!parsed.success) {
-      throw new PortalDerivationError("EDS05_OPERATION_QUEUE_QUERY_INVALID", 400, "Invalid operation queue query.");
-    }
-    return this.compositions.operationsQueue(principal, parsed.data as Record<string, unknown>);
+    // The service selects sticky Core mode BEFORE the strict mode parser.
+    return this.compositions.operationsQueue(principal, asQuery(raw));
   }
 
   @Get("/incidents/:incident_id")
+  @Header("Cache-Control", "private, no-store")
   async incident(@Req() request: CompositionRequest, @Param("incident_id") incidentId: string, @Query() raw: unknown) {
     this.assertId(incidentId);
     return this.compositions.incidentDetail(await this.principal(request, raw), incidentId);
@@ -109,7 +111,9 @@ export class OperationalCompositionController {
     if (!parsed.success) throw new PortalDerivationError("EDS05_QUERY_INVALID", 400, "Invalid composition query.");
     // An unqualified read means the projection's own workspace, not the
     // session's personal one (DR-30); membership still decides access.
+    const core = coreExecutionRead(request.url.split("?")[0]);
     const workspaceId = parsed.data.workspace_id
+      ?? (core ? request.portalWorkspaceId : undefined)
       ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID
       ?? request.portalWorkspaceId;
     // Portal-owned composition remains useful before a local projection is
@@ -117,13 +121,15 @@ export class OperationalCompositionController {
     // projection workspace exists, it is the only permitted source-bound
     // composition scope.  Comparing against `undefined` previously made all
     // dark/local Portal reads return a misleading 404.
-    if (this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
+    if (!core && this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID &&
         workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
       throw new PortalDerivationError("EDS05_PROJECTION_WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
-    if (!(await this.workspaces.isMember(workspaceId, request.portalUser.userId))) {
+    if (!(core ? await this.workspaces.isMember(workspaceId, request.portalUser.userId)
+      : await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
       throw new PortalDerivationError("WORKSPACE_NOT_FOUND", 404, "Workspace not found.");
     }
-    return { user: request.portalUser, session: request.portalSession, workspaceId };
+    return { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
   }
 }

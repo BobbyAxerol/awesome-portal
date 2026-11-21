@@ -1,0 +1,623 @@
+/* Command confirmation, receipt and status: the UXM-09 fixture story.
+ *
+ * Built from the New request stylesheet's measured values (fields, bar, result panel, buttons) so the two confirmation surfaces read as
+ * one family; the hi-fi kit has no command receipt, so the facet list, the operation rows and the certification rows are defined here.
+ *
+ * Names are `.exec-cf-*`; no V1 rule uses them and none of these reach V1. Sizes come from the --exec-font-* roles, colours from the
+ * carbon tokens, and every text/background pair is declared in one rule so the contrast gate can read it. No uppercase. */
+
+.exec-cf-page {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-cf-mast {
+  min-width: 0;
+}
+.exec-cf-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-cf-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+/* ---- step bar ------------------------------------------------------------ */
+
+.exec-cf-steps {
+  padding: 10px var(--space-4);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-cf-steps ol {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-cf-steps li {
+  margin-right: -1px;
+  padding: 6px 14px;
+  font: var(--exec-font-term);
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+  border: 1px solid var(--line-strong);
+}
+.exec-cf-steps li[data-state="current"] {
+  position: relative;
+  z-index: 1;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+/* ---- panel and fields ----------------------------------------------------- */
+
+.exec-cf-panel {
+  min-width: 0;
+  padding: var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-cf-panel[data-flush] {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.exec-cf-next {
+  padding: 0;
+}
+.exec-cf-form {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.exec-cf-fields {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.exec-cf-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.exec-cf-fld {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.exec-cf-label {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font: var(--exec-font-label);
+  letter-spacing: 0.04em;
+  color: var(--ink-faint);
+}
+.exec-cf-label-meta {
+  color: var(--ink-faint);
+}
+.exec-cf-label-meta[data-state="long"],
+.exec-cf-label-meta[data-state="hostile"] {
+  color: var(--bad);
+}
+.exec-cf-link {
+  color: var(--accent);
+  font: var(--exec-font-label);
+}
+.exec-cf-control {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+textarea.exec-cf-control {
+  min-height: 84px;
+  resize: vertical;
+}
+.exec-cf-control:focus-visible,
+.exec-cf-submit:focus-visible,
+.exec-cf-btn:focus-visible,
+.exec-cf-link:focus-visible,
+.exec-cf-res:focus-visible,
+.exec-cf-hand summary:focus-visible,
+.exec-cf-disclosure summary:focus-visible,
+.exec-cf-prov summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-cf-control:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  cursor: not-allowed;
+}
+.exec-cf-control[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+.exec-cf-mono {
+  font: var(--exec-font-id);
+}
+.exec-cf-control.exec-cf-mono {
+  font: var(--exec-font-term);
+}
+.exec-cf-note,
+.exec-cf-meta {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+.exec-cf-error {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--bad);
+  overflow-wrap: anywhere;
+}
+.exec-cf-claim {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.exec-cf-notices {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  list-style: none;
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--warn);
+}
+
+.exec-cf-hand,
+.exec-cf-disclosure,
+.exec-cf-prov {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-cf-hand summary,
+.exec-cf-disclosure summary,
+.exec-cf-prov summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.exec-cf-hand-body {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* ---- "Still needed" bar and the one submit button -------------------------- */
+
+.exec-cf-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-cf-bar-text {
+  display: grid;
+  flex: 1 1 220px;
+  gap: 6px;
+  min-width: 0;
+}
+.exec-cf-need {
+  margin: 0;
+  font: var(--exec-font-body);
+  overflow-wrap: anywhere;
+}
+.exec-cf-bar-act {
+  display: grid;
+  flex: 0 1 auto;
+  gap: var(--space-1);
+  justify-items: start;
+  min-width: 0;
+}
+.exec-cf-submit {
+  padding: 8px 16px;
+  font: var(--exec-font-control);
+  color: var(--on-accent);
+  background: var(--accent-strong);
+  border: 1px solid var(--accent-strong);
+  cursor: pointer;
+}
+.exec-cf-submit:disabled,
+.exec-cf-submit[aria-disabled="true"] {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-cf-why {
+  max-width: 24ch;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-cf-form[data-variant="drawer"] .exec-cf-bar-act {
+  justify-items: start;
+}
+.exec-cf-form[data-variant="drawer"] .exec-cf-why {
+  max-width: none;
+}
+
+/* ---- outcome -------------------------------------------------------------- */
+
+.exec-cf-res {
+  --exec-cf-tone: var(--accent);
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+  border-left: 4px solid var(--exec-cf-tone);
+}
+.exec-cf-res[data-tone="created"],
+.exec-cf-res[data-tone="replayed"] {
+  --exec-cf-tone: var(--f-applied);
+}
+.exec-cf-res[data-tone="duplicate"] {
+  --exec-cf-tone: var(--f-operation);
+}
+.exec-cf-res[data-tone="refused"],
+.exec-cf-res[data-tone="denied"] {
+  --exec-cf-tone: var(--f-rejected);
+}
+.exec-cf-res[data-tone="uncertain"] {
+  --exec-cf-tone: var(--f-unknown);
+}
+.exec-cf-res[data-tone="unavailable"] {
+  --exec-cf-tone: var(--f-attention);
+}
+.exec-cf-res-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: 0;
+  font: var(--exec-font-body);
+  overflow-wrap: anywhere;
+}
+.exec-cf-id {
+  padding: 0 5px;
+  font: var(--exec-font-id);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  overflow-wrap: anywhere;
+}
+.exec-cf-facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+.exec-cf-facts div {
+  display: grid;
+  grid-template-columns: minmax(96px, 140px) minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.exec-cf-facts dt {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-cf-facts dd {
+  margin: 0;
+  font: var(--exec-font-data);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-cf-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+.exec-cf-btn {
+  display: inline-block;
+  padding: 6px 16px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+  text-decoration: none;
+}
+.exec-cf-btn[data-variant="primary"] {
+  color: var(--on-accent);
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+.exec-cf-btn[aria-disabled="true"] {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+
+
+/* ---- page ------------------------------------------------------------------ */
+
+.exec-cf-mast {
+  min-width: 0;
+}
+.exec-cf-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--f-display);
+}
+.exec-cf-body-wrap {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+}
+.exec-cf-flow {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.exec-cf-lanes {
+  display: grid;
+  gap: var(--space-2);
+}
+.exec-cf-radio {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px var(--space-2);
+  align-items: baseline;
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-cf-radio .exec-cf-meta {
+  grid-column: 2;
+}
+.exec-cf-radio input:focus-visible,
+.exec-cf-check input:focus-visible,
+.exec-cf-group summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---- plan and facts ---------------------------------------------------------- */
+
+.exec-cf-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-cf-block {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.exec-cf-body {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-cf-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-cf-check {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-cf-check input {
+  margin-top: 3px;
+}
+.exec-cf-next {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+/* ---- the four answers ------------------------------------------------------- */
+
+.exec-cf-status {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.exec-cf-facets {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line-strong);
+}
+.exec-cf-facets li {
+  display: grid;
+  grid-template-columns: minmax(80px, 110px) minmax(110px, 190px) minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: 8px var(--space-3);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-bottom: 1px solid var(--line);
+}
+.exec-cf-facets li:last-child {
+  border-bottom: 0;
+}
+.exec-cf-facet-name {
+  font: var(--exec-font-term);
+  color: var(--ink-faint);
+}
+.exec-cf-facet-absence {
+  grid-column: 3;
+}
+.exec-cf-facet-absence[data-state="not_published"] {
+  color: var(--ink-soft);
+}
+@media (max-width: 660px) {
+  .exec-cf-facets li {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+  .exec-cf-facet-absence {
+    grid-column: 1;
+  }
+}
+
+/* ---- lookup and discard question ---------------------------------------------- */
+
+.exec-cf-query {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-cf-query:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-cf-lookup {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.exec-cf-confirm {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--f-unknown);
+}
+.exec-cf-confirm-title {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-cf-res[data-tone="stopped"] {
+  --exec-cf-tone: var(--f-attention);
+}
+.exec-cf-res[data-tone="accepted"] {
+  --exec-cf-tone: var(--f-neutral);
+}
+.exec-cf-res[data-tone="rejected"] {
+  --exec-cf-tone: var(--f-rejected);
+}
+
+/* ---- disabled operations and certification ------------------------------------- */
+
+/*
+ * The dock's blocked-action line was drawn for a wide drawer footer: the action name (::before), the reason (one clipped line) and
+ * the access link side by side, with the name and link not allowed to shrink. At 660 px a long command name + link pushed the page
+ * 98 px sideways (browser receipt, e2e/execution-v2-command.spec.ts). On this page the line wraps and the reason is printed in
+ * full: the reason is the content, and a touch screen has no hover to reveal a clipped one.
+ */
+.exec-cf-page .exec-dock-why {
+  flex-wrap: wrap;
+}
+.exec-cf-page .exec-dock-why[data-l]::before {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.exec-cf-page .exec-dock-reason {
+  flex: 1 1 12rem;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.exec-cf-group {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-cf-group summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.exec-cf-ops {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-cf-op {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+}
+.exec-cf-op-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  min-width: 0;
+}
+.exec-cf-case {
+  padding: 0 6px;
+  font: var(--exec-font-term);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+
+/* A long panel title wraps inside its head instead of widening the page at 390px (it overflowed by 150px). */
+.exec-cf-page .exec-blk-ph {
+  flex-wrap: wrap;
+}
+.exec-cf-page .exec-blk-ph-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

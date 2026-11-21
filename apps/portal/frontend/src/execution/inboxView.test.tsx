@@ -67,11 +67,8 @@ describe("the chips are exactly the views the server serves", () => {
     render(<ApprovalInboxContainer api={createFixtureApi()} />);
     await screen.findByText("AP-352");
     for (const view of INBOX_FILTERS) {
-      expect(
-        screen.getAllByRole("button").some((b) => b.getAttribute("data-filter") === view)
-          || screen.queryByRole("button", { name: new RegExp(view.replace("_", " "), "i") }),
-        view,
-      ).toBeTruthy();
+      const asButton = screen.getAllByRole("button").some((b) => b.getAttribute("data-filter") === view);
+      expect(asButton, view).toBe(true);
     }
   });
 });

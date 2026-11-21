@@ -1,0 +1,16 @@
+{
+  "phase":"UDB-03",
+  "backend_scope":"BACKEND_PASS_RETAINED_PREVIEW_REVIEW_READY",
+  "landing_gate":"NORMAL_GROUPED_COMMIT_HOOK_REQUIRED",
+  "known_backend_implementation_debt":[],
+  "consumer_handoff":[
+    {"id":"FE-UDB03-01","owner":"Claude/Codex","state":"SCOPED_CONSUMER_VERIFIED","task":"Retained context, session binding, exact clocks, failures and permissions mapped; no global rights inference","locator":"codex-consumer-refinement.md"},
+    {"id":"FE-UDB03-02","owner":"Claude/Codex","state":"SCOPED_CONSUMER_VERIFIED","task":"No retained stream/poll; failed refresh stays static; Research polling preserved; explicit recovery verified","locator":"codex-consumer-refinement.md"},
+    {"id":"FE-UDB03-03","owner":"Claude/Bobby","state":"WRAP_FIX_VERIFIED_BROAD_VISUAL_ACCEPTANCE_UDB04","task":"Claude wrap fixes preserved, affected preview1280/660 verified. Not a full68-cell HiFi or owner visual acceptance; R1/mobile/cross-loop reviewed in UDB04","locator":"codex-consumer-refinement.md"}
+  ],
+  "external_dispositions":[
+    {"id":"UDB-FUTURE-TS-MANAGEMENT","state":"NOT_PUBLISHED","reason":"TS_RESOURCE_MANAGEMENT_CONTRACT_NOT_PUBLISHED","blocks_existing_reads":false},
+    {"id":"UDB04","state":"NOT_OPENED","reason":"Requires separate Bobby approval, exact candidate and consumer/cross-loop/performance/DR acceptance"},
+    {"id":"SOURCE_LIVE","state":"NOT_APPROVED","reason":"Retained preview is not Edge/source/TLS/SSE/command activation or production release"}
+  ]
+}

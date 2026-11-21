@@ -1,15 +1,17 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, HttpCode, Inject, Optional, Param, Post, Query, Req, UseGuards } from "@nestjs/common";
 import { FastifyRequest } from "fastify";
 import { constantTimeEqual, sha256 } from "../auth/argon";
 import { csrfCookieFrom, CSRF_HEADER, originAllowed } from "../auth/cookies";
 import { ControlApiConfig } from "../config";
-import { PortalUser } from "../domain";
+import { AuthSession, PortalUser } from "../domain";
+import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
 import { SessionGuard } from "../facade/session.guard";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { WorkspacesRepository } from "../repos/workspaces";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { ActivationService } from "./activation.service";
+import { CurrentActivationReads } from "./current-activation.service";
 import {
   StagedActivationApplyRequestSchema,
   StagedActivationPlanRequestSchema,
@@ -19,7 +21,8 @@ import {
 interface ActivationRequest extends FastifyRequest {
   portalUser: PortalUser;
   portalWorkspaceId: string;
-  portalSession: { sessionId: string; csrfSecretHash: string };
+  portalSession: AuthSession & { csrfSecretHash: string };
+  portalViewerWorkspaceId?: string;
 }
 
 @UseGuards(SessionGuard)
@@ -29,22 +32,44 @@ export class ActivationController {
     @Inject(ActivationService) private readonly activation: ActivationService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
+    @Optional() @Inject(ExecutionReadScopes) private readonly scopes?: ExecutionReadScopes,
+    @Optional() @Inject(CurrentActivationReads) private readonly currentReads?: CurrentActivationReads,
   ) {}
 
   @Get("/capabilities")
-  async capabilities(@Req() request: ActivationRequest, @Query("workspace_id") rawWorkspaceId?: unknown) {
+  @Header("Cache-Control", "private, no-store")
+  async capabilities(@Req() request: ActivationRequest, @Query("workspace_id") rawWorkspaceId?: unknown, @Query("environment") rawEnvironment?: unknown) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.activation.capabilities(request.portalUser, workspaceId);
+    return this.readTechnical(request, workspaceId, () => this.activation.capabilities(request.portalUser, workspaceId),
+      () => this.currentReads!.capabilities(this.principal(request,workspaceId),rawEnvironment));
   }
 
   @Get("/plans/:plan_id")
+  @Header("Cache-Control", "private, no-store")
   async detail(
     @Req() request: ActivationRequest,
     @Param("plan_id") planId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
+    @Query("environment") rawEnvironment?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
-    return this.activation.detail(request.portalUser, workspaceId, planId);
+    return this.readTechnical(request, workspaceId, () => this.activation.detail(request.portalUser, workspaceId, planId),
+      () => this.currentReads!.detail(this.principal(request,workspaceId),planId,rawEnvironment));
+  }
+
+  private principal(request:ActivationRequest,workspaceId:string){return {user:request.portalUser,session:request.portalSession,workspaceId,
+    viewerWorkspaceId:request.portalViewerWorkspaceId??request.portalWorkspaceId};}
+  private async readTechnical<T,R>(request: ActivationRequest, workspaceId: string, read: () => Promise<T>, current:()=>Promise<R>): Promise<T|R> {
+    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
+    if (this.scopes && await this.scopes.coreSelectionMode(principal) === "SCOPED_V2") {
+      if(this.currentReads)return current();
+      throw new GovernanceError("ACTIVATION_TECHNICAL_FIELDS_NOT_COMMISSIONED", "Activation technical field policy is not commissioned.", 503);
+    }
+    const result = await read();
+    if (this.scopes && await this.scopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return result;
   }
 
   @Post("/plans")

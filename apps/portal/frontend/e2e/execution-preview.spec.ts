@@ -38,6 +38,10 @@ const FEATURE_ROOTS = [
 ] as const;
 
 test("every product route consumes the same-origin BFF and never leaves the origin", async ({ page, baseURL }) => {
+  // 27 routes walked in one test: ~25s on an idle host, which a full parallel run
+  // stretched past the 60s default (it timed out waiting for the marker on a route
+  // that renders fine alone).
+  test.setTimeout(180_000);
   await freezeClock(page);
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
@@ -54,6 +58,11 @@ test("every product route consumes the same-origin BFF and never leaves the orig
       /Failed to load resource.*503/.test(message.text()) &&
       message.location().url.includes("/api/v1/execution/screens/accounts/")
     ) {
+      return;
+    }
+    // The normal stack has no retained review: the double answers the typed
+    // 404 (UDB_RETAINED_REVIEW_NOT_CONFIGURED) and Chromium logs the status.
+    if (/Failed to load resource.*404/.test(message.text()) && message.location().url.includes("/api/v1/execution/retained-review")) {
       return;
     }
     consoleOffences.push(`${message.type()}: ${message.text()}`);

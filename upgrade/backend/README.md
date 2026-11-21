@@ -32,6 +32,41 @@ IDs now have a source-only fail-closed successor with PG regression 23/23;
 the HTTP mapper is 1/1 and scoped lint passes. 08/read09 remain `NOT_MET`. See the
 [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#n25-weak-attribution-20261107).
 
+26Oct2026 — [Accounts CURRENT and complete backend landing census](../execution_loop/evidence/ELP2-10/ACCOUNTS_CURRENT_AND_BACKEND_LANDING_CENSUS_2026-10-26.md):
+440heads/46worktrees inspected; candidate contains allClaude00e7f6cff and is
+211commits beyond canonical at source snapshot2aae8cbaf. Combined605files
+include349FEpaths; no claim this is backend-only or already landed. Restored
+one exact collided realtime receipt; missing fixture patch/60PNGs and dirty WIP
+explicitly preserved for scoped intake. Two concrete closed-reader mismatches
+go to Claude; full visual/R2 still block integrated landing. CURRENT does not
+wait for financial/Score; exact new source authority/trust and installation/
+connected acceptance still absent. R0 only; no runtime/UI/push or new test claim.
+
+26Oct2026 — [ELP2-10 actual CURRENT source baseline and installation blockers](../execution_loop/evidence/ELP2-10/CURRENT_SOURCE_REUSE_AND_COMMISSIONING_BLOCKERS_2026-10-26.md):
+real E6/E7 basic Accounts acceptance exists; ordinary Manager image/catalogue/
+policy match directly. CURRENT need not wait for financial APPLIED/Score/narrow
+STREAM lineage. Actual Research still lacks migration153 custody/current rights
+and the installed candidate image. Local image70e6217f… now built/hygiene PASS;
+real Research backup→clone→migrations152–154/repeat PASS with unchanged190old
+table counts/selected authority-custody hashes/policy definitions. Original
+ACL/effective RLS NOT_TESTED; shared target unchanged. No phase-PASS or public
+DTO/UI change, calendar SOURCE_DARK. Exact evidence and cleanup in packet.
+
+26Oct2026 — [ELP2-10 whole compiler PASS and final gates](../execution_loop/evidence/ELP2-10/FINAL_GATE_LEDGER_2026-10-26.md):
+full production-source build1459files/229.95s PASS under the existing local
+3CPU/3GiB build profile, source unchanged4e7deab19. Supersedes the prior compiler
+OPEN below. Actual source/budget/calibration/connected/browser remain unmet;
+no duplicate adapter, UI, runtime or canonical/Claude change.
+
+26Oct2026 — [Manager native Series composition and official ownership boundary](../execution_loop/evidence/ELP2-10/SOURCE_BINDING_FOLLOWTHROUGH_2026-10-26.md):
+actual optional-token/finite-route wiring; per-subject purpose cuts held through
+one physical send, same-original recovery, publication and authority checks.
+Official tagged TEXT ownership retains exact canonical guards. Source-only
+candidate Core4e7deab19/Edge91c31b993; focused Core304/Rust24distinct cases
+accounted PASS, seven changed units strict diagnostics PASS; required whole
+build exceeded the approved heap and remains OPEN. No normal landing gate
+claim; financial/economic/health/source/browser acceptance remains open.
+
 Các tài liệu trong thư mục này triển khai chi tiết từng `BAR-*` slice của
 [Backend Architecture Implementation Guide](../BACKEND_ARCHITECTURE_IMPLEMENTATION_GUIDE.md).
 Chúng không thay thế phase hoặc exit gate trong
@@ -817,6 +852,11 @@ Chúng không thay thế phase hoặc exit gate trong
   `verify_artifact` phát hiện digest drift, 3 endpoint read-only
   `/api/v1/alphas*` với public projection an toàn (không maintainer/lock
   digest). 12 tests.
+- [Research Loop P07 evidence — Alpha import and immutable binding](../research_loop/evidence/P07/README.md)
+  — **backend complete / frontend handoff pending:** bounded single-file
+  source custody, private AST analysis, ordered gates, exact digest/version
+  identity and ADMIN activation CAS. It does not execute uploaded strategy
+  code or alter the protected QuantBT kernel, Execution authority or runtime.
 - [BAR-12 — Approval, Promotion, Paper & Sandbox foundations](./BAR_12_APPROVAL_PROMOTION_PAPER_SANDBOX.md)
   — U15 foundations. **Complete:** ApprovalAuthority (policy v1, request
   gắn immutable artifact/audit digest, separation of duties chặn
@@ -2786,3 +2826,75 @@ idle renewal 4, multi-source 4). The stale owner did not advance ACK. The cell
 was removed; this is not evidence the fence is installed or that production
 writer coverage, retention, TLS or connected 03/04/08/09 have been accepted.
 [Unified journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+**2026-10-03 Research W1/W2 backend request closeout:** generated Library
+label search, Journey v5, RC canonical enriched Report revision, compose
+lifecycle/sealed fact, Hub failed_at and source-bound trial ordinals are
+delivered with actual isolated named reads and unchanged immutable custody.
+P12 17/17 covers historical/concurrent bounded index consistency. No
+frontend/shared preview/production/remote change; C4 complete without volumes.
+See [the canonical Research packet](../research_loop/evidence/P21/W1_W2_BACKEND_REQUEST_CLOSEOUT_2026-10-03.md)
+for exact hashes/tests and Claude binding. P23/P24 are separate gates.
+
+**2026-10-03 Research broad reconciliation:** Atlas public reason/condition
+codes, both Replay navigation contracts, exact P19 approval/attempt display
+mapping and an inclusive-retained-fold S05 correctness fix are delivered.
+Presentation validators do not rewrite private manifests or frozen source/
+Report/RC pins. Actual lineage PostgreSQL 4/4 keeps Governance inaccessible
+to the Research runtime role. No frontend/runtime/production/push change;
+one grouped normal hook gates landing. [Receipt and consumer mapping](../research_loop/evidence/P21/BROAD_REQUEST_RECONCILIATION_2026-10-03.md).
+Purge/embargo applied proof and genuine P23/P24 gates remain explicit; stale
+subtitle/ten-artifact requests do not reopen accepted W4/source semantics.
+
+**2026-10-03 BR-F3-02 + W5 backend closeout:** applied purge/embargo proof now
+uses exact same-seal observed positions/native guard windows with typed absence
+and verified tail clipping. Public causal handoff fixes the real cumulative/local
+ordinal mismatch without rewriting the source journal; RC reuses its existing
+selected number with source/study/scope. Four real retained runs, installed native
+QuantBT 1.1.1 oracle, 22 read controls and unchanged immutable custody. Generated
+contracts/focused tests and one normal grouped hook gate landing; C4 exact cell
+teardown, no volumes/data/images pruned. [Receipt and Claude W5 mapping](../research_loop/evidence/P14/BR_F3_02_APPLIED_GUARDS_AND_W5_NAVIGATION_2026-10-03.md).
+No frontend/shared preview/production/remote changes; W5 browser and P23/P24
+retain their own gates, not reopened source upgrades.
+
+**2026-10-10 UDB-01 checkpoint:** preview-only PostgreSQL profiles/pinned16.15,
+forward129/130 and physical-pressure admission delivered;95/95 real-PG gates,
+7 config cases and hash-preserved Core/Research custody. No UI/identity policy/
+source activation/dev/stable change. Bobby-approved bounded qualification
+PASS:8,969 changed near2MiB writes,119 vacuum cycles,physical max304MiB,
+PG sampled charge529MiB/no OOM;exact fixture cleanup done.24h is optional
+release confidence,not a fabricated PASS. **UDB-01 PASS / no in-scope debt**.
+[Report, FK/resource/identity manifest and proof](../research_loop/evidence/UDB-01/README.md).
+
+**2026-10-10 UDB-02 PASS:** isolated private Portal-owned Execution PG/pool/
+limited role/forward ledger;Core identity/Governance/Research authority preserved.
+Two bounded local retained imports,10table count/hash parity,49,421history +
+4,136current entities/FK receipts,no mirror-history duplicate or live cursors.
+38/38 real-PG +7config assertions,independent restart,final restored/live BFF,
+actual rollback/reapply and C4 PASS;12test sessions revoked,no reset/clone.
+Original source workspace provisioned through Core owner/audit,not remapped.
+[Full phase packet and exact Claude/UDB-03 handoff](../research_loop/evidence/UDB-02/README.md).
+No UI/public DTO/dev/stable/remote/source activation. UDB-03/04 not started;
+retained freshness/partial/source gaps stay explicit,not full-product PASS.
+
+**2026-10-10 UDB-03 backend PASS / retained-preview review ready:** existing
+rich Execution data readers/query/history and54 named aliases use isolated
+local retained observations across Paper/Sandbox/Live. Immutable source clocks
+and refusals preserved; no upstream/source worker/SSE/commands/mirror activation.
+Core owner/session/workspace/resource/action authority with one audited GET-only
+preview grant, zero permission cache, private/no-store, bounded2s data memo.
+Actual222 HTTP checks+68browser cells PASS;Core/Research preserved,all9test
+sessions revoked,C4 exact unused build-image cleanup. No frontend design edit,
+remote push/dev/stable. [Packet](../research_loop/evidence/UDB-03/README.md) ·
+[Claude consumer tasks](../research_loop/evidence/UDB-03/handoff.md).
+READ/GENERATED is not CONSUMED/BROWSER_VERIFIED for the new context;UDB-04
+and product/release acceptance remain separate,not implicitly completed.
+
+**2026-10-11 UDB-03 consumer review finished (Bobby-approved):** preserve
+Claude's two landed commits/design; fix session-bound context, failure-safe
+static reads and strict UTC/schema guards. Classify four UDB persistence
+tables with real operator/migration ownership and non-destructive retention.
+91targeted tests/typecheck,6affected browser cells and3explicit context faults
+verified; web-only preview updated, API/DB unchanged,3/3test sessions revoked.
+[Refinement receipt and handoff](../research_loop/evidence/UDB-03/codex-consumer-refinement.md).
+Normal grouped commit; no remote push or UDB-04/product/release activation.

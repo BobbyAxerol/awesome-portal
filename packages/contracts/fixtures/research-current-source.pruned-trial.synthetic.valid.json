@@ -1,0 +1,28 @@
+{
+  "state": "AVAILABLE",
+  "reason_code": null,
+  "stage": "A",
+  "objective_kind": "NOT_PUBLISHED",
+  "fold_scope": { "kind": "ALL_OUTER_FOLDS", "fold_id": null, "reason_code": null },
+  "source_trial_id": "2",
+  "pruned": true,
+  "oos_seen_by_optuna": false,
+  "metrics": {
+    "mean_is_sharpe": { "value": null, "reason_code": "TRIAL_PRUNED_NO_OBJECTIVE" },
+    "mean_oos_sharpe": { "value": null, "reason_code": "TRIAL_PRUNED_NO_OBJECTIVE" },
+    "mean_decay": { "value": null, "reason_code": "TRIAL_PRUNED_NO_OBJECTIVE" },
+    "std_decay": { "value": null, "reason_code": "TRIAL_PRUNED_NO_OBJECTIVE" },
+    "temporal_score": { "value": null, "reason_code": "TRIAL_PRUNED_NO_OBJECTIVE" }
+  },
+  "constraints": {
+    "state": "NOT_APPLICABLE", "reason_code": "QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS",
+    "availability": { "state": "NOT_APPLICABLE", "reason_code": "QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS" }
+  },
+  "feasible": {
+    "state": "NOT_APPLICABLE", "reason_code": "QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS",
+    "availability": { "state": "NOT_APPLICABLE", "reason_code": "QUANTBT_WALK_FORWARD_STUDY_DECLARES_NO_CONSTRAINTS" }
+  },
+  "objective_components": {
+    "state": "NOT_PUBLISHED", "reason_code": "TRIAL_PRUNED_NO_OBJECTIVE", "formula": null, "terms": []
+  }
+}

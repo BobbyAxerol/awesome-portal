@@ -5,7 +5,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { Pool } from "pg";
 import { buildPool } from "../src/db/pool";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
-import { CurrentSourceProxyError } from "../src/execution/current-source.proxy";
+import { CurrentSourceProxyError, type CurrentSourcePrincipal } from "../src/execution/current-source.proxy";
 import { ExecutionProfileRealtimeService } from "../src/execution/profile-realtime.service";
 import {
   acceptedProjectionAdapters,
@@ -15,6 +15,7 @@ import {
   documentInvalidReason,
   ExecutionProfileProjectionRepository,
   ProfileProjectionDocument,
+  type ProjectionRow,
 } from "../src/execution/profile-projection.repository";
 import type { DurableMirrorWriter } from "../src/execution/durable-mirror.contract";
 import {
@@ -35,6 +36,21 @@ import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
 const workspaceId = "ws_projection_test";
 const profileId = "PAPER_BINANCE_USDM";
 const relationKey = "manager.strategies:strategies";
+/** Synthetic projection-only fixture, not a real session or access proof.
+ * These legacy local-reader tests do not install or replace read authority. */
+function testOnlyProjectionPrincipal(sessionId: string): CurrentSourcePrincipal {
+  const now = new Date();
+  return {
+    workspaceId,
+    user: { userId: "usr_bobby", username: "TEST_ONLY_projection", displayName: "TEST_ONLY projection",
+      role: "ADMIN", status: "ACTIVE", mustChangePassword: false, failedLoginCount: 0,
+      lockedUntil: null, sessionVersion: 1, createdAt: now, updatedAt: now, disabledAt: null,
+      accountRevision: 1, archivedAt: null },
+    session: { sessionId, userId: "usr_bobby", state: "ACTIVE", sessionVersion: 1,
+      authenticationTime: now, idleExpiresAt: new Date(now.getTime() + 60_000),
+      absoluteExpiresAt: new Date(now.getTime() + 60_000) },
+  };
+}
 let pool: Pool;
 let repository: ExecutionProfileProjectionRepository;
 
@@ -206,9 +222,25 @@ describe("Phase 1 SGP-local profile projection", () => {
       }) as any);
       const start = performance.now();
       await new Promise(done=>setTimeout(done,60_000));
-      expect(fullReads).toBe(0);
-      expect(metadataReads).toBeGreaterThan(1000);
-      expect(metadataReads).toBeLessThanOrEqual(6*241);
+      // 2026-10-21 finding (R2 hook / Core009 R3): metadataReads was 804 (< 1000)
+      // when other heavy jobs shared the host; it passed on a quiet cell. The
+      // floor is unchanged (not lowered). The assertion messages now PRINT the
+      // measured reads, elapsed ms, expected tick count and event-loop delay so
+      // a future failure shows whether it was machine load (high loop p95/max,
+      // elapsed >> 60000, reads per tick near expected) or a logic regression
+      // (loop idle but reads/tick collapsed, or any full-payload read).
+      const elapsedMs = Math.round(performance.now()-start);
+      const pollMs = Number(replicas[0].diagnostics().local_tail_poll_ms);
+      const evidence = () => JSON.stringify({
+        metadata_reads: metadataReads, full_payload_reads: fullReads, elapsed_ms: elapsedMs,
+        tail_poll_ms: pollMs, expected_ticks: Math.floor(elapsedMs/pollMs),
+        achieved_ticks_per_replica: Math.round(metadataReads/(replicas.length*profiles.length)),
+        event_loop_delay_p95_ms: eventLoop.percentile(95)/1e6, event_loop_delay_max_ms: eventLoop.max/1e6,
+        event_loop_delay_mean_ms: eventLoop.mean/1e6, replica_counters: replicas.map(r => r.diagnostics().counters),
+      });
+      expect(fullReads, `BE-R2-9 full-payload tail reads: ${evidence()}`).toBe(0);
+      expect(metadataReads, `BE-R2-9 metadata reads floor 1000: ${evidence()}`).toBeGreaterThan(1000);
+      expect(metadataReads, `BE-R2-9 metadata reads ceiling ${6*241}: ${evidence()}`).toBeLessThanOrEqual(6*241);
       const latencies: number[] = [];
       for (let i=0;i<6;i++) {
         const env = profiles[i%3];
@@ -234,6 +266,25 @@ describe("Phase 1 SGP-local profile projection", () => {
       payloadRead.mockRestore(); vi.restoreAllMocks();
     }
   },90_000);
+
+  it("reads exact ordered scalar journal metadata without a source payload", async () => {
+    const first=await commit(document("metadata-one"),"metadata-one");
+    await commit(document("metadata-two"),"metadata-two");
+    const rows=await repository.journalMetadataAfter(workspaceId,"paper",profileId,first.projectionEpoch,0,2);
+    expect(rows.map(row=>row.projectionSequence)).toEqual([1,2]);
+    expect(rows.every(row=>row.workspaceId===workspaceId&&row.environment==="paper"&&
+      row.profileId===profileId&&row.projectionEpoch===first.projectionEpoch)).toBe(true);
+    expect(rows.every(row=>!Object.hasOwn(row,"payload"))).toBe(true);
+    expect((await repository.journalMetadataAfter(workspaceId,"paper",profileId,first.projectionEpoch,1,1))
+      .map(row=>row.projectionSequence)).toEqual([2]);
+    expect(await repository.journalMetadataAfter("TEST_ONLY-other-workspace","paper",profileId,first.projectionEpoch,0,2)).toEqual([]);
+    expect(await repository.journalMetadataAfter(workspaceId,"live",profileId,first.projectionEpoch,0,2)).toEqual([]);
+    expect(await repository.journalMetadataAfter(workspaceId,"paper","TEST_ONLY-other-profile",first.projectionEpoch,0,2)).toEqual([]);
+    expect(await repository.journalMetadataAfter(workspaceId,"paper",profileId,"22345678-1234-1234-1234-123456789abc",0,2)).toEqual([]);
+    expect(await repository.journalMetadataAfter(workspaceId,"paper",profileId,first.projectionEpoch,2,2)).toEqual([]);
+    // The preexisting payload reader remains available to its legacy callers.
+    expect((await repository.journalAfter(workspaceId,"paper",profileId,first.projectionEpoch,0,1))[0]).toHaveProperty("payload");
+  });
 
   it("allows only one active writer lease per workspace/profile", async () => {
     expect(await repository.tryAcquireLease(workspaceId, "paper", profileId, "replica-a", 60_000))
@@ -363,10 +414,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     const source = new ExecutionProductReadSource(config, repository, {
       relationPage: async () => { namedCalls += 1; throw new Error("unexpected named warm-up read"); },
     } as never);
-    const principal = {
-      principalId: "usr_bobby", sessionId: "ses_1", workspaceId,
-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
-    };
+    const principal = testOnlyProjectionPrincipal("ses_1");
     const [left, right] = await Promise.all([
       source.relation(principal, "paper", "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
         "manager.strategies", "strategies", { limit: 1 }),
@@ -399,10 +447,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     const source = new ExecutionProductReadSource(config, repository, {
       relationPage: async () => { namedCalls += 1; throw new Error("unexpected named warm-up read"); },
     } as never);
-    const principal = {
-      principalId: "usr_bobby", sessionId: "ses_eds03", workspaceId,
-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
-    };
+    const principal = testOnlyProjectionPrincipal("ses_eds03");
 
     const resolution = await source.resolveDeploymentScope(
       principal, "paper", "EXECUTION_PAPER_WORKBENCH_SCREEN", "dep_200",
@@ -430,10 +475,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     const source = new ExecutionProductReadSource(config, repository, {
       relationPage: async () => { throw new Error("unexpected named warm-up read"); },
     } as never);
-    const principal = {
-      principalId: "usr_bobby", sessionId: "ses_r2_3", workspaceId,
-      roles: ["ADMIN"], authenticationTime: new Date(), authenticationMethods: ["portal_session"],
-    };
+    const principal = testOnlyProjectionPrincipal("ses_r2_3");
 
     const exact = await source.relation(
       principal, "paper", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.orders", "orders",
@@ -1276,6 +1318,46 @@ function emptyManagerResponse(environment: string, relation: string) {
 }
 
 describe("P4-D follow-on: resumable time-series drains", () => {
+  it("does not commit a new ladder cursor while an incomplete parent leaves a child unaccounted for", async () => {
+    const key = "manager.performance:account_equity_snapshots";
+    await repository.saveRelationCursor(workspaceId, "paper", profileId, key, "TEST_ONLY-before");
+    let parentReady = false;
+    const cursors: Array<string | undefined> = [];
+    const source = { relationForProjection: async (_workspace: string, environment: string, _screen: string,
+      _source: string, relation: string, query: { cursor?: string }) => {
+      const response = emptyManagerResponse(environment, relation) as Record<string, any>;
+      if (relation === "accounts") {
+        response.source.completeness = parentReady ? "COMPLETE" : "PARTIAL";
+        if (parentReady) response.source.data.items = [{ relation: { schema: "public", relation }, record_key: "TEST_ONLY-account",
+          fields: { account_id: { kind: "TEXT", value: "TEST_ONLY-account" }, mode: { kind: "TEXT", value: environment } } }];
+      }
+      if (relation === "account_equity_snapshots") {
+        cursors.push(query.cursor);
+        if (query.cursor === "TEST_ONLY-before") {
+          response.source.data.next_cursor = "TEST_ONLY-next";
+          response.source.data.items = [{ relation: { schema: "public", relation }, record_key: "TEST_ONLY-equity",
+            fields: { id: { kind: "TEXT", value: "TEST_ONLY-equity" }, account_id: { kind: "TEXT", value: "TEST_ONLY-account" },
+              mode: { kind: "TEXT", value: environment }, ts: { kind: "TIMESTAMP", value: new Date().toISOString() },
+              equity: { kind: "DECIMAL", value: "10" } } }];
+        }
+      }
+      return response;
+    } };
+    const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
+    try {
+      await worker.runOnce();
+      expect(await repository.relationCursor(workspaceId, "paper", profileId, key)).toBe("TEST_ONLY-before");
+      expect((await repository.rawSnapshot(workspaceId, "paper", profileId))?.document.relations[key])
+        .toMatchObject({ completeness: "PARTIAL", lineage_rejects: { account: 1 }, items: [] });
+      parentReady = true;
+      await worker.runOnce();
+      expect(cursors).toEqual(["TEST_ONLY-before", "TEST_ONLY-next", "TEST_ONLY-before", "TEST_ONLY-next"]);
+      expect(await repository.relationCursor(workspaceId, "paper", profileId, key)).toBe("TEST_ONLY-next");
+      expect((await repository.rawSnapshot(workspaceId, "paper", profileId))?.document.relations[key].items)
+        .toEqual([expect.objectContaining({ fields: expect.objectContaining({ id: "TEST_ONLY-equity", equity: "10" }) })]);
+    } finally { await worker.onApplicationShutdown(); }
+  });
+
   it("persists the drain cursor, resumes from it next cycle and clears it at the tail", async () => {
     const equityCursors: Array<string | undefined> = [];
     let tail = false;
@@ -1702,6 +1784,28 @@ describe("Daily closes for cross-alpha statistics (§14 E1)", () => {
       { strategyId: "alpha_x", accountId: "acc_b", day: "2026-09-02", value: "512" },
     ]);
   });
+
+  it("exact stage successor keeps a malformed LATEST close and exact currency/decimal text, with an overflow witness", async () => {
+    const samples = [
+      { rowId: "exact_earlier", ts: "2026-09-01T08:00:00Z", fields: { strategy_id: "exact_alpha", account_id: "exact_a", equity: "1.2", currency: "USD" } },
+      { rowId: "exact_latest", ts: "2026-09-01T23:00:00Z", fields: { strategy_id: "exact_alpha", account_id: "exact_a", equity: "not-a-decimal", currency: "USD" } },
+      { rowId: "exact_next_day", ts: "2026-09-02T00:00:00Z", fields: { strategy_id: "exact_alpha", account_id: "exact_a", equity: "9007199254740993.03", currency: "USD" } },
+      { rowId: "exact_number", ts: "2026-09-03T00:00:00Z", fields: { strategy_id: "exact_alpha", account_id: "exact_a", equity: 0.3, currency: 123 } },
+      { rowId: "exact_peer", ts: "2026-09-02T00:00:00Z", fields: { strategy_id: "other_alpha", account_id: "peer", equity: "999", currency: "USD" } },
+    ];
+    await repository.appendTimeSeriesHistory(workspaceId, "paper", profileId, equityKey, samples as never);
+    const args = { from: "2026-08-31T00:00:00Z", strategyId: "exact_alpha", maximumRows: 20_000 };
+    const rows = await repository.stageEquityDailyCloses(workspaceId, "paper", profileId, args);
+    expect(rows).toEqual([
+      { strategyId: "exact_alpha", accountId: "exact_a", day: "2026-09-01", value: "not-a-decimal", currency: "USD" },
+      { strategyId: "exact_alpha", accountId: "exact_a", day: "2026-09-02", value: "9007199254740993.03", currency: "USD" },
+      { strategyId: "exact_alpha", accountId: "exact_a", day: "2026-09-03", value: null, currency: null },
+    ]);
+    // A caller with cap1 gets TWO as refusal witness; never a silent first-page sum.
+    expect(await repository.stageEquityDailyCloses(workspaceId, "paper", profileId, { ...args, maximumRows: 1 })).toHaveLength(2);
+    await expect(repository.stageEquityDailyCloses(workspaceId, "paper", profileId, { ...args, maximumRows: 20_001 }))
+      .rejects.toThrow("STAGE_EQUITY_ROW_BOUND_INVALID");
+  });
 });
 
 describe("P4-D window ladder merge", () => {
@@ -1741,8 +1845,8 @@ describe("P4-D window ladder merge", () => {
 describe("row provenance across catalogues (dev 2026-09-07: a pre-catalogue warm window froze the paper projection)", () => {
   const digest = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
   const base = { workspace_id: "ws", profile_id: "PAPER_BINANCE_USDM", source_contract_revision: "r" };
-  const bare = { lineage: { ...base }, fields: { id: "old", ts: "2026-09-01T00:00:00.000Z" } };
-  const stamped = { lineage: { ...base, source_catalogue_sha256: digest }, fields: { id: "new", ts: "2026-09-02T00:00:00.000Z" } };
+  const bare: ProjectionRow = { lineage: { ...base }, fields: { id: "old", ts: "2026-09-01T00:00:00.000Z" } };
+  const stamped: ProjectionRow = { lineage: { ...base, source_catalogue_sha256: digest }, fields: { id: "new", ts: "2026-09-02T00:00:00.000Z" } };
 
   it("drops rows without a catalogue under a catalogued document, rows with one under a bare document, and keeps the rest", () => {
     expect(provenanceCompatibleRows([bare, stamped], digest)).toEqual({ rows: [stamped], dropped: 1 });

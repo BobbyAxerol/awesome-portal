@@ -1,0 +1,82 @@
+{
+  "schema_version": "portal.execution.local-validation-record.v1",
+  "tier": "R3",
+  "entry_sha": "35953e073f609c154ec484b19b4ceeeb09b566c8",
+  "qualification": "TEST_ONLY_CORE_CORRECTNESS_NOT_COMMISSIONING",
+  "status": "PENDING_OWNING_GATE",
+  "generation": {
+    "status": "PASS",
+    "snapshot_tracked_inputs": 480,
+    "commands": [
+      "npm run generate:execution-trusted-commands",
+      "npm run generate:execution-access",
+      "openapi-typescript openapi/execution-profile-realtime.openapi.json -o generated/execution-profile-realtime.d.ts",
+      "python3 tooling/snapshot.py --check"
+    ],
+    "fixtures": {
+      "execution-scoped-realtime.synthetic.valid.json": "aeef8740a1fb9367282c5bf092f9e72b08214b35e892ec64491e7201e5521f96",
+      "execution-trusted-commands.synthetic.valid.json": "48b736694274a84ae9de10f2f0a8a9f1adefd517800d9a26f93e315691b6a419"
+    },
+    "runtime_activation": false
+  },
+  "focused_api": {
+    "status": "FAIL_OR_INCOMPLETE_CORRECTED_ASSERTIONS_AWAIT_NORMAL_R3",
+    "receipt": "/home/bobby/.local/state/portal-execution-elp210/20261019/native-c7-focus-044303/controller.json",
+    "log_sha256": "3edbbefb03ac9859498b6c85b02231bee4ddc6300a82f2edd375648ecb9d28eb",
+    "node": "22",
+    "build": "PASS",
+    "files_passed": 23,
+    "files_failed": 2,
+    "tests_passed": 787,
+    "tests_failed": 3,
+    "test_duration_seconds": 232.60,
+    "failure": "New assertions confused sanitized public message with the separate typed error code; producer unchanged",
+    "runtime_unchanged": true,
+    "source_unchanged_during_gate": true,
+    "index_unchanged": true,
+    "remaining_owned_resources": 0
+  },
+  "focused_contract_diagnostic": {
+    "status": "PASS",
+    "node": "20.20.2",
+    "started_utc": "2026-10-19T04:41:08Z",
+    "duration_seconds": 6.85,
+    "files_passed": 5,
+    "tests_passed": 181,
+    "database_network_authority": false,
+    "qualification": "FIXTURE_SCHEMA_ONLY_NOT_NODE22_RUNTIME",
+    "files": [
+      "execution-trusted-commands.spec.ts",
+      "execution-access.spec.ts",
+      "execution-scoped-realtime.spec.ts",
+      "execution-operation-reader.spec.ts",
+      "execution-producer-ledger.spec.ts"
+    ]
+  },
+  "normal_hook": {
+    "status": "PENDING_AT_TRACKED_SOURCE_CUT",
+    "terminal_authority": "/home/bobby/.local/state/portal-execution-elp210/20261019/c7-terminal.md",
+    "controller_pattern": "native-c7-land-HHMMSS/controller.json",
+    "no_future_pass_claim": true
+  },
+  "resource_safety_ceiling": {
+    "cpu": 4,
+    "memory_gib": 4,
+    "transient_gib": 8,
+    "performance_budget_approval": false
+  },
+  "whole_phase": "NOT_MET",
+  "next_phase": "ELP2_11_NOT_ENTRY_READY",
+  "external_gates": {
+    "genuine_provider_current_human": "NOT_QUALIFIED",
+    "financial_input_publication": "SOURCE_DARK",
+    "approved_calibration_budget": "REQUIRED_ARTIFACTS_NOT_EVIDENCED_IN_CHECKED_SURFACE",
+    "matched_coexistence_g2": "NOT_RUN_17_INPUTS_PENDING",
+    "qualified_source_browser_acceptance": "NOT_RUN"
+  },
+  "external_gate_locator": "c7-runtime-integration-2026-10-19.md#fresh-hk-source-cut-and-remaining-owners",
+  "remote_writes": false,
+  "frontend_edits": false,
+  "push": false,
+  "deployment": false
+}

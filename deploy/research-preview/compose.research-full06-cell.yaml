@@ -1,0 +1,10 @@
+# FULL06 owned qualification custody, never reuse the preview/production store.
+volumes:
+  portal-artifacts:
+    name: portal-research-full06-20261006-artifacts
+  portal-postgres-data:
+    name: portal-research-full06-20261006-postgres
+  portal-nats-data:
+    name: portal-research-full06-20261006-nats
+  roadmap-task-board-data:
+    name: portal-research-full06-20261006-roadmap

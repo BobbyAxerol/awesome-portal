@@ -1,0 +1,388 @@
+{
+  "_comment": "PROPOSED - values for UI development, not backend output. Base = the real GET /api/v1/research/datasets read on the Research preview (claude-preview, 2026-10-01); every field marked PROPOSED in DATA_DECLARATION_SPEC_2026-10-01.md section 3 is added by hand. The backend does not serve them yet. Block = the optional preflight_estimate the preflight (or a dry-run) would carry (spec section 4, DR-07/08/09). BTCUSDT 1h, advanced WFO over 92 days.",
+  "preflight_estimate": {
+    "schema_version": "research.preflight-estimate.v1",
+    "origin": "PORTAL_DERIVED",
+    "as_of_utc_ms": 1790893800000,
+    "catalog_revision": "catrev_8f2c1d04a9b7",
+    "windows": {
+      "is": {
+        "bars": 1056,
+        "first_bar_utc_ms": 1748736000000,
+        "last_bar_utc_ms": 1752534000000
+      },
+      "oos": {
+        "bars": 744,
+        "first_bar_utc_ms": 1752537600000,
+        "last_bar_utc_ms": 1755212400000
+      },
+      "holdout": {
+        "bars": 408,
+        "first_bar_utc_ms": 1755216000000,
+        "last_bar_utc_ms": 1756681200000
+      }
+    },
+    "warmup": {
+      "bars_required": 200,
+      "bars_available_before_is": 12000
+    },
+    "planned_folds": {
+      "count": 11,
+      "basis": "weekly expanding",
+      "min_bars_per_fold": 168,
+      "reason_code": null
+    },
+    "conditions": [
+      {
+        "key": "bars_sufficient",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "2208 bars",
+        "required": ">= 1200 bars"
+      },
+      {
+        "key": "coverage_covers_windows",
+        "state": "NOT_PUBLISHED",
+        "reason_code": "ESTIMATE_NOT_COMPUTED",
+        "observed": null,
+        "required": "2025-06 to 2025-09"
+      },
+      {
+        "key": "timeframe_declared",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "1h",
+        "required": "1h"
+      },
+      {
+        "key": "profile_allows",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "p10.delta-signal-notional-wfo.v1",
+        "required": "enabled profile"
+      },
+      {
+        "key": "seed_and_trials",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "seed 42 · 400 trials",
+        "required": "seed 42 · trials 2 to 400"
+      }
+    ],
+    "profiles": [
+      {
+        "profile_id": "p04.fixed-qualification.v1",
+        "state": "ENABLED",
+        "reason": null,
+        "protocol": "three_window_decay",
+        "execution_route": "signal_notional",
+        "optimization_mode": "mode_1_decay",
+        "trial_range": {
+          "min": 1,
+          "max": 1,
+          "default": null
+        },
+        "seed_policy": {
+          "state": "FORBIDDEN",
+          "value": null
+        },
+        "fold_range": null,
+        "fold_granularity": null,
+        "window_mode": null,
+        "max_span_days": null,
+        "timeframes_allowed": [
+          "1h"
+        ],
+        "schedules_allowed": [
+          "global"
+        ],
+        "window_min_bars": null
+      },
+      {
+        "profile_id": "p10.delta-signal-notional-wfo.v1",
+        "state": "ENABLED",
+        "reason": null,
+        "protocol": "advanced",
+        "execution_route": "signal_notional",
+        "optimization_mode": "mode_1_decay",
+        "trial_range": {
+          "min": 2,
+          "max": 400,
+          "default": null
+        },
+        "seed_policy": {
+          "state": "FIXED",
+          "value": 42
+        },
+        "fold_range": {
+          "min": 2,
+          "max": 16
+        },
+        "fold_granularity": "weekly",
+        "window_mode": "expanding",
+        "max_span_days": 92,
+        "timeframes_allowed": [
+          "1h"
+        ],
+        "schedules_allowed": [
+          "global"
+        ],
+        "window_min_bars": null
+      }
+    ]
+  },
+  "refused_variants": {
+    "bars_sufficient": {
+      "conditions": [
+        {
+          "key": "bars_sufficient",
+          "state": "FAIL",
+          "reason_code": "ESTIMATE_BARS_INSUFFICIENT",
+          "observed": "640 bars",
+          "required": ">= 1200 bars"
+        },
+        {
+          "key": "coverage_covers_windows",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "2020-01 to 2026-10",
+          "required": "2025-06 to 2025-09"
+        },
+        {
+          "key": "timeframe_declared",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "1h",
+          "required": "1h"
+        },
+        {
+          "key": "profile_allows",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "p10.delta-signal-notional-wfo.v1",
+          "required": "enabled profile"
+        },
+        {
+          "key": "seed_and_trials",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "seed 42 · 400 trials",
+          "required": "seed 42 · trials 2 to 400"
+        }
+      ],
+      "planned_folds": {
+        "count": null,
+        "basis": null,
+        "min_bars_per_fold": null,
+        "reason_code": "ESTIMATE_FOLDS_BELOW_PROFILE_MIN"
+      },
+      "warmup": null
+    },
+    "coverage_covers_windows": {
+      "conditions": [
+        {
+          "key": "bars_sufficient",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "2208 bars",
+          "required": ">= 1200 bars"
+        },
+        {
+          "key": "coverage_covers_windows",
+          "state": "FAIL",
+          "reason_code": "ESTIMATE_COVERAGE_GAP",
+          "observed": "starts 2025-08-04",
+          "required": "starts 2025-06-01"
+        },
+        {
+          "key": "timeframe_declared",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "1h",
+          "required": "1h"
+        },
+        {
+          "key": "profile_allows",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "p10.delta-signal-notional-wfo.v1",
+          "required": "enabled profile"
+        },
+        {
+          "key": "seed_and_trials",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "seed 42 · 400 trials",
+          "required": "seed 42 · trials 2 to 400"
+        }
+      ],
+      "planned_folds": null,
+      "warmup": {
+        "bars_required": 200,
+        "bars_available_before_is": 0
+      }
+    },
+    "timeframe_declared": {
+      "conditions": [
+        {
+          "key": "bars_sufficient",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "2208 bars",
+          "required": ">= 1200 bars"
+        },
+        {
+          "key": "coverage_covers_windows",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "2020-01 to 2026-10",
+          "required": "2025-06 to 2025-09"
+        },
+        {
+          "key": "timeframe_declared",
+          "state": "FAIL",
+          "reason_code": "ESTIMATE_TIMEFRAME_NOT_DECLARED",
+          "observed": "4h",
+          "required": "1h"
+        },
+        {
+          "key": "profile_allows",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "p10.delta-signal-notional-wfo.v1",
+          "required": "enabled profile"
+        },
+        {
+          "key": "seed_and_trials",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "seed 42 · 400 trials",
+          "required": "seed 42 · trials 2 to 400"
+        }
+      ],
+      "planned_folds": null,
+      "warmup": null
+    },
+    "profile_allows": {
+      "conditions": [
+        {
+          "key": "bars_sufficient",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "2208 bars",
+          "required": ">= 1200 bars"
+        },
+        {
+          "key": "coverage_covers_windows",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "2020-01 to 2026-10",
+          "required": "2025-06 to 2025-09"
+        },
+        {
+          "key": "timeframe_declared",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "1h",
+          "required": "1h"
+        },
+        {
+          "key": "profile_allows",
+          "state": "FAIL",
+          "reason_code": "ESTIMATE_PROFILE_SPAN_EXCEEDED",
+          "observed": "120 days",
+          "required": "<= 92 days"
+        },
+        {
+          "key": "seed_and_trials",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "seed 42 · 400 trials",
+          "required": "seed 42 · trials 2 to 400"
+        }
+      ],
+      "planned_folds": null,
+      "warmup": null
+    },
+    "seed_and_trials": {
+      "conditions": [
+        {
+          "key": "bars_sufficient",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "2208 bars",
+          "required": ">= 1200 bars"
+        },
+        {
+          "key": "coverage_covers_windows",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "2020-01 to 2026-10",
+          "required": "2025-06 to 2025-09"
+        },
+        {
+          "key": "timeframe_declared",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "1h",
+          "required": "1h"
+        },
+        {
+          "key": "profile_allows",
+          "state": "PASS",
+          "reason_code": null,
+          "observed": "p10.delta-signal-notional-wfo.v1",
+          "required": "enabled profile"
+        },
+        {
+          "key": "seed_and_trials",
+          "state": "FAIL",
+          "reason_code": "ESTIMATE_TRIALS_OUT_OF_RANGE",
+          "observed": "1 trial",
+          "required": "trials 2 to 400"
+        }
+      ],
+      "planned_folds": null,
+      "warmup": null
+    }
+  },
+  "all_pass": {
+    "conditions": [
+      {
+        "key": "bars_sufficient",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "2208 bars",
+        "required": ">= 1200 bars"
+      },
+      {
+        "key": "coverage_covers_windows",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "2020-01 to 2026-10",
+        "required": "2025-06 to 2025-09"
+      },
+      {
+        "key": "timeframe_declared",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "1h",
+        "required": "1h"
+      },
+      {
+        "key": "profile_allows",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "p10.delta-signal-notional-wfo.v1",
+        "required": "enabled profile"
+      },
+      {
+        "key": "seed_and_trials",
+        "state": "PASS",
+        "reason_code": null,
+        "observed": "seed 42 · 400 trials",
+        "required": "seed 42 · trials 2 to 400"
+      }
+    ]
+  }
+}

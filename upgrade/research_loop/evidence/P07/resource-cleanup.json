@@ -1,0 +1,23 @@
+{
+  "phase": "P07",
+  "status": "NO_GLOBAL_CLEANUP_AUTHORIZED_OR_NEEDED",
+  "capacity_snapshot_utc": "2026-09-20T03:44:47Z",
+  "root_filesystem": {
+    "device": "/dev/vda1",
+    "total_human": "621G",
+    "used_human": "304G",
+    "available_human": "317G",
+    "used_percent": 49
+  },
+  "phase_local_observations": [
+    "apps/control-api/node_modules: 148M (read-only observation).",
+    "apps/portal/.venv: 940M (read-only observation).",
+    "The P07 test script creates one exact tmpfs PostgreSQL container named research-p07-postgres-<pid>; its EXIT trap removes only that container."
+  ],
+  "retention_policy": [
+    "Expired, unbound P07 source bytes are purged only by the bounded actor-scoped repository operation.",
+    "Registered AlphaVersion source bytes and gate/registry audit provenance are retained; no business or Research evidence is deleted as test cleanup.",
+    "No Docker image, volume, build cache, worktree, historical data, Execution or Trading System resource was removed."
+  ],
+  "separate_followup_if_needed": "Any system-wide Docker/cache reclamation needs its own read-only inventory, exact targets and quiet-window authorization; P07 must not use a broad prune."
+}

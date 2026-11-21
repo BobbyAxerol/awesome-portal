@@ -1,0 +1,227 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>M09 Operations — lowfi</title><link rel="stylesheet" href="kit.css">
+<style>
+/* page-local only: tab buttons, drawer variants, wrapping cells */
+.split{grid-template-columns:1fr 380px}@media(max-width:1100px){.split{grid-template-columns:1fr}}
+.chip{white-space:nowrap}
+.scroll table{min-width:640px}.scroll td,.scroll th{white-space:normal}
+.tabs button{border:0;background:none;padding:6px 12px;color:var(--mute);border-bottom:2px solid transparent;font:inherit;cursor:pointer;margin-bottom:-1px}
+.tabs button[aria-pressed=true]{color:var(--ink);border-color:var(--ink);font-weight:600}
+[data-t]{display:none}
+body[data-tab=cmd] [data-t=cmd],body[data-tab=exc] [data-t=exc],body[data-tab=aud] [data-t=aud]{display:block}
+[data-d]{display:none}
+body[data-sel=unk] [data-d=unk],body[data-sel=root] [data-d=root],body[data-sel=rec] [data-d=rec]{display:block}
+body[data-state=denied] [data-d]{display:none}body[data-state=denied] [data-d=own]{display:block}
+body[data-sel=unk] tr[data-row=unk] td,body[data-sel=root] tr[data-row=root] td,body[data-sel=rec] tr[data-row=rec] td{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+th.grpH{text-align:center;border-bottom:1px solid var(--line);color:var(--ink)}
+td.f{border-left:1px dashed var(--line)}td.f+td.f{border-left:1px dashed var(--line)}
+.sec{margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:600}
+.fact{display:grid;grid-template-columns:104px 1fr;gap:2px 8px;padding:6px 0;border-bottom:1px solid var(--line)}.fact:last-of-type{border-bottom:0}
+.call{padding:8px 10px;border:1px solid var(--warn);border-radius:6px;background:var(--fill);margin:8px 0}
+.empty{margin-top:12px;padding:28px 20px;text-align:center}.empty h2{font-size:16px;line-height:24px;margin:0 0 6px}.empty p{max-width:560px;margin:6px auto}
+.btn.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.kv td:first-child{color:var(--mute);width:42%}.drawer td{white-space:normal;overflow-wrap:anywhere}
+</style></head><body data-state="healthy" data-notes="on" data-peek="on" data-sel="unk" data-tab="cmd">
+<div class="bar"><b>Lowfi · M09 Operations &amp; Decisions</b>
+ <span class="seg" data-ctl="state"><button data-v="healthy" aria-pressed="true">Healthy</button><button data-v="sparse">Source not ready</button><button data-v="denied">Researcher (own slice)</button><button data-v="loading">Loading</button></span>
+ <span class="seg" data-ctl="notes"><button data-v="on" aria-pressed="true">Notes on</button><button data-v="off">Off</button></span>
+ <span class="seg" data-ctl="peek"><button data-v="off">Table</button><button data-v="on" aria-pressed="true">Peek drawer</button></span>
+ <span class="seg" data-ctl="sel"><button data-v="unk" aria-pressed="true">Row: UNKNOWN</button><button data-v="root">Row: no amount</button><button data-v="rec">Row: partial recall</button></span>
+ <span class="mute sm">Sample values only</span></div>
+<div class="shell"><nav class="side"><h6>Execution</h6><a href="#">Overview</a><a href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a aria-current="page" href="#">Operations</a><h6>Account</h6><a href="#">Profile &amp; Access</a></nav>
+<main>
+<div class="v1wrap"><figure><img src="v1/operations.png" alt="Current Operations queue"><figcaption>Current screen (V1) at <code>/execution/operations</code> — preview build, 1440px, BFF-double sample data. Switch to “What changes” to see the proposal marked against it.</figcaption></figure><figure><img src="v1/approvals.png" alt="Current Approval Inbox"><figcaption>Related current screen (V1) at <code>/governance/approvals</code> — stays its own screen; the proposal only links to it.</figcaption></figure></div>
+<div class="ctx" data-chg="changed" title="V1: ‘Operations Queue’, NOTHING STUCK badge, source chip. Now: adds time range, timezone and money partition."><h1>Operations &amp; Decisions</h1>
+ <span class="chip" data-s="fresh" data-show="healthy denied loading"><i></i>Fresh · 8s</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Command status not qualified</span>
+ <span class="seg" data-seg><button aria-pressed="true">24H</button><button aria-pressed="false">7D</button><button aria-pressed="false">30D</button><button aria-pressed="false">Custom</button></span><span class="chip">Local time · UTC+7</span><span class="chip">USDT · real-funded</span><span class="note">1</span></div>
+
+<div class="banner" data-show="denied"><span class="note">12</span> Showing requests you submitted and exceptions on alphas you own. Fund-level commands and other people's activity are not available to your role.</div>
+<div class="banner warn" data-show="sparse" data-chg="changed" title="V1: ‘Command authority: UNCHANGED_FAIL_CLOSED · relay state not published…’. Same fact in plain words."><b>Command receipts can't be listed yet.</b> The command status source is not qualified for this environment. Nothing here is inferred from other screens. Exceptions still use the existing queue.</div>
+
+<details class="card" style="margin-bottom:12px;padding:8px 14px" data-show="healthy sparse" data-chg="changed" title="V1 shows a ‘Source health by profile’ table always open, with raw profile codes and ‘no reason published’. Now collapsed behind a chip, plain profile names, freshness added.">
+ <summary><b>Source health</b> <span class="chip" data-s="partial" data-show="healthy"><i></i>2 of 3 profiles partial</span><span class="chip" data-s="stale" data-show="sparse"><i></i>Not available</span> <span class="note">14</span></summary>
+ <table style="margin-top:6px"><thead><tr><th>Profile</th><th>State</th><th>Freshness</th></tr></thead>
+ <tbody data-show="healthy"><tr><td>Paper · Binance USD-M</td><td><span class="chip" data-s="fresh"><i></i>Complete</span></td><td class="sm">9s ago</td></tr><tr><td>Sandbox · Binance USD-M</td><td><span class="chip" data-s="partial"><i></i>Partial</span></td><td class="sm">14m ago <span class="mute">· reason not published</span></td></tr><tr><td>Live · Binance USD-M</td><td><span class="chip" data-s="partial"><i></i>Partial</span></td><td class="sm">14m ago <span class="mute">· reason not published</span></td></tr></tbody>
+ <tbody data-show="sparse"><tr><td colspan="3"><span class="na">Not available</span><span class="reason">Command status not qualified</span></td></tr></tbody></table></details>
+
+<div class="grid g3" data-show="healthy sparse loading" data-chg="changed" title="V1 tiles: In this view / Total / Need attention / Partial. Now: UNKNOWN / Pending receipts / Open exceptions.">
+ <div class="card kpi"><div class="l">UNKNOWN outcomes <span class="note">2</span></div>
+  <div class="v" data-show="healthy">1</div><div class="sm mute" data-show="healthy">Query the original request. Do not resend.</div>
+  <div data-show="sparse"><span class="na">Not available</span><span class="reason">Command status not qualified</span></div><div class="sk" data-show="loading"></div></div>
+ <div class="card kpi"><div class="l">Pending receipts</div>
+  <div class="v" data-show="healthy">2</div><div class="sm mute" data-show="healthy">Partly applied or waiting on existing obligations.</div>
+  <div data-show="sparse"><span class="na">Not available</span><span class="reason">Command status not qualified</span></div><div class="sk" data-show="loading"></div></div>
+ <div class="card kpi"><div class="l">Open exceptions</div>
+  <div class="v" data-show="healthy sparse">3</div><div class="sm mute" data-show="healthy">Need a person to look.</div><div class="sm mute" data-show="sparse">From the existing queue.</div><div class="sk" data-show="loading"></div></div>
+</div>
+
+<div class="tabs" role="tablist" data-ctl="tab" style="margin-top:12px" data-chg="new" title="V1 has no tabs by row grain. New: Commands / Exceptions / Audit."><button data-v="cmd" aria-pressed="true">Commands <span class="mute sm" data-show="healthy">128</span></button><button data-v="exc" aria-pressed="false">Exceptions <span class="mute sm" data-show="healthy sparse">3</span></button><button data-v="aud" aria-pressed="false">Audit</button><span class="note">3</span><span class="note">13</span></div>
+
+<div data-t="cmd">
+<div class="tool" data-show="healthy denied loading" data-chg="kept" title="V1 lenses: Needs attention / Mine / All retained. Kept, plus one new lens ‘Needs my approval’ for archive requests.">
+ <span class="seg" data-seg><button aria-pressed="true" data-show="healthy">Needs attention</button><button aria-pressed="false">Mine</button><button aria-pressed="false" data-show="healthy">Needs my approval <span class="pill" style="margin:0 0 0 4px">1</span></button><button aria-pressed="false" data-show="healthy loading">All retained</button></span><span class="note">15</span>
+ <span class="sm mute">Tracks receipts only. Capital actions are started elsewhere, never from this page.</span></div>
+<div class="tool" data-show="healthy denied loading" data-chg="new" data-chg="new" title="V1 has no operation, state or time filters, only the three lenses. New: four filters and a time range."><input placeholder="Search target or command ID" aria-label="Search"><button class="btn">Operation ▾</button><button class="btn">Intent ▾</button><button class="btn">Receipt ▾</button><button class="btn">Reconciliation ▾</button><span class="note">4</span><span style="flex:1"></span><button class="btn" disabled title="Export is not available yet">Export</button></div>
+<div class="tool sm" data-show="healthy"><span class="chip">Receipt: UNKNOWN, Pending ✕</span><span class="chip">Time: last 24H ✕</span><a href="#">Clear all</a><span class="mute">Each state is filtered on its own; they are never combined into one “status”.</span></div>
+
+<div class="split" data-show="healthy denied loading">
+<div class="card scroll" style="padding:0;align-self:start" data-chg="changed" title="V1 columns: PRI · OPERATION · COMMAND·PHASE · TARGET · one STATE. Now: three separate state columns and plain names.">
+<table><thead>
+ <tr><th rowspan="2">Time</th><th rowspan="2">Target · operation</th><th colspan="3" class="grpH">Three separate facts <span class="note">5</span></th><th rowspan="2">Next step</th></tr>
+ <tr><th>Intent</th><th>Receipt</th><th>Reconciliation</th></tr></thead>
+<tbody data-show="healthy">
+ <tr class="grp"><td colspan="6">Today · 17 Oct 2026</td></tr>
+ <tr><td class="mono">13:58</td><td><b>BTC-Trend v3</b><br><span class="mono sm">ARCHIVE</span><br><span class="pill">Archive request · requested by asmith</span></td>
+  <td class="f">Submitted · awaiting my approval</td><td><span class="chip"><i></i>No receipt yet</span></td><td><span class="chip"><i></i>Not applicable</span></td>
+  <td><button class="btn">Review request</button><span class="reason">Opens the approval; nothing archived yet</span><span class="note">16</span></td></tr>
+ <tr data-row="unk"><td class="mono">14:12</td><td><b>Portfolio Canary</b><br><span class="mono sm">ADJUST_TARGET_BUDGET</span></td>
+  <td class="f">Submitted</td><td><span class="chip" data-s="bad"><i></i>UNKNOWN</span></td><td><span class="chip" data-s="partial"><i></i>Reconciling</span></td>
+  <td><button class="btn">Check original request</button><span class="reason">Do not resend</span><span class="note">7</span></td></tr>
+ <tr data-row="root"><td class="mono">14:02</td><td><b>Root fund</b><br><span class="mono sm">SET_ROOT_LIMIT</span></td>
+  <td class="f">Submitted</td><td><span class="chip" data-s="fresh"><i></i>Applied</span></td><td><span class="chip" data-s="fresh"><i></i>Current</span></td>
+  <td class="sm mute">Nothing to do</td></tr>
+ <tr data-row="rec"><td class="mono">13:55</td><td><b>Portfolio Satellite</b><br><span class="mono sm">RECALL_PARTIAL</span></td>
+  <td class="f">Submitted</td><td><span class="chip" data-s="partial"><i></i>Partially applied</span></td><td><span class="chip" data-s="partial"><i></i>Catching up</span></td>
+  <td class="sm">Applied part is final; display is updating<span class="note">8</span></td></tr>
+ <tr><td class="mono">13:41</td><td><b>BTC-Momentum v2</b><br><span class="mono sm">ARCHIVE</span></td>
+  <td class="f">Submitted</td><td><span class="chip" data-s="partial"><i></i>Pending drain</span></td><td><span class="chip" data-s="fresh"><i></i>Current</span></td>
+  <td class="sm"><a href="#">See open obligations</a></td></tr>
+ <tr><td class="mono">13:20</td><td><b>Portfolio Core</b><br><span class="mono sm">ADJUST_TARGET_BUDGET</span></td>
+  <td class="f">Submitted</td><td><span class="chip" data-s="bad"><i></i>Rejected</span><br><span class="sm mute">version conflict</span></td><td><span class="chip" data-s="fresh"><i></i>Current</span></td>
+  <td class="sm">Refresh and review a new preview</td></tr>
+ <tr><td class="mono">12:48</td><td><b>Portfolio Satellite</b><br><span class="mono sm">RECALL_FULL</span></td>
+  <td class="f"><span class="pill">Preview only</span><span class="note">6</span></td><td><span class="chip"><i></i>No receipt</span></td><td><span class="chip"><i></i>Not applicable</span></td>
+  <td class="sm">Nothing was sent</td></tr>
+ <tr><td class="mono">12:10</td><td><b>Account Binance-02</b><br><span class="mono sm">TOP_UP</span></td>
+  <td class="f">Submitted</td><td><span class="chip" data-s="fresh"><i></i>Applied</span></td><td><span class="chip" data-s="partial"><i></i>Catching up</span></td>
+  <td class="sm">Applied; displayed data is still updating</td></tr>
+</tbody>
+<tbody data-show="denied">
+ <tr class="grp"><td colspan="6">Today · 17 Oct 2026</td></tr>
+ <tr class="sel"><td class="mono">11:30</td><td><b>BTC-Trend v3</b><br><span class="mono sm">ARCHIVE</span></td>
+  <td class="f">Submitted · awaiting approval</td><td><span class="chip"><i></i>No receipt yet</span></td><td><span class="chip"><i></i>Not applicable</span></td>
+  <td class="sm"><a href="#">Open in Approval Inbox</a></td></tr>
+ <tr><td colspan="6" class="sm mute">You have 1 request in the last 24H. Fund-level commands are not loaded.</td></tr>
+</tbody>
+<tbody data-show="loading"><tr><td colspan="6"><div class="sk"></div></td></tr><tr><td colspan="6"><div class="sk"></div></td></tr><tr><td colspan="6"><div class="sk"></div></td></tr></tbody>
+</table>
+<div class="sm mute" style="padding:8px 12px" data-show="healthy">Showing 7 of 128 in the last 24H · <a href="#">Next 50</a> · counts above cover the whole filtered set</div></div>
+
+<div class="drawer" data-show="healthy" data-chg="changed" title="V1 right rail: ‘Select an operation — acknowledge or resolve it’ plus an Alerts rail. Now: receipt detail drawer; acknowledge/resolve not shown yet.">
+ <!-- variant: UNKNOWN -->
+ <div data-d="unk">
+  <b>ADJUST_TARGET_BUDGET</b> <span class="mute sm">Portfolio Canary</span>
+  <div class="call"><b>Outcome unknown.</b> The trading system may or may not have applied this. Query the original request. A new one is never sent from here.</div>
+  <div class="sec">Three separate facts</div>
+  <div class="fact"><span class="mute sm">Intent</span><span>Submitted 14:12<br><span class="sm mute">Key idem_4b19…c2</span></span></div>
+  <div class="fact"><span class="mute sm">Receipt</span><span><span class="chip" data-s="bad"><i></i>UNKNOWN</span><br><span class="sm mute">No receipt seen yet.</span></span></div>
+  <div class="fact"><span class="mute sm">Reconciliation</span><span><span class="chip" data-s="partial"><i></i>Reconciling</span><br><span class="sm mute">Looking up the original request.</span></span></div>
+  <div class="sec">Effect</div>
+  <p class="sm" style="margin:2px 0">Target budget requested: 256,000 → 300,000 <span class="mute">USDT · real-funded</span>.<br><span class="mute">Shown as requested only. Nothing is counted as applied.</span></p>
+  <div class="sec">References</div>
+  <table class="kv"><tbody><tr><td>receipt_ref</td><td><span class="na">Not available</span><span class="reason">No receipt yet</span></td></tr><tr><td>source_event_ref</td><td><span class="na">Not available</span><span class="reason">No receipt yet</span></td></tr><tr><td>revision</td><td class="mono">expected r18 · applied <span class="na">Not available</span></td></tr></tbody></table>
+  <p style="margin-top:8px"><button class="btn pri">Check original request</button> <button class="btn" disabled title="Blocked while the outcome is unknown">Send again</button><span class="reason">Checking is read-only. Sending again is blocked until the outcome is known.</span></p>
+  <div data-chg="kept" title="V1’s right rail says ‘pick a row to acknowledge or resolve it’. Kept." style="margin-top:12px;padding-top:8px"><button class="btn">Acknowledge</button> <button class="btn" disabled title="Resolve is possible once the receipt is known">Resolve</button><span class="reason">Acknowledge = a person has seen it. Resolve waits for a known outcome.</span></div>
+ </div>
+ <!-- variant: applied, no amount -->
+ <div data-d="root">
+  <b>SET_ROOT_LIMIT</b> <span class="mute sm">Root fund</span>
+  <div class="sec">Three separate facts</div>
+  <div class="fact"><span class="mute sm">Intent</span><span>Submitted 14:02<br><span class="sm mute">Key idem_91d0…7a</span></span></div>
+  <div class="fact"><span class="mute sm">Receipt</span><span><span class="chip" data-s="fresh"><i></i>Applied</span> <span class="sm mute">14:02</span></span></div>
+  <div class="fact"><span class="mute sm">Reconciliation</span><span><span class="chip" data-s="fresh"><i></i>Current</span><br><span class="sm mute">Display has seen this revision.</span></span></div>
+  <div class="sec">Target-setting effect <span class="note">9</span></div>
+  <table class="kv"><tbody><tr><td>Root limit</td><td class="mono">1,100,000 → 1,200,000 <span class="sm mute">USDT · real-funded</span></td></tr><tr><td>Money moved</td><td>None</td></tr><tr><td>Child budgets</td><td>Unchanged</td></tr></tbody></table>
+  <p class="sm mute" style="margin:6px 0">This command carries no amount, so there is no requested / applied / pending split to show.</p>
+  <div class="sec">References <span class="note">10</span></div>
+  <table class="kv"><tbody><tr><td>receipt_ref</td><td class="mono">rcpt_7c20d1</td></tr><tr><td>source_event_ref</td><td class="mono">evt_90a1f4</td></tr><tr><td>revision</td><td class="mono">expected r18 · applied r19</td></tr></tbody></table>
+  <p style="margin-top:8px"><button class="btn">Copy references</button> <button class="btn">Open Root fund</button></p>
+ </div>
+ <!-- variant: partial recall, with amounts -->
+ <div data-d="rec">
+  <b>RECALL_PARTIAL</b> <span class="mute sm">Portfolio Satellite</span>
+  <div class="sec">Three separate facts</div>
+  <div class="fact"><span class="mute sm">Intent</span><span>Submitted 13:55<br><span class="sm mute">Key idem_e2c8…5f</span></span></div>
+  <div class="fact"><span class="mute sm">Receipt</span><span><span class="chip" data-s="partial"><i></i>Partially applied</span><br><span class="sm mute">Rest waits on existing obligations.</span></span></div>
+  <div class="fact"><span class="mute sm">Reconciliation</span><span><span class="chip" data-s="partial"><i></i>Catching up</span><br><span class="sm mute">Applied; displayed data is still updating. Do not resend.</span></span></div>
+  <div class="sec">Amounts <span class="mute" style="text-transform:none;letter-spacing:0">USDT · real-funded</span></div>
+  <table><tbody><tr><td><b>Requested</b></td><td class="n"><b>40,000.00</b></td></tr><tr><td>= Applied</td><td class="n">25,000.00</td></tr><tr><td>+ Pending</td><td class="n">15,000.00</td></tr><tr><td>+ Cancelled</td><td class="n">0.00</td></tr><tr><td>+ Rejected</td><td class="n">0.00</td></tr></tbody></table>
+  <p class="sm mute" style="margin:6px 0">Applied is never reduced by a refresh. Pending is not counted as money that moved.</p>
+  <div class="sec">References</div>
+  <table class="kv"><tbody><tr><td>receipt_ref</td><td class="mono">rcpt_5e81b9</td></tr><tr><td>source_event_ref</td><td class="mono">evt_6b02c7</td></tr><tr><td>revision</td><td class="mono">expected r18 · applied r19</td></tr></tbody></table>
+  <p style="margin-top:8px"><button class="btn">Copy references</button> <button class="btn">Open Satellite</button></p>
+ </div>
+</div>
+
+<div class="drawer" data-show="denied"><div data-d="own">
+  <b>ARCHIVE</b> <span class="mute sm">BTC-Trend v3</span>
+  <div class="sec">Three separate facts</div>
+  <div class="fact"><span class="mute sm">Intent</span><span>Submitted 11:30 · awaiting approval</span></div>
+  <div class="fact"><span class="mute sm">Receipt</span><span><span class="chip"><i></i>No receipt yet</span></span></div>
+  <div class="fact"><span class="mute sm">Reconciliation</span><span><span class="chip"><i></i>Not applicable</span></span></div>
+  <p class="sm" style="margin:8px 0">Nothing is archived until a receipt says so. A manager reviews the request first.</p>
+  <table class="kv"><tbody><tr><td>receipt_ref</td><td><span class="na">Not available</span><span class="reason">No receipt yet</span></td></tr><tr><td>source_event_ref</td><td><span class="na">Not available</span><span class="reason">No receipt yet</span></td></tr><tr><td>revision</td><td class="mono">expected r12</td></tr></tbody></table></div></div>
+</div>
+</div>
+
+<div class="card empty" data-t="cmd" data-show="sparse">
+ <h2>Command receipts can't be listed yet <span class="note">11</span></h2>
+ <p class="mute">We don't know the outcome of any command, so no list and no zero is shown. Do not resend a command because this page is empty.</p>
+ <p class="sm mute">When available, each row will show</p>
+ <p><span class="pill">Target</span><span class="pill">Operation</span><span class="pill">Intent</span><span class="pill">Receipt</span><span class="pill">Reconciliation</span><span class="pill">Next step</span></p></div>
+
+<div class="card scroll" data-t="exc" style="padding:0" data-show="healthy sparse loading" data-chg="changed" title="V1 has an Alerts rail (CRITICAL counts only, all unavailable) and Acknowledge/Resolve on a selected row. Now: an exceptions list with Acknowledge/Resolve per row.">
+<table><thead><tr><th>Since</th><th>Target</th><th>Exception</th><th>Source</th><th>Acknowledge · resolve</th></tr></thead>
+<tbody data-show="healthy sparse"><tr><td class="mono">14:05</td><td><b>Account Binance-02</b></td><td>Unreconciled valuation</td><td><span class="chip" data-s="partial"><i></i>Stale 14m</span></td><td><button class="btn">Acknowledge</button> <button class="btn">Resolve</button><br><a href="#" class="sm">Open account</a></td></tr>
+<tr><td class="mono">13:55</td><td><b>Portfolio Satellite</b></td><td>Recall not fully released</td><td><span class="chip" data-s="partial"><i></i>Partially applied</span></td><td data-show="healthy"><button class="btn">Acknowledge</button> <button class="btn" disabled title="Resolves when the recall is fully released">Resolve</button><br><a href="#" class="sm">Open receipt</a></td><td data-show="sparse"><span class="na">Not available</span><span class="reason">Needs command status</span></td></tr>
+<tr><td class="mono">12:20</td><td><b>Deployment live-0192</b></td><td>Display behind an applied command</td><td><span class="chip" data-s="partial"><i></i>Catching up</span></td><td><button class="btn">Acknowledge</button> <button class="btn" disabled title="Clears itself when the display catches up">Resolve</button></td></tr></tbody>
+<tbody data-show="loading"><tr><td colspan="5"><div class="sk"></div></td></tr><tr><td colspan="5"><div class="sk"></div></td></tr></tbody></table></div>
+<div class="card empty" data-t="exc" data-show="denied"><h2>No exceptions on your alphas</h2><p class="mute">This is a real empty result for the alphas you own.</p></div>
+
+<div class="card scroll" data-t="aud" style="padding:0" data-show="healthy loading" data-chg="changed" title="V1: a collapsed ‘Command journal — 0 redacted entries’. Now: an open audit list with receipt_ref per row.">
+<table><thead><tr><th>Time</th><th>Who</th><th>What they did</th><th>Target</th><th>receipt_ref</th></tr></thead>
+<tbody data-show="healthy"><tr><td class="mono">14:12</td><td>Stan</td><td>Submitted ADJUST_TARGET_BUDGET</td><td>Portfolio Canary</td><td><span class="na">Not available</span><span class="reason">No receipt yet</span></td></tr>
+<tr><td class="mono">14:02</td><td>Stan</td><td>Submitted SET_ROOT_LIMIT</td><td>Root fund</td><td class="mono">rcpt_7c20d1</td></tr>
+<tr><td class="mono">13:55</td><td>Stan</td><td>Submitted RECALL_PARTIAL</td><td>Portfolio Satellite</td><td class="mono">rcpt_5e81b9</td></tr>
+<tr><td class="mono">12:48</td><td>Stan</td><td>Opened a preview of RECALL_FULL</td><td>Portfolio Satellite</td><td><span class="na">Not available</span><span class="reason">Preview, nothing sent</span></td></tr></tbody>
+<tbody data-show="loading"><tr><td colspan="5"><div class="sk"></div></td></tr><tr><td colspan="5"><div class="sk"></div></td></tr></tbody></table>
+<div class="sm mute" style="padding:8px 12px" data-show="healthy">Audit says who did what. Only a receipt says what the trading system did.</div></div>
+<div class="card empty" data-t="aud" data-show="sparse"><h2>Audit entries can't be listed yet</h2><p class="mute">The audit source is not qualified for this environment. Nothing is shown rather than a partial trail.</p></div>
+<div class="card scroll" data-t="aud" style="padding:0" data-show="denied"><table><thead><tr><th>Time</th><th>Who</th><th>What you did</th><th>Target</th><th>receipt_ref</th></tr></thead><tbody><tr><td class="mono">11:30</td><td>You</td><td>Submitted ARCHIVE</td><td>BTC-Trend v3</td><td><span class="na">Not available</span><span class="reason">No receipt yet</span></td></tr></tbody></table><div class="sm mute" style="padding:8px 12px">Only your own entries are shown.</div></div>
+
+<section class="chgtable card"><h2>What changes vs today — Operations (<span class="mono">/execution/operations</span>)</h2>
+<table><thead><tr><th></th><th>Region</th><th>Today (V1, from the screenshot)</th><th>Proposed</th><th>Why · needs backend</th></tr></thead><tbody>
+<tr><td><span class="tag kept">KEPT</span></td><td>Route, honest “unavailable” behaviour, links to audit evidence and incident detail</td><td>Route works; empty things say why (“no zero, none”, “shown empty rather than removed”); “every row links its audit evidence”</td><td>Same route; Source not ready keeps saying nothing is known and shows no zero</td><td>V1 already does this well; do not regress it.</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>Approval Inbox as its own screen</td><td>Gate inbox: Mine / All / Overdue, R1 / R2 / Paper / Sandbox / Live / Exit, SLA bars</td><td>Not redrawn; an “awaiting approval” command links to it</td><td>Governance gates are a different grain from command receipts.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Page header</td><td>“Operations Queue” with a NOTHING STUCK badge and a source chip “UNAVAILABLE · command journal · fixture”</td><td>“Operations &amp; Decisions” with freshness, time range, local timezone and money partition</td><td>Time range and partition are needed by the filters and the drawer amounts.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Summary tiles</td><td>In this view / Total / Need attention / Partial</td><td>UNKNOWN outcomes / Pending receipts / Open exceptions</td><td>UNKNOWN needs its own number. Needs command status to be qualified.</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>Lenses</td><td>Needs attention / Mine / All retained</td><td>Same three lenses, plus a new “Needs my approval”</td><td>Approval lens shows researcher archive requests for managers.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Tabs by row grain, approval rows</td><td>No tabs; one queue. Approvals live only in Approval Inbox</td><td>Commands / Exceptions / Audit tabs; row type “Archive request · requested by …” that links to the approval</td><td>Needs approval requests to carry the requester and target. Capital actions are not started here; the page only tracks receipts.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>Filters</td><td>None beyond the three lenses; priority is “computed, never assigned by hand”</td><td>Operation, Intent, Receipt, Reconciliation and time range; all in the URL</td><td>Needs filterable command status fields.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Queue table</td><td>PRI · OPERATION (<span class="mono">op_fixture_queue_1</span>) · COMMAND·PHASE · TARGET · one STATE cell (“BLOCKED verify NOT_STARTED unacknowledged”)</td><td>Time · target and operation name · three separate chips (Intent, Receipt, Reconciliation) · next step</td><td>Guide §14. Raw operation ids move to the drawer. Assumes one row per command request; V1’s grain is one operation_id from plan to verify, to be confirmed.</td></tr>
+<tr><td><span class="tag new">NEW</span></td><td>UNKNOWN handling and preview rows</td><td>No UNKNOWN or preview concept on screen</td><td>UNKNOWN → “Check original request”, no resend; “Preview only · No receipt”</td><td>Needs receipt lookup by idempotency key.</td></tr>
+<tr><td><span class="tag kept">KEPT</span></td><td>Acknowledge / Resolve</td><td>Right rail: “Select an operation — pick a row to acknowledge or resolve it”</td><td>Acknowledge and Resolve on each exception and in the drawer</td><td>Resolve stays disabled until the outcome is known.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Right rail / drawer, Alerts rail</td><td>Rail beside the table; Alerts rail (mirror integrity, all UNAVAILABLE)</td><td>Detail drawer: three facts, effect, receipt_ref, source_event_ref, revision; alerts become the Exceptions tab</td><td>Same screen space, richer content.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Unavailable banner wording</td><td>“Command authority: UNCHANGED_FAIL_CLOSED · relay state not published…”</td><td>“Command receipts can’t be listed yet…”; the code moves to a tooltip</td><td>Needs the public copy dictionary (FE-015).</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Source health by profile</td><td>Always-open table: three profile codes, all PARTIAL, “no reason published”</td><td>Collapsed panel with a header chip; table of profile / state / freshness on expand</td><td>Same facts, less noise.</td></tr>
+<tr><td><span class="tag changed">CHANGED</span></td><td>Command journal, Canary twin, composite revision</td><td>Collapsed journal “0 redacted entries”; “Canary twin · Unavailable”; a sha256 line</td><td>Journal becomes the Audit tab; Canary twin is not on this page; revision shows per command in the drawer</td><td>Canary twin comparison is not qualified and belongs to the Canary screen.</td></tr>
+</tbody></table></section>
+<aside class="notes"><b>Annotations</b><ol>
+<li><b>Context.</b> Time range, timezone and the money partition (USDT · real-funded) sit in the header and in the URL. Amounts appear only in the drawer, always with one partition and one currency.</li>
+<li><b>Attention strip</b> is counts with a consequence, not decoration. UNKNOWN is its own number and is never folded into “failed” or “pending”. In Source not ready it reads “Not available”, never 0.</li>
+<li><b>Lenses kept from today:</b> Needs attention, Mine and All retained, plus one new lens, Needs my approval (researcher archive requests, row type “Archive request · requested by …”, with a link to review). This page tracks receipts only: capital actions are never started from here.</li>
+<li><b>Three tabs, three grains.</b> Commands (one row per request), Exceptions (things a person must look at) and Audit (who did what). Same page, different row grain, so no mixed columns. Reuses the existing Operations queue, Incident and Approval Inbox screens where they already exist. At 660px the table scrolls sideways inside its card and the drawer drops below it.</li>
+<li><b>Filters.</b> Operation, plus Intent, Receipt and Reconciliation each as its own filter, and a time range. All in the URL. There is deliberately no single “Status” filter because there is no single status.</li>
+<li><b>Three separate facts.</b> <i>Intent</i> (what was asked: preview only, or submitted), <i>Receipt</i> (what the trading system answered) and <i>Reconciliation</i> (whether the display has caught up). Three columns, three chips, never one merged status. “Sent” or a 200 response is not Applied; Applied is not filled.</li>
+<li><b>Preview ≠ receipt.</b> A preview row says “Preview only · No receipt · Nothing was sent”. Whether previews are kept at all is not confirmed by the backend; if not, this row type disappears and previews live only in their drawer.</li>
+<li><b>UNKNOWN</b> means: query the original request with the same key and wait. The only action is a read-only “Check original request”; “Send again” is shown disabled with its reason. A new send could create a second effect.</li>
+<li><b>Applied but catching up.</b> The receipt stays Applied (or Partially applied) while Reconciliation says Catching up. Copy: “Applied; displayed data is still updating.” No resend.</li>
+<li><b>Effect section depends on the command.</b> SET_ROOT_LIMIT and ADJUST_TARGET_BUDGET can carry no amount: the drawer shows the target-setting effect (before → after) and says no split applies. No invented transfer partition. Only amount-bearing commands show Requested = Applied + Pending + Cancelled + Rejected.</li>
+<li><b>References.</b> receipt_ref, source_event_ref and revision always listed; when there is no receipt they read “Not available” with the reason, never blank or “-”. Command ID and key are short and copyable.</li>
+<li><b>Source not ready is the real first state:</b> capital commands are mounted but not qualified, so receipts cannot be listed yet. The page says so, shows no zero, and warns not to resend because it looks empty. Exceptions keep working from the existing queue; whether the audit source is also unqualified is an assumption to confirm.</li>
+<li><b>Researcher.</b> Own requests and own-alpha exceptions only; no fund-level counts, so the strip is hidden. Audit shows only their own entries.</li>
+<li><b>Source health</b> is kept from today but collapsed: one chip in the header, a table of profile / state / freshness on expand. The Canary twin comparison is not on this page (it is not qualified and belongs to the Canary screen); today's command journal is the Audit tab.</li>
+<li><b>Acknowledge and resolve</b> are kept from today's right rail, now per exception and in the drawer. Acknowledge means a person has seen it; Resolve waits for a known outcome.</li>
+<li><b>Approval requests.</b> A researcher's archive request shows here for the manager with “Needs my approval”; the decision itself happens in the Approval Inbox. No receipt exists until the trading system answers.</li>
+<li><b>Alternative considered:</b> a feed of command cards, each with one progress stepper (Submitted → Applied → Reconciled). Rejected: a stepper implies one ordered status, merges three facts, and has no honest place for UNKNOWN or Preview only.</li>
+</ol></aside>
+</main></div><script src="kit.js"></script></body></html>

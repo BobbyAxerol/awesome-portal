@@ -1,0 +1,44 @@
+{
+  "schema_version": "research.fixed-replay-companion-page.v1",
+  "run_id": "fixed-replay-fixture-run",
+  "scope": "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXECUTION_LEDGER",
+  "execution_profile": {
+    "id": "p04.fixed-qualification.v1",
+    "digest": null
+  },
+  "next_cursor": null,
+  "availability": {
+    "state": "NOT_PUBLISHED",
+    "reason_code": "FIXED_REPLAY_ROW_LIMIT_EXCEEDED"
+  },
+  "custody": "FRESH_SOURCE_NOT_PUBLISHED",
+  "revision": "c53db4b2f2374caba36197098525871c82806c54481838e43791aa8857fd3b87",
+  "manifest": {
+    "schema_version": "research.fixed-replay-companion-manifest.v1",
+    "workspace_id": "fixed-replay-fixture-workspace",
+    "run_id": "fixed-replay-fixture-run",
+    "artifact_id": "fixed-replay-fixture-artifact",
+    "artifact_revision": 1,
+    "manifest_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "requested_spec_digest": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "effective_spec_digest": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "dataset_binding_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "execution_profile_id": "p04.fixed-qualification.v1",
+    "execution_profile_digest": null,
+    "market_symbol": "BTCUSDT",
+    "source": {
+      "schema_version": "research.fixed-replay-source.v1",
+      "state": "NOT_PUBLISHED",
+      "reason_code": "FIXED_REPLAY_ROW_LIMIT_EXCEEDED",
+      "oos_start_utc_ms": 1700000000000,
+      "oos_end_exclusive_utc_ms": 1700000120000
+    },
+    "scope": "FIXED_OOS_RETAINED_MARKET_AND_ACCOUNT_NOT_EXECUTION_LEDGER"
+  },
+  "counts": {
+    "full_source_retained": null,
+    "matching_filter": null,
+    "returned": 0
+  },
+  "rows": []
+}

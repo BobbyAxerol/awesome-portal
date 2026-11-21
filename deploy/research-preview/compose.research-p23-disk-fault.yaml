@@ -1,0 +1,16 @@
+# P23-T03 test-only artifact filesystem. Apply only to the owned P23 project
+# after cloning its artifact volume into a separately mounted ext4 image.
+# The bind replaces the base named volume at the exact same target; render
+# `docker compose config` and inspect both mounts before starting services.
+# Never apply this overlay to dev, shared preview, stable or production.
+services:
+  portal-api:
+    volumes:
+      - type: bind
+        source: ${P23_T03_ARTIFACT_ROOT:?P23-T03 requires an isolated mounted artifact root}
+        target: /var/lib/portal/artifacts
+  quant-worker-py:
+    volumes:
+      - type: bind
+        source: ${P23_T03_ARTIFACT_ROOT:?P23-T03 requires an isolated mounted artifact root}
+        target: /var/lib/portal/artifacts

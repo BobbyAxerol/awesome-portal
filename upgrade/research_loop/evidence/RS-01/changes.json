@@ -1,0 +1,15 @@
+{
+  "schema_version": "research.rs01-changes.v1",
+  "phase": "RS-01",
+  "backend_surfaces": [
+    "Python P13 evidence receipt producer",
+    "Control API progress/evidence/split/replay readers",
+    "Research-only read admission",
+    "additive PostgreSQL migrations",
+    "Research OpenAPI and generated declarations"
+  ],
+  "frontend_files_changed": [],
+  "runtime_or_deployment_changed": false,
+  "historical_rows_mutated": false,
+  "protected_execution_or_source_changed": false
+}

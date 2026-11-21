@@ -1,0 +1,1026 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Research full-source child audit companion",
+    "version": "1.0.0",
+    "description": "Additive bounded source-file lifecycle custody; legacy <=64 fold witnesses and original five-table P05 seal remain unchanged. FULL_SOURCE_RETAINED means all rows available in the bounded source file, not complete engine generation/history: source-dropped rows are irrecoverable. GET reads tenant-scoped immutable custody only, never runs an engine or opens Parquet. Cursor pages are private/no-store."
+  },
+  "paths": {
+    "/api/v1/quantbt/runs/{run_id}/current-source/child-audit-companion": {
+      "get": {
+        "operationId": "researchChildAuditCompanionGetV1",
+        "summary": "Page full available source lifecycle rows or typed legacy absence",
+        "security": [
+          {
+            "portalSession": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/RunId"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+            }
+          },
+          {
+            "name": "fold_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+            }
+          },
+          {
+            "name": "context",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "anti-leakage in-sample search",
+                "in-sample scoring",
+                "out-of-sample scoring",
+                "out-of-sample generation"
+              ]
+            }
+          },
+          {
+            "name": "audit_ordinal",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 19999
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        ],
+        "description": "Strict closed selectors. Exact audit_ordinal lookup and cursor are mutually exclusive. Opaque signed cursors bind tenant/actor/run/revision/full filter/page limit; expire and cannot restart on a changed/missing seal. Counts matching_fold and matching_filter cover the full retained population, not only returned rows.",
+        "responses": {
+          "200": {
+            "description": "Sealed full-source page or typed absence; dropped source history stays explicit",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed refusal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "portal_session"
+      }
+    },
+    "schemas": {
+      "RunId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+      },
+      "UtcMs": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "Row": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "audit_ordinal",
+          "candidate_id",
+          "fold_id",
+          "seed",
+          "context",
+          "lifecycle_kind",
+          "policy",
+          "certified_isolation",
+          "spawned",
+          "reset_called",
+          "warmup_called",
+          "warmup_bars",
+          "closed",
+          "state_before",
+          "cutoff_utc_ms",
+          "train_start_utc_ms",
+          "train_end_utc_ms",
+          "test_start_utc_ms",
+          "test_end_utc_ms",
+          "strategy_fingerprint",
+          "market_fingerprint",
+          "run_fingerprint"
+        ],
+        "properties": {
+          "audit_ordinal": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 19999
+          },
+          "candidate_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fold_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "context": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 96,
+                "pattern": "^[A-Za-z0-9 _.:-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lifecycle_kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "certified_isolation": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spawned": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reset_called": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warmup_called": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "warmup_bars": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "state_before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cutoff_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "train_start_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "train_end_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "test_start_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "test_end_utc_ms": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UtcMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "strategy_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "market_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "run_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "One normalized source-file lifecycle row with its original ordinal/fold/context/candidate/fingerprints. No wall-clock generation claim. <=4096 serialized bytes."
+      },
+      "Manifest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "run_id",
+          "artifact_id",
+          "artifact_revision",
+          "manifest_digest",
+          "source_transform_digest",
+          "requested_spec_digest",
+          "effective_spec_digest",
+          "dataset_binding_digest",
+          "execution_profile_id",
+          "execution_profile_digest",
+          "source_adapter_id",
+          "profile_id",
+          "source_file_digest",
+          "source_contract_digest",
+          "rows_digest",
+          "source_record_count",
+          "records_dropped_by_source",
+          "source_total_count",
+          "source_run_fingerprint",
+          "policy",
+          "authority"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "research.child-audit-companion-manifest.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "run_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "artifact_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "artifact_revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "manifest_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_transform_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "requested_spec_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "effective_spec_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "dataset_binding_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "execution_profile_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "execution_profile_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_adapter_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "profile_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,159}$"
+          },
+          "source_file_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_contract_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "rows_digest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "source_record_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20000
+          },
+          "records_dropped_by_source": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_total_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2020000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_run_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,95}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "authority": {
+            "const": "SOURCE_LIFECYCLE_OBSERVATIONS_NOT_GENERATION_CLOCK"
+          }
+        },
+        "description": "Companion immutable seal bound to the exact retained P05 artifact/revision, source transform, requested/effective/data/profile and source-file digest. Total is retained source count plus known source drops, otherwise null. Neither private worker/lease fields nor source paths are public."
+      },
+      "Page": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "run_id",
+              "availability",
+              "custody",
+              "revision",
+              "manifest",
+              "scope",
+              "counts",
+              "rows",
+              "next_cursor"
+            ],
+            "properties": {
+              "schema_version": {
+                "const": "research.child-audit-companion-page.v1"
+              },
+              "run_id": {
+                "$ref": "#/components/schemas/RunId"
+              },
+              "availability": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason_code"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "AVAILABLE"
+                  },
+                  "reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              "custody": {
+                "const": "FULL_SOURCE_RETAINED"
+              },
+              "revision": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "manifest": {
+                "$ref": "#/components/schemas/Manifest"
+              },
+              "scope": {
+                "const": "SOURCE_LIFECYCLE_OBSERVATIONS_NOT_GENERATION_CLOCK"
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "full_source_retained",
+                  "records_dropped_by_source",
+                  "source_total_if_known",
+                  "matching_fold",
+                  "matching_filter",
+                  "legacy_sample_retained",
+                  "returned"
+                ],
+                "properties": {
+                  "full_source_retained": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 20000
+                  },
+                  "records_dropped_by_source": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "source_total_if_known": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "matching_fold": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2020000
+                  },
+                  "matching_filter": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 2020000
+                  },
+                  "legacy_sample_retained": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "returned": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 200
+                  }
+                }
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Row"
+                },
+                "maxItems": 200
+              },
+              "next_cursor": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4096
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "run_id",
+              "availability",
+              "custody",
+              "revision",
+              "manifest",
+              "scope",
+              "counts",
+              "rows",
+              "next_cursor"
+            ],
+            "properties": {
+              "schema_version": {
+                "const": "research.child-audit-companion-page.v1"
+              },
+              "run_id": {
+                "$ref": "#/components/schemas/RunId"
+              },
+              "availability": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason_code"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "const": "LEGACY_SAMPLE"
+                  }
+                }
+              },
+              "custody": {
+                "const": "LEGACY_SAMPLE"
+              },
+              "revision": {
+                "type": "null"
+              },
+              "manifest": {
+                "type": "null"
+              },
+              "scope": {
+                "const": "SOURCE_LIFECYCLE_OBSERVATIONS_NOT_GENERATION_CLOCK"
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "full_source_retained",
+                  "records_dropped_by_source",
+                  "source_total_if_known",
+                  "matching_fold",
+                  "matching_filter",
+                  "legacy_sample_retained",
+                  "returned"
+                ],
+                "properties": {
+                  "full_source_retained": {
+                    "type": "null"
+                  },
+                  "records_dropped_by_source": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "source_total_if_known": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "matching_fold": {
+                    "type": "null"
+                  },
+                  "matching_filter": {
+                    "type": "null"
+                  },
+                  "legacy_sample_retained": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "returned": {
+                    "const": 0
+                  }
+                }
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Row"
+                },
+                "maxItems": 0
+              },
+              "next_cursor": {
+                "type": "null"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schema_version",
+              "run_id",
+              "availability",
+              "custody",
+              "revision",
+              "manifest",
+              "scope",
+              "counts",
+              "rows",
+              "next_cursor"
+            ],
+            "properties": {
+              "schema_version": {
+                "const": "research.child-audit-companion-page.v1"
+              },
+              "run_id": {
+                "$ref": "#/components/schemas/RunId"
+              },
+              "availability": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason_code"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "const": "SOURCE_AUDIT_NOT_RETAINED"
+                  }
+                }
+              },
+              "custody": {
+                "const": "NOT_RETAINED"
+              },
+              "revision": {
+                "type": "null"
+              },
+              "manifest": {
+                "type": "null"
+              },
+              "scope": {
+                "const": "SOURCE_LIFECYCLE_OBSERVATIONS_NOT_GENERATION_CLOCK"
+              },
+              "counts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "full_source_retained",
+                  "records_dropped_by_source",
+                  "source_total_if_known",
+                  "matching_fold",
+                  "matching_filter",
+                  "legacy_sample_retained",
+                  "returned"
+                ],
+                "properties": {
+                  "full_source_retained": {
+                    "type": "null"
+                  },
+                  "records_dropped_by_source": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "source_total_if_known": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "matching_fold": {
+                    "type": "null"
+                  },
+                  "matching_filter": {
+                    "type": "null"
+                  },
+                  "legacy_sample_retained": {
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 2020000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "returned": {
+                    "const": 0
+                  }
+                }
+              },
+              "rows": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Row"
+                },
+                "maxItems": 0
+              },
+              "next_cursor": {
+                "type": "null"
+              }
+            }
+          }
+        ]
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 160,
+                "description": "Typed RESEARCH_CURRENT_SOURCE_* refusal; session guard 401 keeps its existing generic code."
+              },
+              "message": {
+                "type": "string",
+                "maxLength": 1024
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "maxLength": 128
+          }
+        }
+      }
+    }
+  }
+}

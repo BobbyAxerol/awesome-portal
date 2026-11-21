@@ -1,0 +1,259 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>C2 Capital flow and compare — HIFI concept</title><link rel="stylesheet" href="../hifi.css"><style>
+.tool{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{flex:1}.mut{color:var(--ink-faint)}
+.stagebar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.blk{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line-strong);background:var(--paper);padding:2px 10px;font:500 11px/16px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+.blk i{width:8px;height:8px;display:inline-block;background:var(--stage-live)}.blk.sim{border-color:var(--series-sim);color:var(--series-sim)}.blk.sim i{background:repeating-linear-gradient(135deg,var(--series-sim) 0 2px,transparent 2px 4px);border:1px solid var(--series-sim)}
+#flow{position:relative}#flow svg{width:100%;height:auto;display:block}
+.sk text{font-family:var(--font-mono);font-size:11px;fill:var(--ink-soft);paint-order:stroke;stroke:var(--panel);stroke-width:4px;stroke-linejoin:round}
+.sk text.b{fill:var(--ink)}.sk text.h{font-size:10px;letter-spacing:.1em;fill:var(--ink-faint);stroke:none}.sk text.na{fill:var(--ink-faint);font-family:var(--font-sans);font-size:11px}
+.sk .nd rect.n{stroke:var(--ink);stroke-width:1}.sk .nd,.sk .lk{transition:opacity .12s}.sk .nd{cursor:default}
+.sk.dim .nd:not(.hi),.sk.dim .lk:not(.hi){opacity:.14}
+.sk .lk path.l{opacity:.34}.sk .lk.hi path.l{opacity:.78}
+.sk .nd:focus{outline:none}.sk .nd:focus rect.n{stroke:var(--accent);stroke-width:2}
+.tip{max-width:340px;white-space:normal;line-height:16px}.tip .t{margin-bottom:4px;color:var(--ink)}.tip div{color:var(--ink-soft)}
+.p[hidden]{display:none!important}
+.pick{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pk{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line-strong);background:var(--paper);color:var(--ink-soft);padding:4px 10px;font:500 12px/16px var(--font-mono);cursor:pointer}
+.pk i{width:10px;height:10px;display:inline-block;border:1px solid var(--ink-faint)}.pk[aria-pressed=true]{color:var(--ink);border-color:var(--c);box-shadow:inset 0 -2px 0 var(--c)}.pk[aria-pressed=true] i{background:var(--c);border-color:var(--c)}
+.pk[disabled]{cursor:not-allowed;color:var(--ink-faint);border-style:dashed;background:repeating-linear-gradient(135deg,transparent 0 5px,var(--line-soft) 5px 6px)}
+.pk small{font:400 10px/14px var(--font-mono);color:var(--ink-faint);letter-spacing:.04em}
+#cmp{position:relative}#cmp svg{display:block;width:100%;height:auto;overflow:visible}#cmp .rd{flex-wrap:wrap;gap:6px 22px}.rd .sw{display:inline-block;width:10px;height:10px;margin-right:6px}
+.best{display:inline-block;width:8px;height:8px;background:var(--ink);margin-right:8px;vertical-align:middle}.nb{display:inline-block;width:8px;height:8px;margin-right:8px;vertical-align:middle}
+.hd i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:middle}
+.win{color:inherit}
+.hat{background:repeating-linear-gradient(135deg,transparent 0 5px,var(--line) 5px 6px);border:1px dashed var(--line-strong)}
+@media(max-width:1100px){.app{grid-template-columns:1fr}}@media(max-width:900px){#flow{overflow-x:auto}#flow svg{min-width:900px}}
+</style></head>
+<body data-state="healthy">
+<div class="strip"><span>Design concept · C2</span><span class="grp" data-ctl="state"><button data-v="healthy" aria-pressed="true">Manager</button><button data-v="sparse" aria-pressed="false">Source not ready</button><button data-v="researcher" aria-pressed="false">Researcher</button></span><span>Sample values</span></div>
+<div class="app">
+<header class="top"><span class="brand">Quant Ecosystem Portal</span><span class="crumb">Execution / Portfolios / <b>Core</b></span></header>
+<nav class="side"><h6>Execution</h6><a href="#">Overview</a><a aria-current="page" href="#">Portfolios</a><a href="#">Alpha Fleet</a><a href="#">Accounts</a><a href="#">Archived Alphas</a><a href="#">Operations</a><h6>Governance</h6><a href="#">Approval Inbox</a><a href="#">Waivers</a><a href="#">Exit Reviews</a><h6>Administration</h6><a href="#">Profile &amp; Access</a></nav>
+<main><div class="stack">
+<div class="mast"><div><h1>Core</h1><div class="sub">pf_0001 · Live · USDT · M. Tran</div></div>
+ <div class="ctrls"><span class="fresh"><i class="dot"></i>Fresh · 12:04Z</span></div></div>
+
+<div class="tabs" role="tablist" id="tabs"><button role="tab" data-t="flow" aria-selected="true">Capital flow</button><button role="tab" data-t="cmp" aria-selected="false">Compare</button></div>
+
+<div class="banner" data-s="sparse">Source not qualified. Flows and series are not available.</div>
+<div class="banner info" data-s="researcher">Your slice only. Capital flow and compare are manager views.</div>
+<div class="panel hat empty na" data-s="sparse">Not available · Source not qualified</div>
+
+<section class="p stack" data-p="flow" data-s="healthy">
+ <div class="panel"><div class="ph">Capital flow <span class="r">USDT · one basis per block · hover a node or band</span></div>
+  <div class="stagebar"><span class="blk"><i></i>Real-funded · Live</span><span class="mut" style="font-size:12px">Capital, budget, exposure and venue margin are separate columns</span></div>
+  <div class="chart" id="flow"></div>
+  <div class="cap"><span>Band width = amount on its own basis</span><span>Budget is a limit, not cash</span><span>Hatched outline = Not available</span></div></div>
+ <div class="panel"><div class="ph">Capital ledger <span class="r">Append-only · newest first</span></div><div class="tw"><table><thead><tr><th>Seq</th><th>Time · UTC</th><th>Event</th><th>Target</th><th>Basis</th><th class="n">Amount · USDT</th><th>Receipt</th><th>Command</th></tr></thead><tbody>
+  <tr><td class="mono">0007</td><td class="mono">2026-10-17 09:14</td><td>Recall budget</td><td class="mono">live-0192</td><td>Budget</td><td class="n">−20,000.00</td><td><span class="tagu">Recall pending</span></td><td class="mono">cmd-7d41</td></tr>
+  <tr><td class="mono">0006</td><td class="mono">2026-10-17 09:02</td><td>Lock allocation</td><td class="mono">live-0210</td><td>Budget</td><td class="n"><span class="na">Not applicable</span></td><td><span class="tagu">Applied</span></td><td class="mono">cmd-7d3a</td></tr>
+  <tr><td class="mono">0005</td><td class="mono">2026-10-17 08:41</td><td>Approve budget · 650,000.00 → 700,000.00</td><td class="mono">pf_0001</td><td>Budget</td><td class="n">+50,000.00</td><td><span class="tagu">Applied</span></td><td class="mono">cmd-7d37</td></tr>
+  <tr><td class="mono">0004</td><td class="mono">2026-10-17 08:40</td><td>Grant budget</td><td class="mono">live-0221</td><td>Budget</td><td class="n">+50,000.00</td><td><span class="tagu">Applied</span></td><td class="mono">cmd-7d36</td></tr>
+  <tr><td class="mono">0003</td><td class="mono">2026-08-11 09:14</td><td>Approve budget</td><td class="mono">pf_0001</td><td>Budget</td><td class="n">650,000.00</td><td><span class="tagu">Applied</span></td><td class="mono">cmd-6c02</td></tr>
+  <tr><td class="mono">0002</td><td class="mono">2026-08-11 09:12</td><td>Added funds</td><td class="mono">pf_0001</td><td>Capital</td><td class="n">+100,000.00</td><td><span class="tagu">Applied</span></td><td class="mono">cmd-6c01</td></tr>
+  <tr><td class="mono">0001</td><td class="mono">2026-07-02 08:00</td><td>Initial funds</td><td class="mono">pf_0001</td><td>Capital</td><td class="n">+500,000.00</td><td><span class="tagu">Applied</span></td><td class="mono">cmd-5a00</td></tr></tbody></table></div></div>
+</section>
+
+<section class="p stack" data-p="cmp" data-s="healthy" hidden>
+ <div class="panel"><div class="ph">Compare <span class="r">Pick 2 to 4 · one currency · Modified Dietz</span></div>
+  <div class="tool" style="margin-bottom:12px"><span class="seg" data-local="kind"><button data-v="pf" aria-pressed="true">Portfolios</button><button data-v="al" aria-pressed="false">Alphas</button></span><span class="sp"></span>
+   <span class="seg" data-local="mode"><button data-v="ret" aria-pressed="true">Return</button><button data-v="pnl" aria-pressed="false">Net PnL</button></span>
+   <span class="seg" data-local="win"><button data-v="7" aria-pressed="false">7D</button><button data-v="30" aria-pressed="false">30D</button><button data-v="90" aria-pressed="true">90D</button></span></div>
+  <div class="pick" id="pick" style="margin-bottom:14px"></div>
+  <div class="chart" id="cmp"></div>
+  <div class="cap"><span class="winc">90D</span><span>1D</span><span>UTC</span><span>Retained snapshots</span></div></div>
+ <div class="panel"><div class="ph">Metrics <span class="r" id="mhint">Square = best in row</span></div><div class="tw"><table id="mt"></table></div></div>
+</section>
+</div></main></div>
+<script src="../hifi.js"></script>
+<script>
+(function(){
+var NS="http://www.w3.org/2000/svg";
+function E(t,a,txt){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e}
+function fmt(n,d){var s=Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});return(n<0?"−":"")+s}
+function sg(n,d){return(n>0?"+":"")+fmt(n,d)}
+function css(k){return getComputedStyle(document.documentElement).getPropertyValue(k).trim()}
+var state="healthy",tab="flow";
+
+/* ============================ A · CAPITAL FLOW ============================ */
+var K=.00043,NW=12,N={},L=[],ST={};
+function nd(id,x,y,h,o){N[id]=Object.assign({id:id,x:x,y:y,h:h,w:NW},o||{})}
+function lk(id,a,b,v,y0,y1,h,col,o){L.push(Object.assign({id:id,a:a,b:b,v:v,y0:y0,y1:y1,h:h,col:col},o||{}))}
+var C={fund:"--series-2",pnl:"--chart-band",bud:"--series",sim:"--series-sim"};
+function build(){
+ N={};L=[];
+ // funds in -> economic capital
+ nd("init",130,56,215,{lab:"Initial funds",val:"500,000.00",col:C.fund,tip:["Initial funds","500,000.00 USDT","81.6% of economic capital"]});
+ nd("add",130,285,43,{lab:"Added funds",val:"100,000.00",col:C.fund,tip:["Added funds","100,000.00 USDT","16.3% of economic capital"]});
+ nd("pnl",130,342,6,{lab:"Net PnL since start",val:"+12,480.40",col:C.pnl,tip:["Net PnL since start","+12,480.40 USDT","Fees and funding included","2.0% of economic capital"]});
+ nd("fund",130,376,26,{lab:"By funding source",na:"Not available",hatch:true,tip:["By funding source","Not available","No approved per-source attribution"]});
+ nd("cap",300,84,263.4,{lab:"Economic capital",val:"612,480.40",col:C.fund,head:true,tip:["Economic capital","612,480.40 USDT","Initial 500,000.00 + Added 100,000.00","+ Net PnL 12,480.40"]});
+ nd("ret",300,358,6,{lab:"Returned capital",val:"0.00",hollow:true,below:true,tip:["Returned capital","0.00 USDT"]});
+ lk("l_init","init","cap",500000,56,84,215,C.fund,{tip:["Initial funds → Economic capital","500,000.00 USDT"]});
+ lk("l_add","add","cap",100000,285,299,43,C.fund,{tip:["Added funds → Economic capital","100,000.00 USDT"]});
+ lk("l_pnl","pnl","cap",12480.4,342,342,5.4,C.pnl,{tip:["Net PnL → Economic capital","+12,480.40 USDT"]});
+ // budget (limit, not a flow of cash)
+ nd("bud",455,70,301,{lab:"Approved budget",val:"700,000.00",col:C.bud,head:true,tip:["Approved budget","700,000.00 USDT","540,000.00 allocated","160,000.00 headroom","A limit set by the manager, not cash"]});
+ var A=[["btc","BTC-Trend v3",200000,44,86],["eth","ETH-Mean v2",160000,142,68.8],["sol","SOL-Breakout v1",100000,222.8,43],["car","Funding-Carry v4",80000,277.8,34.4]];
+ var cur=70;
+ A.forEach(function(a){nd(a[0],610,a[3],a[4],{lab:a[1],val:fmt(a[2],2),col:C.bud,tip:[a[1],"Budget "+fmt(a[2],2)+" USDT"]});lk("l_"+a[0],"bud",a[0],a[2],cur,a[3],a[4],C.bud,{tip:["Approved budget → "+a[1],fmt(a[2],2)+" USDT"]});cur+=a[4]});
+ nd("head",610,324.2,68.8,{lab:"Headroom",val:"160,000.00",na:"Not deployed",hatch:true,tip:["Headroom","160,000.00 USDT","Approved but not allocated"]});
+ // deployments
+ var D=[["d0192","live-0192 · Binance-02","btc",120000,44,51.6,114100,38030,3300],["d0193","live-0193 · OKX-01","btc",80000,95.6,34.4,73500,24500,2120.1],["d0210","live-0210 · Binance-02","eth",160000,142,68.8,132200,null,3890.12],["d0215","live-0215 · Bybit-01","sol",100000,222.8,43,61000,null,410],["d0221","live-0221 · OKX-01","car",80000,277.8,34.4,78400,null,-410]];
+ var ay={btc:44,eth:142,sol:222.8,car:277.8};
+ D.forEach(function(d){var ex=d[6],bu=d[3];nd(d[0],775,d[4],d[5],{lab:d[1],val:fmt(bu,2),col:C.bud,exp:ex,mar:d[7],pl:d[8],dep:true,tip:[d[1],"Budget "+fmt(bu,2)+" USDT","Exposure "+fmt(ex,2)+" ("+(ex/bu*100).toFixed(1)+"% of budget)",d[7]!=null?"Margin used "+fmt(d[7],2)+" (venue)":"Margin used: Not available","Net PnL "+sg(d[8],2)]});
+  lk("l_"+d[0],d[2],d[0],bu,d[4],d[4],d[5],C.bud,{tip:[d[1],"Budget "+fmt(bu,2)+" USDT"]})});
+ // simulated block
+ nd("sv",300,480,107.5,{lab:"Virtual funds",val:"250,000.00",col:C.sim,sim:true,head:true,tip:["Virtual funds · simulated","250,000.00 USDT","Paper twin. Never added to real funds."]});
+ nd("sbtc",610,480,51.6,{lab:"BTC-Trend paper",val:"120,000.00",col:C.sim,sim:true,tip:["BTC-Trend paper","120,000.00 USDT simulated"]});
+ nd("seth",610,543.6,34.4,{lab:"ETH-Mean paper",val:"80,000.00",col:C.sim,sim:true,tip:["ETH-Mean paper","80,000.00 USDT simulated"]});
+ nd("shead",610,590,21.5,{lab:"Unallocated virtual",val:"50,000.00",na:"Not deployed",hatch:true,sim:true,tip:["Unallocated virtual","50,000.00 USDT simulated"]});
+ lk("l_sbtc","sv","sbtc",120000,480,480,51.6,C.sim,{tip:["Virtual funds → BTC-Trend paper","120,000.00 USDT simulated"]});
+ lk("l_seth","sv","seth",80000,531.6,543.6,34.4,C.sim,{tip:["Virtual funds → ETH-Mean paper","80,000.00 USDT simulated"]});
+ lk("l_shead","sv","shead",50000,566,590,21.5,C.sim,{tip:["Virtual funds → Unallocated","50,000.00 USDT simulated"],hatch:true});
+}
+function adj(id,dir){var seen={},q=[id];seen[id]=1;while(q.length){var c=q.pop();L.forEach(function(l){if(l.lim)return;if(dir>=0&&l.a===c&&!seen[l.b]){seen[l.b]=1;q.push(l.b)}if(dir<=0&&l.b===c&&!seen[l.a]){seen[l.a]=1;q.push(l.a)}})}return seen}
+function drawFlow(){
+ var host=document.getElementById("flow");if(!host||!host.offsetParent)return;build();
+ var W=1200,H=630,svg=E("svg",{viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Capital flow for Core","class":"sk"});
+ var defs=E("defs",{});
+ [["pH","--ink-faint"],["pS","--series-sim"],["pR","--flag-recall"]].forEach(function(p){var pt=E("pattern",{id:p[0],width:6,height:6,patternUnits:"userSpaceOnUse",patternTransform:"rotate(45)"});pt.appendChild(E("line",{x1:0,y1:0,x2:0,y2:6,style:"stroke:var("+p[1]+");stroke-width:1.4"}));defs.appendChild(pt)});svg.appendChild(defs);
+ // column heads
+ [["FUNDS IN",0,"start"],["ECONOMIC CAPITAL",300,"start"],["APPROVED BUDGET",455,"start"],["ALPHA",610,"start"],["DEPLOYMENT",775,"start"],["EXPOSURE",1040,"end"],["MARGIN USED",1118,"end"],["PNL (30D)",1198,"end"]].forEach(function(h){svg.appendChild(E("text",{x:h[1],y:14,"text-anchor":h[2],class:"h"},h[0]))});
+ svg.appendChild(E("line",{x1:0,x2:W,y1:22,y2:22,style:"stroke:var(--line)"}));
+ // limit connector cap -> bud
+ var lim={id:"lim",a:"cap",b:"bud",lim:true,tip:["Budget limit","Approved 700,000.00 vs capital 612,480.40","A limit set by the manager. Not funded by specific cash flows."]};L.push(lim);
+ var gl=E("g",{"data-id":"lim",class:"lk",tabindex:0});gl.appendChild(E("path",{d:"M312,215 L455,215",style:"stroke:var(--ink-soft);stroke-width:1.5;stroke-dasharray:6 4;fill:none"}));
+ gl.appendChild(E("rect",{x:338,y:205,width:92,height:20,style:"fill:var(--paper);stroke:var(--line-strong)"}));gl.appendChild(E("text",{x:384,y:219,"text-anchor":"middle",style:"fill:var(--ink-soft);font-size:10px;letter-spacing:.06em;stroke:none"},"LIMIT · NOT CASH"));
+ gl.appendChild(E("path",{d:"M312,212 L312,218",style:"stroke:var(--ink-soft)"}));svg.appendChild(gl);
+ // links
+ var gLinks=E("g",{});svg.appendChild(gLinks);
+ L.forEach(function(l){if(l.lim)return;var a=N[l.a],b=N[l.b],x0=a.x+a.w,x1=b.x,xm=(x0+x1)/2,y0=l.y0,y1=l.y1,h=Math.max(l.h,1);
+  var d="M"+x0+","+y0+" C"+xm+","+y0+" "+xm+","+y1+" "+x1+","+y1+" L"+x1+","+(y1+h)+" C"+xm+","+(y1+h)+" "+xm+","+(y0+h)+" "+x0+","+(y0+h)+" Z";
+  var g=E("g",{"data-id":l.id,class:"lk"});g.appendChild(E("path",{d:d,class:"l",style:"fill:var("+l.col+")"}));
+  if(l.hatch)g.appendChild(E("path",{d:d,style:"fill:url(#pS)"}));
+  if(l.id==="l_d0192"){var rh=20000*K,d2="M"+x0+","+y0+" C"+xm+","+y0+" "+xm+","+y1+" "+x1+","+y1+" L"+x1+","+(y1+rh)+" C"+xm+","+(y1+rh)+" "+xm+","+(y0+rh)+" "+x0+","+(y0+rh)+" Z";g.appendChild(E("path",{d:d2,style:"fill:url(#pR);opacity:.95"}));g.appendChild(E("path",{d:d2,style:"fill:none;stroke:var(--flag-recall);stroke-width:1"}))}
+  gLinks.appendChild(g)});
+ // nodes
+ var gN=E("g",{});svg.appendChild(gN);
+ Object.keys(N).forEach(function(id){var n=N[id],g=E("g",{"data-id":id,class:"nd",tabindex:0,role:"img","aria-label":n.tip.join(". ")});
+  var col="var("+(n.col||"--ink-faint")+")";
+  if(n.hatch){g.appendChild(E("rect",{x:n.x,y:n.y,width:n.w,height:n.h,class:"n",style:"fill:url(#"+(n.sim?"pS":"pH")+");stroke:"+(n.sim?"var(--series-sim)":"var(--ink-faint)")+";stroke-dasharray:3 2"}))}
+  else if(n.hollow){g.appendChild(E("rect",{x:n.x,y:n.y,width:n.w,height:n.h,class:"n",style:"fill:var(--paper);stroke:var(--ink-soft)"}))}
+  else if(n.sim){g.appendChild(E("rect",{x:n.x,y:n.y,width:n.w,height:n.h,class:"n",style:"fill:var(--series-sim);stroke:var(--series-sim)"}));g.appendChild(E("rect",{x:n.x,y:n.y,width:n.w,height:n.h,style:"fill:url(#pS);opacity:.0"}))}
+  else g.appendChild(E("rect",{x:n.x,y:n.y,width:n.w,height:n.h,class:"n",style:"fill:"+col}));
+  // labels
+  var cy=n.y+n.h/2;
+  if(id==="init"||id==="add"||id==="pnl"||id==="fund"){var t=E("text",{x:120,y:cy-2,"text-anchor":"end"},n.lab);g.appendChild(t);g.appendChild(E("text",{x:120,y:cy+11,"text-anchor":"end",class:n.na?"na":"b"},n.na||n.val))}
+  else if(n.head){g.appendChild(E("text",{x:n.x+n.w+8,y:n.y-6,class:"b"},n.val));g.appendChild(E("text",{x:n.x+n.w+8,y:n.y+8,style:"font-family:var(--font-sans)"},n.lab))}
+  else if(id==="ret"){g.appendChild(E("text",{x:n.x+n.w+8,y:n.y+6,style:"font-family:var(--font-sans)"},n.lab+" "+n.val))}
+  else if(n.dep){var up=id==="d0192"?10:0;g.appendChild(E("text",{x:n.x+n.w+8,y:cy-3-up,class:"b"},n.lab));g.appendChild(E("text",{x:n.x+n.w+8,y:cy+11-up},"Budget "+n.val))}
+  else{g.appendChild(E("text",{x:n.x+n.w+8,y:cy-2,class:"b"},n.lab));g.appendChild(E("text",{x:n.x+n.w+8,y:cy+11,class:n.na?"na":""},n.na?n.val+" · "+n.na:n.val))}
+  gN.appendChild(g);
+  if(n.dep){ // attribute columns
+   var ex=n.exp,r=ex/parseFloat(n.val.replace(/,/g,""));
+   g.appendChild(E("text",{x:1040,y:cy-1,"text-anchor":"end",class:"b"},fmt(ex,2)));
+   g.appendChild(E("rect",{x:974,y:cy+5,width:66,height:3,style:"fill:var(--line)"}));g.appendChild(E("rect",{x:974,y:cy+5,width:66*r,height:3,style:"fill:var(--series)"}));
+   if(n.mar!=null)g.appendChild(E("text",{x:1118,y:cy+4,"text-anchor":"end",class:"b"},fmt(n.mar,2)));else{g.appendChild(E("text",{x:1118,y:cy-1,"text-anchor":"end",class:"na"},"Not available"));g.appendChild(E("text",{x:1118,y:cy+11,"text-anchor":"end",class:"na",style:"font-size:10px"},"Not published"))}
+   g.appendChild(E("text",{x:1198,y:cy+4,"text-anchor":"end",style:"fill:var("+(n.pl>=0?"--series":"--series-dd")+");font-weight:500"},sg(n.pl,2)))}
+ });
+ // flags: pending recall + lock
+ function flagSvg(x,y,w,txt,c,glyph){var g=E("g",{});g.appendChild(E("rect",{x:x,y:y,width:w,height:16,style:"fill:color-mix(in srgb,var("+c+") 14%,var(--paper));stroke:color-mix(in srgb,var("+c+") 55%,transparent)"}));g.appendChild(E("rect",{x:x,y:y,width:3,height:16,style:"fill:var("+c+")"}));g.appendChild(E("text",{x:x+9,y:y+12,style:"fill:var("+c+");font-size:10.5px;letter-spacing:.06em;stroke:none"},glyph+" "+txt));return g}
+ svg.appendChild(flagSvg(791,N.d0192.y+N.d0192.h/2+7,112,"RECALL 20,000","--flag-recall","↩"));
+ svg.appendChild(flagSvg(791,N.d0210.y+N.d0210.h/2+16,96,"LOCKED","--flag-paused","❚❚"));svg.appendChild(flagSvg(893,N.d0210.y+N.d0210.h/2+16,64,"SHARED","--flag-reconcile","⇄"));
+ svg.appendChild(flagSvg(909,N.d0192.y+N.d0192.h/2+7,64,"SHARED","--flag-reconcile","⇄"));
+ // totals
+ svg.appendChild(E("line",{x1:900,x2:W,y1:402,y2:402,style:"stroke:var(--line-strong)"}));
+ svg.appendChild(E("text",{x:1040,y:420,"text-anchor":"end",class:"b"},"459,200.00"));svg.appendChild(E("text",{x:1118,y:420,"text-anchor":"end",class:"na"},"Per account"));svg.appendChild(E("text",{x:1198,y:420,"text-anchor":"end",class:"b",style:"fill:var(--series);font-weight:500"},"+9,310.22"));svg.appendChild(E("text",{x:900,y:420,class:"h"},"TOTAL"));
+ // simulated divider
+ svg.appendChild(E("line",{x1:0,x2:W,y1:440,y2:440,style:"stroke:var(--series-sim);stroke-width:2;stroke-dasharray:10 6"}));
+ svg.appendChild(E("rect",{x:0,y:446,width:318,height:18,style:"fill:var(--paper);stroke:var(--series-sim)"}));svg.appendChild(E("text",{x:8,y:459,style:"fill:var(--series-sim);font-size:10.5px;letter-spacing:.08em;stroke:none"},"SIMULATED · PAPER TWIN · NOT ADDED TO REAL"));
+ // sim nodes second pass (order)
+ host.innerHTML="";host.appendChild(svg);
+ var tip=document.createElement("div");tip.className="tip";host.appendChild(tip);
+ function hi(id,isLink){var set={};var s1=adj(id,-1),s2=adj(id,1);Object.keys(s1).concat(Object.keys(s2)).forEach(function(k){set[k]=1});
+  svg.classList.add("dim");svg.querySelectorAll(".nd,.lk").forEach(function(e){e.classList.remove("hi")});
+  if(isLink){var l=L.filter(function(x){return x.id===id})[0];if(l&&!l.lim){set={};var u=adj(l.a,-1),d=adj(l.b,1);Object.keys(u).forEach(function(k){set[k]=1});Object.keys(d).forEach(function(k){set[k]=1})}else{set={cap:1,bud:1,lim:1}}}
+  Object.keys(set).forEach(function(k){var e=svg.querySelector('[data-id="'+k+'"]');if(e)e.classList.add("hi")});
+  L.forEach(function(l){if(l.lim)return;if(set[l.a]&&set[l.b]){var e=svg.querySelector('[data-id="'+l.id+'"]');if(e)e.classList.add("hi")}});
+  if(isLink||id==="lim"){var e2=svg.querySelector('[data-id="'+id+'"]');if(e2)e2.classList.add("hi")}
+  if(id==="cap"||id==="bud"){var li=svg.querySelector('[data-id="lim"]');if(li)li.classList.add("hi")}}
+ function tipFor(id,x,y){var o=N[id]||L.filter(function(l){return l.id===id})[0];if(!o||!o.tip)return;tip.innerHTML='<div class="t">'+o.tip[0]+'</div>'+o.tip.slice(1).map(function(t){return"<div>"+t+"</div>"}).join("");tip.style.display="block";var hr=host.getBoundingClientRect();var lx=x-hr.left+14,ly=y-hr.top+14;lx=Math.min(lx,host.clientWidth-tip.offsetWidth-4);tip.style.left=Math.max(4,lx)+"px";tip.style.top=ly+"px"}
+ function clear(){svg.classList.remove("dim");svg.querySelectorAll(".hi").forEach(function(e){e.classList.remove("hi")});tip.style.display="none"}
+ svg.querySelectorAll(".nd,.lk").forEach(function(e){var id=e.getAttribute("data-id"),isL=e.classList.contains("lk");
+  e.addEventListener("mouseenter",function(ev){hi(id,isL);tipFor(id,ev.clientX,ev.clientY)});
+  e.addEventListener("mousemove",function(ev){tipFor(id,ev.clientX,ev.clientY)});
+  e.addEventListener("mouseleave",clear);
+  e.addEventListener("focus",function(){hi(id,isL);var r=e.getBoundingClientRect();tipFor(id,r.right,r.top)});e.addEventListener("blur",clear)});
+ host._redraw=drawFlow;
+}
+
+/* ================================ B · COMPARE ================================ */
+var PF=[{id:"core",n:"Core",base:612480.4,pnl:9310.22,ret:1.6,vol:.28,seed:11},{id:"sat",n:"Satellite",base:380205,pnl:33420.1,ret:9.7,vol:.7,seed:23},{id:"can",n:"Canary",base:256000,pnl:-1540,ret:-.6,vol:.42,seed:37},{id:"hed",n:"Hedge",base:188640.75,pnl:2310.4,ret:1.2,vol:.2,seed:41},{id:"pil",n:"Pilot",base:40000,pnl:610,ret:1.5,vol:.16,seed:53},
+ {id:"bas",n:"Basis-Arb",dis:"Return not available"},{id:"jpy",n:"Yen-Carry",cur:"JPY",dis:"Other currency"},{id:"vnd",n:"Asia-Pool",cur:"VND",dis:"Other currency"}];
+var AL=[{id:"btc",n:"BTC-Trend v3",base:200000,pnl:5420.1,ret:2.7,vol:.45,seed:61},{id:"eth",n:"ETH-Mean v2",base:160000,pnl:3890.12,ret:2.4,vol:.4,seed:71},{id:"sol",n:"SOL-Breakout v1",base:100000,pnl:410,ret:.4,vol:.5,seed:83},{id:"car",n:"Funding-Carry v4",base:80000,pnl:-410,ret:-.5,vol:.3,seed:97},{id:"avx",n:"AVAX-Rev v1",dis:"No allocation"}];
+var COL=["--series","--series-2","--series-dd","--chart-band"],DASH=["","","7 4","2 4"];
+var kind="pf",mode="ret",sel={pf:["core","sat","can"],al:["btc","eth","sol"]};
+function rng(s){return function(){s=(s*1664525+1013904223)%4294967296;return s/4294967296}}
+function winN(){var w=window.__win||"90";return w==="7"?8:w==="30"?31:w==="90"?91:241}
+function raw(e){if(e._raw)return e._raw;var r=rng(e.seed),P=[0];for(var i=1;i<241;i++)P.push(P[i-1]+(r()-.5)*e.vol*3.46);var d=P[240]-P[210],ramp=e.ret-d;for(var j=211;j<241;j++)P[j]+=ramp*(j-210)/30;for(var k=241-1;k>=0;k--){}e._raw=P;return P}
+function ser(e){var n=winN(),P=raw(e),s=241-n,R=[];for(var i=0;i<n;i++)R.push(P[s+i]-P[s]);var f=e.pnl/e.ret;return{R:R,Pn:R.map(function(v){return v*f})}}
+function metrics(e){var s=ser(e),n=s.R.length,pk=-1e9,dd=0;s.R.forEach(function(v){var nav=100+v;pk=Math.max(pk,nav);dd=Math.min(dd,(nav/pk-1)*100)});return{ret:s.R[n-1],pnl:s.Pn[n-1],dd:dd}}
+function list(){return kind==="pf"?PF:AL}
+function ents(){return sel[kind].map(function(id){return list().filter(function(e){return e.id===id})[0]})}
+function pick(){var h=document.getElementById("pick");h.innerHTML="";var chosen=sel[kind];
+ list().forEach(function(e){var b=document.createElement("button");b.className="pk";var ci=chosen.indexOf(e.id);b.style.setProperty("--c","var("+COL[ci<0?0:ci]+")");b.setAttribute("aria-pressed",ci>=0?"true":"false");
+  b.innerHTML="<i></i>"+e.n+(e.cur?" <small>"+e.cur+"</small>":"")+(e.dis?" <small>"+e.dis+"</small>":"");
+  if(e.dis){b.disabled=true;b.title=e.dis+(e.cur?" · cannot be compared on this basis":"")}
+  else if(ci<0&&chosen.length>=4){b.disabled=true;b.title="Max 4"}
+  b.addEventListener("click",function(){var c=sel[kind],i=c.indexOf(e.id);if(i>=0){if(c.length<=2)return;c.splice(i,1)}else if(c.length<4)c.push(e.id);pick();drawCmp();mt()});h.appendChild(b)})}
+function nice(lo,hi,k){var span=hi-lo,step=Math.pow(10,Math.floor(Math.log10(span/k))),e=span/k/step;step*=e<1.5?1:e<3?2:e<7?5:10;var a=Math.floor(lo/step)*step,t=[];for(var v=a;v<=hi+step*.001;v+=step)t.push(v);return t}
+function drawCmp(){var host=document.getElementById("cmp");if(!host||!host.offsetParent)return;var es=ents(),n=winN(),W=host.clientWidth||900,H=330,m={l:62,r:150,t:16,b:28},iw=W-m.l-m.r,ih=H-m.t-m.b;
+ var S=es.map(function(e){var s=ser(e);return mode==="ret"?s.R:s.Pn});var all=[].concat.apply([],S),lo=Math.min.apply(0,all.concat([0])),hi=Math.max.apply(0,all.concat([0])),pad=(hi-lo)*.1||1;lo-=pad;hi+=pad;var tk=nice(lo,hi,6);lo=tk[0];hi=tk[tk.length-1];
+ function x(i){return m.l+iw*i/(n-1)}function y(v){return m.t+ih*(1-(v-lo)/(hi-lo))}
+ var lab=function(v,d){return mode==="ret"?sg(v,d==null?2:d)+"%":sg(v,0)};
+ var start=new Date(Date.UTC(2026,9,17)-(n-1)*864e5),mono="IBM Plex Mono, monospace";
+ var svg=E("svg",{viewBox:"0 0 "+W+" "+H,role:"img","aria-label":"Comparison of "+es.map(function(e){return e.n}).join(", ")});
+ tk.forEach(function(v){var yy=y(v);svg.appendChild(E("line",{x1:m.l,x2:W-m.r,y1:yy,y2:yy,style:"stroke:var(--line);opacity:"+(Math.abs(v)<1e-9?1:.55)}));svg.appendChild(E("text",{x:m.l-8,y:yy+4,"text-anchor":"end",style:"fill:var(--ink-faint);font-size:11px;font-family:"+mono},mode==="ret"?fmt(v,1)+"%":fmt(v,0)))});
+ var xt=[];for(var q=0;q<6;q++){var qi=Math.round((n-1)*q/5);if(xt.indexOf(qi)<0)xt.push(qi)}
+ xt.forEach(function(i){var d=new Date(start.getTime()+i*864e5);svg.appendChild(E("line",{x1:x(i),x2:x(i),y1:m.t+ih,y2:m.t+ih+4,style:"stroke:var(--ink-faint)"}));svg.appendChild(E("text",{x:x(i),y:m.t+ih+19,"text-anchor":i===0?"start":i===n-1?"end":"middle",style:"fill:var(--ink-faint);font-size:11px;font-family:"+mono},(n>120?d.toISOString().slice(0,7):d.toISOString().slice(5,10))));});
+ es.forEach(function(e,k){var pts=S[k].map(function(v,i){return x(i)+","+y(v)}).join(" ");svg.appendChild(E("polyline",{points:pts,fill:"none",style:"stroke:var("+COL[k]+");stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round",
+  "stroke-dasharray":DASH[k]}))});
+ // end pills, collision-free
+ var ends=es.map(function(e,k){return{k:k,y:y(S[k][n-1]),v:S[k][n-1],n:e.n}}).sort(function(a,b){return a.y-b.y});for(var i=1;i<ends.length;i++)if(ends[i].y-ends[i-1].y<24)ends[i].y=ends[i-1].y+24;
+ ends.forEach(function(p){var yy=y(S[p.k][n-1]);svg.appendChild(E("circle",{cx:x(n-1),cy:yy,r:4.5,style:"fill:var("+COL[p.k]+");stroke:var(--panel);stroke-width:2"}));var t=p.n+"  "+lab(p.v,mode==="ret"?1:0),w=t.length*6.8+16;
+  svg.appendChild(E("line",{x1:x(n-1)+5,x2:W-m.r+8,y1:yy,y2:p.y,style:"stroke:var("+COL[p.k]+");stroke-width:1"}));svg.appendChild(E("rect",{x:W-m.r+8,y:p.y-11,width:w,height:22,style:"fill:var("+COL[p.k]+")"}));svg.appendChild(E("text",{x:W-m.r+16,y:p.y+4,style:"fill:#0b0b0c;font-size:11.5px;font-weight:600;font-family:"+mono},t))});
+ var cross=E("line",{y1:m.t,y2:m.t+ih,style:"stroke:var(--ink);opacity:.7",visibility:"hidden"});svg.appendChild(cross);
+ var dots=es.map(function(e,k){var c=E("circle",{r:5,style:"fill:var("+COL[k]+");stroke:var(--ink);stroke-width:2",visibility:"hidden"});svg.appendChild(c);return c});
+ var hit=E("rect",{x:m.l,y:m.t,width:iw,height:ih,fill:"transparent",tabindex:0});svg.appendChild(hit);
+ var rd=document.createElement("div");rd.className="rd";host.innerHTML="";host.appendChild(rd);host.appendChild(svg);
+ function rdFor(i){var d=new Date(start.getTime()+i*864e5);rd.innerHTML='<span><span class="u">'+d.toISOString().slice(0,10)+' UTC</span></span>'+es.map(function(e,k){return'<span><span class="sw" style="background:var('+COL[k]+')"></span><span class="u">'+e.n+'</span><b>'+lab(S[k][i])+'</b></span>'}).join("")}
+ rdFor(n-1);
+ function show(i){i=Math.max(0,Math.min(n-1,i));cross.setAttribute("x1",x(i));cross.setAttribute("x2",x(i));cross.setAttribute("visibility","visible");dots.forEach(function(c,k){c.setAttribute("cx",x(i));c.setAttribute("cy",y(S[k][i]));c.setAttribute("visibility","visible")});rdFor(i);return i}
+ var cur=n-1;hit.addEventListener("mousemove",function(ev){var r=svg.getBoundingClientRect(),px=(ev.clientX-r.left)*W/r.width;cur=show(Math.round((px-m.l)/iw*(n-1)))});
+ hit.addEventListener("mouseleave",function(){cross.setAttribute("visibility","hidden");dots.forEach(function(c){c.setAttribute("visibility","hidden")});rdFor(n-1)});
+ hit.addEventListener("keydown",function(ev){if(ev.key==="ArrowLeft")cur=show(cur-1);else if(ev.key==="ArrowRight")cur=show(cur+1);else if(ev.key==="Escape")hit.dispatchEvent(new Event("mouseleave"))});
+ host._redraw=function(){drawCmp();mt()}}
+function mt(){var t=document.getElementById("mt");if(!t||!t.offsetParent)return;var es=ents(),M=es.map(metrics),W=window.__win||"90",wl={"7":"7D","30":"30D","90":"90D","all":"ALL"}[W];
+ function best(vals,dir){var b=vals.reduce(function(a,v,i){return(dir>0?v>vals[a]:v<vals[a])?i:a},0);return b}
+ var bp=best(M.map(function(m){return m.pnl}),1),br=best(M.map(function(m){return m.ret}),1),bd=best(M.map(function(m){return m.dd}),1);
+ var head='<thead><tr><th>Metric</th>'+es.map(function(e,k){return'<th class="n hd"><i style="background:var('+COL[k]+')"></i>'+e.n+'</th>'}).join("")+'</tr></thead>';
+ function row(l,cells,bi){return'<tr><td>'+l+'</td>'+cells.map(function(c,i){return'<td class="n">'+(i===bi?'<span class="best" title="Best in row"></span>':'<span class="nb"></span>')+c+'</td>'}).join("")+'</tr>'}
+ var cls=function(v){return""};
+ t.innerHTML=head+'<tbody>'+row(kind==="pf"?"Economic capital · USDT":"Allocation · USDT",es.map(function(e){return fmt(e.base,2)}),-1)
+  +row("Net PnL · "+wl+" · USDT",M.map(function(m){return sg(m.pnl,2)}),bp)
+  +row("Return · "+wl+" · Modified Dietz",M.map(function(m){return sg(m.ret,1)+"%"}),br)
+  +row("Max drawdown · "+wl,M.map(function(m){return fmt(m.dd,1)+"%"}),bd)
+  +row("Score",es.map(function(){return'<span class="na">Pending</span>'}),-1)+'</tbody>'}
+
+/* ================================ wiring ================================ */
+function go(t){tab=t;document.querySelectorAll(".p").forEach(function(p){p.hidden=p.getAttribute("data-p")!==t});document.querySelectorAll("#tabs button").forEach(function(b){b.setAttribute("aria-selected",b.getAttribute("data-t")===t?"true":"false")});setTimeout(all,0)}
+function all(){drawFlow();drawCmp();mt()}
+document.querySelectorAll("#tabs button").forEach(function(b){b.addEventListener("click",function(){go(b.getAttribute("data-t"))})});
+var oldSeg=window.onseg;window.onseg=function(k,v){if(k==="kind"){kind=v;pick();drawCmp();mt()}else if(k==="mode"){mode=v;drawCmp()}};
+window.onctl=function(k,v){state=v;setTimeout(all,0)};
+document.addEventListener("click",function(e){if(e.target.closest(".seg[data-win] button"))setTimeout(function(){drawCmp();mt()},0)});
+window.addEventListener("resize",all);
+var h=location.hash.slice(1);pick();go(h==="cmp"?"cmp":"flow");
+})();
+</script></body></html>

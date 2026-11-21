@@ -1,0 +1,163 @@
+/**
+ * CardsTable — a real <table> that turns into stacked cards at 660px and below.
+ *
+ * The switch is CSS only (css/cards.css): every cell carries `data-l`, its
+ * column label, and the stylesheet prints it before the value once the header
+ * row is hidden. Above 660px, and in jsdom, it is an ordinary table.
+ *
+ * Numeric columns keep the V1 contract: `data-numeric="true"` on the th and
+ * every td, so mono, tabular, right-aligned and never truncated.
+ *
+ * Sorting (P-B4, hi-fi `th.s`): a column that declares `sortKey`, in a table
+ * given `onSort`, prints its header as a button with `aria-sort`; the table
+ * only reports the click, the caller owns the order. Tables that pass neither
+ * are unchanged. Below 660px the header row is hidden, so a caller that sorts
+ * keeps its own control for the card layout.
+ *
+ * Scrolling (WCAG 2.1.1, axe scrollable-region-focusable, UXM-10 F-5): the wrap scrolls sideways when the table is wider
+ * than its column. A scroll region with nothing focusable inside cannot be scrolled from the keyboard, so exactly then
+ * (it overflows AND holds no link, button or focusable row) the wrap becomes a named, focusable region. Otherwise it is a
+ * plain div and adds no Tab stop.
+ */
+import { Fragment, type KeyboardEvent, type ReactNode } from "react";
+
+import "./css/cards.css";
+import { useKeyboardScroll } from "./useKeyboardScroll";
+
+export interface CardsColumn<Row> {
+  key: string;
+  /** Header text, and the label printed on the card. */
+  label: string;
+  numeric?: boolean;
+  /** Makes the header a sort control for this key (needs `onSort` on the table). */
+  sortKey?: string;
+  /** Why this header does not sort right now (its title when it is not a sort control). */
+  sortOffReason?: string;
+  /** Decoration before the header text (a series swatch); hidden from assistive tech. `label` stays the accessible name. */
+  head?: ReactNode;
+  render(row: Row): ReactNode;
+}
+
+export interface CardsSort {
+  key: string;
+  dir: "asc" | "desc";
+}
+
+export interface CardsTableProps<Row> {
+  columns: readonly CardsColumn<Row>[];
+  rows: readonly Row[];
+  rowKey(row: Row): string;
+  /** Accessible name of the table. */
+  label: string;
+  selectedKey?: string | null;
+  /** Makes rows keyboard-reachable; the row opens a Drawer, it does not navigate. */
+  onRowOpen?(row: Row): void;
+  /** Shown in place of the body when there are no rows. */
+  empty?: ReactNode;
+  /** The order the caller applied; marks the matching `sortKey` header. */
+  sort?: CardsSort | null;
+  /** Several keys at once (multi-sort): each marked header shows its priority (1, 2, 3) when there is more than one. Wins over `sort`. */
+  sorts?: readonly CardsSort[];
+  /** A sortable header was activated. The caller decides direction. */
+  onSort?(key: string): void;
+  /** A screen's own class on the table, for a card layout of its own (the Alpha 360 orders and fills). */
+  className?: string;
+  /** A group header row before this row (it starts a group), or `null`. The rows arrive already ordered by group. */
+  groupBefore?(row: Row, index: number): ReactNode;
+  /**
+   * Says in words, under the table, that it goes on to the right: printed only while the wrap really overflows (the same
+   * `data-more` the edge fade reads). The fade alone cuts a header mid-word and reads as clipping; the sentence names the cause.
+   */
+  scrollHint?: boolean;
+}
+
+/** A cell that rendered nothing says so; it is never a dash and never 0. */
+function present(content: ReactNode): boolean {
+  return content !== null && content !== undefined && content !== false && content !== "";
+}
+
+export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, sorts, onSort, className, groupBefore, scrollHint }: CardsTableProps<Row>) {
+  const open = (row: Row) => (event: KeyboardEvent) => {
+    // Space is prevented so the page does not scroll from under the row.
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onRowOpen?.(row);
+    }
+  };
+  const { ref: wrapRef, props: scrollProps } = useKeyboardScroll<HTMLDivElement>(label, [rows, columns]);
+  const hint = scrollHint === true && scrollProps["data-more"] !== undefined;
+  return (
+    <>
+    <div ref={wrapRef} className="exec-cards-wrap" {...scrollProps}>
+      <table className={className ? `exec-cards ${className}` : "exec-cards"} aria-label={label}>
+        <thead>
+          <tr>
+            {columns.map((c) => {
+              const sortable = onSort !== undefined && c.sortKey !== undefined;
+              const ranked = sortable && sorts !== undefined ? sorts.findIndex((entry) => entry.key === c.sortKey) : -1;
+              const active = sortable && sorts !== undefined ? (ranked >= 0 ? sorts[ranked]!.dir : null)
+                : sortable && sort?.key === c.sortKey ? (sort?.dir ?? null) : null;
+              const head = c.head ? <span className="exec-cards-head" aria-hidden="true">{c.head}</span> : null;
+              return (
+                <th
+                  key={c.key}
+                  scope="col"
+                  data-numeric={c.numeric ? "true" : undefined}
+                  aria-sort={active === "asc" ? "ascending" : active === "desc" ? "descending" : undefined}
+                  data-sortable={sortable ? "true" : undefined}
+                  title={!sortable ? c.sortOffReason : undefined}
+                >
+                  {sortable ? (
+                    <button type="button" className="exec-cards-sort" data-dir={active ?? undefined} onClick={() => onSort(c.sortKey!)}>
+                      {head}{c.label}
+                      {ranked >= 0 && sorts !== undefined && sorts.length > 1 ? <span className="exec-cards-rank" aria-label={`sort priority ${ranked + 1}`}>{ranked + 1}</span> : null}
+                    </button>
+                  ) : (
+                    <>{head}{c.label}</>
+                  )}
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 && empty ? (
+            <tr className="exec-cards-empty">
+              <td colSpan={columns.length}>{empty}</td>
+            </tr>
+          ) : null}
+          {rows.map((row, index) => {
+            const key = rowKey(row);
+            const header = groupBefore === undefined ? null : groupBefore(row, index);
+            return (
+              <Fragment key={key}>
+              {header !== null && header !== undefined ? <tr className="exec-cards-group"><th scope="rowgroup" colSpan={columns.length}>{header}</th></tr> : null}
+              <tr
+                data-selected={key === selectedKey ? "true" : undefined}
+                aria-current={key === selectedKey ? "true" : undefined}
+                data-interactive={onRowOpen ? "true" : undefined}
+                tabIndex={onRowOpen ? 0 : undefined}
+                onClick={onRowOpen ? () => onRowOpen(row) : undefined}
+                onKeyDown={onRowOpen ? open(row) : undefined}
+              >
+                {columns.map((c) => {
+                  const content = c.render(row);
+                  return (
+                    <td key={c.key} data-l={c.label} data-numeric={c.numeric ? "true" : undefined}>
+                      <span className="exec-cards-v">
+                        {present(content) ? content : <span className="exec-cards-na">Not available</span>}
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+    {hint ? <p className="exec-cards-hint">Scroll sideways for the other columns</p> : null}
+    </>
+  );
+}

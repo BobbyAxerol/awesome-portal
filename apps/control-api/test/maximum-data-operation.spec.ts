@@ -18,6 +18,7 @@ const user: PortalUser = {
   userId: "usr_eds01", username: "eds01", displayName: "EDS-01", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-09-04T00:00:00.000Z"), updatedAt: new Date("2026-09-04T00:00:00.000Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 
 const session: AuthSession = {
@@ -271,7 +272,7 @@ describe("EDS-01 sealed Manager-v2 deployment operation", () => {
   it("rejects cursor/path injection at the same-origin controller before an operation is selected", async () => {
     const controller = new MaximumDataOperationController(
       { deploymentPage: async () => ({ ok: true }) } as unknown as MaximumDataOperationService,
-      { isMember: async () => true } as never,
+      { canReadExecution: async () => true } as never,
     );
     const request = { portalUser: principal.user, portalSession: principal.session, portalWorkspaceId: principal.workspaceId } as never;
     await expect(controller.deployments(request, {

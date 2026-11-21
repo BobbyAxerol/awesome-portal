@@ -14,13 +14,13 @@ import { useNavigate } from "react-router-dom";
 
 import type { AlphaFleetQuery, BindingListQuery, ExecutionApi } from "../api/ports";
 import type {
-  AlphaFleetDeployment,
-  AlphaFleetItem,
+  AlphaResourceDeployment,
+  AlphaResourceItem,
   BranchCapability,
   ProfileEnvelope,
   QueryAnalytics,
 } from "../api/profileRead";
-import { readAlphaFleetItem, readQueryAnalytics, type BindingDetailRead } from "../api/profileRead";
+import { readAlphaResourceItem, readQueryAnalytics, type BindingDetailRead } from "../api/profileRead";
 import { formatExact } from "../formatExact";
 import { utcStamp } from "../time";
 import { pageOf } from "../api/profileRows";
@@ -46,6 +46,7 @@ import type { RangePreset } from "../../charts/financial/financialData";
 import { MARKET_CANDLES_MAX_LIMIT, MARKET_CANDLE_INTERVALS, MARKET_CANDLE_INTERVAL_MS, type MarketCandle, type MarketCandleInterval, type MarketCandlesPayload, fittingInterval, marketVenueOf, mergeCandles, publishedTimeframe, timeframeFromStrategyId } from "../api/marketCandles";
 import { candleProvenanceLine, candleRefusalLine, type MarketContextCandles } from "../api/marketContext";
 import { unavailable } from "../api/ports";
+import { retainedLoading, useRetainedReview } from "../retainedReview";
 import { AlphaActivityTile, ExecutionQualityTile, PortfolioCapitalBoard } from "../components/DerivationTile";
 import { financialChartView, type FinancialChartPayload } from "../api/financialChart";
 import type { AlphaActivity, DeploymentQuality, PortfolioCapital } from "../api/derivations";
@@ -1023,30 +1024,30 @@ function promotionStage(stage: string): PromotionStage {
   return SOURCE_STAGE[stage.toUpperCase()] ?? "PAPER_OBSERVATION";
 }
 
-function readiness(deployment: AlphaFleetDeployment): Readiness {
+function readiness(deployment: AlphaResourceDeployment): Readiness {
   const health = deployment.health.toUpperCase();
   if (health === "READY" || health === "BLOCKED" || health === "NOT_READY") return health;
-  return deployment.active && deployment.state.toUpperCase() === "ACTIVE" ? "READY" : "UNKNOWN";
+  return "UNKNOWN";
 }
 
 function unique(values: readonly string[]): readonly string[] {
   return Array.from(new Set(values.filter((value) => value.length > 0)));
 }
 
-function fleetKpis(item: AlphaFleetItem): Kpi[] {
+function fleetKpis(item: AlphaResourceItem): Kpi[] {
   return [
-    ...item.allocations.map((row) => ({ label: `allocation · ${row.currency}`, value: row.value, unit: row.currency })),
+    ...item.allocations.map((row) => ({ label: `allocation · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.value, unit: row.currency })),
     ...item.balances.flatMap((row) => [
-      { label: `balance total · ${row.currency}`, value: row.total, unit: row.currency },
-      { label: `balance free · ${row.currency}`, value: row.free, unit: row.currency },
-      { label: `balance locked · ${row.currency}`, value: row.locked, unit: row.currency },
+      { label: `balance total · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.total, unit: row.currency },
+      { label: `balance free · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.free, unit: row.currency },
+      { label: `balance locked · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.locked, unit: row.currency },
     ]),
-    ...item.positionPnl.map((row) => ({ label: `current position PnL · ${row.currency}`, value: row.net, unit: row.currency })),
-    ...item.exposure.map((row) => ({ label: `current exposure · ${row.currency}`, value: row.value, unit: row.currency })),
+    ...item.positionPnl.map((row) => ({ label: `current position PnL · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.net, unit: row.currency })),
+    ...item.exposure.map((row) => ({ label: `current exposure · ${row.currency}`, value: row.state === "UNAVAILABLE" ? null : row.value, unit: row.currency })),
   ];
 }
 
-function fleetVenues(item: AlphaFleetItem): VenueRow[] {
+function fleetVenues(item: AlphaResourceItem): VenueRow[] {
   const byVenue = new Map<string, VenueRow>();
   for (const deployment of item.deployments) {
     const current: VenueRow = byVenue.get(deployment.venue) ?? {
@@ -1062,7 +1063,7 @@ function fleetVenues(item: AlphaFleetItem): VenueRow[] {
   return Array.from(byVenue.values());
 }
 
-function fleetDeployments(item: AlphaFleetItem): DeploymentRow[] {
+function fleetDeployments(item: AlphaResourceItem): DeploymentRow[] {
   return item.deployments.map((deployment) => ({
     deploymentId: deployment.deploymentId,
     venue: deployment.venue,
@@ -1400,6 +1401,13 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
    * says which source it drew.
    */
   environment?: "paper" | "sandbox" | "live" | null }) {
+  const retainedContext = useRetainedReview();
+  // Retained review explicitly disables source refresh. Do not bootstrap
+  // Manager or venue candles from retained order/fill timestamps. An absent
+  // context preserves the existing separately qualified source-enabled lane.
+  const sourceReadsAllowed = !retainedLoading() && (retainedContext.status === "idle" || retainedContext.status === "absent");
+  const sourceReadReason = retainedContext.status === "retained" ? "UDB_RETAINED_OBSERVATION_NOT_CURRENT_SOURCE"
+    : retainedContext.error ?? "UDB_CONTEXT_NOT_READY";
   const subject = subjectId ?? alphaId ?? "subject";
   const accountScope = alphaId === null ? subjectId ?? null : null;
   // G9: the drained relation page set is the source once orders and fills have been read; the N25 page stands in before that and when the BFF is unavailable
@@ -1438,7 +1446,8 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
   // the finding, not a rendering problem to smooth over. The footer names
   // whichever one was drawn.
   const context = useApiRead<MarketContextCandles>(
-    (signal) => !activeSymbol || !range || !venue || !environment
+    (signal) => !sourceReadsAllowed ? Promise.resolve(unavailable(sourceReadReason))
+      : !activeSymbol || !range || !venue || !environment
       ? Promise.resolve(unavailable("No symbol, range or environment to read the Trading System's candles for."))
       : scopedReadApi(api, signal).getMarketContextCandles({
           environment,
@@ -1449,22 +1458,23 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
           toMs: range.hi,
           pointLimit: Math.min(2000, limit),
         }),
-    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, environment],
-    { keepValue: true },
+    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, environment, sourceReadsAllowed, sourceReadReason],
+    { keepValue: sourceReadsAllowed },
   );
   const market = useApiRead<MarketCandlesPayload>(
-    (signal) => !activeSymbol || !range
+    (signal) => !sourceReadsAllowed ? Promise.resolve(unavailable(sourceReadReason))
+      : !activeSymbol || !range
       ? Promise.resolve(unavailable("No symbol among this alpha's events to read candles for."))
       : venue === null
         ? Promise.resolve(unavailable(`No public klines for venue ${events.venue ?? "(not published)"} — MARKET_CANDLES_VENUE_UNSUPPORTED.`))
         : scopedReadApi(api, signal).getMarketCandles({ environment: relationValue?.environment ?? "paper", venue, symbol: activeSymbol, interval, fromMs: range.lo, toMs: range.hi, limit }),
-    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue, relationValue?.environment],
-    { keepValue: true },
+    [api, activeSymbol, interval, range?.lo, range?.hi, limit, venue, events.venue, relationValue?.environment, sourceReadsAllowed, sourceReadReason],
+    { keepValue: sourceReadsAllowed },
   );
   // Edge paging: when the reader reaches an end of the loaded candles, one
   // more page is read on that side and merged; a page that comes back empty
   // marks that side exhausted. Pages are keyed by symbol|interval.
-  const pageKey = `${activeSymbol ?? ""}|${interval}|${venue ?? ""}`;
+  const pageKey = `${sourceReadsAllowed ? "source" : "retained"}|${activeSymbol ?? ""}|${interval}|${venue ?? ""}`;
   const [pages, setPages] = useState<{ key: string; candles: (readonly MarketCandle[])[]; exhausted: { left: boolean; right: boolean }; loading: "left" | "right" | null }>({ key: pageKey, candles: [], exhausted: { left: false, right: false }, loading: null });
   const merged = useMemo(() => {
     const base = market.value && market.value.state === "READY" ? market.value.candles : [];
@@ -1474,7 +1484,7 @@ export function TradeReplayLive({ api, analytics, additive = null, alphaId, subj
   }, [market.value, pages, pageKey]);
   const onRangeEdge = (edge: "left" | "right") => {
     if ((window as Window & { __replayDebug?: boolean }).__replayDebug) console.debug("[replay] edge", JSON.stringify({ edge, activeSymbol, venue, merged: merged.length, loading: pages.loading, exhausted: pages.exhausted, key: pages.key === pageKey }));
-    if (!activeSymbol || venue === null || merged.length === 0 || pages.loading) return;
+    if (!sourceReadsAllowed || !activeSymbol || venue === null || merged.length === 0 || pages.loading) return;
     if (pages.key === pageKey && pages.exhausted[edge]) return;
     const first = merged[0]!, last = merged[merged.length - 1]!;
     const stepMs = MARKET_CANDLE_INTERVAL_MS[interval];
@@ -1697,7 +1707,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
   const navigate = useNavigate();
   const analytics = analyticsState.value;
   const resource = resourceState.value;
-  const item = resource ? readAlphaFleetItem(resource.objects.alpha) : null;
+  const item = resource?.schemaVersion === "execution.alpha-resource.v1" ? readAlphaResourceItem(resource.objects.alpha) : null;
   const sourceFacts = resourceFacts(resource, "ALPHA", alphaId);
   const viewFacts = combinedFacts(sourceFacts, analytics);
   const envelope: Envelope = resource
@@ -1743,7 +1753,7 @@ export function AlphaThreeSixtyRichContainer({ api, alphaId }: { api: ExecutionA
       owner={item?.owner ?? "owner not published"}
       envelope={envelope}
       venueOptions={["ALL", ...unique(item?.deployments.map((row) => row.venue) ?? [])]}
-      portfolioOptions={["ALL", ...unique(item?.portfolios.map((row) => row.portfolioId) ?? [])]}
+      portfolioOptions={["ALL", ...unique(item?.portfolios.flatMap((row) => row.portfolioId === null ? [] : [row.portfolioId]) ?? [])]}
       modeOptions={["ALL", ...unique(item?.deployments.map((row) => row.stage) ?? [])]}
       windowOptions={[...SCOPE_WINDOWS]}
       scope={scope}

@@ -248,6 +248,13 @@ describe("EX-BE-05b/F1b Portal incident detail", () => {
         panel.data === null,
     )).toBe(true);
 
+    const eligibilityRoute=`/api/v1/execution/operations/incidents/${first.json().detail.incident.incident_id}/eligibility`;
+    expect((await rawInject(`${eligibilityRoute}?workspace_id=${workspaceId}`)).statusCode).toBe(401);
+    const userEligibility=await inject(reader,`${eligibilityRoute}?workspace_id=${workspaceId}`);
+    expect(userEligibility.statusCode).toBe(403);expect(userEligibility.json().error.code).toBe("ADMIN_ROLE_REQUIRED");
+    const unknownQuery=await inject(bobby,`${eligibilityRoute}?workspace_id=${workspaceId}&role=ADMIN`);
+    expect(unknownQuery.statusCode).toBe(400);expect(unknownQuery.json().error.code).toBe("INVALID_INCIDENT_ELIGIBILITY");
+
     const replay = await createIncident();
     expect(replay.statusCode).toBe(201);
     expect(replay.json().detail.incident.incident_id).toBe(first.json().detail.incident.incident_id);
@@ -274,6 +281,20 @@ describe("EX-BE-05b/F1b Portal incident detail", () => {
     const created = await createIncident("incident:create:workflow");
     const incidentId = created.json().detail.incident.incident_id;
     const route = `/api/v1/execution/operations/incidents/${incidentId}`;
+
+    async function eligibility(version:number,eligible:boolean[]){
+      const response=await inject(bobby,`${route}/eligibility?workspace_id=${workspaceId}`);
+      expect(response.statusCode).toBe(200);expect(response.headers["cache-control"]).toBe("private, no-store");
+      const body=response.json();
+      expect(body).toMatchObject({schema_version:"portal.execution.incident-action-eligibility.v1",workspace_id:workspaceId,
+        incident_id:incidentId,workflow_version:version,current_only:true,advisory_only:true,
+        source_side_effect_requested:false,deployment_resume_requested:false});
+      expect(body.actions.map((item:{eligible:boolean})=>item.eligible)).toEqual(eligible);
+      return body;
+    }
+    const initialEligibility=await eligibility(1,[true,false,false]);
+    expect(initialEligibility.actions[1].blocker_codes).toEqual([
+      "INCIDENT_ACKNOWLEDGEMENT_REQUIRED","INCIDENT_ASSIGNEE_REQUIRED","MITIGATION_EVIDENCE_REQUIRED"]);
 
     const earlyMitigation = await mutation(bobby, `${route}/mitigate`, {
       ...mutationBase("execution.incident-mitigate-request.v1", "incident:mitigate:early", 1),
@@ -326,6 +347,8 @@ describe("EX-BE-05b/F1b Portal incident detail", () => {
       captured_at: "2026-08-23T12:00:00Z",
     });
     expect(mitigationEvidence.statusCode).toBe(201);
+    const mitigationEligibility=await eligibility(5,[false,true,false]);
+    expect(mitigationEligibility.actions[1].blocker_codes).toEqual([]);
 
     const mitigated = await mutation(bobby, `${route}/mitigate`, {
       ...mutationBase("execution.incident-mitigate-request.v1", "incident:mitigate:1", 5),
@@ -359,6 +382,8 @@ describe("EX-BE-05b/F1b Portal incident detail", () => {
       captured_at: "2026-08-23T12:05:00Z",
     });
     expect(cleanEvidence.statusCode).toBe(201);
+    const resolutionEligibility=await eligibility(7,[false,false,true]);
+    expect(resolutionEligibility.actions[2].required_inputs).toEqual(["clean_dry_run_evidence_hash","reason"]);
 
     const resolved = await mutation(bobby, `${route}/resolve`, {
       ...mutationBase("execution.incident-resolve-request.v1", "incident:resolve:1", 7),
@@ -387,6 +412,9 @@ describe("EX-BE-05b/F1b Portal incident detail", () => {
       },
     });
     expect((await ctx.pool.query("SELECT 1 FROM outbox_messages")).rowCount).toBe(0);
+    const resolvedEligibility=await eligibility(8,[false,false,false]);
+    expect(resolvedEligibility.actions.every((item:{blocker_codes:string[]})=>
+      item.blocker_codes.length===1&&item.blocker_codes[0]==="INCIDENT_ALREADY_RESOLVED")).toBe(true);
 
     await expect(ctx.pool.query(
       `UPDATE execution_incidents
@@ -421,6 +449,9 @@ describe("EX-BE-05b/F1b Portal incident detail", () => {
       [otherWorkspace, bobby.userId],
     );
     await insertOperation("op-other-workspace", otherWorkspace);
+    const nonmemberEligibility=await inject(bobby,`${route}/eligibility?workspace_id=${otherWorkspace}`);
+    expect(nonmemberEligibility.statusCode).toBe(404);
+    expect(nonmemberEligibility.json().error.code).toBe("WORKSPACE_NOT_FOUND");
     const crossSource = await mutation(bobby, `${route}/operations`, {
       ...mutationBase("execution.incident-correlate-operation-request.v1", "incident:link:cross", 2),
       operation_id: "op-other-workspace",

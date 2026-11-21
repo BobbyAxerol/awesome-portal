@@ -9,8 +9,8 @@
  * Only bootstrap routes are hard-coded (FRONTEND_HANDOFF §2): registry error,
  * not-found, and the legacy compatibility redirects.
  */
-import { Suspense, lazy, type ComponentType } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Suspense, lazy, useContext, type ComponentType } from "react";
+import { Navigate, Route, Routes, useLocation, useSearchParams } from "react-router-dom";
 
 import { ResultsSkeleton, StateView } from "../components/ui";
 import { CommandCenter } from "../features/command-center/CommandCenter";
@@ -25,6 +25,11 @@ import {
   EXECUTION_PREVIEW_EXTRA_ROUTES,
 } from "../execution/previewRegistry";
 import { screenDeliveryProfile, screenDeliveryPolicy } from "../execution/profile";
+import { isV2Screen } from "../execution/v2/flags";
+import { withContext } from "../execution/v2/urlState";
+import { SELF_ENTRY_PATH, SelfWorkspaceContext } from "./selfNavView";
+
+const COMPARE_SCREEN_ID = "EXECUTION_COMPARE_SCREEN";
 
 /**
  * Heavy modules are loaded when their route is entered, not before.
@@ -50,12 +55,68 @@ const UsersAccess = lazy(() =>
 const ProfileAccess = lazy(() =>
   import("../features/admin/ProfileAccess").then((m) => ({ default: m.ProfileAccess })),
 );
+// UXM-07 S1e: the V2 access self-view. The raw env string gates the import(), so
+// a flag-off build emits no V2 chunk and PROFILE_ACCESS stays the V1 matrix.
+const V2Access = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/screens/access"))
+  : null;
+// UXM-07 S2: the V2 roster. Same raw-env gate; `?view=legacy` keeps the V1 screen reachable.
+const V2Users = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/screens/users"))
+  : null;
+// WP-D: the context bar of the V2 pages mounted here (Profile & Access, Users), which sit outside the preview frame that normally draws it.
+// Same raw-env gate; drawn only while the shell flag is on AND the page's own V2 screen is the one mounted.
+const V2PageContextBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/shell/PageContextBar"))
+  : null;
+// UXM-08: the fixture-only scoped slice. Same raw-env gate, so a flag-off build emits no chunk for it.
+const V2Slice = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/screens/slice"))
+  : null;
+// UXM-09: the fixture-only command story. Same raw-env gate, so a flag-off build emits no chunk for it.
+const V2Command = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/screens/command/storyRoute"))
+  : null;
 const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
+const ResearchFixtures = lazy(() => import("../research/ResearchFixtures"));
 const ExecutionPreviewRoute = lazy(() =>
   import("../execution/ExecutionPreviewRoute").then((m) => ({
     default: m.ExecutionPreviewRoute,
   })),
 );
+
+function PageBar() {
+  return V2PageContextBar !== null && isV2Screen("shell") ? <Suspense fallback={null}><V2PageContextBar /></Suspense> : null;
+}
+
+/**
+ * `profile` flag on: everyone gets the self-view and owners keep the V1 matrix
+ * on a second tab. Off (or the key absent from the manifest): the V1 screen,
+ * unchanged, including its typed denial for a non-owner.
+ */
+export function UsersEntry() {
+  const [search] = useSearchParams();
+  if (V2Users === null || !isV2Screen("users") || search.get("view") === "legacy") return <UsersAccess />;
+  // D9/D10: a denied roster links to My access, keeping the shared context (workspace_id, env, ...).
+  return (
+    <>
+      <PageBar />
+      <V2Users legacyHref={`${ADMIN_USERS_ROUTE}?view=legacy`} accessHref={withContext(ADMIN_PROFILE_ACCESS_ROUTE, search)} />
+    </>
+  );
+}
+
+function ProfileAccessEntry() {
+  // WP-E request: the workspace the shell's self-context resolved (only when the address names none; AMBIGUOUS/NONE stay null),
+  // so "Granted to you" shows without a workspace in the address. The page's own rule keeps the address first.
+  const sessionWorkspaceId = useContext(SelfWorkspaceContext);
+  return V2Access !== null && isV2Screen("profile") ? (
+    <>
+      <PageBar />
+      <V2Access manage={<ProfileAccess />} sessionWorkspaceId={sessionWorkspaceId} />
+    </>
+  ) : <ProfileAccess />;
+}
 
 /**
  * Registry feature id -> implemented module.
@@ -75,7 +136,7 @@ const MODULES: Record<string, { component: ComponentType; wildcard?: boolean }> 
    * and, more importantly, it keeps ONE feature model (§3.2) instead of a
    * screen that exists in the router and not in the product's own map.
    */
-  PROFILE_ACCESS: { component: ProfileAccess },
+  PROFILE_ACCESS: { component: V2Access !== null ? ProfileAccessEntry : ProfileAccess },
   PORTAL_MAP: { component: PortalMap },
   QUANTBT_RESEARCH: { component: QuantBTModule, wildcard: true },
   PLANNING: { component: PlanningModule, wildcard: true },
@@ -126,6 +187,32 @@ export const ADMIN_PROFILE_ACCESS_ROUTE = "/administration/profile-access";
 export const EXECUTION_FIXTURES_ROUTE = "/execution/_fixtures";
 
 /**
+ * UXM-08 scoped slice (`EXECUTION_SLICE_ROUTE`): portfolio -> fleet -> alpha under a scope banner, with the
+ * notification-stream life cycle. FIXTURE ONLY and mounted only when the V2 manifest names `scoped`: it is not a registry
+ * feature, appears in no navigation and reads no real source. Defined here and not in the slice sources, so the V2 link
+ * scan (linkTargets) does not take it for a path every build mounts.
+ */
+export const EXECUTION_SLICE_ROUTE = "/execution/slice";
+
+/**
+ * UXM-09 command story (`EXECUTION_COMMAND_ROUTE`): plan, typed confirmation, receipt and status over a scripted fake port.
+ * FIXTURE ONLY, mounted only when the V2 manifest names `command`; not a registry feature, in no navigation, and it sends
+ * nothing. Defined here for the same reason as `EXECUTION_SLICE_ROUTE`.
+ */
+export const EXECUTION_COMMAND_ROUTE = "/execution/command";
+
+/**
+ * Research Loop component fixtures (`RESEARCH_FIXTURES_ROUTE`).
+ *
+ * The same idea on the paper surface: every Research panel in every state, so
+ * the P03–P06 composition can be reviewed before the screens that consume it
+ * are routed. It is not a registry feature, renders no live data, and appears
+ * in no navigation. The page labels itself a fixture lane in its own copy so
+ * it cannot be read as product data.
+ */
+export const RESEARCH_FIXTURES_ROUTE = "/research/_fixtures";
+
+/**
  * `/?new=1` was the standalone QuantBT entry point for a new run. `/` now
  * belongs to the Command Center, so the shim keeps the old bookmark working
  * without giving QuantBT a claim on the root route.
@@ -133,7 +220,7 @@ export const EXECUTION_FIXTURES_ROUTE = "/execution/_fixtures";
 function RootRoute() {
   const location = useLocation();
   if (new URLSearchParams(location.search).get("new") === "1") {
-    return <Navigate to={`${QUANTBT_ROOT}/new`} replace />;
+    return <Navigate to={`${QUANTBT_ROOT}/runs/new`} replace />;
   }
   return <CommandCenter />;
 }
@@ -157,9 +244,17 @@ function NotFound() {
 
 export function PortalRoutes({ registry }: { registry: PortalRegistryDocument }) {
   const previewScreens = EXECUTION_PREVIEW_ENABLED
-    ? registry.screens.filter((screen) => hasExecutionPreview(screen.screen_id))
+    ? registry.screens
+        .filter((screen) => hasExecutionPreview(screen.screen_id))
+        // A screen that exists only as a V2 screen (Compare, rev 9) claims its path only while its flag is on; flag off the path stays unclaimed.
+        .filter((screen) => screen.screen_id !== COMPARE_SCREEN_ID || isV2Screen("compare"))
     : [];
   const previewByExactRoute = new Map(previewScreens.map((screen) => [screen.route, screen]));
+  // The cockpit's New request drawer posts to the New-request screen's route, so it is bound to THAT screen's delivery policy:
+  // the approval inbox's own policy says governance_write_enabled=false and would refuse the write client-side.
+  // Mounted on both the screen routes and the feature canonical routes (the cockpit lives on /governance/approvals).
+  const requestScreen = registry.screens.find((screen) => screen.screen_id === "EXECUTION_NEW_APPROVAL_REQUEST_SCREEN");
+  const requestScreenPolicy = requestScreen ? screenDeliveryPolicy(requestScreen) : null;
 
   return (
     // The fallback reserves a screen-shaped footprint, so entering a split route
@@ -175,7 +270,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             <Route
               key={`execution-preview:${screen.screen_id}`}
               path={screen.route}
-              element={<ExecutionPreviewRoute screenId={screen.screen_id} profile={screenDeliveryProfile(screen)} policy={screenDeliveryPolicy(screen)} />}
+              element={<ExecutionPreviewRoute screenId={screen.screen_id} profile={screenDeliveryProfile(screen)} policy={screenDeliveryPolicy(screen)} requestPolicy={requestScreenPolicy} />}
             />
           ))}
         {EXECUTION_PREVIEW_ENABLED
@@ -187,7 +282,9 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
               />
             ))
           : null}
-        {registry.features.map((feature) => {
+        {registry.features.filter((feature) => feature.canonical_route !== SELF_ENTRY_PATH).map((feature) => {
+          // Registry rev 8 lists PROFILE_ACCESS_SELF (navigation/breadcrumbs/featureForPath), but its route is the
+          // explicit, flag-gated one below: a registry-derived route would render a preview in a flag-off build.
           const module = MODULES[feature.id];
           const previewScreen = previewByExactRoute.get(feature.canonical_route);
           const previewScreenId =
@@ -196,7 +293,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             feature.canonical_route === "/"
               ? <RootRoute />
               : EXECUTION_PREVIEW_ENABLED && previewScreenId
-                ? <ExecutionPreviewRoute screenId={previewScreenId} profile={screenDeliveryProfile(registry.screens.find((s) => s.screen_id === previewScreenId) ?? null)} />
+                ? <ExecutionPreviewRoute screenId={previewScreenId} profile={screenDeliveryProfile(registry.screens.find((s) => s.screen_id === previewScreenId) ?? null)} requestPolicy={requestScreenPolicy} />
                 : module
                   ? <module.component />
                   : <FeaturePreview feature={feature} />;
@@ -210,10 +307,25 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
         {/* Account administration: session-scoped, not a registry feature. The
             screen itself renders `denied` for a non-ADMIN, so a guessed URL does
             not leak the table. */}
-        <Route path={ADMIN_USERS_ROUTE} element={<UsersAccess />} />
+        <Route path={ADMIN_USERS_ROUTE} element={<UsersEntry />} />
+
+        {/* BE-P7 self-only "My access" (`self_entry.route`): the SAME self-view the access screen draws, with NO `manage` prop, so
+            the admin policy matrix cannot be reached from here whatever the session says. The matrix stays at
+            ADMIN_PROFILE_ACCESS_ROUTE behind its owner + capability guard. Mounted only with the `profile` flag; flag off the path
+            is not a route (the catch-all answers). A registry feature since rev 8 (PROFILE_ACCESS_SELF: listing only; this explicit route stays the mount). */}
+        {V2Access !== null && isV2Screen("profile") ? <Route path={SELF_ENTRY_PATH} element={<><PageBar /><V2Access /></>} /> : null}
 
         {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
         <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />
+
+        {/* UXM-08 fixture-only scoped slice: flag-gated, off by default. */}
+        {V2Slice !== null && isV2Screen("scoped") ? <Route path={EXECUTION_SLICE_ROUTE} element={<V2Slice />} /> : null}
+
+        {/* UXM-09 fixture-only command story: flag-gated, off by default. */}
+        {V2Command !== null && isV2Screen("command") ? <Route path={EXECUTION_COMMAND_ROUTE} element={<V2Command />} /> : null}
+
+        {/* Research Loop composition fixtures: components, not a screen. */}
+        <Route path={RESEARCH_FIXTURES_ROUTE} element={<ResearchFixtures />} />
 
         {/* Legacy compatibility. The set of paths comes from the registry; the
             owning module decides how each one translates. */}

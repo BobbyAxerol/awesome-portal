@@ -1,0 +1,263 @@
+# P23-T08 — exact-cell cold-cache measurement, warm Library SLO gap
+
+2026-09-28 · Codex · `docs/research-loop-plan` · **T08 PARTIAL / P23 NOT_QUALIFIED**.
+This is a real 20-principal GET-only measurement on the immutable P23 cell at
+`http://127.0.0.1:8096/`, image identity source `19a8e81362e0e6aa3e09ad1a1c224db226c37455`.
+It is not a final-HEAD or mixed HEAVY+queued W06 cold-cache claim.
+
+## Boundary and method
+
+- Before the drill, `research.jobs` had zero QUEUED/CLAIMED/RUNNING/RETRY_WAIT/
+  CANCEL_REQUESTED rows. The existing 22 P23-only sessions were checked through
+  real auth; the 20-reader private manifest was refreshed from the same IDs,
+  not from new accounts or reset credentials. An initial request correctly
+  refused stale manifest cookies. No Production/dev/shared-preview account changed.
+- Stopped and restarted **only** the five named P23 web/API/worker/PostgreSQL
+  containers. NATS and Roadmap stayed running. `docker ps` ID/name inventory
+  hash before and after both cycles was
+  `f5c980fb7d90c6be624e00862b9d2bc53a7cd5576240486ea578fc43b1fb1a1e`;
+  all seven owned services recovered healthy/running, with zero active jobs.
+- [The bounded helper](../../../../scripts/research-p23/evict-owned-page-cache.py)
+  used for the two actual evictions was SHA-256
+  `0b72d78acbf0112c4143bbe1d4479343f5f920de2a7e6381b2676d2d8faeecb8`.
+  It checked exact Docker volume mountpoints and refused active PostgreSQL/API
+  writers; the command sequence stopped all five named containers. The
+  subsequent source-only guard tightening checks all five stopped containers
+  and project labels (current helper SHA-256
+  `f39e1dddb41774b45a2a891040418acec6dc6a0d3e59afd7cf3fe4b07fac65bc`);
+  its live-container negative test refused eviction. The helper calls `posix_fadvise(DONTNEED)`
+  with read-only descriptors on P23 PostgreSQL and P23 artifact files only.
+  No HMD, Execution, dev/stable/preview volume, shared process, host
+  `drop_caches`, artifact bytes or DB ledger was touched. Its running-writer
+  negative test returned `P23_WRITERS_MUST_BE_STOPPED` without eviction.
+- First measured cache cycle found 2,873 owned files, 138,783,146 file bytes,
+  124,825,600 resident bytes and zero after eviction. The second cycle's raw
+  private receipt found 11,669,504 resident bytes and zero after eviction.
+  Cache warmed again only through the named reads; no claim is made about cold
+  shared HMD or OS caches outside the two isolated volumes.
+
+## Actual latency and resource results
+
+The synchronized retake made six named GETs for each of **20 distinct real
+principals**. All 120 responses were 200 with bounded JSON; no mutation or
+implicit job was requested. Measured p95 includes same-origin auth, query and
+complete body consumption:
+
+| Route | Cold p95 | Cold target | Result |
+|---|---:|---:|---|
+| Library | 984 ms | 1,500 ms | PASS |
+| Progress | 280 ms | 1,500 ms | PASS |
+| Evidence | 449 ms | 1,500 ms | PASS |
+| Search | 337 ms | 2,000 ms | PASS |
+| Report | 134 ms | 1,500 ms | PASS |
+| Replay | 388 ms | 2,000 ms | PASS |
+
+The simultaneous exact seven-service cgroup series had eight bounded samples,
+one sampled during the read interval, and a 423,473,152-byte peak under the
+5,000,000,000-byte aggregate cap. The first cold cycle independently returned
+six 200/SLO passes (Library 843 ms), but its resource series overlapped only
+part of the read; the synchronized retake above is the primary receipt.
+
+**Do not hide the warm failure.** The 20-principal warm preflight before cache
+eviction measured Library p95 **709 ms**, and the warm follow-up after the
+retake measured **815 ms**, both above the 500-ms Guide §16.3 target. The
+other five routes passed. The earlier clean W06 receipt at `b2e8b868` measured
+490 ms with ~67-KiB Library response; this cell now has 40 runs and the same
+route returns ~68 KiB. Current evidence does not isolate query, admission,
+auth or host contention as the cause. No threshold was relaxed and no ≤P21
+source/accepted UI changed to manufacture a PASS.
+
+A bounded GET-only isolation probe followed: one reader made five sequential
+Library requests in **179/60/58/45/56 ms**; twenty distinct readers asking only
+Library measured p50 **324 ms**, p95 **521 ms**, all 200, same 67,798-byte
+response ceiling. This points to concurrency/admission/tail latency rather than
+a consistently slow single read, but does **not** establish the exact cause.
+The 521-ms burst is also above the 500-ms target. Its private 0600 receipt is
+`t08-library-isolation.json`, SHA-256
+`34ff34dd70ff4597e174f5f689735e71d5ffba2c5a426ecd2fc8e8c6b3bf873d`.
+
+## Warm Library owner handoff — 2026-09-28 follow-up
+
+After renewing only the same P23 test sessions through their existing passwords,
+the unchanged pinned cell repeated the 20-principal/six-GET warm read twice.
+Library p95 was **606 ms** and **692 ms**, both above 500 ms; all 20 Library
+responses were 200 with the same 67,798-byte maximum body. These diagnostic
+commands did not modify application source, schema, business rows or thresholds.
+One further unmonitored retake was persisted privately as `t08-warm-followup.json`
+(SHA-256 `5564616e9021a855a3c41d5798cf91d7eb6c33c36b52e3e27c2c1335623ba5cd`):
+20/20 Library 200, p95 **765 ms**, overall warm SLO FAIL. Its full bounded
+response-timing receipt is 0600; no business rows are logged.
+A third 20-principal read deliberately overlapped 55 aggregate-only PostgreSQL
+activity samples: Library p95 was **735 ms**, all 20 responses were 200, sampled
+`active` peaked at five, no sampled lock wait occurred, and `idle in transaction`
+peaked at seven. The PostgreSQL monitor itself adds load, so **735 ms is not an
+acceptance result or proof that PostgreSQL/queue is the root cause**. The two
+unmonitored repeats independently confirm the warm SLO failure.
+
+Source locators for the shared <=P21 owner: `run-library.controller.ts:39-47`
+does workspace membership and awaits `progress.reconcileBestEffort` before the
+reader; `run-library.repository.ts:238,285-287` admits only four active and 16
+queued Library reads; `run-library.repository.ts:301-440` obtains a bounded
+page, same-snapshot summary and rich card facts; `progress.service.ts:341-379`
+throttles reconciliation/sweep. None is proven to be the sole culprit by this
+receipt. Please measure the actual auth/membership, reconciliation, admission
+queue, DB page/summary and response-body stages separately on the same pinned
+image/40-run workspace. Preserve RLS, one-snapshot counts, exact card truth,
+bounded admission and the 5-GB cap; do not just increase slots or cache a stale
+whole response to force p95 green. Retake the full 20-principal warm/cold W06
+with one HEAVY plus four queued intents after a justified fix.
+
+## Private exact bytes (0600, not Git)
+
+All locators are under
+`/home/bobby/.local/state/portal-research-p23/20260927/runtime/`.
+
+| File | SHA-256 | Meaning |
+|---|---|---|
+| `t08-cache-eviction.json` | `f1963ce28b8fd80fee7198cf3c22b7a355f12bd37dbd125d59b12c5a0b8e7bfa` | Exact stopped-writer cache eviction, 11,669,504→0 resident bytes |
+| `t08-read-cold-retake.json` | `a3b2fbed82534a365e6481c0045c43cb5a633d0c6a6a35a7d0b04761da851845` | 20 principals × 6 GET, cold SLO |
+| `t08-resource-cold-retake.json` | `167203d8badef80842d6ab06cb033fb38102fe6d4406fc607c345c7575caf850` | Exact seven-service capped series and overlapping sample |
+| `t08-warm-preflight.json` | `7f8b5878afe469c9b44dea3f5697d32c1b0ae6f33104834d848d94665dee5fff` | First Library warm p95 709-ms failure |
+| `t08-warm-retake.json` | `99c08fa8f1715b672e47c6d4fc79fbde70a4bdc3cdec697bdd2cb93c99667695` | Second Library warm p95 815-ms failure |
+
+Focused helper gates: Python syntax PASS; `--evict` with live writers refuses;
+the Node-owned P23 helper suite **49/49 PASS**, and the P23 verifier suite on
+its declared Vitest runner **14/14 PASS**. An initial `node --test` wildcard
+included `qualify.test.mjs` (a Vitest file) and failed solely because that is
+the wrong runner; the two correct runner commands above both exited zero.
+
+## Disposition
+
+The **isolated cold-reader and no-shared-cache-interference subgate passes**.
+T08 stays **PARTIAL** until the Library warm regression is explained/removed,
+and a final candidate W06 cold/read measurement overlaps one active HEAVY plus
+four queued intents as required by Guide §16.3. The Library implementation is
+≤P21 shared source: Codex will profile its query/admission and hand an exact
+repair to Claude rather than change her current code without coordination.
+P23/P24 and the eight-group goal remain active; this is no release/Production
+activation. The exact test cell, volumes and 22 TTL identities remain owned by
+P23 qualification and are not pruned while still needed.
+
+## Same final-candidate cold subgate — 2026-09-29
+
+After the clean passing W06 retake on `2436b118`, the exact P23 cell had
+zero active/queued jobs. Only its five named web/API/worker/PostgreSQL
+containers were stopped; the guarded helper accepted only the P23 PostgreSQL
+and artifact volumes. It reported **3,536 regular files**, **207,654,452
+bytes** on those volumes and **143,867,904 → 0 resident page-cache bytes**.
+It reported `file_bytes_modified=false`, `host_drop_caches_used=false`.
+The trap restored the same seven-service cell healthy, with `dirty=false`
+identity; no shared Execution/dev/production service or volume was touched.
+
+Twenty real authenticated principals then made the same 120 bounded named
+GETs with the `cold` SLO profile: **120/120 HTTP 200**. Cold p95 was Library
+**462 ms**, Progress **241 ms**, Evidence **476 ms**, Search **322 ms**,
+Report **148 ms**, Replay **326 ms**; all six are below their cold targets.
+A strict 24-sample, seven-service resource series overlapped the read interval
+and peaked at **420,196,352 bytes** (<5 GB). All three receipts are 0600.
+
+| Private receipt | SHA-256 |
+| --- | --- |
+| `t08-candidate-2436b118-eviction.json` | `931136baaf6edfc2f7a3a738fb9bb3ce996e1d633124156f36a2034f87ae42e9` |
+| `t08-candidate-2436b118-cold-read.json` | `9c62b42a16a0d9852ebab173edb408c16030719cddafa1b1fdb766cb61768bd7` |
+| `t08-candidate-2436b118-resource-series.json` | `e807958daff658cb69ab817d70ec4c99d8aa7107944f45095a7f7ceab14c5513` |
+
+This closes the **current-candidate isolated cold GET-only subgate**. It does
+not claim a simultaneous cold-read + active WFO/four-queued T08 run. The
+passing warm W06 receipt is separate, and the earlier warm FAIL remains
+preserved. Therefore T08 and P23 remain PARTIAL/OPEN.
+
+
+## Same current 88be2acd image — guarded cold GET-only retake
+
+After the first W06 PASS on source commit
+88be2acd23189b83109116c6d1b8c98f280a9af5, the isolated P23 cell had zero
+active/queued jobs. Only its five named web/API/worker/PostgreSQL containers
+were stopped. The guarded P23-only DB/artifact-volume helper observed 3,638
+files/218,069,087 file bytes and evicted 85,966,848→0 resident bytes using
+read-only descriptors; no bytes changed and no host drop_caches was called.
+All seven services recovered healthy with exact source/image identity and
+dirty=false. Twenty distinct authenticated readers then made six cold GETs
+each: 120/120 HTTP 200. Cold p95 Library/Progress/Evidence/Search/Report/Replay
+was 572/306/498/215/190/257 ms, all below the original cold targets. The
+24-sample overlapping seven-service series peaked at 427,020,288 bytes.
+Same-image warm GET-only p95 Library/Evidence was 388/282 ms; a later
+second exact W06 mixed retake also PASS (405/305 ms, one real HEAVY WFO,
+four queued, 120/120 GET 200; see W06 packet).
+
+Mode-0600 receipt SHA-256: eviction
+178e1d9dbe86b1782cd62a5635077129cb87ff845c4b698d9f3189e058631849;
+cold-read
+80465a2f2112c6e84ce632d322aa06ba70e7f91d28ec64e7358196e20d0d6385;
+resource-series
+dc0d3bfcb77a584220bef5798af3a0bca07096f389c6472351adeb0b927a4dcd.
+This closes the current-candidate isolated cold GET-only subgate. It does not
+prove simultaneous cold-read plus active WFO/four queued. T08/P23 remain
+PARTIAL/OPEN; no shared Execution/dev/Production volume or service changed.
+
+
+## Current-candidate cold-start mixed retake — 2026-09-29
+
+The immediately preceding cold GET-only result remains valid. A further
+test on the same Control API image
+sha256:c65403a1e3de199a0ffeb5a82b6c9e9744710638146eac327da6a195f95c9f03
+and clean docs-only source identity f0c88c54 added one active HEAVY WFO and
+four durable queued intents after an exact P23-only cold-cache eviction.
+Five owned containers were stopped; the guarded helper measured 3,793 files,
+233,497,794 file bytes and 26,300,416→0 resident bytes across only P23
+PostgreSQL/artifact volumes. No file bytes changed and no host drop_caches
+was called. All seven services recovered healthy, and a post-restart probe
+verified the operator and all twenty distinct reader identities before any
+new job was created.
+
+The final receipt t08-mixed-cold-final-f0c88c54 has diagnostic_only=false
+and zero source/container/image drift. A queue sample at 15:37:25.697 UTC
+shows RUNNING + four QUEUED. The measured read window was
+15:37:26.241–15:37:27.990 UTC; WFO completion was observed at 15:37:36.239.
+Thus the read overlapped a real running WFO, not merely a queued or finished
+run. Twenty readers made six named GETs each, all 120 returned HTTP 200.
+Library/Progress/Evidence/Search/Report/Replay p95 were
+414/288/404/424/168/326 ms, respectively, each meeting its original warm
+target; the overlapping strict 24-sample seven-service series peaked at
+617,881,600 bytes (<5,000,000,000). WFO ended COMPLETED/READY, all four
+queued intents were cancelled via the public API, and a read-only ledger
+check found zero active/queued jobs. No SLO relaxation was used.
+
+This is a **cold-start mixed-workload PASS**, not proof that every individual
+page was still cold at the read instant: auth identity probes and the WFO
+itself may warm some pages after eviction. Combined with the separate exact
+cold GET-only receipt above, it closes the P23-only T08 cache/restart and
+mixed-WFO subgates on this candidate, without claiming a host-wide cache
+flush or whole-P23/Product acceptance.
+
+Two preceding attempted cold-start measurements are deliberately retained
+as **INCONCLUSIVE SETUP FAILURES**, not latency samples. Attempt one created
+one WFO/four queued but the old operator cookie reached SESSION_REQUIRED
+during progress polling; after owned password login the four queued were
+cancelled by public API and the WFO succeeded. Attempt two used refreshed
+operator credentials but a stale reader manifest; 20-reader identity precheck
+refused before any named GET. Its four queued intents were cancelled by the
+harness and WFO succeeded. Both left zero active/queued jobs. Before the
+third attempt the exact reader manifest was regenerated and 20/20 identity
+probes passed. No preflight row or quota was manually cleared; each five-token
+set expired naturally. These two failures must not be reinterpreted as
+Evidence/Library SLO failures or hidden as passing reads.
+
+Private mode-0600 receipt hashes in the P23 runtime home:
+
+| Receipt | SHA-256 |
+| --- | --- |
+| t08-mixed-cold-start-f0c88c54-eviction.json | a5f9f6222d260a590d70d75de27d293e1c5b7f02e830d836358bc3a3f4a9e6df |
+| t08-mixed-cold-f0c88c54-workload.json | 5b1f90ee048b01470f3c29bc1e411b52cd138663e7b89fc9421a52fd04c116fb |
+| t08-mixed-cold-f0c88c54-cleanup.json | c648008154ff2fdea32446c192b7da2eb0b56bce1b5f4d7f24abbb8ebe45b285 |
+| t08-mixed-cold-retry-f0c88c54-eviction.json | 174d2eda759ac9ed36935a11347908396983eeb4fd09fa1d3d21b0745923264b |
+| t08-mixed-cold-retry-f0c88c54-workload.json | 6ced21aeb7d5d61d19adcfd0e2205be663968002d9e780687b4dc5d90b3bd587 |
+| t08-mixed-cold-retry-f0c88c54-cleanup.json | 6cd96ffb1768e9a2498cf39cc66dc6087338bcd28d58acb1d7491f52a2921613 |
+| t08-mixed-cold-final-f0c88c54-eviction.json | 39595388f4d37ce97453a3cf94d27531391e60ebc6bbc53eb22524efaf19d7de |
+| t08-mixed-cold-final-f0c88c54-workload.json | ba4d6b9b42773efc40dc787bbcc5a76fe87fcb427c5b39f235eaac23e8e3b440 |
+| t08-mixed-cold-final-f0c88c54-read.json | dcd6e3ef1aa196f302866319b02de77bace4e42bc492e14d9769c637ac2ab37a |
+| t08-mixed-cold-final-f0c88c54-resource-series.json | 73e2c1ffa34cf944df83aba5190afff38e4b23c415efb7e7df876ad791cc211f |
+
+T08 is a scoped current-candidate PASS; T02, T07/T13, T12, T14, T15 and
+final P23 DR/BR/GX remain OPEN. No shared Execution/dev/Production runtime,
+source data, UI or SLO was changed.

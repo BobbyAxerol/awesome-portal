@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { loadConfig } from "../config";
-import { buildPool } from "../db/pool";
+import { buildPool, buildExecutionPool } from "../db/pool";
 import { reseedDurableMirrorCursors } from "../execution/durable-mirror-reseed";
 
 async function main(): Promise<void> {
@@ -13,7 +13,7 @@ async function main(): Promise<void> {
     throw new Error("usage: execution-durable-mirror-reseed (--dry-run|--apply) --run-id <operator-run-id>");
   }
   const config = loadConfig();
-  const pool = buildPool(config.DATABASE_URL);
+  const pool = config.EXECUTION_DATABASE_URL ? buildExecutionPool(config) : buildPool(config.DATABASE_URL);
   try {
     const result = await reseedDurableMirrorCursors(pool, config, {
       mode: apply ? "APPLY" : "DRY_RUN",

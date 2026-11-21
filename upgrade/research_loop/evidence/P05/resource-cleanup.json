@@ -1,0 +1,28 @@
+{
+  "phase": "P05",
+  "status": "NO_ACTION_NEEDED",
+  "capacity_snapshot_utc": "2026-09-19T19:47:00Z",
+  "root_filesystem": {
+    "device": "/dev/vda1",
+    "total_bytes": 665811062784,
+    "used_bytes": 324702330880,
+    "available_bytes": 341091954688,
+    "used_percent": 49
+  },
+  "docker_read_only_snapshot": {
+    "images": {"total": 141, "active": 21, "size": "36.28GB", "reclaimable": "24.76GB"},
+    "containers": {"total": 40, "active": 38, "size": "1.27MB", "reclaimable": "40.96kB"},
+    "local_volumes": {"total": 16, "active": 16, "size": "102.8GB", "reclaimable": "0B"},
+    "build_cache": {"total": 1353, "active": 48, "size": "45.24GB", "reclaimable": "138.5MB"}
+  },
+  "phase_local_cleanup": [
+    "Removed only /tmp/portal-research-p05-rust-target.* targets created by the P05 Rust gate.",
+    "P05 PostgreSQL proof used tmpfs-only data and an exact research-p05-postgres-* self-removing container; no such container remained after verification.",
+    "Removed incomplete temporary packages/contracts node_modules and /tmp/portal-research-p05-contract-npm-cache after the unavailable dependency install did not complete."
+  ],
+  "intentional_retention": [
+    "The user-level Rust 1.85.1 toolchain is retained as a documented Research development dependency, not a runtime container cache.",
+    "No Docker image, BuildKit cache, volume, worktree, HMD data, Execution service, Trading System resource or production database row was removed."
+  ],
+  "separate_followup_if_needed": "Docker's 24.76GB reclaimable images are outside P05 ownership. Any deletion requires the C4.3 protected quiet-window inventory and must not be folded into a phase test closeout."
+}

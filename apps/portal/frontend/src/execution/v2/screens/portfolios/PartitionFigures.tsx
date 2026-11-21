@@ -1,0 +1,112 @@
+/**
+ * Manager dataset figures, one cell per economic partition (execution-manager-dataset.v1), shared by Overview, Portfolios and
+ * Portfolio 360.
+ *
+ * - Every partition is its own line: Real-funded (ACTUAL), Paper and Sandbox are never merged and two currencies are never added.
+ *   There is no total in this file; `MetricValue` prints the published exact string (a true zero is a value) or the typed absence.
+ * - Where a figure lives is the contract's: the dataset's `capital_statements` (before the table filters) or a `groups` entry
+ *   (the whole filtered query, keyed by `portfolio_id`). Nothing is read from a row and added up here.
+ * - A key that no partition publishes is not drawn from here: the caller keeps its own `Not published (FE-xxx)`.
+ */
+import type { ExecutionApi } from "../../../api/ports";
+import type { ManagerDataset } from "../../readers/managerDataset";
+import { figuresByPartition, type ManagerPartition, type ManagerPartitionedMetrics } from "../../readers/managerMetric";
+import { MetricValue, metricTitle } from "../manager/MetricValue";
+import { showDecimal } from "../../charts/decimal";
+
+import "./partitionFigures.css";
+
+export const DOMAIN_WORD: Readonly<Record<ManagerPartition["economicDomain"], string>> = {
+  ACTUAL: "Real-funded",
+  PAPER: "Paper",
+  SANDBOX: "Sandbox",
+};
+
+/** A port that predates the dataset (an older shell, a narrow test double) has no method: that is "not published", not a crash. */
+export const servesDataset = (api: ExecutionApi): boolean => typeof api.getManagerDataset === "function";
+
+export const partitionLabel = (partition: ManagerPartition): string => `${DOMAIN_WORD[partition.economicDomain]} · ${partition.currency}`;
+
+/** True when at least one partition of the list publishes `key` (a typed absence counts: the contract spoke). */
+export const publishes = (list: readonly ManagerPartitionedMetrics[], key: string): boolean => list.some((entry) => entry.metrics.has(key));
+
+/** The group the dataset published for one portfolio (`group_by=portfolio_id`), as its per-partition figures. */
+export function portfolioGroup(dataset: ManagerDataset, portfolioId: string): readonly ManagerPartitionedMetrics[] | null {
+  const group = dataset.groups.find((g) => g.key.length === 1 && g.key[0]!.field === "portfolio_id" && g.key[0]!.value === portfolioId);
+  return group === undefined ? null : group.economicPartitions;
+}
+
+/** Every published portfolio group, by portfolio id. */
+export function groupsByPortfolio(dataset: ManagerDataset): ReadonlyMap<string, readonly ManagerPartitionedMetrics[]> {
+  const out = new Map<string, readonly ManagerPartitionedMetrics[]>();
+  for (const group of dataset.groups) {
+    if (group.key.length === 1 && group.key[0]!.field === "portfolio_id" && group.key[0]!.value !== null) out.set(group.key[0]!.value, group.economicPartitions);
+  }
+  return out;
+}
+
+/** `unique_row_count` of each portfolio group: the (alpha, version, portfolio) rows of the queried environment. Published, never counted here. */
+export function rowCountsByPortfolio(dataset: ManagerDataset): ReadonlyMap<string, number> {
+  const out = new Map<string, number>();
+  for (const group of dataset.groups) {
+    if (group.key.length === 1 && group.key[0]!.field === "portfolio_id" && group.key[0]!.value !== null) out.set(group.key[0]!.value, group.uniqueRowCount);
+  }
+  return out;
+}
+
+/**
+ * Where `key` is published for a scope: the capital statements first, then the scope's own portfolio group. `null` when neither
+ * says anything (the contract does not carry it, so the caller keeps its gap).
+ */
+export function figureSource(dataset: ManagerDataset | null, key: string, portfolioId?: string): readonly ManagerPartitionedMetrics[] | null {
+  if (dataset === null) return null;
+  if (publishes(dataset.capitalStatements, key)) return dataset.capitalStatements;
+  const group = portfolioId === undefined ? null : portfolioGroup(dataset, portfolioId);
+  return group !== null && publishes(group, key) ? group : null;
+}
+
+/**
+ * `labels="several"` (the register table): a partition label is printed only when the list holds more than one partition, because one
+ * partition is already named by the page basis line; the label stays on the figure's title either way.
+ */
+/** The sign of a published exact string, read from the text (no arithmetic): a signed figure is coloured by it, a true zero is neutral. */
+function toneOf(metric: { kind: string; exact?: string } | null): "positive" | "negative" | "neutral" | undefined {
+  if (metric === null || metric.kind !== "value" || metric.exact === undefined) return undefined;
+  return metric.exact.startsWith("-") ? (/[1-9]/.test(metric.exact) ? "negative" : "neutral") : /[1-9]/.test(metric.exact) ? "positive" : "neutral";
+}
+
+export function PartitionFigures({ list, metricKey, signed = false, labels = "always", omitUnit = null, unit = "inline" }: {
+  list: readonly ManagerPartitionedMetrics[];
+  metricKey: string;
+  signed?: boolean;
+  labels?: "always" | "several";
+  /**
+   * A currency whose money figures print as the bare number: the register row already states its base currency in the identity cell,
+   * so a figure in THAT currency needs no unit beside it (it stays in the title). A figure in any other currency keeps its unit.
+   */
+  omitUnit?: string | null;
+  /**
+   * `caption`: a money figure prints as the number at the figure's size with its currency as a small caption beside it (one style for every
+   * tile, QA1 P3-05); the default prints the unit inline as the shared metric cell does.
+   */
+  unit?: "inline" | "caption";
+}) {
+  const figures = figuresByPartition(list, metricKey);
+  return (
+    <ul className="exec-part" aria-label={`${metricKey} by economic partition`}>
+      {figures.map(({ partition, metric }) => (
+        <li key={`${partition.economicDomain}|${partition.currency}|${partition.basis}|${partition.nativeProfileRef}`} className="exec-part-line" data-domain={partition.economicDomain} data-tone={signed ? toneOf(metric) : undefined} title={`${partitionLabel(partition)} · ${partition.basis}`}>
+          {labels === "several" && figures.length === 1 ? null : <span className="exec-part-label" title={`${partition.basis} · ${partition.nativeProfileRef}`}>{partitionLabel(partition)}</span>}
+          {metric !== null && metric.kind === "value" && metric.unit === "MONEY" && (unit === "caption" || (omitUnit !== null && metric.currency === omitUnit))
+            ? (
+              <span className="exec-mgr-num" title={`${metric.exact}${unit === "caption" ? "" : ` ${metric.currency}`} · ${metricTitle(metric)}`} data-zero={metric.zero ? "true" : undefined}>
+                {showDecimal(metric.exact, { unit: "money", signed })}
+                {unit === "caption" && metric.currency !== omitUnit ? <small className="exec-pf-unit"> {metric.currency}</small> : null}
+              </span>
+            )
+            : <MetricValue metric={metric} signed={signed} />}
+        </li>
+      ))}
+    </ul>
+  );
+}

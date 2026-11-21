@@ -1,0 +1,77 @@
+{
+ "schema_version": "execution.operational-composition.v1",
+ "logical_operation_id": "executionOperationalWaiversRegisterV1",
+ "record_authority": "PORTAL_CONTROL",
+ "source_authority": "PORTAL_CONTROL_PLUS_ACCEPTED_TRADING_SYSTEM_OBSERVATIONS",
+ "workspace_id": "ws_TEST_ONLY",
+ "read_at_ms": 1794397525137,
+ "read_at": "2026-11-11T11:45:25.137Z",
+ "composite_revision": "sha256:d75804101c7b4412ac2afefd8558d27f788e3cd1989593203f586b10a026754e",
+ "source_health": {
+  "input_digest": "sha256:80df3fb659ee6401764b75bed0d717b2d1fb86787515db349b4676df914925c4",
+  "state": "UNAVAILABLE",
+  "reason_code": "WORKSPACE_NOT_FOUND",
+  "source_side_effect_requested": false
+ },
+ "redacted_command_journal": {
+  "digest": "sha256:80df3fb659ee6401764b75bed0d717b2d1fb86787515db349b4676df914925c4",
+  "state": "UNAVAILABLE",
+  "reason_code": "WORKSPACE_NOT_FOUND",
+  "source_side_effect_requested": false
+ },
+ "canary_twin_comparison": {
+  "state": "UNAVAILABLE",
+  "reason_code": "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED",
+  "source_side_effect_requested": false
+ },
+ "command_authority": {
+  "state": "UNCHANGED_FAIL_CLOSED",
+  "source_side_effect_requested": false
+ },
+ "lineage": {
+  "source_health_input_digest": "sha256:80df3fb659ee6401764b75bed0d717b2d1fb86787515db349b4676df914925c4",
+  "command_journal_digest": "sha256:80df3fb659ee6401764b75bed0d717b2d1fb86787515db349b4676df914925c4",
+  "workflow_digest": "sha256:9ac54e304ce83fb7338c117ce6378ca1bc427d0c181ba2d3d3b83656d6141f72",
+  "formula_version": "execution.operational-composition.v1"
+ },
+ "data": {
+  "waivers_register": {
+   "schema_version": "governance.conditions-register.v1",
+   "record_authority": "PORTAL_CONTROL",
+   "delivery_profile": "portal",
+   "read_at": "2026-11-11T11:45:25.137Z",
+   "actor": {
+    "user_id": "usr_TEST_ONLY",
+    "username": "preview-user",
+    "roles": [
+     "ADMIN"
+    ]
+   },
+   "read_truth": {
+    "state": "EMPTY",
+    "reason_code": "NO_MATCHING_PORTAL_GOVERNANCE_RECORDS",
+    "scope": "REQUEST"
+   },
+   "page": {
+    "rows": [],
+    "total_count": 0,
+    "filtered_count": 0,
+    "next_cursor": null,
+    "prev_cursor": null,
+    "has_more": false,
+    "has_previous": false,
+    "applied_filters": [],
+    "applied_sort": [
+     {
+      "field": "updated_at",
+      "direction": "desc"
+     },
+     {
+      "field": "condition_id",
+      "direction": "desc"
+     }
+    ]
+   }
+  }
+ }
+}

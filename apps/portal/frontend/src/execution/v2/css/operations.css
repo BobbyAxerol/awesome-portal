@@ -1,0 +1,733 @@
+/* Operations queue V2 and the incident root drawer (hi-fi v2 operations,
+ * incident). Layout and type only: colour through carbon tokens, one
+ * foreground and one background per rule so the pair gate can read it, type
+ * only through the --exec-font-* roles, no uppercase. */
+
+.exec-ops {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+
+.exec-ops-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-ops-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-ops-subtitle {
+  margin: 0;
+  font: var(--exec-font-subtitle);
+  color: var(--ink-soft);
+}
+.exec-ops-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exec-ops-chip {
+  padding: 0 var(--space-2);
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+
+.exec-ops-time {
+  font: var(--exec-font-id);
+}
+
+/* ---- panels and Not published ------------------------------------------ */
+
+.exec-ops-panel {
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+.exec-ops-panel > summary {
+  cursor: pointer;
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-ops-panel-title {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+.exec-ops-np-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-ops-np {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-ops-np-word {
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-ops-np-reason {
+  display: block;
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+
+.exec-ops-banner {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--warn-bg);
+  border: 1px solid var(--warn);
+}
+.exec-ops-banner[data-tone="unknown"] {
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px dashed var(--warn);
+}
+
+/* A KPI cell that holds a state word: the body role, on the 32px line the numerals sit on (OP-9). */
+.exec-ops-kpi-word {
+  display: inline-block;
+  padding: 7px 0;
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+
+/* Source health summary and per-profile table (OP-7) */
+.exec-ops-sum {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-ops-profiles {
+  width: 100%;
+  margin: var(--space-2) 0;
+  border-collapse: collapse;
+  font: var(--exec-font-body);
+}
+.exec-ops-profiles th {
+  padding: 4px var(--space-3) 4px 0;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+  text-align: left;
+}
+.exec-ops-profiles td {
+  padding: 4px var(--space-3) 4px 0;
+  border-top: 1px solid var(--line);
+}
+
+/* ---- toolbar ------------------------------------------------------------ */
+
+.exec-ops-tool {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-4);
+}
+.exec-ops-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: var(--exec-font-th);
+  color: var(--ink-soft);
+}
+.exec-ops-field select,
+.exec-ops-field input {
+  min-width: 120px;
+  padding: 4px 8px;
+  font: var(--exec-font-data);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-field select:focus-visible,
+.exec-ops-field input:focus-visible,
+.exec-ops-seg button:focus-visible,
+.exec-ops-tab:focus-visible,
+.exec-ops-more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-ops-seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-seg button {
+  padding: 4px 12px;
+  font: var(--exec-font-control);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 0;
+  border-right: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ops-seg button:last-child {
+  border-right: 0;
+}
+.exec-ops-seg button[aria-pressed="true"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+/* Disabled keeps its contrast: the colour changes, the opacity does not. */
+.exec-ops-seg button:disabled {
+  color: var(--ink-faint);
+  background: var(--paper);
+  cursor: not-allowed;
+}
+.exec-ops-reason {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+}
+.exec-ops-apply {
+  padding: 4px 12px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+
+/* The same control as a link (a denied panel's "See what you can access"). */
+a.exec-ops-apply {
+  display: inline-block;
+  text-decoration: none;
+}
+
+/* ---- tabs --------------------------------------------------------------- */
+
+.exec-ops-tabs {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-ops-tab {
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+}
+.exec-ops-tab[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+/* ---- queue layout ------------------------------------------------------- */
+
+.exec-ops-lay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.exec-ops-lay[data-dock="true"] {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.exec-ops-table {
+  min-width: 0;
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+}
+.exec-ops-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-ops-more {
+  padding: 4px 16px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ops-more:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  cursor: not-allowed;
+}
+
+.exec-ops-target {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: normal;
+}
+.exec-ops-id {
+  font: var(--exec-font-id);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+/* A target that has a page is a link: accent, underlined on focus and hover, same type as the plain id. */
+a.exec-ops-id,
+a.exec-ops-mono,
+.exec-ops-subline a {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+a.exec-ops-id:hover,
+a.exec-ops-mono:hover,
+.exec-ops-subline a:hover {
+  text-decoration: underline;
+}
+.exec-ops-meta {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ops-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  white-space: normal;
+}
+
+/* ---- incident links in a queue row (FE-042) ---------------------------- */
+
+.exec-ops-links {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin-top: var(--space-1);
+}
+.exec-ops-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-ops-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: var(--space-2);
+  min-width: 0;
+}
+.exec-ops-link-id {
+  font: var(--exec-font-id);
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+span.exec-ops-link-id {
+  color: var(--ink);
+}
+
+/* ---- counts by status (FE-043) ----------------------------------------- */
+
+.exec-ops-counts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.exec-ops-counts-title {
+  margin: 0;
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+.exec-ops-counts-scope {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ops-counts-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line-strong);
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-dim {
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+.exec-ops-dim-label {
+  margin: 0;
+  font: var(--exec-font-control);
+  color: var(--ink);
+}
+.exec-ops-dim-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-1) 0;
+}
+.exec-ops-dim-num {
+  font: var(--exec-font-id);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.exec-ops-dim-total .exec-ops-dim-num {
+  font: var(--exec-font-kpi);
+}
+.exec-ops-dim-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-body);
+}
+.exec-ops-dim-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.exec-ops-dim-row[data-selected="true"] {
+  font-weight: 600;
+}
+.exec-ops-dim-tag {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+@media (max-width: 1100px) {
+  .exec-ops-counts-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 660px) {
+  .exec-ops-counts-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- dock and drawer bodies -------------------------------------------- */
+
+.exec-ops-facts {
+  display: grid;
+  grid-template-columns: minmax(96px, 120px) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-4);
+  font: var(--exec-font-body);
+}
+.exec-ops-facts dt {
+  color: var(--ink-soft);
+}
+.exec-ops-facts dd {
+  margin: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-ops-mono {
+  font: var(--exec-font-id);
+}
+.exec-ops-section {
+  margin: var(--space-4) 0 var(--space-2);
+  font: var(--exec-font-section);
+  color: var(--ink);
+}
+
+.exec-dock-priority .exec-ops-section {
+  margin-top: 0;
+}
+
+/* The incident's four unpublished panels (INC-3): a name and one line each, side by side where there is room. */
+.exec-ops-gaps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2) var(--space-3);
+}
+.exec-ops-gap {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+}
+.exec-ops-gap-title {
+  margin: 0;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-ops-gap-assignee {
+  margin: var(--space-2) 0 0;
+}
+.exec-ops-gap-assignee .exec-ops-gap-title {
+  display: inline;
+}
+.exec-dock-priority .exec-ops-np-reason {
+  margin-top: var(--space-2);
+}
+
+.exec-ops-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-control);
+}
+.exec-ops-rail li {
+  padding: var(--space-1) var(--space-3);
+  color: var(--ink-soft);
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+/* The rail is followed by its one-line caveat, then the facts: keep a gap between them. */
+.exec-ops-rail + .exec-ops-reason {
+  margin-bottom: var(--space-3);
+}
+.exec-ops-subline {
+  display: block;
+  margin-top: 2px;
+}
+.exec-ops-tool + .exec-ops-reason {
+  margin: var(--space-1) 0 var(--space-2);
+}
+.exec-ops-rail li + li {
+  margin-left: -1px;
+}
+.exec-ops-rail li[data-step="done"] {
+  color: var(--ink);
+  background: var(--paper-raised);
+  border-color: var(--ink-soft);
+}
+.exec-ops-rail li[data-step="current"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.exec-ops-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+@media (max-width: 660px) {
+  .exec-ops-lay[data-dock="true"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- open recalls the Portal controlled (FE-062) ------------------------- */
+
+.exec-ops-recalls {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.exec-ops-recall {
+  min-width: 0;
+  padding: var(--space-3);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-recall[data-state="UNKNOWN"] {
+  border-style: dashed;
+}
+.exec-ops-recall .exec-ops-facts {
+  margin-bottom: var(--space-2);
+}
+.exec-ops-recall-note {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+
+/* Four label-and-number tiles: two to a row at phone width. */
+@media (max-width: 660px) {
+  .exec-ops .exec-blk-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* The table scrolls inside its own panel below 1300px: say so, where the reader looks for the next column (QA1 I-09). Hidden where it fits. */
+.exec-ops-scrollhint {
+  display: none;
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+@media (max-width: 1300px) and (min-width: 1101px) {
+  .exec-ops-scrollhint {
+    display: block;
+  }
+}
+/* Where the table scrolls sideways the action column stays pinned at the right edge, so Next is never the column that is cut (QA2 R3-23). */
+@media (max-width: 1300px) and (min-width: 1101px) {
+  .exec-ops-table .exec-cards th:last-child,
+  .exec-ops-table .exec-cards td:last-child {
+    position: sticky;
+    right: 0;
+    background: var(--paper-raised);
+    box-shadow: -1px 0 0 var(--line-strong);
+  }
+}
+/* An id breaks only when it must (at a separator), not in the middle of a token. */
+.exec-ops-target .exec-ops-id {
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+.exec-ops-tool[data-row="narrow"] {
+  margin-top: var(--space-2);
+}
+
+/* A status flag in a row never breaks inside its own label (a wrapped flag read as two facts at 1024). */
+.exec-ops-cell .exec-flag {
+  white-space: nowrap;
+}
+
+/* ---- WP-B: tabs count, source segment, next cell, peek, journal ---------- */
+
+.exec-ops-tab-count {
+  margin-left: var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-ops-tab[aria-selected="true"] .exec-ops-tab-count {
+  color: var(--ink);
+}
+.exec-ops-subtitle {
+  margin: 0;
+  font: var(--exec-font-subtitle);
+  color: var(--ink-soft);
+}
+.exec-ops-linkbtn {
+  padding: 0;
+  font: var(--exec-font-id);
+  color: var(--accent);
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-ops-linkbtn:hover {
+  text-decoration: underline;
+}
+.exec-ops-linkbtn:focus-visible,
+.exec-ops-link-peek:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-ops-next-text {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+a.exec-ops-next-link {
+  font: var(--exec-font-body);
+  color: var(--accent);
+}
+.exec-ops-link-peek {
+  font: var(--exec-font-meta);
+  color: var(--accent);
+}
+.exec-ops-link-peek:hover {
+  text-decoration: underline;
+}
+.exec-ops-journal {
+  padding: var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+}
+
+/* Below 1100px the queue is cards, as it is at 660: six columns of ids, badges and a button do not fit beside the sidebar, and a table
+ * that scrolls sideways hides the column a person acts in (QA4 R3-13). The shared card rule (cards.css) starts at 660; this is the same
+ * layout for the queue's own tables from 661 to 1100, with the label sentence-cased (the uppercase allowlist is the shared selector). */
+@media (max-width: 1100px) and (min-width: 661px) {
+  .exec-ops-table .exec-cards thead {
+    display: none;
+  }
+  .exec-ops-table .exec-cards,
+  .exec-ops-table .exec-cards tbody {
+    display: block;
+  }
+  .exec-ops-table .exec-cards tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-1) var(--space-4);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .exec-ops-table .exec-cards tbody td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    height: auto;
+    padding: 3px 0;
+    border: 0;
+    white-space: normal;
+  }
+  .exec-ops-table .exec-cards tbody td[data-l] {
+    justify-content: flex-start;
+    gap: var(--space-3);
+  }
+  .exec-ops-table .exec-cards td[data-l]::before {
+    content: attr(data-l);
+    flex: none;
+    min-width: 72px;
+    font: var(--exec-font-label);
+    color: var(--ink-faint);
+  }
+  /* The target and the action take the full card width: they are the two things a person reads and presses. */
+  .exec-ops-table .exec-cards tbody td[data-l="Target and operation"],
+  .exec-ops-table .exec-cards tbody td[data-l="Next"] {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Incident writes the server does not offer yet: one disclosure instead of a row of disabled buttons. */
+.exec-ops-unavail {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line);
+}
+.exec-ops-unavail > summary {
+  cursor: pointer;
+  font: var(--exec-font-control);
+}
+.exec-ops-unavail > .exec-ops-reason {
+  margin-top: var(--space-2);
+}
+.exec-ops-unavail-list {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-ops-unavail-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+}
+.exec-ops-unavail-name {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}

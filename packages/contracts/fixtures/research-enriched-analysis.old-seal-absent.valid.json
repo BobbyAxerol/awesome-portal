@@ -1,0 +1,6 @@
+{
+  "schema_version": "research.enrichment-availability.v1",
+  "state": "NOT_PUBLISHED",
+  "reason_code": "SEALED_ENRICHMENT_NOT_COMPUTED",
+  "enriched_analysis": null
+}

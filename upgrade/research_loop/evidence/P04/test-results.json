@@ -1,0 +1,36 @@
+{
+  "phase": "P04",
+  "status": "PASS_BACKEND",
+  "receipts": [
+    {
+      "gate": "P04 targeted catalog/adapter/legacy regression",
+      "command": "pytest test_research_engine_catalog.py test_engine_capabilities.py test_quantbt_dependency.py test_historical_data_real.py test_advanced_walkforward.py test_three_window_runner.py test_m0_freeze.py",
+      "result": "75 passed, 2 skipped",
+      "notes": "The two real-HMD tests are deliberately opt-in in the standard lane."
+    },
+    {
+      "gate": "P04 approved real-HMD read-only parity",
+      "command": "PORTAL_RUN_HMD_REAL_SMOKE=1 pytest test_historical_data_real.py",
+      "result": "2 passed",
+      "notes": "No source write, runtime deployment or raw row export."
+    },
+    {
+      "gate": "final full backend regression including default ProcessPool API worker lane",
+      "command": "pytest",
+      "result": "432 passed, 2 skipped in 128.69s",
+      "execution_boundary": "outside the restricted local sandbox; default forkserver retained",
+      "notes": "The restricted sandbox returns EPERM for forkserver; no unsafe production fallback to fork was introduced. An initial broad run found committed OpenAPI snapshot drift, which was regenerated before the final full green run. The final run also verifies the Atlas startup-provenance cache guard."
+    }
+  ],
+  "not_run_by_design": [
+    "Frontend Atlas implementation, browser build and visual acceptance — owned by the P04 frontend handoff and P09.",
+    "Runtime Compose/deployment/production source mutation — out of P04 scope.",
+    "Durable artifact writer, retention, scheduler, external source or Execution integration — owned by P05/P06 and later phases."
+  ],
+  "infrastructure_verification": {
+    "result": "NOT_RUN_ENVIRONMENTAL",
+    "command": "./scripts/verify-workspace.sh",
+    "reason": "The local user cannot access the Docker daemon and has no passwordless sudo. The verifier stops before its read-only Compose rendering checks.",
+    "scope_assessment": "P04 does not modify Compose, runtime inputs or deploy topology; its Dockerfile change is a one-line pinned-release comment. Full backend, contract, freeze and read-only HMD gates passed independently."
+  }
+}

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadConfig } from "../src/config";
+import { loadConfig, paperReadProfileId } from "../src/config";
 
 const folders: string[] = [];
 
@@ -18,6 +18,19 @@ function baseEnv(): NodeJS.ProcessEnv {
     CLOUDFLARE_ACCESS_JWKS_URI:
       "https://primussparkquant.cloudflareaccess.com/cdn-cgi/access/certs",
     INTERNAL_PRINCIPAL_SECRET: "independent-internal-principal-secret",
+  };
+}
+
+/** P11 is a non-local feature guard, so exercise it with the same independent
+ * signing-key precondition production requires rather than weakening that
+ * global configuration invariant in a unit test. */
+function p11Env(): NodeJS.ProcessEnv {
+  return {
+    ...baseEnv(),
+    QUERY_CURSOR_KEYS_JSON:
+      '{"query-k1":"query-progress-test-key-that-is-longer-than-thirty-two-bytes"}',
+    GOVERNANCE_APPLY_KEYS_JSON:
+      '{"governance-k1":"governance-progress-test-key-longer-than-thirty-two-bytes"}',
   };
 }
 
@@ -80,6 +93,155 @@ describe("Control API non-local signing keyrings", () => {
       GOVERNANCE_APPLY_KEYS_JSON:
         '{"governance-k1":"inline-governance-secret-longer-than-thirty-two-bytes"}',
     })).toThrow(/QUERY_CURSOR_KEYS_FILE could not be read/);
+  });
+});
+
+describe("P11 Research Progress activation guard", () => {
+  it("stays dark by default and requires the complete P10 producer tuple when enabled", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_PROGRESS).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_PROGRESS: "true",
+    })).toThrow(/FEATURE_RESEARCH_PROGRESS=true requires FEATURE_RESEARCH_RUN_PRODUCER=true/);
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_RUN_PRODUCER: "true",
+      FEATURE_RESEARCH_PROGRESS: "true",
+    }).RESEARCH_PROGRESS_PRIVATE_TIMEOUT_MS).toBe(1_500);
+  });
+});
+
+describe("P12 Run Library activation guard", () => {
+  it("stays dark independently while preserving the existing signed cursor precondition", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_RUN_LIBRARY).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_RUN_LIBRARY: "true",
+    }).FEATURE_RESEARCH_RUN_LIBRARY).toBe("true");
+  });
+});
+
+describe("P13 Evidence Flow activation guard", () => {
+  it("keeps the browser reader dark by default while allowing a reviewed retained-evidence read rollout", () => {
+    // P13 materialisation is bound to a P11 terminal callback. The reader can
+    // safely be enabled later for already immutable receipts, so it must not
+    // force a new P10/P11 worker activation merely to browse retained facts.
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_EVIDENCE).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_EVIDENCE: "true",
+    }).FEATURE_RESEARCH_EVIDENCE).toBe("true");
+  });
+});
+
+describe("P14 Split truth activation guard", () => {
+  it("keeps the read-only chronology BFF dark independently of source-side terminal receipts", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_SPLIT).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_SPLIT: "true",
+    }).FEATURE_RESEARCH_SPLIT).toBe("true");
+  });
+});
+
+describe("P15 Search truth activation guard", () => {
+  it("keeps the fixed-profile Search reader dark independently of P10/P11 worker flags", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_SEARCH).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_SEARCH: "true",
+    }).FEATURE_RESEARCH_SEARCH).toBe("true");
+  });
+});
+
+describe("P16 Freeze / integrity activation guard", () => {
+  it("stays dark independently while allowing only a retained immutable-binding reader", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_FREEZE).toBe("false");
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_FREEZE: "true",
+    }).FEATURE_RESEARCH_FREEZE).toBe("true");
+  });
+});
+
+describe("P17 route-aware Replay activation guard", () => {
+  it("stays dark by default and cannot expose its retained evidence reader without P13", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_REPLAY).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_REPLAY: "true",
+    })).toThrow(/FEATURE_RESEARCH_REPLAY=true requires FEATURE_RESEARCH_EVIDENCE=true/);
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_EVIDENCE: "true",
+      FEATURE_RESEARCH_REPLAY: "true",
+    }).FEATURE_RESEARCH_REPLAY).toBe("true");
+  });
+});
+
+describe("P18 Report / reproducible export activation guard", () => {
+  it("stays dark by default and requires every sealed P13--P17 reader before its report surface can be admitted", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_REPORTS).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_REPORTS: "true",
+    })).toThrow(/FEATURE_RESEARCH_REPORTS=true requires/);
+    const config = loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_EVIDENCE: "true", FEATURE_RESEARCH_SPLIT: "true",
+      FEATURE_RESEARCH_SEARCH: "true", FEATURE_RESEARCH_FREEZE: "true",
+      FEATURE_RESEARCH_REPLAY: "true", FEATURE_RESEARCH_REPORTS: "true",
+    });
+    expect(config.RESEARCH_REPORT_EXPORT_MAXIMUM_BYTES).toBe(512 * 1024);
+    expect(config.RESEARCH_REPORT_EXPORT_LEASE_SECONDS).toBe(90);
+  });
+});
+
+describe("P20 Compare activation guard", () => {
+  it("stays dark by default and requires the retained Library, Evidence and Split readers", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_COMPARE).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_COMPARE: "true",
+    })).toThrow(/FEATURE_RESEARCH_COMPARE=true requires/);
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_RUN_LIBRARY: "true",
+      FEATURE_RESEARCH_EVIDENCE: "true",
+      FEATURE_RESEARCH_SPLIT: "true",
+      FEATURE_RESEARCH_COMPARE: "true",
+    }).FEATURE_RESEARCH_COMPARE).toBe("true");
+  });
+});
+
+describe("P21 Release Candidate local-seal activation guard", () => {
+  it("stays dark by default and requires retained Report plus Lineage definitions", () => {
+    expect(loadConfig(p11Env()).FEATURE_RESEARCH_RELEASE_CANDIDATES).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_RELEASE_CANDIDATES: "true",
+    })).toThrow(/FEATURE_RESEARCH_RELEASE_CANDIDATES=true requires/);
+    expect(loadConfig({
+      ...p11Env(),
+      FEATURE_RESEARCH_EVIDENCE: "true", FEATURE_RESEARCH_SPLIT: "true",
+      FEATURE_RESEARCH_SEARCH: "true", FEATURE_RESEARCH_FREEZE: "true",
+      FEATURE_RESEARCH_REPLAY: "true", FEATURE_RESEARCH_REPORTS: "true",
+      FEATURE_RESEARCH_RUN_LIBRARY: "true", FEATURE_RESEARCH_LINEAGE: "true",
+      FEATURE_RESEARCH_RELEASE_CANDIDATES: "true",
+    }).FEATURE_RESEARCH_RELEASE_CANDIDATES).toBe("true");
+  });
+
+  it("keeps P22 publication intake dark by default and only behind the P21 composer", () => {
+    const p21 = {
+      ...p11Env(),
+      FEATURE_RESEARCH_EVIDENCE: "true", FEATURE_RESEARCH_SPLIT: "true",
+      FEATURE_RESEARCH_SEARCH: "true", FEATURE_RESEARCH_FREEZE: "true",
+      FEATURE_RESEARCH_REPLAY: "true", FEATURE_RESEARCH_REPORTS: "true",
+      FEATURE_RESEARCH_RUN_LIBRARY: "true", FEATURE_RESEARCH_LINEAGE: "true",
+      FEATURE_RESEARCH_RELEASE_CANDIDATES: "true",
+    };
+    expect(loadConfig(p21).FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION).toBe("false");
+    expect(() => loadConfig({
+      ...p11Env(), FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true",
+    })).toThrow(/FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION=true requires FEATURE_RESEARCH_RELEASE_CANDIDATES=true/);
+    expect(loadConfig({ ...p21, FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION: "true" })
+      .FEATURE_RESEARCH_RELEASE_CANDIDATE_PUBLICATION).toBe("true");
   });
 });
 
@@ -163,5 +325,93 @@ describe("P4-D DNSE paper-profile taxonomy config (owner-approved 2026-09-03)", 
 
   it("stays inert by default — the flag defaults off", () => {
     expect(loadConfig({ ...baseEnv(), ...edgeCommon, FEATURE_EXECUTION_EDGE: "false" }).FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_DNSE).toBe("false");
+  });
+});
+
+describe("OKX Paper profile config (owner decision 2026-11-18, staged groundwork, flag off)", () => {
+  const edgeCommon = {
+    QUERY_CURSOR_KEYS_JSON:
+      '{"query-k1":"query-taxonomy-test-key-that-is-longer-than-thirty-two-bytes"}',
+    GOVERNANCE_APPLY_KEYS_JSON:
+      '{"governance-k1":"governance-taxonomy-test-key-longer-than-thirty-two-b"}',
+    FEATURE_EXECUTION_EDGE: "true",
+    EXECUTION_EDGE_PRIVATE_KEY_FILE: "/tmp/delegation.pem",
+    EXECUTION_EDGE_CA_FILE: "/tmp/ca.pem",
+    EXECUTION_EDGE_CLIENT_CERT_FILE: "/tmp/client.pem",
+    EXECUTION_EDGE_CLIENT_KEY_FILE: "/tmp/client-key.pem",
+  };
+
+  it("fails closed when the OKX flag is on without its own origin, profile and audience", () => {
+    expect(() => loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+    })).toThrow(/EXECUTION_EDGE_PAPER_OKX_ORIGIN.*EXECUTION_EDGE_PAPER_OKX_PROFILE_ID.*EXECUTION_EDGE_PAPER_OKX_AUDIENCE/);
+  });
+
+  it("pins the OKX profile and audience to PAPER_OKX_SWAP / portal-execution-edge-paper-okx", () => {
+    expect(() => loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+      EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.execution.internal",
+      EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_OTHER",
+      EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper-okx",
+    })).toThrow(/profile and audience must match the N13B pins/);
+    expect(() => loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+      EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.execution.internal",
+      EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+      EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper",
+    })).toThrow(/profile and audience must match the N13B pins/);
+  });
+
+  it("loads a complete OKX profile configuration and stays inert by default", () => {
+    const config = loadConfig({
+      ...baseEnv(),
+      ...edgeCommon,
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+      EXECUTION_EDGE_PAPER_OKX_ORIGIN: "https://paper-okx.execution.internal",
+      EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+      EXECUTION_EDGE_PAPER_OKX_AUDIENCE: "portal-execution-edge-paper-okx",
+    });
+    expect(config.EXECUTION_EDGE_PAPER_OKX_PROFILE_ID).toBe("PAPER_OKX_SWAP");
+    expect(config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX).toBe("true");
+    expect(loadConfig({ ...baseEnv(), ...edgeCommon, FEATURE_EXECUTION_EDGE: "false" }).FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX).toBe("false");
+  });
+});
+
+describe("Paper read profile (owner decision 2026-11-18: OKX is the Paper default where it exists)", () => {
+  const okx = {
+    FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+    EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+    EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+  } as const;
+
+  it("defaults to OKX when the OKX profile is enabled and wired", () => {
+    expect(paperReadProfileId(okx)).toBe("PAPER_OKX_SWAP");
+  });
+
+  it("stays on the BINANCE Paper profile where OKX is off or unwired", () => {
+    expect(paperReadProfileId({ ...okx, FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "false" })).toBe("PAPER_BINANCE_USDM");
+    expect(paperReadProfileId({ ...okx, EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: undefined })).toBe("PAPER_BINANCE_USDM");
+    expect(paperReadProfileId({})).toBeUndefined();
+  });
+
+  it("lets an explicit choice move the read side back to BINANCE", () => {
+    expect(paperReadProfileId({ ...okx, EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_BINANCE_USDM" })).toBe("PAPER_BINANCE_USDM");
+  });
+
+  it("refuses an explicit OKX read profile without the OKX profile wired", () => {
+    expect(() => loadConfig({
+      ...baseEnv(),
+      EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_OKX_SWAP",
+    })).toThrow(/EXECUTION_PAPER_READ_PROFILE_ID=PAPER_OKX_SWAP requires/);
+  });
+
+  it("rejects a profile id that is not a known Paper family", () => {
+    expect(() => loadConfig({ ...baseEnv(), EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_DNSE_VNM" })).toThrow();
   });
 });

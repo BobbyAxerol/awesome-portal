@@ -1,0 +1,38 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.manager-score-revision.v1",
+    "target": {"surface": "ALPHA", "id": "TEST_ONLY-alpha"},
+    "workspace_id": "TEST_ONLY-workspace",
+    "environment": "paper",
+    "revision_mode": "ORIGINAL_AS_PUBLISHED",
+    "purpose": "HISTORICAL_ANALYSIS_ONLY",
+    "operational_current": false,
+    "revision_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "supersedes_revision_ref": null,
+    "supersedes_reason": "TARGET_HISTORY_LINEAGE_NOT_PROJECTED",
+    "source": {
+      "authorized_source_ref": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source_revision": "TEST_ONLY-source-r1",
+      "source_as_of_ms": 1800000000000,
+      "recorded_through_ms": 1800000000000,
+      "facts_through_ms": null
+    },
+    "knowledge_cutoff_ms": null,
+    "knowledge_cutoff_reason": "ORIGINAL_KNOWLEDGE_CUTOFF_NOT_RECORDED",
+    "computed_at_ms": null,
+    "computed_at_reason": "ORIGINAL_COMPUTE_TIMES_ARE_PER_ENTRY",
+    "eligibility": {
+      "policy_current": false,
+      "policy_state": "UNKNOWN",
+      "reason_code": "POLICY_STATE_NOT_CLASSIFIED",
+      "economic_source": "RETAINED_EXACT_REVISION",
+      "usable_as_current_operational_score": false
+    },
+    "availability": "NOT_PUBLISHED",
+    "reason_codes": ["SELECTED_SCORE_REVISION_NOT_PUBLISHED"],
+    "score_details": [],
+    "composition": {"availability": "NOT_PUBLISHED", "reason_code": "COMPOSITION_REVISION_NOT_SELECTED"},
+    "regime": {"availability": "NOT_PUBLISHED", "reason_code": "INDEPENDENT_REGIME_REVISION_NOT_SELECTED"}
+  }
+}

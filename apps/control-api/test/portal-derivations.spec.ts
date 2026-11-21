@@ -24,6 +24,7 @@ const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
   mustChangePassword: false, failedLoginCount: 0, lockedUntil: null, sessionVersion: 1,
   createdAt: new Date("2026-09-05T00:00:00.000Z"), updatedAt: new Date("2026-09-05T00:00:00.000Z"), disabledAt: null,
+  accountRevision: 1, archivedAt: null,
 };
 const session: AuthSession = {
   sessionId: "ses_eds05", userId: user.userId, state: "ACTIVE", sessionVersion: 1,
@@ -88,7 +89,7 @@ function snapshot(relations: Record<string, ProjectionRelation>): ProfileProject
     document, sourceEpoch: "epoch-eds05", sourceCursor: "opaque-source-cursor-must-not-leak",
     sourceAsOf: new Date("2026-09-05T12:00:00.000Z"), receivedAt: now, lastSuccessfulRefreshAt: now,
     completeness: "COMPLETE", projectionEpoch: "projection-eds05", projectionSequence: 17,
-    payloadDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    payloadDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", sourceCatalogueSha256: null,
   };
 }
 
@@ -194,7 +195,7 @@ describe("EDS-05 Portal derivations and operational composition", () => {
     const sourceHealth = vi.fn();
     const controller = new PortalDerivationsController(
       { sourceHealth } as unknown as PortalDerivationsService,
-      { isMember: vi.fn(async () => true) } as never,
+      { canReadExecution: vi.fn(async () => true) } as never,
       config(),
     );
     const request = { portalUser: user, portalWorkspaceId: "ws_other", portalSession: session } as never;
@@ -205,21 +206,21 @@ describe("EDS-05 Portal derivations and operational composition", () => {
   });
 
   it("reads the projection's own workspace when the caller names none (DR-30), and still refuses a non-member", async () => {
-    const sourceHealth = vi.fn(async () => ({ ok: true }));
-    const isMember = vi.fn(async () => true);
+    const sourceHealth = vi.fn(async (_principal: unknown) => ({ ok: true }));
+    const canReadExecution = vi.fn(async () => true);
     const controller = new PortalDerivationsController(
       { sourceHealth } as unknown as PortalDerivationsService,
-      { isMember } as never,
+      { canReadExecution } as never,
       config(),
     );
     const request = { portalUser: user, portalWorkspaceId: "ws_personal_of_another_member", portalSession: session } as never;
     await controller.sourceHealth(request, {});
-    expect(isMember).toHaveBeenCalledWith(workspaceId, user.userId);
+    expect(canReadExecution).toHaveBeenCalledWith(workspaceId, user.userId);
     expect(sourceHealth.mock.calls[0]?.[0]).toMatchObject({ workspaceId });
 
     const denied = new PortalDerivationsController(
       { sourceHealth: vi.fn() } as unknown as PortalDerivationsService,
-      { isMember: vi.fn(async () => false) } as never,
+      { canReadExecution: vi.fn(async () => false) } as never,
       config(),
     );
     await expect(denied.sourceHealth(request, {})).rejects.toMatchObject({

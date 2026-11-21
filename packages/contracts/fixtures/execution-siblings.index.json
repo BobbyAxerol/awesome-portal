@@ -1,0 +1,180 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "siblings": [
+    {
+      "name": "controls",
+      "gap": "GAP-3",
+      "schema": "execution-controls.v1.schema.json",
+      "route": "/api/v1/execution/controls",
+      "valid": [
+        "published",
+        "no-locks",
+        "not-read",
+        "no-source"
+      ],
+      "post": null
+    },
+    {
+      "name": "obligations",
+      "gap": "GAP-4",
+      "schema": "execution-obligations.v1.schema.json",
+      "route": "/api/v1/execution/obligations",
+      "valid": [
+        "published",
+        "none",
+        "not-read"
+      ],
+      "post": null
+    },
+    {
+      "name": "portfolio-members",
+      "gap": "GAP-5",
+      "schema": "execution-portfolio-members.v1.schema.json",
+      "route": "/api/v1/execution/portfolios/{portfolio_id}/members",
+      "valid": [
+        "published",
+        "empty",
+        "no-source"
+      ],
+      "post": null
+    },
+    {
+      "name": "account-profile",
+      "gap": "GAP-6",
+      "schema": "execution-account-profile.v1.schema.json",
+      "route": "/api/v1/execution/accounts/{account_id}/profile",
+      "valid": [
+        "identity_only",
+        "published",
+        "partial"
+      ],
+      "post": null
+    },
+    {
+      "name": "alpha-readiness",
+      "gap": "GAP-9",
+      "schema": "execution-alpha-readiness.v1.schema.json",
+      "route": "/api/v1/execution/readiness",
+      "valid": [
+        "published",
+        "empty",
+        "no_source",
+        "items_null"
+      ],
+      "post": null
+    },
+    {
+      "name": "fleet-map",
+      "gap": "FE-035",
+      "schema": "execution-fleet-map.v1.schema.json",
+      "route": "/api/v1/execution/manager/fleet-map",
+      "valid": [
+        "published",
+        "capped_small",
+        "max_1000"
+      ],
+      "post": null
+    },
+    {
+      "name": "reconciliation",
+      "gap": "GAP-11",
+      "schema": "execution-reconciliation.v1.schema.json",
+      "route": "/api/v1/execution/reconciliation",
+      "valid": [
+        "published",
+        "clean"
+      ],
+      "post": null
+    },
+    {
+      "name": "limits",
+      "gap": "GAP-12",
+      "schema": "execution-limits.v1.schema.json",
+      "route": "/api/v1/execution/limits",
+      "valid": [
+        "published",
+        "none"
+      ],
+      "post": null
+    },
+    {
+      "name": "cost-events",
+      "gap": "GAP-15",
+      "schema": "execution-cost-events.v1.schema.json",
+      "route": "/api/v1/execution/cost-events",
+      "valid": [
+        "published",
+        "none"
+      ],
+      "post": null
+    },
+    {
+      "name": "report-snapshots",
+      "gap": "GAP-13",
+      "schema": "execution-report-snapshots.v1.schema.json",
+      "route": "/api/v1/execution/reports",
+      "valid": [
+        "published",
+        "none"
+      ],
+      "post": null
+    },
+    {
+      "name": "recovery-events",
+      "gap": "GAP-14",
+      "schema": "execution-recovery-events.v1.schema.json",
+      "route": "/api/v1/execution/recovery-events",
+      "valid": [
+        "published",
+        "none"
+      ],
+      "post": null
+    },
+    {
+      "name": "grants",
+      "gap": "GAP-16",
+      "schema": "execution-grants.v1.schema.json",
+      "route": "/api/v1/execution/grants",
+      "valid": [
+        "published",
+        "none"
+      ],
+      "post": null
+    },
+    {
+      "name": "command-receipt",
+      "gap": "GAP-2",
+      "schema": "execution-command-receipt.v1.schema.json",
+      "route": "/api/v1/execution/commands/{operation_id}/receipt",
+      "valid": [
+        "applied",
+        "verified",
+        "denied"
+      ],
+      "post": null
+    },
+    {
+      "name": "order-detail",
+      "gap": "GAP-10",
+      "schema": "execution-order-detail.v1.schema.json",
+      "route": "/api/v1/execution/orders/{order_id}/detail",
+      "valid": [
+        "filled",
+        "no-fills",
+        "mixed-fee"
+      ],
+      "post": null
+    },
+    {
+      "name": "blotter-summary",
+      "gap": "GAP-10",
+      "schema": "execution-blotter-summary.v1.schema.json",
+      "route": "/api/v1/execution/blotter/summary",
+      "valid": [
+        "published",
+        "not-read"
+      ],
+      "post": null
+    }
+  ]
+}

@@ -1,0 +1,543 @@
+/* Blotter (UXM-07 S2). The order table reuses cards.css (table until 660px,
+ * then cards). Tokens and type roles only; no uppercase, no raw colour.
+ * Text/fill pairs repeat ones proven by fleet.css and cards.css. */
+.exec-blt2-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-blt2-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-blt2-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-blt2-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-blt2-fresh {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-blt2-meta {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-blt2-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-blt2-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+
+/* scope chips, filters */
+.exec-blt2-scope,
+.exec-blt2-tool,
+.exec-blt2-tools,
+.exec-blt2-rowbar,
+.exec-blt2-pager,
+.exec-blt2-pagerbtns {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-blt2-rowbar,
+.exec-blt2-pager {
+  justify-content: space-between;
+}
+.exec-blt2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+}
+.exec-blt2-chip-k {
+  font: var(--exec-font-id);
+  color: var(--ink-faint);
+}
+.exec-blt2-field {
+  display: inline-flex;
+  min-width: 0;
+}
+.exec-blt2-input {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 5px 8px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-blt2-input::placeholder {
+  color: var(--ink-faint);
+}
+.exec-blt2-btn,
+.exec-blt2-segbtn {
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-blt2-btn:disabled {
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+  border-color: var(--line);
+  cursor: not-allowed;
+}
+.exec-blt2-seg {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+.exec-blt2-segbtn[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-blt2-count {
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-blt2-btn:focus-visible,
+.exec-blt2-segbtn:focus-visible,
+.exec-blt2-input:focus-visible,
+.exec-blt2-x:focus-visible,
+.exec-blt2-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-blt2-link {
+  font: var(--exec-font-control);
+  color: var(--accent);
+}
+.exec-blt2-menuwrap {
+  position: relative;
+}
+.exec-blt2-menu {
+  position: absolute;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 230px;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-top: 4px;
+  padding: var(--space-2) var(--space-3);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-blt2-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--exec-font-body);
+}
+/* Expand toggle: 20x20 square with a + or minus (hi-fi .x). "Read" on the groups table is a word, so it keeps its width. */
+.exec-blt2-x {
+  position: relative;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--space-1);
+  font: var(--exec-font-label);
+  line-height: 18px;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-blt2-x[aria-pressed] {
+  padding: 0 var(--space-2);
+}
+.exec-blt2-x[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-blt2-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* text */
+.exec-blt2-count-line {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-blt2-note {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-blt2-na {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-blt2-num {
+  font: var(--exec-font-num);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.exec-blt2-id {
+  font: var(--exec-font-id);
+}
+/* The order id is a link to the chart (hi-fi a.chipx.mono). */
+.exec-blt2-idlink {
+  padding: 0 var(--space-1);
+  font: var(--exec-font-id);
+  color: var(--accent);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+  text-decoration: none;
+}
+.exec-blt2-idlink:hover {
+  border-color: var(--accent);
+}
+.exec-blt2-idlink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-blt2-unit {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-blt2-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-blt2-empty p {
+  margin: 0;
+}
+
+/* table */
+/* Measured on hi-fi blotter.html: td 4px 8px, row 36px, th 4px 8px. */
+.exec-blt2-table tbody td {
+  height: 36px;
+  padding: 4px var(--space-2);
+}
+.exec-blt2-table thead th {
+  padding: 4px var(--space-2);
+}
+/* Measured on hi-fi blotter.html: td.n and the time column are 12px; text cells are the data role. */
+.exec-blt2-table tbody td {
+  font: var(--exec-font-data);
+}
+.exec-blt2-table tbody td[data-numeric="true"],
+.exec-blt2-table tbody td .exec-blt2-num {
+  font: var(--exec-font-id);
+  font-variant-numeric: tabular-nums;
+}
+/* Tighter cell padding so the ten default columns fit the 1440 panel without a sideways scroll (QA1 R4 I7); the Order column keeps the
+ * row identity in view when a narrower width does scroll (the status column sticks to the other edge). */
+.exec-blt2-table thead th,
+.exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td {
+  padding-left: var(--space-1);
+  padding-right: var(--space-1);
+}
+/* A placeholder sentence inside a figure cell wraps; the figures never do. */
+.exec-blt2-fq .exec-blt2-na {
+  display: inline-block;
+  max-width: 7ch;
+  white-space: normal;
+  vertical-align: top;
+}
+/* Side and type: the header and the cell may take two lines, so the column is as wide as its words, not its label. */
+.exec-blt2-table thead th[data-col="side"] {
+  white-space: normal;
+  min-width: 0;
+}
+.exec-blt2-table thead th[data-col="side"] {
+  max-width: 8ch;
+}
+.exec-blt2-fee {
+  align-items: flex-end;
+}
+.exec-blt2-table thead th:nth-child(2),
+.exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:nth-child(2) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--paper-raised);
+}
+/* Status stays in view at any width (hi-fi .stk): the last column sticks to the right edge of the scrolling box. */
+.exec-blt2-table thead th:last-child,
+.exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: var(--paper-raised);
+  box-shadow: -1px 0 0 var(--line);
+}
+.exec-blt2-table tbody tr[data-selected="true"] td:last-child {
+  background: var(--accent-soft);
+}
+.exec-blt2-ordercell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+/* The expander and its id/marker sit on one line of one size: the expander glyph follows the id's role (audit: sublabel-bigger on 50 rows). */
+.exec-blt2-ordercell .exec-blt2-x {
+  font: var(--exec-font-id);
+}
+.exec-blt2-kid > td {
+  height: auto;
+  white-space: normal;
+  background: var(--paper-sunken);
+}
+.exec-blt2-kidbox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4) 40px;
+  padding: var(--space-2) 0;
+}
+.exec-blt2-kidbox section {
+  min-width: 0;
+}
+.exec-blt2-h4 {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+}
+.exec-blt2-inner {
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-blt2-inner th {
+  padding: 3px var(--space-3);
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+  text-align: left;
+}
+.exec-blt2-inner td {
+  padding: 3px var(--space-3);
+  border-top: 1px solid var(--line-soft);
+}
+.exec-blt2-inner th[data-numeric="true"],
+.exec-blt2-inner td[data-numeric="true"] {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.exec-blt2-inner tr[data-self="true"] td,
+.exec-blt2-inner tr[data-selected="true"] td {
+  color: var(--ink);
+  background: var(--accent-soft);
+}
+.exec-blt2-group {
+  margin-top: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-blt2-group p {
+  margin: 0 0 var(--space-2);
+}
+/* The square stays 20px; the hit area reaches 28px so the target is at least 24 CSS px (WCAG 2.5.8). */
+.exec-blt2-x::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+/* Folding panels and "How to read" (hi-fi details.panel, details). */
+.exec-blt2-fold > summary {
+  list-style: none;
+  cursor: pointer;
+}
+.exec-blt2-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.exec-blt2-fold > summary::before {
+  content: "\25B8";
+  content: "\25B8" / "";
+  margin-right: var(--space-2);
+  color: var(--ink-faint);
+}
+.exec-blt2-fold[open] > summary::before {
+  content: "\25BE";
+  content: "\25BE" / "";
+}
+.exec-blt2-fold > summary > .exec-blk-ph-title {
+  margin-right: auto;
+}
+.exec-blt2-fold:not([open]) > summary {
+  border-bottom: 0;
+}
+.exec-blt2-fold > summary:focus-visible,
+.exec-blt2-how > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.exec-blt2-how > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font: var(--exec-font-meta);
+}
+.exec-blt2-how > .exec-blt2-note {
+  padding: var(--space-2) 0;
+}
+.exec-blt2-prov {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+.exec-blt2-prov summary {
+  cursor: pointer;
+  color: var(--accent);
+  font: var(--exec-font-meta);
+}
+
+/* Deployment cell: id over venue. */
+.exec-blt2-two {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (max-width: 660px) {
+  /* The Columns button sits at the left on a phone: the menu opens from its left edge, not off the screen (QA3 not-checked item). */
+  .exec-blt2-menu {
+    right: auto;
+    left: 0;
+    max-width: calc(100vw - 2 * var(--space-4));
+  }
+  /* A placeholder sentence ("Not published for this order") wraps inside its card cell; an exact figure never does. */
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td {
+    height: auto;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:nth-child(2) {
+    position: static;
+  }
+  .exec-blt2-table tbody td .exec-blt2-na {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .exec-blt2-panel {
+    padding: var(--space-3);
+  }
+  .exec-blt2-inner {
+    display: block;
+    overflow-x: auto;
+  }
+  /* A phone card is a two-column grid (label above value), not seven stacked lines: a page of ten reads as one short scroll. The
+   * order cell holds the expander and the id, so it takes the card's full width (UXM-07 audit B #22). */
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px var(--space-3);
+    padding: 8px 12px;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td[data-l] {
+    display: block;
+    padding: 4px 0;
+    min-width: 0;
+    text-align: left;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td[data-l]::before {
+    display: block;
+    margin-right: 0;
+    padding-right: 0;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td[data-l="Order"] {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td[data-l="Order"]::before {
+    display: none;
+  }
+  /* Cards: nothing sticks; every cell is a row of the card. */
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:last-child {
+    position: static;
+    box-shadow: none;
+    background: transparent;
+  }
+}
+
+/* Order path over the loaded orders: four steps, each a figure with its share of the submitted orders. */
+.exec-blt2-funnel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+}
+.exec-blt2-fstep {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  background: var(--paper-raised);
+}
+.exec-blt2-fk {
+  font: var(--exec-font-label);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
+.exec-blt2-fv {
+  font: var(--exec-font-num);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 660px) {
+  .exec-blt2-funnel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.exec-blt2-scrollhint {
+  display: none;
+}
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-blt2-scrollhint {
+    display: block;
+  }
+}
+
+/* QA7 N2-05: between the phone cards and 1180px the status chip may take two lines ("Partially / filled") so the figures keep their columns. */
+@media (min-width: 661px) and (max-width: 1180px) {
+  .exec-blt2-v2 .exec-cards td[data-l="Status"] .exec-flag {
+    white-space: normal;
+  }
+}
