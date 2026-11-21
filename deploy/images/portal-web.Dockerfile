@@ -53,6 +53,13 @@ RUN npm run build -- --base=/roadmap-task-board/
 # the Portal template below while pinning the verified multi-arch manifest.
 FROM nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
 
+# CVE-2026-111497 (CRITICAL, brotli out-of-bounds write): the pinned runtime
+# ships brotli-libs 1.2.0-r0 and the 1.29 Alpine line has no rebuilt image yet.
+# Raise only that library to the fixed release (1.2.1-r0); the verified nginx
+# binary and pinned manifest stay unchanged. Remove this once the pinned base
+# carries brotli-libs >= 1.2.1-r0.
+RUN apk add --no-cache 'brotli-libs>=1.2.1-r0'
+
 # portal.conf is a template: the official nginx envsubst entrypoint renders
 # /etc/nginx/templates/*.template into /etc/nginx/conf.d/ using container env
 # (PORTAL_WEB_UPSTREAM selects the façade vs. the legacy Python upstream).
