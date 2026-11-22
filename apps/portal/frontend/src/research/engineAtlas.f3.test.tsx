@@ -31,6 +31,14 @@ function view(tab: AtlasTab, extra: Partial<React.ComponentProps<typeof EngineAt
   );
 }
 
+/** KaTeX is a lazy chunk: each Formula's state update lands after the data, so wait for it inside the test (N29-FE-01 §5). */
+async function typeset() {
+  await waitFor(() => {
+    const nodes = Array.from(document.querySelectorAll("[data-formula-state]"));
+    expect(nodes.every((node) => node.getAttribute("data-formula-state") === "katex")).toBe(true);
+  });
+}
+
 describe("F3 12-15 - a failed read keeps its request id and offers a re-read", () => {
   it("503: Read again calls onRetry; the request id is printed", () => {
     const onRetry = vi.fn();
@@ -56,8 +64,9 @@ describe("F3 12-15 - a failed read keeps its request id and offers a re-read", (
     expect(document.querySelector("[data-refusal-request]")?.getAttribute("data-refusal-request")).toBe("req_403");
   });
 
-  it("no request id is printed when the read succeeded", () => {
+  it("no request id is printed when the read succeeded", async () => {
     view("modes", { requestId: "req_old" });
+    await typeset();
     expect(document.querySelector("[data-request-id]")).toBeNull();
   });
 
@@ -90,8 +99,9 @@ describe("F3 12-15 - a failed read keeps its request id and offers a re-read", (
 });
 
 describe("F3 7_root - what it reads is a strip of cells from the served inputs", () => {
-  it("draws one cell per selection input, the server token as its tooltip", () => {
+  it("draws one cell per selection input, the server token as its tooltip", async () => {
     view("modes");
+    await typeset();
     for (const mode of DOC.modes) {
       const card = document.querySelector(`[data-mode="${mode.mode_id}"]`) as HTMLElement;
       const reads = (mode.facts as { reads: { state: string; selection_inputs: string[] } } | null)?.reads;
@@ -141,8 +151,9 @@ describe("F3 FG 12-02 - tabs and route rows", () => {
     for (const q of qualifiers) expect(q.className).toContain("[overflow-wrap:anywhere]");
   });
 
-  it("the release block can shrink below 260px instead of overrunning", () => {
+  it("the release block can shrink below 260px instead of overrunning", async () => {
     view("modes");
+    await typeset();
     const html = document.querySelector("details")?.parentElement?.innerHTML ?? document.body.innerHTML;
     expect(html).not.toContain("min-w-[260px]");
   });
