@@ -265,6 +265,33 @@ describe("EDS-11R1 generated named Manager relation authority", () => {
     expect(managerRelationOperationByRoute("account-balances")?.relation).toBe("account_balances");
   });
 
+  it("accepts per-profile exact catalogue seals only for their own profile (allow-list)", async () => {
+    const source = new FakeCurrentSource();
+    const service = new MaximumDataOperationService(source as unknown as ExecutionCurrentSourceProxy, new FakeContinuations() as never);
+    const legacy = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
+    const paperSeals = ["sha256:4f38c58fed81c7600aea3d5c57dbca64443fc6b47c8ffa54d60296d7cd83c811", "sha256:4eaca507fbc256c3e7089b90c41fa533f698b4eb141914aba5f6136ee8cbfb46"];
+    const sandboxSeal = "sha256:3852c844e7d06f70317bd54e53776081213d82569c6d203f78f05caa5bda15df";
+    const oneOff = (d: string) => d.slice(0, -1) + (d.endsWith("0") ? "1" : "0");
+    const call = (env: Environment) => service.relationPage(principal, "account-balances", { environment: env, limit: 1 });
+    for (const env of ["paper", "sandbox", "live"] as const) {
+      source.response = envelope(env, { catalogueSha256: legacy });
+      await expect(call(env)).resolves.toMatchObject({ source_catalogue_sha256: legacy });
+    }
+    for (const seal of paperSeals) {
+      source.response = envelope("paper", { catalogueSha256: seal });
+      await expect(call("paper")).resolves.toMatchObject({ source_catalogue_sha256: seal });
+    }
+    source.response = envelope("sandbox", { catalogueSha256: sandboxSeal });
+    await expect(call("sandbox")).resolves.toMatchObject({ source_catalogue_sha256: sandboxSeal });
+    for (const [env, seal] of [
+      ["sandbox", paperSeals[0]!], ["live", paperSeals[1]!], ["live", sandboxSeal], ["paper", sandboxSeal],
+      ["paper", oneOff(paperSeals[0]!)], ["live", oneOff(legacy)],
+    ] as const) {
+      source.response = envelope(env, { catalogueSha256: seal });
+      await expect(call(env)).rejects.toMatchObject({ code: "EDS11R_SOURCE_CONTRACT_REJECTED", status: 502 });
+    }
+  });
+
   it("keeps the HTTP boundary named: generic source/relation parameters are rejected before a BFF call", async () => {
     const controller = new MaximumDataOperationController(
       { relationPage: async () => ({ accepted: true }) } as unknown as MaximumDataOperationService,

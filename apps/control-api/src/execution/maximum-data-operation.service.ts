@@ -36,6 +36,7 @@ import {
 } from "./eds11r-manager-relation.registry";
 import { MAXIMUM_DATA_INTAKE_V1, MaximumDataEnvironment } from "./maximum-data-intake";
 import { NATIVE_TUPLE_A_CATALOGUE_SHA256, nativeTupleARelationAllowed } from "./native-tuple-a";
+import { acceptCatalogueDigest } from "./catalogue-digest-allowlist";
 import { managerTimestamp } from "./manager-timestamp";
 import { carryCacheBranch, takeCacheBranch } from "../execution-v2/native-cache-observation";
 
@@ -315,11 +316,12 @@ export class MaximumDataOperationService {
     ) throw sourceContractRejected();
 
     const source = asObject(bff.source);
+    const acceptedDeploymentsDigest = acceptCatalogueDigest(binding.profileId, "deployments", source.catalogue_sha256);
     if (
       source.contract_version !== operation.sourceContractRevision ||
       source.authority !== "EXECUTION_CELL" ||
       source.profile_id !== binding.profileId ||
-      source.catalogue_sha256 !== operation.sourceCatalogueSha256 ||
+      acceptedDeploymentsDigest === undefined ||
       !SOURCE_AVAILABILITY.has(string(source.availability))
     ) throw sourceContractRejected();
 
@@ -361,7 +363,7 @@ export class MaximumDataOperationService {
       environment: query.environment,
       profile_id: binding.profileId,
       source_contract_revision: operation.sourceContractRevision,
-      source_catalogue_sha256: operation.sourceCatalogueSha256,
+      source_catalogue_sha256: acceptedDeploymentsDigest,
       source_history_semantics: operation.sourceHistorySemantics,
       source_health: {
         availability: source.availability,
@@ -404,8 +406,6 @@ export class MaximumDataOperationService {
   ) {
     const bff = asRelationObject(response);
     // Native review (a native epoch is present) is bound to tuple A; the legacy path keeps the intake pack digest.
-    const relationCatalogue = scope.nativeEpochDigest !== undefined
-      ? NATIVE_TUPLE_A_CATALOGUE_SHA256 : MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
     if (
       bff.schema_version !== "portal.execution.current-source-bff.v2" ||
       bff.authority !== "PORTAL_CONTROL_API" ||
@@ -415,11 +415,15 @@ export class MaximumDataOperationService {
     ) throw relationSourceContractRejected();
 
     const source = asRelationObject(bff.source);
+    // Native epoch: tuple A only (strict). Legacy: per-profile exact-digest allow-list.
+    const relationCatalogue = scope.nativeEpochDigest !== undefined
+      ? (source.catalogue_sha256 === NATIVE_TUPLE_A_CATALOGUE_SHA256 ? NATIVE_TUPLE_A_CATALOGUE_SHA256 : undefined)
+      : acceptCatalogueDigest(expectedProfileId, "relations", source.catalogue_sha256);
     if (
       source.contract_version !== MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision ||
       source.authority !== "EXECUTION_CELL" ||
       source.profile_id !== expectedProfileId ||
-      source.catalogue_sha256 !== relationCatalogue ||
+      relationCatalogue === undefined ||
       !SOURCE_AVAILABILITY.has(string(source.availability))
     ) throw relationSourceContractRejected();
     if (source.availability !== "AVAILABLE") {
