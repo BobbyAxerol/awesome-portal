@@ -381,9 +381,15 @@ class DeltaWfoChildReceipt:
             "first_oos_utc_ms": self.first_oos_utc_ms,
         }
         from portal_api.domain.research_early_stopping import admitted_early_stopping
-        row = execution_recipe(self.execution_profile_id)
-        stopping = admitted_early_stopping({"early_stopping": self.early_stopping,
-            "optuna_trials": self.optuna_trials or row["public_profile"]["trial_default"]})
+        # Only a registry recipe can admit early stopping, and its default trial
+        # budget comes from that recipe. The what-if grid and the pinned final
+        # audit are utility profiles with no recipe row; they carry no early
+        # stopping, so no lookup is made for them.
+        stopping = None
+        if self.early_stopping is not None:
+            row = execution_recipe(self.execution_profile_id)
+            stopping = admitted_early_stopping({"early_stopping": self.early_stopping,
+                "optuna_trials": self.optuna_trials or row["public_profile"]["trial_default"]})
         if stopping is not None:
             if self.task == "P16_DELTA_WHATIF_GRID":
                 raise ResearchSupervisorError("what-if diagnostics cannot inherit optimizer early stopping")

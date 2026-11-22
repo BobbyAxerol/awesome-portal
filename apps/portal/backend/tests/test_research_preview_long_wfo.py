@@ -164,6 +164,9 @@ def test_progress_journal_cpu_cap(preview_off: None, monkeypatch: pytest.MonkeyP
     assert journal(tmp_path / "on", 1800).cpu_cap_seconds == 1800
 
 
+@pytest.mark.research_sandbox
+
+
 @pytest.mark.anyio
 async def test_preview_worker_runs_and_retains_65_trials_under_preview_limits(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,

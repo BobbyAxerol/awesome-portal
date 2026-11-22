@@ -56,8 +56,14 @@ def test_combined_passport_budget_coarsens_only_declared_display_samples() -> No
         "equity_points": points,
         "derived": {"net_return_fraction": "0.123", "max_drawdown_fraction": "-0.08",
                     "rolling_returns_20_observations": rolling},
-        "summary_analytics": {"input_digest": "b" * 64, "net_oos_return": "0.123"},
-        "summary_analytics_v2": {"input_digest": "c" * 64, "sharpe": "1.25"},
+        # Curves are already within the smallest display cap (4), so the fitter
+        # leaves them untouched and the exact-equality assertions below hold.
+        "summary_analytics": {"input_digest": "b" * 64, "net_oos_return": "0.123",
+                              "in_sample_equity": {"points": [{"equity": "100"}, {"equity": "101"}]}},
+        "summary_analytics_v2": {"input_digest": "c" * 64, "sharpe": "1.25",
+                                 "strategy_curve": [{"value": "100"}, {"value": "101"}],
+                                 "benchmark_curve": [{"value": "100"}, {"value": "99"}],
+                                 "last_30d": {"points": [{"value": "100"}, {"value": "102"}]}},
     }
     before = deepcopy(receipt)
     budget = len(json.dumps(receipt, separators=(",", ":")).encode()) - 500

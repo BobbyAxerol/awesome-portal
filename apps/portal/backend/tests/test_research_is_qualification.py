@@ -307,7 +307,7 @@ def test_file_symlink_parent_symlink_hardlink_and_public_permissions_are_refused
     link.unlink(); path.chmod(0o644)
     with pytest.raises(ValueError, match="private regular"):
         verify(path, metadata)
-    public = tmp_path / "public"; public.mkdir(mode=0o755)
+    public = tmp_path / "public"; public.mkdir(); public.chmod(0o755)  # mkdir(mode=) is masked by umask
     with pytest.raises(ValueError, match="private output"):
         capture(public)
 

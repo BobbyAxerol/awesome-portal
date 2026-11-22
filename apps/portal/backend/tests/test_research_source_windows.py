@@ -126,6 +126,8 @@ def test_fixed_producer_passes_immutable_bounds_but_not_holdout_rows(tmp_path: P
                 enforced_limits={"cpu_seconds": 45}, evidence_source={"source": {"source_transform_digest": "a" * 64}},
                 fixed_replay_source=None, fixed_replay_path=None,
                 is_qualification_source=None, is_qualification_path=None,
+                native_execution=None, native_optimization_path=None,
+                window_execution_source=None, window_execution_path=None,
                 imported_source_digest=source_digest if imported else None)
 
         run_imported_alpha_qualification = run_p04_delta_qualification

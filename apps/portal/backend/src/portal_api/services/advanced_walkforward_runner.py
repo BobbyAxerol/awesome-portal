@@ -400,7 +400,7 @@ class AdvancedWalkForwardRunner:
             series["drawdown"] = series.equity / series.equity.cummax() - 1
             self._artifacts.write_frame(run_id, f"series/training-{fold_id}.parquet", series)
             remaining -= len(frame)
-        self._artifacts.write_json(run_id, "series/training-disclosure.v1.json", {"schema_version":"research.training-disclosure.v1", "absences":disclosure})
+        self._artifacts.write_json(run_id, "series/training-disclosure.v1.json", with_portal_provenance("series/training-disclosure.v1.json", {"schema_version":"research.training-disclosure.v1", "absences":disclosure}))
 
     def _write_mode_evidence(self, run_id: str, wf: Mapping[str, Any], endpoint: Any) -> None:
         """Retain bounded native mode evidence; never reconstruct methodology."""
@@ -428,7 +428,7 @@ class AdvancedWalkForwardRunner:
             path = self._artifacts.run_directory(run_id) / relative
             tables[name] = {"path": relative, "rows": len(frame),
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest()}
-        document = with_portal_provenance("mode_evidence.v1.json", canonicalize(_sanitize({
+        evidence = canonicalize(_sanitize({
             "schema_version": "portal.wfo-mode-evidence.v1",
             "source": "QuantBT 1.1.1 public research_audit and walk_forward metadata",
             "optimization_mode": wf.get("optimization_mode"),
@@ -439,10 +439,12 @@ class AdvancedWalkForwardRunner:
             "row_counts": {name: table["rows"] for name, table in tables.items()},
             "bounds": {"table_rows": 4096, "total_rows": 8192, "bytes": 256 * 1024},
             "audit_summary": audit.metadata(),
-        })))
+        }))
+        # Wrapped at the write site (provenance is checked syntactically there).
+        document = with_portal_provenance("mode_evidence.v1.json", evidence)
         if len(json.dumps(document, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")) > 256 * 1024:
             raise AdvancedWalkForwardError("FULL-04 native mode evidence exceeds its byte bound")
-        self._artifacts.write_json(run_id, "wfo/mode_evidence.v1.json", document)
+        self._artifacts.write_json(run_id, "wfo/mode_evidence.v1.json", with_portal_provenance("mode_evidence.v1.json", evidence))
 
     def _write_wfo_artifacts(self, run_id: str, wf: Mapping[str, Any]) -> None:
         from portal_api.services.three_window_runner import _flatten_frame

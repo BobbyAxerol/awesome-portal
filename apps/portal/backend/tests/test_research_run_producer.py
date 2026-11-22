@@ -242,6 +242,9 @@ def test_native_producer_reaches_confined_launch_with_exact_recipe_caps(tmp_path
     assert not (market_root / request.job_id / request.worker_attempt_id).exists()
 
 
+@pytest.mark.research_sandbox
+
+
 def test_p10_t04_t13_real_snapshot_to_isolated_delta_to_receipt_has_no_holdout_or_scratch_leak(
     tmp_path: Path,
 ) -> None:
@@ -941,6 +944,9 @@ def test_rf02_nats_consume_loop_survives_an_idle_queue() -> None:
     received = asyncio.run(scenario())
     assert [job.payload for job in received] == [{"run_id": "r1"}]
     assert message.acked
+
+
+@pytest.mark.research_sandbox
 
 
 def test_e17_imported_source_runs_through_real_producer_child_and_is_erased(

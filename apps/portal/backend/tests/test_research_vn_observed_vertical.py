@@ -179,10 +179,17 @@ def test_qualified_fixed_estimate_uses_only_observed_index_and_same_p08_topology
     adapter, frame = source()
     catalog = ResearchEngineCatalogService(REGISTRY, market_data_provider=adapter)
     result = declaration_estimate(source_document(frame), spec(), warmup_bars=300, engine_catalog=catalog)
-    assert result["planned_folds"] == {"availability": "AVAILABLE", "reason_code": None,
+    train_bars = len(frame[(frame["time"] >= "2025-04-01") & (frame["time"] < "2025-08-01")])
+    oos_bars = len(frame[(frame["time"] >= "2025-08-01") & (frame["time"] < "2026-01-01")])
+    planned = dict(result["planned_folds"])
+    items = planned.pop("items")
+    assert planned == {"availability": "AVAILABLE", "reason_code": None,
         "count": 1, "basis": "P08_PLANNER_ON_INDEXED_TIMESTAMPS_V1",
-        "min_train_bars": len(frame[(frame["time"] >= "2025-04-01") & (frame["time"] < "2025-08-01")]),
-        "min_oos_bars": len(frame[(frame["time"] >= "2025-08-01") & (frame["time"] < "2026-01-01")])}
+        "min_train_bars": train_bars, "min_oos_bars": oos_bars}
+    # The planner now also publishes the per-fold windows on the same indexed timestamps.
+    assert items == [{"ordinal": 1,
+        "train": {"start_utc_ms": ms("2025-04-01"), "end_exclusive_utc_ms": ms("2025-08-01"), "bars": train_bars},
+        "outer_oos": {"start_utc_ms": ms("2025-08-01"), "end_exclusive_utc_ms": ms("2026-01-01"), "bars": oos_bars}}]
     assert result["earliest_start_basis"] == "OBSERVED_INDEXED_WARMUP_BARS_V1"
     assert result["earliest_start_utc_ms"] == ms(frame["time"].iloc[300])
     assert result["windows"][0]["warmup_bars_available_before_start"] == 300

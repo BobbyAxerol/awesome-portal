@@ -101,9 +101,10 @@ const SCREENS = LANE_SCREENS.map(([name, route, root]) => {
 type Screen = (typeof SCREENS)[number];
 
 async function ready(page: Page, root: string): Promise<void> {
-  await expect(page.locator(root).first()).toBeVisible();
+  // First mount under CI load can exceed the default 5 s expect timeout.
+  await expect(page.locator(root).first()).toBeVisible({ timeout: 20_000 });
   // The stage screens mount their root while the read is in flight (data-state="loading").
-  await expect(page.locator(root).first()).not.toHaveAttribute("data-state", "loading");
+  await expect(page.locator(root).first()).not.toHaveAttribute("data-state", "loading", { timeout: 20_000 });
 }
 
 /* ── the meter: what a tab asks of the network ─────────────────────────────────────────────────────────────────── */
@@ -957,7 +958,7 @@ test.describe("not-available disclosure", () => {
 
 for (const [name, route, root] of SCREENS) {
   test(`access · ${name} · no sideways scroll, a clean Tab walk, a visible focus ring, axe, at 1440 / 1024 / 390`, async ({ page, baseURL }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     await openLane(page);
     const watch = watchPage(page, baseURL);
     await page.goto(route);

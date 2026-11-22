@@ -5,7 +5,7 @@
     "portal_producer": "portal-api"
   },
   "file_digests": {
-    "advanced_walkforward_runner": "sha256:419761e7f732ce3ee51b11597693b893355e4258ac76b3718cf305b23709ade2",
+    "advanced_walkforward_runner": "sha256:21e144d61ee4c87bd791b546cbb62d37048e419a28beaffec25def2f825eacc4",
     "compose": "sha256:3f8dec2fd79c6695c5c57c324a0e374d0a49ca75d47e75aea2cf71e18803aecc",
     "compose_production": "sha256:a82ad203c55d0235b8db92d80f2b105b687c17b72da7b889a7f8e7e631a0b5db",
     "constraints_portal": "sha256:bd6172132133a7c332c068b1f8799a4794b0277313d71a462343864d772c905d",
@@ -21,13 +21,13 @@
     "nginx_portal_conf": "sha256:93d66ab1be41b94388b307463540f851a3c3ae9cb391582ea7706a7fd49bf50e",
     "openapi_planning_snapshot": "sha256:1566dcdff7c3cc72debdeb392566ad6bd36d029babb23db7ed220c7d5633d605",
     "openapi_portal": "sha256:9c65cc8c1041207cd335c15cd9f22275b9ad81b6e6f1f2da92d93378e7e949e0",
-    "openapi_portal_snapshot": "sha256:1026df1995b597966b83699901c930e474757ac1607002f9577ba52f156fdf1c",
+    "openapi_portal_snapshot": "sha256:9c65cc8c1041207cd335c15cd9f22275b9ad81b6e6f1f2da92d93378e7e949e0",
     "planning_frontend_lock": "sha256:ecce66117cbebc21e59eaa93b101ea7e923b888173359528eed1ec621ffd04f5",
     "planning_frontend_package": "sha256:50296a506bfa3c5786e7bc5845655b10c0a7d222cfcfabd58a0ada28d2024268",
     "planning_requirements": "sha256:89a5642e429cc00ba51f79f3854db39ade9e0e69fa098b16fc44cc54a1b1d053",
     "planning_requirements_dev": "sha256:6b932715dbbe91092d3abd614cbb095f2d105ddce45eaa99f5c98159ec93156b",
     "portal_app_main": "sha256:8ce0677eb9a896fd60bdb20c76acf981dd7513cff49314ba40b6659d353f728d",
-    "portal_backend_pyproject": "sha256:3abd375cbb9902764ffe6976cbb9981942b4d6ea2576e37a6e28b536c311e7f4",
+    "portal_backend_pyproject": "sha256:a489eb77579290a7abc8e08d9c8b524eeb0e6c73fad4d78571b8e42323275fe8",
     "portal_frontend_lock": "sha256:1f19e5c4c1ce102f87fc1651975e6239cca29d83254f2ad11f3ce28f6eab1e0c",
     "portal_frontend_package": "sha256:9b06da502ad2d5010ca580ae3e4ad2e35f88e5f19631c47296a197ad4bb36216",
     "protected_kernel_hash": "sha256:3d7f0520defd55acddcf21bfde2fcca34b7aabbf26e5413eb7cd5c4e90c684d9",
@@ -39,9 +39,9 @@
     "research_engine_catalog_schema": "sha256:7a6020948784a15941947c8662cdeb35ecae164b10b98699548c442e70ec7ef0",
     "research_engine_catalog_service": "sha256:20a1f240625fdf0cec3d7c0daad400fa1422a95b0e9f245703196954d7a17bb2",
     "research_run_evidence_schema": "sha256:ac1213412f91adbfb3f76c12dc12c6943fc979e83e75b1a5de9909e7fb01b730",
-    "run_request_schema": "sha256:582ced995417c641c9247fce422887e7f637359945fd8ef3b3e442d15fde009e"
+    "run_request_schema": "sha256:78d05826d83d4d19c46855c33814c6c349ddfc9d615a7c0da359197392edec73"
   },
-  "frozen_at_commit": "226dc6005d871aaaece9da702f083462a5ab85ba",
+  "frozen_at_commit": "dd854995de3167a40a41348209ebdae962a7c0c5",
   "golden_tolerances": {
     "exit_price": {
       "atol": 1e-12,

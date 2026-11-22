@@ -29,7 +29,14 @@ jobs:
     # Browser visual and application suites have their own runners below: one
     # serialized 45-minute job previously reached its timeout while tests were
     # still green, leaving a valid release commit permanently unpublishable.
-    timeout-minutes: 60
+    # 180, not 60: with the Research/Execution v2 line merged this job runs
+    # `portal verify` (full workspace verification, ~60 min of control-api tests
+    # alone) and then the contracts and Control API suites again; dev run
+    # 44928297371 (research line, 2026-11-21) was cancelled at exactly 60 min
+    # inside `Validate Portal contracts` while every test seen was green.
+    # The publication gate (publish-images.yml) and its reviewed bound in
+    # scripts/execution-image-publication-test.sh are sized from this value.
+    timeout-minutes: 180
 
     steps:
       - name: Check out Portal source
@@ -132,7 +139,8 @@ jobs:
     needs: integration
     if: ${{ always() && (inputs.update_visual_snapshots == true || needs.integration.result == 'success') }}
     runs-on: [self-hosted, linux, x64, portal-ci]
-    timeout-minutes: 60
+    # 782 Playwright tests measured ~50 minutes; 60 left no headroom under load.
+    timeout-minutes: 75
 
     steps:
       - name: Check out Portal source

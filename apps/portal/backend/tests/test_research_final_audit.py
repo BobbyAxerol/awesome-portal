@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
+
+import pytest
 from unittest.mock import patch
 
 from golden_fixture import GOLDEN_PARAMS, build_market_frame
@@ -152,6 +154,7 @@ class PinnedAuditProducerContractTests(unittest.TestCase):
                     ResearchProgressJournal(Path(directory), run_id="rrun_invalid", attempt_id="rwa_invalid",
                         lease_epoch=1, planned_trials=trials, cpu_cap_seconds=120, profile=profile)
 
+    @pytest.mark.research_sandbox
     def test_native_producer_and_fenced_p05_retention_preserve_the_original_selection(self):
         from types import SimpleNamespace
         import pyarrow as pa
@@ -314,6 +317,7 @@ class PinnedAuditContractTests(unittest.TestCase):
 
 
 class NativePinnedAuditTests(unittest.TestCase):
+    @pytest.mark.research_sandbox
     def test_native_fixed_evaluation_does_not_create_optuna_study(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "snapshot.parquet"
@@ -404,6 +408,7 @@ class RetainedSelectionPinTests(unittest.TestCase):
 
 
 class IsolatedPinnedAuditTests(unittest.TestCase):
+    @pytest.mark.research_sandbox
     def test_real_namespace_child_preserves_pins_and_rejects_duplicate_launch(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

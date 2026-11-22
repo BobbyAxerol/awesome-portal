@@ -150,6 +150,9 @@ def test_supervisor_refuses_an_unbounded_whatif_receipt(tmp_path: Path) -> None:
         receipt.as_payload(output_root=tmp_path / "out")
 
 
+@pytest.mark.research_sandbox
+
+
 def test_real_child_rescores_the_frozen_theta_to_the_parents_exact_objective(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -221,6 +224,7 @@ def test_child_refuses_an_evaluation_outside_its_declaration(tmp_path: Path, mon
         supervisor.run_delta_wfo(receipt)
 
 
+@pytest.mark.research_sandbox
 @pytest.mark.anyio
 async def test_worker_seals_the_whatif_grid_before_run_completed_and_never_folds(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
@@ -430,6 +434,9 @@ def test_sibling_pins_are_admitted_only_on_the_whatif_axes() -> None:
     ):
         with pytest.raises(ValidationError, match=message):
             ResearchRunProducerRequest.model_validate(with_overrides(overrides))
+
+
+@pytest.mark.research_sandbox
 
 
 def test_real_child_honours_sibling_pins(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

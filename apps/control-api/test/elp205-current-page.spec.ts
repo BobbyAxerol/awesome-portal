@@ -3,6 +3,7 @@ import type { AuthSession, PortalUser } from "../src/domain";
 import type { ExecutionCurrentSourceProxy } from "../src/execution/current-source.proxy";
 import { MaximumDataOperationService, type MaximumDataOperationPrincipal } from "../src/execution/maximum-data-operation.service";
 import { MAXIMUM_DATA_INTAKE_V1 } from "../src/execution/maximum-data-intake";
+import { MANAGER_DEPLOYMENTS_CATALOGUE_SHA256 } from "../src/execution/maximum-data-operation.registry";
 import { managerTimestamp } from "../src/execution/manager-timestamp";
 import { retainedOperationPage } from "../src/execution/retained-operation-page";
 import { managerRelationOperationByRoute } from "../src/execution/eds11r-manager-relation.registry";
@@ -40,13 +41,14 @@ function row(id = "dep1", updatedAt = sourceTime, wide = false) {
   };
 }
 
-function envelope(items: unknown[] = [row()], asOf = sourceTime) {
+function envelope(items: unknown[] = [row()], asOf = sourceTime,
+  catalogue: string = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest) {
   return {
     schema_version: "portal.execution.current-source-bff.v2", authority: "PORTAL_CONTROL_API",
     requested_environment: "paper", source_environment: "paper", profile_id: "PAPER_BINANCE_USDM",
     source: {
       contract_version: MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision, authority: "EXECUTION_CELL",
-      profile_id: "PAPER_BINANCE_USDM", catalogue_sha256: MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest,
+      profile_id: "PAPER_BINANCE_USDM", catalogue_sha256: catalogue,
       availability: "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of: asOf,
       data: { relation: { schema: "public", relation: "strategy_deployments" }, items, next_cursor: privateCursor },
     },
@@ -71,11 +73,14 @@ describe.each(["deployment", "named relation"] as const)("ELP2-05 current-page %
     return lane === "deployment" ? service.deploymentPage(principal, query)
       : service.relationPage(principal, "strategy-deployments", query);
   }
+  // The deployments operation binds the installed Manager catalogue (7db9d2fe7); named relations keep the intake pack digest.
+  const catalogue = lane === "deployment" ? MANAGER_DEPLOYMENTS_CATALOGUE_SHA256 : MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
+  const env = (items?: unknown[], asOf?: string) => envelope(items ?? [row()], asOf ?? sourceTime, catalogue);
   const rejected = lane === "deployment" ? "EDS01_SOURCE_CONTRACT_REJECTED" : "EDS11R_SOURCE_CONTRACT_REJECTED";
   const tooLarge = lane === "deployment" ? "EDS01_RESPONSE_TOO_LARGE" : "EDS11R_RESPONSE_TOO_LARGE";
 
   it("rejects more rows than the requested page before persisting a continuation", async () => {
-    const f = fixture(envelope([row("dep1"), row("dep2")]));
+    const f = fixture(env([row("dep1"), row("dep2")]));
     await expect(read(f.service, 1)).rejects.toMatchObject({ code: rejected, status: 502 });
     expect(f.issued).toEqual([]);
   });
@@ -86,7 +91,7 @@ describe.each(["deployment", "named relation"] as const)("ELP2-05 current-page %
     "2026-10-16T00:00:00.000+25:00", "2026-10-16T00:00:00.Z",
     "2026-10-16T00:00:00.000Z\n",
   ])("rejects ambiguous, invalid or unsupported-precision source clock %s", async clock => {
-    const f = fixture(envelope([row()], clock));
+    const f = fixture(env([row()], clock));
     await expect(read(f.service, 1)).rejects.toMatchObject({ code: rejected, status: 502 });
     expect(f.issued).toEqual([]);
   });
@@ -99,7 +104,7 @@ describe.each(["deployment", "named relation"] as const)("ELP2-05 current-page %
     ["2026-10-16T00:00:00.123456+07:00", "2026-10-15T17:00:00.123Z"],
     ["2026-10-15T17:00:00.123456-07:00", sourceTime],
   ])("projects source and row clock %s to UTC milliseconds", async (clock, expected) => {
-    const f = fixture(envelope([row("dep1", clock)], clock));
+    const f = fixture(env([row("dep1", clock)], clock));
     const result = await read(f.service, 1);
     expect(result.source_health.as_of_ms).toBe(Date.parse(expected));
     const record = result.records[0];
@@ -109,19 +114,19 @@ describe.each(["deployment", "named relation"] as const)("ELP2-05 current-page %
   });
 
   it("rejects invalid selected row timestamps before persisting a continuation", async () => {
-    const f = fixture(envelope([row("dep1", "2026-10-16T00:00:00")]));
+    const f = fixture(env([row("dep1", "2026-10-16T00:00:00")]));
     await expect(read(f.service, 1)).rejects.toMatchObject({ code: rejected, status: 502 });
     expect(f.issued).toEqual([]);
   });
 
   it("rejects an overlarge public page without orphaning a private continuation", async () => {
-    const f = fixture(envelope(Array.from({ length: 200 }, (_, i) => row(`dep${i}`, sourceTime, true))));
+    const f = fixture(env(Array.from({ length: 200 }, (_, i) => row(`dep${i}`, sourceTime, true))));
     await expect(read(f.service, 200)).rejects.toMatchObject({ code: tooLarge, status: 502 });
     expect(f.issued).toEqual([]);
   });
 
   it("preserves an exact millisecond source clock and issues only the opaque public continuation", async () => {
-    const f = fixture(envelope([row()], "2026-10-16T07:00:00.123+07:00"));
+    const f = fixture(env([row()], "2026-10-16T07:00:00.123+07:00"));
     const result = await read(f.service, 1);
     expect(result.source_health.as_of_ms).toBe(Date.parse(sourceTime));
     expect(result.page.next_cursor).toBe(publicCursor);

@@ -53,6 +53,13 @@ SCAN_ALLOWLIST = {
     "apps/portal/backend/src/portal_api/repositories/portal_registry.py",
     "apps/portal/backend/src/portal_api/repositories/portal_links.py",
     "scripts/control-api-provision-keyrings.sh",
+    # Hands the runtime role credential to psql through a shell variable
+    # reference only; the script contains no literal secret.
+    "deploy/postgres/execution-init.sh",
+    # Deliberately fake leak markers asserting that secrets are redacted/never
+    # rendered; neither value authenticates anywhere.
+    "apps/portal/frontend/src/execution/v2/readers/scopedRealtime.test.ts",
+    "apps/portal/frontend/src/execution/v2/screens/account/model.test.ts",
     # This verification script contains literal private-key markers solely to
     # reject them from imported contract artifacts.  Scanning the checker
     # itself would turn the release hygiene gate into a permanent false

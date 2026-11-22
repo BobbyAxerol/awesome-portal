@@ -33,10 +33,10 @@ env:
 jobs:
   publish:
     runs-on: [self-hosted, linux, x64, portal-publish]
-    # CI permits a 60-minute authority job followed by a 75-minute browser
-    # verification job.  Reserve a bounded 150-minute gate window (including
+    # CI permits a 180-minute authority job followed by a 75-minute browser
+    # verification job.  Reserve a bounded 270-minute gate window (including
     # runner scheduling margin), then retain 60 minutes for build/sign/evidence.
-    timeout-minutes: 210
+    timeout-minutes: 330
 
     steps:
       - name: Check out Portal source
@@ -66,7 +66,7 @@ jobs:
         run: |
           mkdir -p release-gates
           ci_gate_poll_seconds=30
-          ci_gate_max_attempts=300
+          ci_gate_max_attempts=540
           required_check_names=(
             "Validate Portal monorepo stack"
             "Portal web visual baseline"

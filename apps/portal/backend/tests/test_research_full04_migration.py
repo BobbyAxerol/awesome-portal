@@ -16,7 +16,12 @@ OLD36_DIGEST = "223f55db55580f807996ca9f474479d8525d7a560bb327a4e79f225a88460534
 
 def test_full04_migration_preserves_all_36_historical_recipe_bytes_semantically():
     table = json.loads(TABLE.read_text())
-    old = [row for row in table["recipes"] if row["descriptor"]["schema_version"] != "research.full04-delta-profile.v1"]
+    # The 36 rows of the approved base are exactly the P04-P17 rows plus FULL03; later research
+    # lines (FULL04/05/06, native routes, expanded trials) append rows and never rewrite these.
+    later = {"research.full04-delta-profile.v1", "research.full05-imported-profile.v1",
+             "research.full06-delta-profile.v1", "research.native-route-profile.v1",
+             "research.expanded-trial-profile.v1"}
+    old = [row for row in table["recipes"] if row["descriptor"]["schema_version"] not in later]
     assert len(old) == 36
     # Independently measured from approved base 8f9c2125, not today's registry.
     assert recipe_digest(old) == OLD36_DIGEST
