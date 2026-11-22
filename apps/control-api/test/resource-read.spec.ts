@@ -835,8 +835,8 @@ describe("EDS-04 named resource BFFs", () => {
     expect(account.capabilities).toContainEqual(expect.objectContaining({ capability_id: "resource.account.differences", state: "PARTIAL", reason_code: "ACCOUNT_COMPARISON_INCOMPLETE" }));
     expect(JSON.stringify(account)).not.toContain("private-ref");
 
-    const binding = await service(relations).read(principal(), "BINDING", "acc_target@BINANCE", "paper") as Record<string, any>;
-    expect(binding.data.binding).toMatchObject({ binding_id: "acc_target@BINANCE", account_id: "acc_target", venue: "BINANCE", credential_state: "SYNC_SYNCED" });
+    const binding = await service(relations).read(principal(), "BINDING", "va_target", "paper") as Record<string, any>;
+    expect(binding.data.binding).toMatchObject({ binding_id: "va_target", account_id: "acc_target", venue: "BINANCE", credential_state: "SYNC_SYNCED" });
     expect(JSON.stringify(binding)).not.toContain("private-ref");
   });
 
@@ -1075,13 +1075,13 @@ describe("EDS-04 named resource BFFs", () => {
       [RELATION.venueAccounts]: relation("venue_accounts", [{ venue_account_id: "va_target", binding_id: "acc_target@BINANCE", account_id: "acc_target", mode: "paper", venue: "BINANCE" }]),
       [RELATION.brokerSync]: relation("broker_account_sync_effective", rows),
     };
-    let binding = await service(relations).read(principal(), "BINDING", "acc_target@BINANCE", "paper") as Record<string, any>;
+    let binding = await service(relations).read(principal(), "BINDING", "va_target", "paper") as Record<string, any>;
     expect(binding.data.binding.credential_state).toBe("SYNC_SYNCED");
     relations[RELATION.brokerSync] = relation("broker_account_sync_effective", rows, "PARTIAL");
-    binding = await service(relations).read(principal(), "BINDING", "acc_target@BINANCE", "paper") as Record<string, any>;
+    binding = await service(relations).read(principal(), "BINDING", "va_target", "paper") as Record<string, any>;
     expect(binding.data.binding.credential_state).toBe("NOT_PUBLISHED");
     relations[RELATION.brokerSync] = relation("broker_account_sync_effective", [rows[0], { ...rows[0], sync_id: "sync-2", status: "FAILED" }]);
-    binding = await service(relations).read(principal(), "BINDING", "acc_target@BINANCE", "paper") as Record<string, any>;
+    binding = await service(relations).read(principal(), "BINDING", "va_target", "paper") as Record<string, any>;
     expect(binding.data.binding.credential_state).toBe("NOT_PUBLISHED");
   });
 

@@ -186,7 +186,7 @@ describe("owning financial refresh → persistence → retained Accounts list", 
       const next = relation === "accounts" && !query.cursor && !options.empty ? "TEST_ONLY:accounts-next" : null;
       const rows = options.empty ? [] : relation === "accounts"
         ? [{ account_id: query.cursor ? "acc_b" : "acc_a", mode: "paper", venue: query.cursor ? "OKX" : "BINANCE" }]
-        : relation === "venue_accounts" ? ids.map(row => ({ ...row, mode: "paper" })) : [];
+        : relation === "venue_accounts" ? ids.map(row => ({ venue_account_id: row.binding_id, account_id: row.account_id, venue: row.venue })) : [];
       return sourcePage(relation, rows, next, options.missingCut || options.oneMissingCut && relation === "venue_accounts" ? null : at);
     }) };
     const replaceBindings = vi.fn(async (input: { rows: BindingProjectionRecord[]; sourceAsOf: Date | null;
