@@ -8,7 +8,7 @@ import { CurrentSourceProxyError, type CurrentSourceCataloguedOperationPolicy } 
 import { ExecutionDurableMirrorRepository } from "../src/execution/durable-mirror.repository";
 import { ExecutionProfileProjectionRepository } from "../src/execution/profile-projection.repository";
 import { ExecutionProfileProjectionWorker } from "../src/execution/profile-projection.worker";
-import { profileProjectionCatalog, profileObservationAffectedScreens } from "../src/execution/profile-projection.catalog";
+import { INTERNAL_PROJECTION_SCREEN, profileProjectionCatalog, profileObservationAffectedScreens } from "../src/execution/profile-projection.catalog";
 import { managerRelationOperationByRelation, managerRelationProfileBinding } from "../src/execution/eds11r-manager-relation.registry";
 import { namedRetainedRelationAction } from "../src/execution/retained-operation-page";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
@@ -79,26 +79,29 @@ describe("ELP2-04 finite heartbeat capture, not public reader commissioning", ()
     for (const environment of ["paper", "sandbox", "live"] as const) {
       const bindings = profileProjectionCatalog(environment).filter(binding => binding.relation === RELATION);
       expect(bindings).toHaveLength(1);
-      expect(bindings[0]).toMatchObject({ key: "service_heartbeats", screenId: "EXECUTION_COMMAND_CENTER_SCREEN",
-        sourceId: SOURCE, fields: ["service_name", "last_seen_at", "status"] });
+      // T3: the Edge returns four columns (details is jsonb and denied); the relation is DB-wide
+      // internal state with NO user-screen binding.
+      expect(bindings[0]).toMatchObject({ key: "service_heartbeats", screenId: INTERNAL_PROJECTION_SCREEN, internal: true,
+        sourceId: SOURCE, fields: ["service_name", "instance_id", "status", "last_seen_at"] });
       expect(bindings[0].ladder).toBeUndefined();
-      expect(profileObservationAffectedScreens(environment, [KEY])).toContain("EXECUTION_COMMAND_CENTER_SCREEN");
+      expect(profileObservationAffectedScreens(environment, [KEY])).toEqual([]);
+      expect(managerRelationOperationByRelation(RELATION)?.screenIds).toEqual([]);
     }
     expect(() => namedRetainedRelationAction(RELATION)).toThrow("EXECUTION_NAMED_PURPOSE_NOT_COMMISSIONED");
   });
 
-  it("persists source scalars exactly under declared PK and strips instance topology/other source fields", async () => {
+  it("persists the four returnable columns exactly under declared PK and strips every other source field", async () => {
     const input = source((environment, relation) => relation === RELATION ? response(environment, relation,
-      [heartbeat(environment, "TEST_ONLY-service", { instance_id: "MUST_NOT_CAPTURE", arbitrary_field: "MUST_NOT_CAPTURE" })]) : undefined);
+      [heartbeat(environment, "TEST_ONLY-service", { instance_id: "TEST_ONLY-instance", details: "MUST_NOT_CAPTURE", arbitrary_field: "MUST_NOT_CAPTURE" })]) : undefined);
     const snapshot = await capture(input);
     const relation = snapshot!.document.relations[KEY];
     expect(relation).toMatchObject({ availability: "AVAILABLE", completeness: "COMPLETE", freshness: "FRESH", as_of: TIME,
-      items: [{ fields: heartbeat("paper"), lineage: { workspace_id: WS, profile_id: profile("paper") } }] });
+      items: [{ fields: heartbeat("paper", "TEST_ONLY-service", { instance_id: "TEST_ONLY-instance" }), lineage: { workspace_id: WS, profile_id: profile("paper") } }] });
     expect(JSON.stringify(relation)).not.toContain("MUST_NOT_CAPTURE");
     expect(relation.window).toBeUndefined();
     const calls = heartbeatCalls(input); expect(calls).toHaveLength(3);
     for (const call of calls) {
-      expect(call[0]).toBe(WS); expect(call[2]).toBe("EXECUTION_COMMAND_CENTER_SCREEN"); expect(call[3]).toBe(SOURCE);
+      expect(call[0]).toBe(WS); expect(call[2]).toBe(INTERNAL_PROJECTION_SCREEN); expect(call[3]).toBe(SOURCE);
       expect(call[5]).toEqual({ limit: 200 });
       expect(call[6]).toMatchObject({ operationId: "managerServiceHeartbeatsPageV1", sourceId: SOURCE, relation: RELATION,
         maximumResponseBytes: 1048576, sourceMaximumConcurrency: 4,
@@ -108,7 +111,7 @@ describe("ELP2-04 finite heartbeat capture, not public reader commissioning", ()
     expect(gaps.rows).toEqual([]);
     for (const environment of ["paper", "sandbox", "live"] as const) {
       const current = await mirror.currentPage({ workspaceId: WS, environment, profileId: profile(environment), relationKey: KEY, limit: 20 });
-      expect(current.rows).toEqual([{ entity_key: '["TEST_ONLY-service"]', fields: heartbeat(environment) }]);
+      expect(current.rows).toEqual([{ entity_key: '["TEST_ONLY-service"]', fields: heartbeat(environment, "TEST_ONLY-service", { instance_id: "TEST_ONLY-instance" }) }]);
     }
   });
 

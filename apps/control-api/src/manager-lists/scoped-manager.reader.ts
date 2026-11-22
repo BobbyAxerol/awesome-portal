@@ -329,7 +329,10 @@ export function composeManagerItems(scope: AuthorizedExecutionReadScope, snapsho
     }
     return [row];
   }) :
-    kind === "PORTFOLIO" ? rows("portfolios") : rows("venue_accounts");
+    kind === "PORTFOLIO" ? rows("portfolios") :
+      // The Edge's venue_accounts rows carry venue_account_id, not binding_id.
+      rows("venue_accounts").map(row => row.binding_id == null && row.venue_account_id != null
+        ? { ...row, binding_id: row.venue_account_id } : row);
   const visible = resources.filter(resource => resource.kind === kind && (!bindingId || resource.id === bindingId))
     .flatMap<{ resource: typeof resources[number]; alphaVersion: string | null; portfolio: string | null }>(resource => {
       if (kind !== "ALPHA") return [{ resource, alphaVersion: null, portfolio: null }];

@@ -6,6 +6,7 @@ import { freshnessPolicies } from "../execution/environment-parity";
 import { retainedReview } from "../execution/retained-read-profile";
 import { AuthSession, PortalUser } from "../domain";
 import { ControlApiConfig, querySigningKeys } from "../config";
+import { VENUE_ACCOUNT_FIELDS } from "../execution/profile-projection.catalog";
 import { ExecutionProductReadSource } from "../execution/product-read-source";
 import { ControlPlaneQueryService, KeysetCursorCodec } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -75,10 +76,6 @@ const FINDING_FIELDS = [
 const ACCOUNT_FIELDS = [
   "account_id", "mode", "venue", "external_account_ref", "active", "state",
   "created_at", "updated_at",
-] as const;
-const VENUE_ACCOUNT_FIELDS = [
-  "venue_account_id", "binding_id", "account_id", "mode", "venue", "state",
-  "status", "active", "created_at", "updated_at",
 ] as const;
 const BROKER_SYNC_FIELDS = [
   "sync_id", "external_account_ref", "mode", "venue", "status", "synced_at", "created_at",
@@ -553,6 +550,7 @@ export class ManagerListsService {
       page("accounts").items,
       page("venue_accounts").items,
       page("broker_sync").items,
+      environment,
     );
     const sourceAsOf = oldestDate(accounts.asOf, venueAccounts.asOf, brokerSync.asOf);
     const financialCutUsable = sourceAsOf && !Number.isNaN(sourceAsOf.valueOf()) && originalPages.every(original =>
@@ -993,9 +991,18 @@ function aggregateCurrencyPnl(values: readonly { currency: string; realized: str
   });
 }
 
-function bindingRows(
+/**
+ * Bindings population. A binding is a venue account keyed by its
+ * `venue_account_id`. The Edge's venue_accounts relation is filtered by venue,
+ * not by mode, and has no mode/binding_id/state/status column: the mode and
+ * venue of each row come from public.accounts through `account_id`, never from
+ * the profile. A venue account whose account is not in the read, or whose
+ * account mode is not the requested environment, is left out (fail closed)
+ * rather than attributed to this environment by inference.
+ */
+export function bindingRows(
   accounts: readonly Record<string, unknown>[], venueAccounts: readonly Record<string, unknown>[],
-  brokerSync: readonly Record<string, unknown>[],
+  brokerSync: readonly Record<string, unknown>[], environment?: ManagerListEnvironment,
 ): BindingProjectionRecord[] {
   const accountById = new Map(accounts.flatMap((row) => {
     const id = text(row, "account_id"); return id ? [[id, row] as const] : [];
@@ -1003,20 +1010,25 @@ function bindingRows(
   const syncByRef = new Map(brokerSync.flatMap((row) => {
     const ref = text(row, "external_account_ref"); return ref ? [[ref, row] as const] : [];
   }));
-  const sourceRows = venueAccounts.length > 0 ? venueAccounts : accounts;
+  const fromVenueAccounts = venueAccounts.length > 0;
+  const sourceRows = fromVenueAccounts ? venueAccounts : accounts;
   return sourceRows.flatMap((row) => {
     const accountId = text(row, "account_id"); if (!accountId) return [];
-    const account = accountById.get(accountId) ?? row;
-    const venue = normalized(text(row, "venue") ?? text(account, "venue"), "UNKNOWN");
-    const bindingId = text(row, "binding_id", "venue_account_id") ?? `${accountId}@${venue}`;
-    const sync = syncByRef.get(text(account, "external_account_ref") ?? "");
+    const account = fromVenueAccounts ? accountById.get(accountId) : row;
+    if (!account) return [];
+    const mode = text(account, "mode");
+    if (environment && fromVenueAccounts && mode?.trim().toLowerCase() !== environment) return [];
+    const venue = normalized(text(account, "venue") ?? text(row, "venue"), "UNKNOWN");
+    const bindingId = fromVenueAccounts ? text(row, "venue_account_id") : `${accountId}@${venue}`;
+    if (!bindingId) return [];
+    const sync = syncByRef.get(text(account, "external_account_ref") ?? text(row, "external_account_ref") ?? "");
     const active = bool(row, "active") ?? bool(account, "active");
     const updatedAt = [row, account, ...(sync ? [sync] : [])]
       .map((candidate) => date(candidate, "updated_at", "synced_at", "created_at"))
       .sort((left, right) => right.valueOf() - left.valueOf())[0];
     return [{
       bindingId, accountId, venue,
-      state: normalized(text(row, "state", "status") ?? text(account, "state"), active === false ? "INACTIVE" : "ACTIVE"),
+      state: normalized(text(account, "state"), active === false ? "INACTIVE" : "ACTIVE"),
       credentialState: sync ? `SYNC_${normalized(text(sync, "status"), "UNKNOWN")}` : "NOT_PUBLISHED",
       updatedAt,
     }];

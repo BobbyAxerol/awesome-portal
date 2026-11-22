@@ -12,6 +12,12 @@ export interface ProfileProjectionBinding {
   relation: string;
   fields: readonly string[];
   /**
+   * DB-wide internal state: collected into the durable projection but never
+   * bound to a user screen, never named in a revalidation instruction and
+   * never listed as a retained-review panel.
+   */
+  internal?: true;
+  /**
    * P4-D window ladder class. Time-series relations keep a merged 30-day
    * window inside the committed snapshot (dedup by `idField`, bounded rows);
    * everything else stays the source's fresh page.
@@ -355,10 +361,18 @@ const BROKER_SYNC = [
   "sync_id", "external_account_ref", "mode", "venue", "source", "status",
   "buying_power", "currency", "synced_at", "created_at",
 ] as const;
-const VENUE_ACCOUNT = [
-  "venue_account_id", "binding_id", "account_id", "mode", "venue", "state",
-  "status", "active", "created_at", "updated_at",
+/**
+ * Edge-returnable venue_accounts columns (jsonb raw_metadata is denied and
+ * never requested). The relation has NO mode/binding_id/state/status column:
+ * mode and venue per row come from public.accounts via account_id, and the
+ * Bindings identity is venue_account_id. Shared by the projection worker,
+ * the profile reader and the Bindings list so no copy can drift.
+ */
+export const VENUE_ACCOUNT_FIELDS = [
+  "venue_account_id", "account_id", "venue", "external_account_ref", "market_type",
+  "order_category", "active", "created_at", "updated_at",
 ] as const;
+const VENUE_ACCOUNT = VENUE_ACCOUNT_FIELDS;
 const PORTFOLIO = [
   "portfolio_id", "name", "owner", "base_currency", "state", "created_at", "updated_at",
 ] as const;
@@ -423,11 +437,15 @@ const GROUP = [
   "state", "winner_leg_id", "target_quantity", "filled_quantity", "open_quantity",
   "excess_quantity", "version", "last_error", "created_at", "updated_at",
 ] as const;
-const LEG = [
+export const CONDITIONAL_LEG_FIELDS = [
   "group_id", "leg_id", "parent_leg_id", "role", "sequence", "client_order_id", "venue_order_id",
   "side", "position_side", "order_type", "quantity", "filled_quantity", "price", "trigger_price",
   "trigger_reference", "time_in_force", "good_till_date", "reduce_only", "post_only", "state",
   "average_fill_price", "version", "created_at", "updated_at",
+  // T3: the 8 additional Edge-returnable leg columns (payload and
+  // spawned_order_ids are jsonb and stay denied).
+  "condition_type", "trigger_direction", "trigger_authority", "price_protection_policy",
+  "market_evidence_ref", "valid_until_ms", "custom_condition_id", "native_algo_id",
 ] as const;
 // Exact existing generated operations, not a dynamic relation/field selector.
 // Parent-only private lineage plus the finite leg reader's current subset.
@@ -435,12 +453,17 @@ const LEG = [
 const BRACKET_PARENT = [
   "bracket_group_id", "account_id", "strategy_id", "execution_session_id", "mode", "created_at", "updated_at",
 ] as const;
+// T3: all 20 Edge-returnable columns (raw jsonb is denied).
 const BRACKET_LEG = [
-  "bracket_group_id", "leg_id", "side", "quantity", "price", "status", "created_at", "updated_at", "submitted_at",
+  "leg_id", "bracket_group_id", "leg_type", "leg_index", "client_order_id", "side", "order_type",
+  "quantity", "quantity_fraction", "price", "trigger_price", "time_in_force", "reduce_only",
+  "intent", "status", "submitted_at", "filled_at", "cancelled_at", "created_at", "updated_at",
 ] as const;
-// Source-observed technical scalars only. No component/health interpretation,
-// instance topology, public-purpose admission or history/stream activation.
-const SERVICE_HEARTBEAT = ["service_name", "last_seen_at", "status"] as const;
+// Source-observed technical scalars only (details is jsonb and denied). The
+// relation is DB-wide internal state: it has no screen binding and is never
+// rendered on a user screen by default (see INTERNAL_PROJECTION below).
+export const SERVICE_HEARTBEAT_FIELDS = ["service_name", "instance_id", "status", "last_seen_at"] as const;
+const SERVICE_HEARTBEAT = SERVICE_HEARTBEAT_FIELDS;
 const JOURNAL = [
   "command_id", "command_kind", "contract_revision", "mode", "venue", "alpha_id", "account_id",
   "client_order_id", "aggregate_key", "state", "outcome_class", "accepted_at", "dispatched_at",
@@ -452,6 +475,9 @@ const RISK_GRANT = [
 const SIZING_DECISION = [
   "decision_id", "strategy_id", "account_id", "mode", "venue", "created_at",
 ] as const;
+
+/** Placeholder screen id of an internal-only binding; not a Portal screen. */
+export const INTERNAL_PROJECTION_SCREEN = "INTERNAL_NO_SCREEN";
 
 const FLEET: readonly ProfileProjectionBinding[] = [
   bind("strategies", "EXECUTION_ALPHA_FLEET_LIST_SCREEN", "manager.strategies", "strategies", STRATEGY),
@@ -472,7 +498,8 @@ const FLEET: readonly ProfileProjectionBinding[] = [
     ["account_policy_id", "account_id", "mode", "venue", "created_at", "updated_at"]),
   bind("brackets", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-brackets", "order_brackets", BRACKET_PARENT),
   bind("bracket_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-bracket-legs", "order_bracket_legs", BRACKET_LEG),
-  bind("service_heartbeats", "EXECUTION_COMMAND_CENTER_SCREEN", "manager.current.service-heartbeats", "service_heartbeats", SERVICE_HEARTBEAT),
+  { ...bind("service_heartbeats", INTERNAL_PROJECTION_SCREEN, "manager.current.service-heartbeats", "service_heartbeats", SERVICE_HEARTBEAT),
+    internal: true },
 ];
 
 const PAPER: readonly ProfileProjectionBinding[] = [
@@ -483,7 +510,7 @@ const PAPER: readonly ProfileProjectionBinding[] = [
   bind("orders", "EXECUTION_PAPER_WORKBENCH_SCREEN", "manager.orders", "orders", ORDER),
   bind("fills", "EXECUTION_PAPER_WORKBENCH_SCREEN", "manager.fills", "fills", FILL),
   bind("conditional_groups", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.conditional-orders", "conditional_order_groups", GROUP),
-  bind("conditional_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.conditional-orders", "conditional_order_group_legs", LEG),
+  bind("conditional_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.conditional-orders", "conditional_order_group_legs", CONDITIONAL_LEG_FIELDS),
   bind("command_journal", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.command-journal", "command_journal", JOURNAL),
   bind("sizing_decisions", "EXECUTION_GATE_R1_REVIEW_SCREEN", "manager.risk", "sizing_decisions", SIZING_DECISION),
   bind("risk_grants", "EXECUTION_GATE_R2_REVIEW_SCREEN", "manager.risk", "risk_grants", RISK_GRANT),
@@ -549,7 +576,7 @@ export function profileObservationAffectedScreens(
 ): string[] {
   const changed = new Set(relationKeys);
   const direct = profileProjectionCatalog(environment)
-    .filter((binding) => changed.has(`${binding.sourceId}:${binding.relation}`))
+    .filter((binding) => !binding.internal && changed.has(`${binding.sourceId}:${binding.relation}`))
     .map((binding) => binding.screenId);
   const supplements = relationKeys.flatMap((key) => OBSERVATION_SCREEN_SUPPLEMENTS[environment][key] ?? []);
   return knownReadScreens([...direct, ...supplements]);

@@ -1,3 +1,4 @@
+import { VENUE_ACCOUNT_FIELDS } from "../execution/profile-projection.catalog";
 import { Inject, Injectable } from "@nestjs/common";
 import { AuthSession, PortalUser } from "../domain";
 import {
@@ -89,10 +90,6 @@ const ACCOUNT_SYNC_FIELDS = [
 const BROKER_SYNC_FIELDS = [
   "sync_id", "external_account_ref", "mode", "venue", "source", "status",
   "buying_power", "currency", "synced_at", "created_at",
-] as const;
-const VENUE_ACCOUNT_FIELDS = [
-  "venue_account_id", "binding_id", "account_id", "mode", "venue", "state",
-  "status", "active", "created_at", "updated_at",
 ] as const;
 const ORDER_FIELDS = [
   "order_id", "client_order_id", "venue_order_id", "trader_id", "strategy_id", "account_id",

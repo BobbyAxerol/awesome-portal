@@ -1,3 +1,4 @@
+import { CONDITIONAL_LEG_FIELDS } from "../execution/profile-projection.catalog";
 import { createHash } from "node:crypto";
 import { PAPER_OBSERVATION_POLICY } from "./observation-policy";
 import { Inject, Injectable, Optional } from "@nestjs/common";
@@ -147,12 +148,7 @@ const GROUP_FIELDS = [
   "state", "winner_leg_id", "target_quantity", "filled_quantity", "open_quantity",
   "excess_quantity", "version", "last_error", "created_at", "updated_at",
 ] as const;
-const LEG_FIELDS = [
-  "group_id", "leg_id", "parent_leg_id", "role", "sequence", "client_order_id", "venue_order_id",
-  "side", "position_side", "order_type", "quantity", "filled_quantity", "price", "trigger_price",
-  "trigger_reference", "time_in_force", "good_till_date", "reduce_only", "post_only", "state",
-  "average_fill_price", "version", "created_at", "updated_at",
-] as const;
+const LEG_FIELDS = CONDITIONAL_LEG_FIELDS;
 const RECONCILIATION_FIELDS = [
   "finding_id", "account_id", "strategy_id", "execution_session_id", "mode", "venue",
   "finding_type", "severity", "status", "created_at", "resolved_at",

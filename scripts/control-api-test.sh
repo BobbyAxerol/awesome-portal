@@ -25,6 +25,8 @@ if [[ -n "${QUALIFIED_OUTPUT_DIR}" || -n "${QUALIFIED_SOURCE_TREE}" ]]; then
   [[ "$(git -C "${ROOT_DIR}" cat-file -t "${QUALIFIED_SOURCE_TREE}")" == tree ]] || exit 2
 fi
 MAXIMUM_DATA_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v1"
+# T3: the registry compiler also reads the v2 column catalogue (additive columns).
+MAXIMUM_DATA_PACK_V2="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v2"
 EDS08_SOURCE_CONTINUITY_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1"
 # EDS-11R's checked-in named-operation compiler consumes this immutable
 # Manager census in addition to the maximum-data evidence pack.  Keep it
@@ -116,6 +118,7 @@ cp "${APP_DIR}/package.json" "${APP_DIR}/package-lock.json" "${DEPS_DIR}/"
   "${NODE_IMAGE}" npm ci --no-audit --no-fund
 test -x "${DEPS_DIR}/node_modules/.bin/tsc"
 test -f "${MAXIMUM_DATA_PACK}/MANIFEST.sha256"
+test -f "${MAXIMUM_DATA_PACK_V2}/COLUMN_SEMANTICS_CATALOG.csv"
 test -f "${EDS08_SOURCE_CONTINUITY_PACK}/MANIFEST.sha256"
 test -f "${EDS11R_MANAGER_CENSUS_PACK}/manager-surface-census.v1.json"
 
@@ -210,6 +213,7 @@ fi
   -v "${ROOT_DIR}/deploy/research-preview/native-core-templates:/core009-templates:ro" \
   -e PORTAL_CORE009_TEMPLATES_DIR=/core009-templates \
   -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
+  -v "${MAXIMUM_DATA_PACK_V2}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v2:ro" \
   -v "${EDS08_SOURCE_CONTINUITY_PACK}:/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1:ro" \
   -v "${EDS11R_MANAGER_CENSUS_PACK}:/services/portal-execution-edge-rs/contracts/manager-surface-census-v1:ro" \
   -v "${EDGE_MANAGER_V2_PACK_DIR}:/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1:ro" \
@@ -222,6 +226,7 @@ fi
   -e EDS02_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
   -e EDS08_SOURCE_CONTINUITY_PACK="/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1" \
   -e EDS11R_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
+  -e EDS11R_SOURCE_PACK_V2="/services/portal-execution-edge-rs/contracts/maximum-data-return-v2" \
   -e EDS11R_CENSUS_PACK="/services/portal-execution-edge-rs/contracts/manager-surface-census-v1" \
   -e EDGE_MANAGER_V2_PACK="/services/portal-execution-edge-rs/contracts/manager-v2-paper-read-v1" \
   -e EDGE_SERVICE_MAIN="/services/portal-execution-edge-rs/crates/edge-service/src/main.rs" \

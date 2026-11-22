@@ -148,7 +148,9 @@ describe("EDS-11R1 generated named Manager relation authority", () => {
     });
     for (const operation of EDS11R_MANAGER_RELATION_OPERATION_REGISTRY) {
       expect(operation.fields.length).toBeGreaterThan(0);
-      expect(operation.screenIds.length).toBeGreaterThan(0);
+      // service_heartbeats is the one deliberately screen-less (internal-only) operation.
+      if (operation.relation === "service_heartbeats") expect(operation.screenIds).toEqual([]);
+      else expect(operation.screenIds.length).toBeGreaterThan(0);
       expect(operation.identityFields.every((field) => operation.fields.some((candidate) => candidate.name === field))).toBe(true);
       expect(operation.fields.every((field) => ["BOOLEAN", "INTEGER", "DECIMAL", "TEXT", "TIMESTAMP"].includes(field.kind))).toBe(true);
     }

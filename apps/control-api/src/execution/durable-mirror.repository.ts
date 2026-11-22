@@ -1039,7 +1039,8 @@ function dimensionsOf(fields: Record<string, ProjectionScalar>): {
     deploymentId: scalarText(fields.deployment_id),
     accountId: scalarText(fields.account_id),
     portfolioId: scalarText(fields.portfolio_id),
-    bindingId: scalarText(fields.binding_id),
+    // The Edge's venue_accounts rows have no binding_id: the venue account is the binding.
+    bindingId: scalarText(fields.binding_id) ?? scalarText(fields.venue_account_id),
   };
 }
 

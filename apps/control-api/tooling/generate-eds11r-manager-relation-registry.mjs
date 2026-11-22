@@ -20,6 +20,12 @@ const sourcePack = process.env.EDS11R_SOURCE_PACK ?? join(
   repositoryRoot,
   "services/portal-execution-edge-rs/contracts/maximum-data-return-v1",
 );
+// T3: the v2 pack carries columns the Edge now returns that the v1 pack predates
+// (see COLUMN_SUPPLEMENT_FROM_V2 below). It is read additively only.
+const sourcePackV2 = process.env.EDS11R_SOURCE_PACK_V2 ?? join(
+  repositoryRoot,
+  "services/portal-execution-edge-rs/contracts/maximum-data-return-v2",
+);
 const censusPack = process.env.EDS11R_CENSUS_PACK ?? join(
   repositoryRoot,
   "services/portal-execution-edge-rs/contracts/manager-surface-census-v1",
@@ -170,7 +176,6 @@ const screenCoverageOverrides = Object.freeze({
   "public.reconciliation_observation_buckets": ["EXECUTION_INCIDENT_DETAIL_SCREEN", "EXECUTION_OPERATIONS_QUEUE_SCREEN"],
   "public.risk_grants": ["EXECUTION_ALPHA_360_SCREEN", "EXECUTION_GATE_R2_REVIEW_SCREEN"],
   "public.risk_profiles": ["EXECUTION_ALPHA_360_SCREEN", "EXECUTION_GATE_R2_REVIEW_SCREEN"],
-  "public.service_heartbeats": ["EXECUTION_COMMAND_CENTER_SCREEN"],
   "public.settlement_calendars": ["EXECUTION_PAPER_WORKBENCH_SCREEN", "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN"],
   "public.sizing_decisions": ["EXECUTION_ALPHA_360_SCREEN", "EXECUTION_GATE_R1_REVIEW_SCREEN"],
   "public.strategies": ["EXECUTION_ALPHA_360_SCREEN", "EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
@@ -179,8 +184,26 @@ const screenCoverageOverrides = Object.freeze({
   "public.venues": ["EXECUTION_ACCOUNT_BROKER_360_SCREEN", "EXECUTION_PAPER_WORKBENCH_SCREEN"],
 });
 
+/**
+ * Relations whose column list is widened with columns that exist only in the v2
+ * pack (never replacing a v1 column). Same scalar/sensitivity filter as v1, so
+ * the jsonb columns (payload, spawned_order_ids) stay out.
+ * conditional_order_group_legs gains condition_type, trigger_direction,
+ * trigger_authority, price_protection_policy, market_evidence_ref,
+ * valid_until_ms, custom_condition_id and native_algo_id.
+ */
+const COLUMN_SUPPLEMENT_FROM_V2 = Object.freeze(["public.conditional_order_group_legs"]);
+
+/**
+ * SCREEN_BOUND in the census (so it keeps its named operation and route) but
+ * deliberately bound to NO user screen: DB-wide internal state that the owner
+ * has not decided to show. screen_ids is emitted empty for these.
+ */
+const internalOnlyRelations = Object.freeze(["public.service_heartbeats"]);
+
 const relationCensus = read(sourcePack, "DATABASE_RELATION_CENSUS.csv");
 const columnCatalogue = read(sourcePack, "COLUMN_SEMANTICS_CATALOG.csv");
+const columnCatalogueV2 = read(sourcePackV2, "COLUMN_SEMANTICS_CATALOG.csv");
 const managerCensus = readJson(censusPack, "manager-surface-census.v1.json");
 
 const relationMetadata = new Map();
@@ -193,6 +216,14 @@ for (const row of parseCsv(columnCatalogue.body, "COLUMN_SEMANTICS_CATALOG.csv")
   const fields = columnsByRelation.get(relationId) ?? [];
   fields.push(row);
   columnsByRelation.set(relationId, fields);
+}
+
+for (const row of parseCsv(columnCatalogueV2.body, "COLUMN_SEMANTICS_CATALOG.csv (v2)")) {
+  const relationId = `${row.schema}.${row.relation}`;
+  if (!COLUMN_SUPPLEMENT_FROM_V2.includes(relationId)) continue;
+  const fields = columnsByRelation.get(relationId);
+  if (!fields) throw new Error(`${relationId}: v2 supplement has no v1 relation`);
+  if (!fields.some((existing) => existing.column === row.column)) fields.push(row);
 }
 
 const allRelations = [...managerCensus.body.relations]
@@ -253,10 +284,13 @@ const operations = screenBound.map((entry) => {
     throw new Error(`${relationId}: no safe identity selector`);
   }
   const relationName = relation[1];
-  const screenIds = entry.screen_ids.length > 0
-    ? [...entry.screen_ids]
-    : screenCoverageOverrides[relationId];
-  if (!screenIds?.length) throw new Error(`${relationId}: SCREEN_BOUND relation has no Portal screen binding`);
+  const internalOnly = internalOnlyRelations.includes(relationId);
+  const screenIds = internalOnly
+    ? []
+    : entry.screen_ids.length > 0
+      ? [...entry.screen_ids]
+      : screenCoverageOverrides[relationId];
+  if (!internalOnly && !screenIds?.length) throw new Error(`${relationId}: SCREEN_BOUND relation has no Portal screen binding`);
   return {
     operation_id: `manager${pascalCase(relationName)}PageV1`,
     route_id: kebabCase(relationName),
@@ -306,6 +340,7 @@ const rendered = [
       manager_surface_census: managerCensus.digest,
       database_relation_census: sha256(relationCensus.body),
       column_semantics_catalogue: sha256(columnCatalogue.body),
+      column_semantics_catalogue_v2: sha256(columnCatalogueV2.body),
     },
     relation_count: allRelations.length,
     screen_bound_relation_count: operations.length,

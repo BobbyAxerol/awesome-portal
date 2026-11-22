@@ -41,6 +41,7 @@ done
 mkdir -p "${OUT}"; chmod 700 "${OUT}"
 
 MAXIMUM_DATA_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v1"
+MAXIMUM_DATA_PACK_V2="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v2"
 EDS08_SOURCE_CONTINUITY_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1"
 EDS11R_MANAGER_CENSUS_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/manager-surface-census-v1"
 SUFFIX="m$$"
@@ -118,6 +119,7 @@ for rep in $(seq 1 "${REPS}"); do
     -v "${DEPS_DIR}:/cell" -v "${REP_DIR}:/out" -v "${ROOT_DIR}/packages/contracts:/contracts:ro" -e PORTAL_CONTRACTS_DIR=/contracts \
     -v "${ROOT_DIR}/deploy/research-preview/native-core-templates:/core009-templates:ro" -e PORTAL_CORE009_TEMPLATES_DIR=/core009-templates \
     -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
+    -v "${MAXIMUM_DATA_PACK_V2}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v2:ro" \
     -v "${EDS08_SOURCE_CONTINUITY_PACK}:/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1:ro" \
     -v "${EDS11R_MANAGER_CENSUS_PACK}:/services/portal-execution-edge-rs/contracts/manager-surface-census-v1:ro" \
     --tmpfs /tmp:rw,exec,mode=1777,size=512m -w /cell/work -e HOME=/tmp -e npm_config_cache=/tmp/.npm \
@@ -125,6 +127,7 @@ for rep in $(seq 1 "${REPS}"); do
     -e EDS02_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
     -e EDS08_SOURCE_CONTINUITY_PACK="/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1" \
     -e EDS11R_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
+    -e EDS11R_SOURCE_PACK_V2="/services/portal-execution-edge-rs/contracts/maximum-data-return-v2" \
     -e EDS11R_CENSUS_PACK="/services/portal-execution-edge-rs/contracts/manager-surface-census-v1" \
     "${NODE_IMAGE}" sh -c '
       # No tsc build: vitest transpiles the sources itself, and tsc runs out of heap inside a 2 GiB cell (first attempt, exit 97).

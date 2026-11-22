@@ -561,7 +561,7 @@ function scopedResourceProfile(profile: LoadedProfile, scope: AuthorizedExecutio
             .map(field => [field, row.fields[field]])) }));
       rows = [...rows, ...shells];
     }
-    if (alias === "venue_accounts") rows = rows.filter(row => typeof row.fields.binding_id === "string");
+    if (alias === "venue_accounts") rows = rows.filter(row => typeof row.fields.venue_account_id === "string" || typeof row.fields.binding_id === "string");
     const unsafeMoney = normalized.some(row => projectionRowVisible(scope, row.fields) &&
       Object.keys(row.fields).some(field => SCOPED_FINANCIAL_FIELDS.has(field) && !retainedFieldAllowed(scope, field) && !retainedDetailFieldAllowed(scope, field)));
     relations[key] = { ...source, as_of: null, completeness: "PARTIAL", reason_code: unsafeMoney ? "EXECUTION_READ_FIELD_POLICY_PENDING" :
@@ -1243,7 +1243,9 @@ function tupleKey(row: { strategyId?: string; accountId?: string; mode?: string;
 }
 
 function canonicalBindingId(row: Record<string, ProjectionScalar>): string | null {
-  const declared = text(row, "binding_id");
+  // The Edge's venue_accounts relation has no binding_id: the binding is the
+  // venue account itself. binding_id is read only from earlier retained rows.
+  const declared = text(row, "venue_account_id") ?? text(row, "binding_id");
   if (declared) return declared;
   const accountId = text(row, "account_id");
   const venue = text(row, "venue");
@@ -1677,7 +1679,8 @@ function resourceSummary(
     binding_id: resourceId,
     account_id: summaryText(parent, "account_id"),
     venue: summaryText(parent, "venue"),
-    state: summaryText(parent, "state") ?? summaryText(parent, "status") ?? "UNKNOWN",
+    state: summaryText(parent, "state") ?? summaryText(parent, "status") ??
+      (parent.active === true ? "ACTIVE" : parent.active === false ? "INACTIVE" : "UNKNOWN"),
     credential_state: bindingCredentialState(data("broker_sync"), relations.get("broker_sync")),
     updated_at: summaryText(parent, "updated_at") ?? summaryText(parent, "created_at"),
     account: data("accounts")[0] ?? null,

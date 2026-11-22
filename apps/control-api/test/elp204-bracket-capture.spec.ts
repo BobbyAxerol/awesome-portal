@@ -96,7 +96,10 @@ describe("ELP2-04 bounded exact bracket capture", () => {
       expect(bindings.map(binding => binding.sourceId + ":" + binding.relation)).toEqual([PARENT, CHILD]);
       expect(bindings.every(binding => binding.ladder === undefined)).toBe(true);
       expect(bindings[0].fields).not.toContain("error_message");
-      expect(bindings[1].fields).not.toContain("client_order_id");
+      // T3: all 20 Edge-returnable leg columns; raw jsonb stays denied.
+      expect(bindings[1].fields).toHaveLength(20);
+      expect(bindings[1].fields).toEqual(expect.arrayContaining(["client_order_id", "trigger_price", "leg_type", "intent", "filled_at"]));
+      expect(bindings[1].fields).not.toContain("raw");
       expect(profileObservationAffectedScreens(environment, [PARENT, CHILD])).toContain("EXECUTION_FULL_BLOTTER_SCREEN");
     }
   });
@@ -104,14 +107,14 @@ describe("ELP2-04 bounded exact bracket capture", () => {
   it("atomically persists both exact aliases and declared PKs without fake mirror gaps or private diagnostics", async () => {
     const input = source((environment, relation) => relation === "order_brackets"
       ? response(environment, relation, [parent(environment, "same-bracket", { error_message: "MUST_NOT_CAPTURE", risk_grant_id: "MUST_NOT_CAPTURE" })])
-      : relation === "order_bracket_legs" ? response(environment, relation, [{ ...leg(), client_order_id: "MUST_NOT_CAPTURE", trigger_price: "90000" }]) : undefined);
+      : relation === "order_bracket_legs" ? response(environment, relation, [{ ...leg(), client_order_id: "TEST_ONLY-coid", trigger_price: "90000", raw: "MUST_NOT_CAPTURE" }]) : undefined);
     const snapshot = await capture(input);
     expect(snapshot?.document.relations[PARENT]).toMatchObject({ availability: "AVAILABLE", completeness: "COMPLETE",
       items: [{ fields: { bracket_group_id: "same-bracket", account_id: "paper-account", strategy_id: null } }] });
     expect(snapshot?.document.relations[CHILD]).toMatchObject({ availability: "AVAILABLE", completeness: "COMPLETE",
-      items: [{ fields: { leg_id: "1", quantity: "0", price: "12345678901234567890.0001" } }] });
+      items: [{ fields: { leg_id: "1", quantity: "0", price: "12345678901234567890.0001", client_order_id: "TEST_ONLY-coid", trigger_price: "90000" } }] });
     expect(JSON.stringify(snapshot?.document.relations[PARENT])).not.toContain("MUST_NOT_CAPTURE");
-    expect(JSON.stringify(snapshot?.document.relations[CHILD])).not.toMatch(/MUST_NOT_CAPTURE|trigger_price/);
+    expect(JSON.stringify(snapshot?.document.relations[CHILD])).not.toContain("MUST_NOT_CAPTURE");
     const calls = input.relationForProjection.mock.calls.filter(call => call[4] === "order_brackets" || call[4] === "order_bracket_legs");
     expect(calls).toHaveLength(6);
     for (const call of calls) {

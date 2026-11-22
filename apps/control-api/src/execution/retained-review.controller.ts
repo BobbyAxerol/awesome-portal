@@ -81,7 +81,7 @@ export class ExecutionRetainedReviewController {
       const snapshot = await this.projections.rawSnapshot(principal.workspaceId, environment, profile);
       if (snapshot) snapshots.push({ environment, profile, snapshot });
       const panels: RetainedContextPanelV2[] = [];
-      for (const binding of profileProjectionCatalog(environment)) {
+      for (const binding of profileProjectionCatalog(environment).filter(candidate => !candidate.internal)) {
         const key = `${binding.sourceId}:${binding.relation}`;
         const source = snapshot?.document.relations[key];
         const base: RetainedContextPanelV2 = { panel_id: binding.key, screen_id: binding.screenId,
@@ -161,7 +161,7 @@ export class ExecutionRetainedReviewController {
       const ranges=new Map(history.rows.map(row=>[row.relation_key,row]));
       profiles.push({environment,profile_id:profile,source_as_of_ms:ms(source?.source_as_of),
         snapshot_observed_ms:ms(source?.last_successful_refresh_at),source_payload_digest:source?.payload_digest??null,
-        freshness:"STALE",completeness:"PARTIAL",panels:profileProjectionCatalog(environment).map(binding=>{
+        freshness:"STALE",completeness:"PARTIAL",panels:profileProjectionCatalog(environment).filter(candidate=>!candidate.internal).map(binding=>{
           const key=`${binding.sourceId}:${binding.relation}`,original=source?.source_groups?.[key];
           const entity=current.get(key),range=ranges.get(key);
           const snapshotRows=original?.availability==="AVAILABLE"?Number(original.count):0;
