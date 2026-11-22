@@ -66,6 +66,9 @@ def test_native_fixed_child_cannot_widen_any_admitted_resource_cap(tmp_path: Pat
         supervisor.run_p04_delta_qualification(receipt,limits=replace(ResearchChildLimits(),**{field:value}))
 
 
+@pytest.mark.research_sandbox
+
+
 def test_p06_t05_t08_actual_quantbt_child_is_separate_network_pid_and_resource_bounded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The P06 child is a process namespace, not `asyncio.to_thread` theatre."""
 

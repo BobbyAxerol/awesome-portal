@@ -100,7 +100,7 @@
     {
       "id": "ci_qualification_gate",
       "file": ".github/workflows/ci.yml",
-      "sha256": "sha256:3bfdc09889b3ee9ddb8f3a1ac5c52494636c213ba24e24ed3c6fa91419e4b268"
+      "sha256": "sha256:d32fea611157a527fbed7d1983f5e0dfd59ccafa969798dbc9d8944fa4ac0c8e"
     },
     {
       "id": "cosign_signature_adapter",

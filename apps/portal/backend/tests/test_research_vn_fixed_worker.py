@@ -173,7 +173,9 @@ def test_snapshot_producer_preserves_real_observed_tape_through_child_and_p05_re
                 num_trades=result["num_trades"], bars=result["bars"], elapsed_seconds=1, peak_rss_bytes=1,
                 cpu_seconds=1, enforced_limits={"cpu_seconds":45}, evidence_source=result["evidence_source"],
                 fixed_replay_source=result["fixed_replay_source"], fixed_replay_path=receipt.market_path.parent / "fixed-replay.parquet",
-                imported_source_digest=None, is_qualification_source=None, is_qualification_path=None)
+                imported_source_digest=None, is_qualification_source=None, is_qualification_path=None,
+                native_execution=None, native_optimization_path=None,
+                window_execution_source=None, window_execution_path=None)
     executor = ResearchRunProducerExecutor(snapshots=snapshots, supervisor=RecordingChild(), market_root=tmp_path / "market")
     result = executor._execute_sync(request, tmp_path / "output")
     assert result["status"] == "COMPLETED"

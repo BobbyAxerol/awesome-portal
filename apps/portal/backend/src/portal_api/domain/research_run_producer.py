@@ -234,9 +234,15 @@ class ResearchRunProducerEnvelope(PortalModel):
     def validate_bounded_requested_spec(self) -> "ResearchRunProducerEnvelope":
         # Registry identity is bounded and image-owned; arbitrary strings are
         # never a route to an unknown adapter or the legacy default profile.
-        execution_recipe(self.execution_profile_id)
-        admitted_early_stopping(self.requested_spec,
-            optimizing=execution_recipe(self.execution_profile_id)["public_profile"]["trial_count"]["max"] > 1)
+        # The what-if grid and the pinned final audit are the two utility
+        # profiles: bounded by their own constants, they carry no registry
+        # recipe (the FULL-03 generator treats them as utilities) and never
+        # search, so early stopping does not apply to them.
+        if self.is_whatif or self.is_final_audit:
+            optimizing = False
+        else:
+            optimizing = execution_recipe(self.execution_profile_id)["public_profile"]["trial_count"]["max"] > 1
+        admitted_early_stopping(self.requested_spec, optimizing=optimizing)
         encoded = json.dumps(
             self.requested_spec,
             sort_keys=True,

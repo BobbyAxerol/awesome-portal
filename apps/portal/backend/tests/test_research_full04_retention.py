@@ -140,6 +140,18 @@ def test_full04_native_mode_facts_and_five_private_audits_are_in_p05_custody(nat
         assert summary["summary_analytics_v2"]["metrics"]["benchmark_return_fraction"]["value"] == source_v2["metrics"]["benchmark_return_fraction"]["value"]
 
 
+class _WindowExecutionApi(FakeControlApi):
+    """The shared fake predates the window-execution ingress; ack it as the real endpoint does."""
+
+    @staticmethod
+    def answer(operation, body):
+        if operation == "window-execution/batches":
+            return {"state": "ACCEPTED", "row_count": len(body["rows"])}
+        if operation == "window-execution/seal":
+            return {"state": "SEALED", "companion_digest": body["companion_digest"]}
+        return FakeControlApi.answer(operation, body)
+
+
 def test_full04_mode5_ordinary_retention_uses_native_fullspan_not_requested_oos(native_export, tmp_path):
     method, child, _, raw, _, _, _, _, _ = native_export
     if method != "mode5-global":
@@ -156,7 +168,7 @@ def test_full04_mode5_ordinary_retention_uses_native_fullspan_not_requested_oos(
     bind_full03_work(doc)
     request = ResearchRunProducerRequest.model_validate(doc)
     source_config_before = (raw / "config.json").read_bytes()
-    with FakeControlApi() as api:
+    with _WindowExecutionApi() as api:
         result = ResearchCurrentSourceRetentionClient(endpoint=api.origin,
             secret="full04-ordinary-retention-unit-secret", sleep=lambda _: None).retain(
             request=request, source_root=raw.parent, artifact_root=tmp_path,

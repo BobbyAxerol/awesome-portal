@@ -533,6 +533,13 @@
               ],
               "title": "Data Start"
             },
+            "embargo_bars": {
+              "default": 0,
+              "maximum": 10000.0,
+              "minimum": 0.0,
+              "title": "Embargo Bars",
+              "type": "integer"
+            },
             "fill_value": {
               "default": 0.0,
               "title": "Fill Value",
@@ -543,6 +550,64 @@
               "default": "carry",
               "title": "Fold Boundary Position Policy",
               "type": "string"
+            },
+            "inner_min_folds": {
+              "default": 2,
+              "maximum": 16.0,
+              "minimum": 2.0,
+              "title": "Inner Min Folds",
+              "type": "integer"
+            },
+            "inner_split_frequency": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "weekly",
+                    "monthly",
+                    "quarterly"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inner Split Frequency"
+            },
+            "inner_train_window": {
+              "anyOf": [
+                {
+                  "maxLength": 8,
+                  "pattern": "^[1-9][0-9]{0,4}(D|h)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inner Train Window"
+            },
+            "inner_window_mode": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "expanding",
+                    "rolling"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inner Window Mode"
+            },
+            "label_horizon_bars": {
+              "default": 0,
+              "maximum": 10000.0,
+              "minimum": 0.0,
+              "title": "Label Horizon Bars",
+              "type": "integer"
             },
             "min_test_bars": {
               "default": 1,
@@ -935,6 +1000,13 @@
               "default": 0,
               "minimum": 0.0,
               "title": "Optuna Trials",
+              "type": "integer"
+            },
+            "purge_bars": {
+              "default": 0,
+              "maximum": 10000.0,
+              "minimum": 0.0,
+              "title": "Purge Bars",
               "type": "integer"
             },
             "random_seed": {

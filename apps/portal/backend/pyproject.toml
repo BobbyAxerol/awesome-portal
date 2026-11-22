@@ -40,3 +40,6 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src", ".."]
 addopts = "-q"
+markers = [
+  "research_sandbox: needs a real research sandbox (shared-libpython Python, working unshare user/net/mount namespaces, quantbt and data_loader importable); skipped with a reason when the machine lacks one",
+]

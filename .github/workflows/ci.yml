@@ -139,7 +139,8 @@ jobs:
     needs: integration
     if: ${{ always() && (inputs.update_visual_snapshots == true || needs.integration.result == 'success') }}
     runs-on: [self-hosted, linux, x64, portal-ci]
-    timeout-minutes: 60
+    # 782 Playwright tests measured ~50 minutes; 60 left no headroom under load.
+    timeout-minutes: 75
 
     steps:
       - name: Check out Portal source

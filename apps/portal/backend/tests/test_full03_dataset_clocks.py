@@ -111,6 +111,9 @@ def test_full03_loader_declaration_is_authority_not_static_portal_menu():
             start="2025-01-01T00:00:00Z", end_exclusive="2025-01-01T01:00:00Z"))
 
 
+@pytest.mark.research_sandbox(needs=("data_loader",))
+
+
 def test_full03_installed_rc3_fixed_interval_grammar_matches_discovery():
     import data_loader
     for native in NATIVE_INTERVALS:

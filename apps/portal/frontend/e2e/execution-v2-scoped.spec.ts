@@ -185,6 +185,8 @@ test("FIXTURE_LAB · slice @1280: the fixture buttons and the select are reachab
 });
 
 test("FIXTURE_LAB · slice @1280: idle fanout - no request while idle or hidden, and showing the tab again starts nothing", async ({ page, baseURL }) => {
+  // advance() makes ~1200 round trips with a real 15 ms wait each; allow for CI load.
+  test.setTimeout(180_000);
   await openLane(page, 1280, "install");
   const net = apiMeter(page);
   await openSlice(page);

@@ -126,7 +126,9 @@ def _spec(payload: dict) -> dict:
 @pytest.mark.parametrize("mutate, message", [
     (lambda p: p["research"].__setitem__("execution_profile_digest", "0" * 64), "digest"),
     (lambda p: p["research"].__setitem__("execution_profile_digest", None), "digest"),
-    (lambda p: p["research"].__setitem__("execution_profile_id", "p10.other.v1"), "execution_profile_id"),
+    # FULL-03 made the profile id a registry-bounded string: an unknown id is still
+    # refused, now with the registry error instead of a Literal mismatch.
+    (lambda p: p["research"].__setitem__("execution_profile_id", "p10.other.v1"), "execution_profile_id|unknown execution recipe"),
     (lambda p: p["research"].__setitem__("p04_parameters", {
         "window": 32, "rsi_l": 20, "signalLength": 9, "len_atr1": 10,
         "len_atr2": 42, "rvol": 1.6, "len_vol": 16, "slpercent": 1.3,
@@ -200,7 +202,10 @@ def test_w1_child_task_allowlist(tmp_path: Path, clean_child_environment: None) 
     })
 
 
-def test_w1_child_refuses_output_root_escape(tmp_path: Path, clean_child_environment: None) -> None:
+def test_w1_child_refuses_output_root_escape(tmp_path: Path, clean_child_environment: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The guard under test is the child-tmpfs check; CI sets TMPDIR to the runner temp
+    # that contains tmp_path, so point it elsewhere (the child sets its own TMPDIR).
+    monkeypatch.setenv("TMPDIR", "/nonexistent-child-tmpfs")
     receipt_dir = tmp_path / "work"
     (receipt_dir / "output").mkdir(parents=True)
     elsewhere = tmp_path / "elsewhere"
@@ -221,7 +226,10 @@ def test_w1_child_refuses_output_root_escape(tmp_path: Path, clean_child_environ
         research_child.execute_receipt(_child_receipt(receipt_dir / "output"), receipt_dir=receipt_dir)
 
 
-def test_w1_child_refuses_a_different_profile_digest(tmp_path: Path, clean_child_environment: None) -> None:
+def test_w1_child_refuses_a_different_profile_digest(tmp_path: Path, clean_child_environment: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The guard under test is the child-tmpfs check; CI sets TMPDIR to the runner temp
+    # that contains tmp_path, so point it elsewhere (the child sets its own TMPDIR).
+    monkeypatch.setenv("TMPDIR", "/nonexistent-child-tmpfs")
     (tmp_path / "output").mkdir()
     with pytest.raises(ValueError, match="digest"):
         research_child.execute_receipt(
@@ -270,6 +278,9 @@ def _golden_wfo_receipt(tmp_path: Path, suffix: str) -> DeltaWfoChildReceipt:
         data_end_exclusive_utc_ms=GOLDEN_END_MS,
         first_oos_utc_ms=GOLDEN_SPLIT_MS,
     )
+
+
+@pytest.mark.research_sandbox
 
 
 def test_w1_supervisor_runs_real_wfo_child_under_wfo_limits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -372,6 +383,9 @@ def test_w1_producer_flag_off_refuses_before_any_child(tmp_path: Path, monkeypat
         executor._execute_sync(request, tmp_path / "engine")
 
 
+@pytest.mark.research_sandbox
+
+
 def test_w1_producer_runs_real_wfo_child_and_stages_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _enable_wfo(monkeypatch)
     snapshots, identity = _snapshot(tmp_path)
@@ -444,6 +458,9 @@ def _journal_events(registry_root: Path, run_id: str, attempt_id: str) -> list[d
         registry_root, run_id=run_id, attempt_id=attempt_id, lease_epoch=1, planned_trials=3, cpu_cap_seconds=120,
     )
     return journal.events_after(0)["events"]
+
+
+@pytest.mark.research_sandbox
 
 
 @pytest.mark.anyio

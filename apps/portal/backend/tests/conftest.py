@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import functools
+import importlib.util
+import os
+import shutil
+import subprocess
+import sys
 from datetime import UTC, datetime
 
 import numpy as np
@@ -81,3 +87,71 @@ def run_request(parameter_space: ParameterSpaceConfig) -> PortalRunRequest:
         account=AccountConfig(),
         execution=ExecutionConfig(),
     )
+
+
+_SANDBOX_HOW = (
+    "the research gate (scripts/research-loop-v11/test-*.sh) runs it with the lockfile-aligned "
+    "apps/portal/.venv Python (shared libpython resolvable without LD_LIBRARY_PATH, quantbt-engine "
+    "and data_loader installed) on a host that permits `unshare -Urnmpf --mount-proc`"
+)
+
+
+@functools.lru_cache(maxsize=None)
+def _missing_for_child_launcher() -> tuple[str, ...]:
+    """What the P06 child launcher needs: a runnable Python and namespaces."""
+
+    missing: list[str] = []
+    # The child is launched with a scrubbed environment (no LD_LIBRARY_PATH),
+    # so libpython must resolve from the default loader configuration.
+    try:
+        ldd = subprocess.run(
+            ["ldd", sys.executable], env={"PATH": os.defpath}, capture_output=True, text=True, timeout=30
+        )
+        if "not found" in ldd.stdout:
+            lines = [line.strip() for line in ldd.stdout.splitlines() if "not found" in line]
+            missing.append("a Python whose shared libpython resolves without LD_LIBRARY_PATH (" + "; ".join(lines) + ")")
+    except (OSError, subprocess.SubprocessError):
+        pass  # no ldd: static Python or unknown; let the real child decide
+    unshare = shutil.which("unshare")
+    if unshare is None:
+        missing.append("the `unshare` binary")
+    else:
+        try:
+            probe = subprocess.run(
+                [unshare, "-Urnmpf", "--mount-proc", "true"], capture_output=True, timeout=30
+            )
+            if probe.returncode != 0:
+                missing.append("permission for `unshare -Urnmpf --mount-proc` (user/net/mount namespaces)")
+        except (OSError, subprocess.SubprocessError):
+            missing.append("a working `unshare -Urnmpf --mount-proc`")
+    try:
+        from portal_api.adapters.quantbt import QUANTBT_DISTRIBUTION, QUANTBT_ENGINE_VERSION
+        from importlib import metadata
+
+        installed = metadata.version(QUANTBT_DISTRIBUTION)
+        if installed != QUANTBT_ENGINE_VERSION:
+            missing.append(f"{QUANTBT_DISTRIBUTION}=={QUANTBT_ENGINE_VERSION} (found {installed})")
+    except Exception:  # not installed, or adapter not importable
+        missing.append("an installed quantbt-engine at the pinned version")
+    return tuple(missing)
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip ``research_sandbox`` tests, with a reason, only where the sandbox is absent.
+
+    ``@pytest.mark.research_sandbox`` = real namespace child; add
+    ``needs=("data_loader",)`` for tests that import the reader in-process.
+    """
+
+    for item in items:
+        marker = item.get_closest_marker("research_sandbox")
+        if marker is None:
+            continue
+        missing = list(_missing_for_child_launcher())
+        for module in marker.kwargs.get("needs", ()):
+            if importlib.util.find_spec(module) is None:
+                missing.append(f"an importable `{module}`")
+        if missing:
+            item.add_marker(pytest.mark.skip(
+                reason="research_sandbox: this machine lacks " + ", ".join(missing) + "; " + _SANDBOX_HOW
+            ))
