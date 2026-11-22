@@ -16,6 +16,13 @@ command -v curl >/dev/null 2>&1 || {
   exit 1
 }
 
+# The reviewed Postgres config is bind-mounted read-only and read by the container's
+# postgres user (uid 70, not the checkout owner). A runner with UMask=0077 (the CI
+# runner) checks it out as 0600, and postgres then exits at once with "could not open
+# configuration file ... Permission denied" (dev CI 45035355985, both attempts). The
+# file holds no secret, so make it world-readable here instead of depending on the umask.
+chmod a+r "${ROOT_DIR}/deploy/postgres/portal.conf"
+
 # Use a dedicated project/port by default so this never stops a developer's
 # normal `portal` stack. Callers may override all values explicitly.
 export PORTAL_STACK_NAME="${PORTAL_STACK_NAME:-portal-smoke}"
@@ -217,11 +224,23 @@ SELECT
   'SMOKE-R1', :'workspace_id', 'R1', 'ALPHA_VERSION', 'smoke-alpha-v1',
   'Smoke alpha v1', 'SMOKE-RC-1', 'RESEARCH', 'R1', user_id, username,
   user_id, username, 'PENDING', 'approval.v3', 1,
-  'sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
+  'sha256:14757cc36560afa4e27d33323bbf791d437829f90f8989a6c008836c78b85d02',
   true, 0, NULL, now() + interval '6 hours', now() + interval '48 hours',
   now(), now()
 FROM portal_users
 WHERE username = 'stan';
+
+-- The decision path (governance.repository.ts, 5ca9d1671) refuses an APPROVE over an
+-- empty manifest (EVIDENCE_INCOMPLETE), so the request carries one evidence record. Its
+-- manifest hash is computeEvidenceManifestHash over exactly this row (canonical JSON,
+-- sorted keys, captured_at as ISO-8601 with milliseconds).
+INSERT INTO governance_approval_evidence
+  (evidence_id, approval_id, ordinal, kind, label, display_value, sha256,
+   schema_version, source_authority, required, captured_at, retention_class, access_policy)
+VALUES
+  ('SMOKE-R1-E1', 'SMOKE-R1', 0, 'REPORT', 'Smoke evidence', 'smoke',
+   'sha256:cd9e1424a06a72db63cfbc66989a55b4098f1ff195f2a2099f56220910e42fa1',
+   'smoke.evidence.v1', 'RESEARCH', true, '2026-01-01T00:00:00.000Z', 'SMOKE', 'SMOKE');
 SQL
 
 printf 'Smoke: read Phase 1 Approval Inbox and R1 evidence envelope\n'
@@ -238,7 +257,7 @@ r1_detail="$(curl --fail-with-body --silent --show-error --cookie "${cookie_file
   exit 1
 }
 
-plan_payload="{\"schema_version\":\"governance.r1-decision-plan-request.v1\",\"workspace_id\":\"${workspace_id}\",\"request_key\":\"smoke:r1:approve\",\"command_type\":\"GOVERNANCE_R1_DECISION\",\"command_version\":1,\"target\":{\"approval_id\":\"SMOKE-R1\"},\"expected_approval_version\":1,\"payload\":{\"decision\":\"APPROVE\",\"reason\":\"Independent SGP operational smoke review.\",\"evidence_hashes\":[]}}"
+plan_payload="{\"schema_version\":\"governance.r1-decision-plan-request.v1\",\"workspace_id\":\"${workspace_id}\",\"request_key\":\"smoke:r1:approve\",\"command_type\":\"GOVERNANCE_R1_DECISION\",\"command_version\":1,\"target\":{\"approval_id\":\"SMOKE-R1\"},\"expected_approval_version\":1,\"payload\":{\"decision\":\"APPROVE\",\"reason\":\"Independent SGP operational smoke review.\",\"evidence_hashes\":[\"sha256:cd9e1424a06a72db63cfbc66989a55b4098f1ff195f2a2099f56220910e42fa1\"]}}"
 csrf_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
   --request POST "http://127.0.0.1:${PORTAL_HTTP_PORT}/api/v1/execution/commands/plans" \
   --cookie "${cookie_file}" --header 'Content-Type: application/json' \
