@@ -5,7 +5,8 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
   "input_digests": {
     "manager_surface_census": "sha256:cb577bdd67eb8ffaf8ec8bb73ac273f064623f2acc7210cc8b2955439411cfe3",
     "database_relation_census": "sha256:a869e0823908788d91fba5d1579634097f7fb5b6e08c4195d25a56cb7d8926f4",
-    "column_semantics_catalogue": "sha256:1cd136b941061dc354a22d7caed2d3d14eb08d897ef80349be9ada4cc3237a72"
+    "column_semantics_catalogue": "sha256:1cd136b941061dc354a22d7caed2d3d14eb08d897ef80349be9ada4cc3237a72",
+    "column_semantics_catalogue_v2": "sha256:5a61f5d1e4d6a4fd32b80ec23b1599bc44b14930024c9097209ad34116e72b6e"
   },
   "relation_count": 96,
   "screen_bound_relation_count": 54,
@@ -1211,8 +1212,16 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
           "kind": "TEXT"
         },
         {
+          "name": "condition_type",
+          "kind": "TEXT"
+        },
+        {
           "name": "created_at",
           "kind": "TIMESTAMP"
+        },
+        {
+          "name": "custom_condition_id",
+          "kind": "TEXT"
         },
         {
           "name": "filled_quantity",
@@ -1228,6 +1237,14 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         },
         {
           "name": "leg_id",
+          "kind": "TEXT"
+        },
+        {
+          "name": "market_evidence_ref",
+          "kind": "TEXT"
+        },
+        {
+          "name": "native_algo_id",
           "kind": "TEXT"
         },
         {
@@ -1249,6 +1266,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         {
           "name": "price",
           "kind": "DECIMAL"
+        },
+        {
+          "name": "price_protection_policy",
+          "kind": "TEXT"
         },
         {
           "name": "quantity",
@@ -1279,6 +1300,14 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
           "kind": "TEXT"
         },
         {
+          "name": "trigger_authority",
+          "kind": "TEXT"
+        },
+        {
+          "name": "trigger_direction",
+          "kind": "TEXT"
+        },
+        {
           "name": "trigger_price",
           "kind": "DECIMAL"
         },
@@ -1289,6 +1318,10 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
         {
           "name": "updated_at",
           "kind": "TIMESTAMP"
+        },
+        {
+          "name": "valid_until_ms",
+          "kind": "INTEGER"
         },
         {
           "name": "venue_order_id",
@@ -3518,9 +3551,7 @@ export const EDS11R_MANAGER_RELATION_REGISTRY_SOURCE = {
       ],
       "source_history_semantics": "E2_REQUIRED_NO_DML_OR_ROW_HISTORY_PROBE",
       "source_retention_semantics": "NOT_QUERIED_E1_NO_BUSINESS_ROW_ACCESS",
-      "screen_ids": [
-        "EXECUTION_COMMAND_CENTER_SCREEN"
-      ]
+      "screen_ids": []
     },
     {
       "operation_id": "managerSettlementCalendarsPageV1",
