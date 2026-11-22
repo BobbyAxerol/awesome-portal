@@ -141,8 +141,8 @@ if poll_match is None or attempt_match is None:
     raise SystemExit("Publication must declare a bounded CI-gate polling budget.")
 ci_gate_poll_seconds = int(poll_match.group(1))
 ci_gate_max_attempts = int(attempt_match.group(1))
-if ci_gate_poll_seconds != 30 or ci_gate_max_attempts != 300:
-    raise SystemExit("Publication CI-gate polling budget drifted from the reviewed 150-minute bound.")
+if ci_gate_poll_seconds != 30 or ci_gate_max_attempts != 540:
+    raise SystemExit("Publication CI-gate polling budget drifted from the reviewed 270-minute bound.")
 if 'for attempt in $(seq 1 "${ci_gate_max_attempts}"); do' not in release_gate:
     raise SystemExit("Publication must consume its declared CI-gate polling bound.")
 if 'if [[ "${attempt}" == "${ci_gate_max_attempts}" ]]; then' not in release_gate:
@@ -151,7 +151,7 @@ if 'sleep "${ci_gate_poll_seconds}"' not in release_gate:
     raise SystemExit("Publication must use its declared CI-gate polling interval.")
 
 publish_timeout_minutes = int(job.get("timeout-minutes", 0))
-if publish_timeout_minutes < 210:
+if publish_timeout_minutes < 330:
     raise SystemExit("Publication timeout must reserve the reviewed CI gate and publication budget.")
 
 ci_jobs = ci_document.get("jobs")
