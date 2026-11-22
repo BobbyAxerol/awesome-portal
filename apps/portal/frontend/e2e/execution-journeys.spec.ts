@@ -232,6 +232,8 @@ async function auditRouteControls(page: Page, route: string): Promise<ControlRec
   const records: ControlRecord[] = [];
   await open(page, route);
   let i = 0;
+  // Indexes whose first verdict was silence; each gets exactly one fresh-page retry.
+  const retriedSilent = new Set<number>();
   while (true) {
       // Fresh page per control. Clicking sequentially on one page let an
       // earlier click's in-flight decision walk swallow the next click (the
@@ -338,6 +340,13 @@ async function auditRouteControls(page: Page, route: string): Promise<ControlRec
         (meta.tag === "INPUT" && after.focus === "INPUT")
       ) {
         records.push(base);
+      } else if (!retriedSilent.has(i)) {
+        // Under CI host load a real effect can land after the 1.5 s window (CI run
+        // 44989063363: the V1 workbench 'Accounting' tab passed one run and was
+        // reported silent the next with no code change). A control that is
+        // genuinely inert stays silent on a fresh page too, so it is still caught.
+        retriedSilent.add(i);
+        continue;
       } else {
         records.push({ ...base, verdict: "NO-OP" });
       }

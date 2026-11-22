@@ -263,8 +263,13 @@ jobs:
           # Main releases promote the reviewed Execution product routes; without
           # this input the Dockerfile's safe local default renders legacy
           # registry previews even when the source contains the rich screens.
+          # EXECUTION_V2_SCREENS is the reviewed READ-ONLY manifest of Execution V2
+          # screens (owner decision 2026-11-22). Fixture/test-only keys (command,
+          # scoped, pending-preview, fleet-stream) and the form screens (request,
+          # admin, users) are deliberately not listed.
           build-args: |
             EXECUTION_PREVIEW_ENABLED=true
+            EXECUTION_V2_SCREENS=shell,overview,fleet,alpha,portfolios,compare,account,workbench,sandbox,canary,live,blotter,ops,cockpit,profile
           push: true
           tags: ${{ steps.web-meta.outputs.tags }}
           labels: ${{ steps.web-meta.outputs.labels }}

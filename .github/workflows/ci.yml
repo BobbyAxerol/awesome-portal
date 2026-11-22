@@ -2,7 +2,13 @@ name: Portal CI
 
 on:
   push:
-    branches: [main, dev]
+    # CI runs on dev (and on pull requests). main only ever receives a fast-forward
+    # of a SHA that is already green on dev, and the publication workflow refuses to
+    # build unless the three required check-runs are green for that exact SHA
+    # (publish-images.yml). Running the same 3 h CI again on the main push added no
+    # evidence and made the publication hold the single runner while its own gate
+    # queued behind it (a self-deadlock seen three times on 2026-11-21).
+    branches: [dev]
   pull_request:
     branches: [main, dev]
   workflow_dispatch:
