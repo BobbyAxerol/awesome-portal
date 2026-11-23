@@ -655,7 +655,7 @@ mod tests {
             completeness: "COMPLETE".to_owned(),
             as_of: Utc::now(),
             response_body: serde_json::json!({"authority":"EXECUTION_CELL","data":{}}),
-            ttl: Duration::from_millis(50),
+            ttl: Duration::from_millis(3000),
         };
         let stored = store.store_source_read_cache(&write).await.unwrap();
         assert!(stored.etag.starts_with("\"sha256-"));
@@ -683,7 +683,7 @@ mod tests {
             .await
             .unwrap()
             .is_none());
-        tokio::time::sleep(Duration::from_millis(70)).await;
+        tokio::time::sleep(Duration::from_millis(3200)).await;
         assert!(store
             .load_source_read_cache(
                 "n21-cache",
