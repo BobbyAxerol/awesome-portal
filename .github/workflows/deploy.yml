@@ -289,6 +289,18 @@ jobs:
               -P "${DEPLOY_PORT}" "${compose_file}" \
               "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose/${compose_file##*/}"
           done
+          # The compose files bind-mount ./postgres/portal.conf (the one reviewed Postgres
+          # config) relative to this directory, and the takeover recreates the Postgres
+          # service from them. Ship it beside them, world-readable: the container's
+          # postgres user (uid 70) is not the deploy user, and this runner's UMask=0077
+          # would otherwise leave it unreadable ("could not open configuration file").
+          ssh_deploy -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "install -d -m 0755 '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose/postgres'"
+          scp_deploy \
+            -P "${DEPLOY_PORT}" deploy/postgres/portal.conf \
+            "${DEPLOY_USER}@${DEPLOY_HOST}:${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose/postgres/portal.conf"
+          ssh_deploy -p "${DEPLOY_PORT}" "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "chmod 0644 '${DEPLOY_PATH}/releases/${SOURCE_COMMIT}/compose/postgres/portal.conf'"
           scp_deploy \
             -P "${DEPLOY_PORT}" \
             scripts/prepare-stable-release-takeover.py \

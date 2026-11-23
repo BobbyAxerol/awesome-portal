@@ -95,7 +95,7 @@
     {
       "id": "protected_deploy_workflow",
       "file": ".github/workflows/deploy.yml",
-      "sha256": "sha256:0f626f68f0b14a7ef5c38e948f15002bf091090428df1b8eef180ac8372b61b9"
+      "sha256": "sha256:ebd5a4f0af8b93d9304db102a54d1b6bb47a71fa2c41cf105694b2e248832ae0"
     },
     {
       "id": "ci_qualification_gate",
