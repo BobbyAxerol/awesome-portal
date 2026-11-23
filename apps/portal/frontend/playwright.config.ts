@@ -30,7 +30,11 @@ export default defineConfig({
   // A visual diff is meaningless if it trips on one antialiased pixel, and
   // useless if it ignores a real layout shift. 0.2% of the frame is the band
   // between those two failures.
-  expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled" } },
+  // The default 5 s assertion wait is not enough on the shared CI runner: the V2 screens lazy-load their chunks
+  // after `page.goto`, and dev CI 45110337949 lost a different test of the chromium-v2 project in each of two runs
+  // (alpha-scoped :275, then :298 and ra-fixture :46) with the element simply "not found" at 5 s. Only the wait
+  // grows; no assertion is changed, and the screenshot tolerance is unchanged.
+  expect: { timeout: 15_000, toHaveScreenshot: { maxDiffPixelRatio: 0.002, animations: "disabled" } },
   use: {
     trace: "retain-on-failure",
     // The suite sets its own viewport per breakpoint.
