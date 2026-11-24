@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-ordinary-profile-authority.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "portal.ordinary-profile-operation.v1"
+    },
+    "operation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "operation": {
+      "type": "string",
+      "enum": [
+        "INSTALL",
+        "DELEGATE",
+        "REVOKE"
+      ]
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "head_revision": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "head_digest": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+    },
+    "grant_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "outcome": {
+      "const": "APP_APPLIED"
+    },
+    "decided_at_ms": {
+      "type": "integer",
+      "minimum": -9007199254740991,
+      "maximum": 9007199254740991
+    },
+    "source_qualified": {
+      "const": false
+    },
+    "stream_commissioned": {
+      "const": false
+    },
+    "command_commissioned": {
+      "const": false
+    }
+  },
+  "required": [
+    "schema_version",
+    "operation_id",
+    "operation",
+    "workspace_id",
+    "head_revision",
+    "head_digest",
+    "grant_id",
+    "outcome",
+    "decided_at_ms",
+    "source_qualified",
+    "stream_commissioned",
+    "command_commissioned"
+  ]
+}

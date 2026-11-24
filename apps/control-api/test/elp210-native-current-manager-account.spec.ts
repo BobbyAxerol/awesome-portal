@@ -62,7 +62,10 @@ describe("native named Account/Alpha route selection and physical writer ownersh
     });
     const nativeManager = vi.fn(async (_p: unknown, _q: unknown, _surface: string, _id: string | undefined,
       _raw: unknown, beforeDispatch: () => void) => { beforeDispatch(); beforeDispatch(); });
-    const models = { hasNativeCurrentRelations: () => installed, read: ordinary, readNativeAccount: native,
+    const models = { hasNativeCurrentRelations: () => installed,
+      shouldUseNativeCurrent:(_principal:unknown,query:{environment?:string;profile_id?:string})=>installed&&
+        (query.environment===undefined||query.environment==="paper")&&(query.profile_id===undefined||query.profile_id==="PAPER_BINANCE_USDM"),
+      read: ordinary, readNativeAccount: native,
       readNativeAlpha: nativeAlpha, readNativeManager: nativeManager };
     const controller = new ManagerModelController(models as unknown as ManagerModelService,
       { canReadExecution: async () => true } as unknown as WorkspacesRepository);

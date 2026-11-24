@@ -9,6 +9,8 @@ import { ProfileController } from "./auth/profile.controller";
 import { OwnProfileProjection } from "./auth/profile-projection";
 import { ExecutionAccessController } from "./execution-v2/access.controller";
 import { ExecutionAccessService } from "./execution-v2/access.service";
+import { OrdinaryProfileAuthority } from "./execution-v2/ordinary-profile-authority";
+import { OrdinaryProfileAuthorityController } from "./execution-v2/ordinary-profile-authority.controller";
 import { ExecutionCommandService } from "./execution-v2/command.service";
 import { ExecutionCommandController } from "./execution-v2/command.controller";
 import type { CommandTrust } from "./execution-v2/command-trust";
@@ -318,6 +320,9 @@ export interface ControlApiDependencies {
   executionAccessTrust?: AccessTrustProvider;
   allowTestOnlyExecutionAccess?: boolean;
   executionManagerRuntime?: ManagerRuntimeInstallation;
+  /** Private ordinary app authority, independently commissioned. No ENV flag,
+   * native grant, source qualification or workspace policy flip is inferred. */
+  ordinaryProfileAuthority?: OrdinaryProfileAuthority;
   /** Explicit private candidate composition, never an environment switch or
    * browser input. It must share the candidate's bounded Core pool. */
   currentHumanMutations?: CurrentHumanMutations;
@@ -368,6 +373,10 @@ export class AppModule implements OnApplicationShutdown {
       throw new Error("TEST_ONLY Execution authority requires an isolated test application.");
     if (dependencies.currentHumanMutations && !dependencies.currentHumanMutations.usesPool(pool))
       throw new Error("CURRENT_HUMAN_MUTATION_CORE_POOL_REQUIRED");
+    if (dependencies.ordinaryProfileAuthority && (!(dependencies.ordinaryProfileAuthority instanceof OrdinaryProfileAuthority) ||
+      !dependencies.ordinaryProfileAuthority.usesPool(pool) || !dependencies.currentHumanMutations ||
+      !dependencies.ordinaryProfileAuthority.usesCoordinator(dependencies.currentHumanMutations)))
+      throw new Error("ORDINARY_PROFILE_AUTHORITY_CORE_COMPOSITION_REQUIRED");
     if(dependencies.financialSource&&(!dependencies.nativeManagerRead||!dependencies.currentHumanMutations?.hasReverseRecoveryParticipant(dependencies.financialSource.participant)))
       throw new Error("FINANCIAL_SOURCE_SHARED_NATIVE_COMPOSITION_REQUIRED");
     if(dependencies.nativeCurrent&&(!nativeResearchReview(config)||!dependencies.nativeManagerRead||
@@ -409,6 +418,7 @@ export class AppModule implements OnApplicationShutdown {
     return {
       module: AppModule,
       controllers: [
+        ...(dependencies.ordinaryProfileAuthority ? [OrdinaryProfileAuthorityController] : []),
         ...(p7Review ? [C2P7ReviewCandidateController] : []),
         ...(p7Emergency ? [C2P7EmergencyCandidateController] : []),
         ExecutionRetainedReviewController,
@@ -560,10 +570,13 @@ export class AppModule implements OnApplicationShutdown {
             accessTrust, dependencies.allowTestOnlyExecutionAccess === true, dependencies.currentHumanMutations),
           inject: [CONTROL_API_POOL,AuthService],
         },
+        ...(dependencies.ordinaryProfileAuthority ? [{provide:OrdinaryProfileAuthority,
+          useValue:dependencies.ordinaryProfileAuthority}] : []),
         {
           // Identity/policy stay in Core even when Execution data is isolated.
           provide: ExecutionReadScopes,
-          useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionReadScopes(db,access,cfg),
+          useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionReadScopes(db,access,cfg,
+            dependencies.ordinaryProfileAuthority),
           inject: [CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
         },
         ...(dependencies.nativeCurrent?[{

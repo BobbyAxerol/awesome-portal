@@ -35,9 +35,20 @@ import type { ManagerSeriesRuntime } from "./manager-series-runtime";
 import type { ManagerEconomicSourceRuntime } from "./manager-economic-source-runtime";
 import { ManagerOriginalCustodyLifecycle,type ManagerOriginalCustodyCaps,
   type ManagerOriginalCustodyOmission,type ManagerOriginalIdleDelegate } from "./manager-original-custody-lifecycle";
+import { z } from "zod";
+import { validateManagerProfileRegistry, type ManagerProfileRegistry } from "./manager-profile-registry";
+import { ordinaryManagerSourceDomain } from "./ordinary-manager-source";
+
+const ordinaryDomain = z.object({ environment:z.enum(["paper","sandbox","live"]),
+  domain:z.object({profile_id:z.string().min(1).max(256),catalogue_sha256:z.string().regex(/^[a-f0-9]{64}$/),
+    profile_sha256:z.string().regex(/^[a-f0-9]{64}$/),field_policy_sha256:z.string().regex(/^[a-f0-9]{64}$/)}).strict(),
+  field_policy_ref:z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$/) }).strict();
+export type ManagerOrdinaryDomain = Readonly<z.infer<typeof ordinaryDomain>>;
 
 export interface ManagerRuntimePartition {
   scope: ManagerLeaseScope;
+  /** Private source/profile seals; not a human grant or native-domain bridge. */
+  ordinary_domain?: ManagerOrdinaryDomain;
   commissioning: PublicationCommissioning;
   source: ManagerProjectionSource;
   /** Existing private current publication provider. No new URL/wire is inferred. */
@@ -74,6 +85,7 @@ export interface ManagerRuntimeInstallation {
   partitions: readonly ManagerRuntimePartition[];
   cadence_ms: number;
   maximum_publication_reads: number;
+  profile_registry?: ManagerProfileRegistry;
   /** Private independently qualified hub; BUSINESS commissioning never grants STREAM. */
   realtime?: ScopedReplayHub;
 }
@@ -117,15 +129,29 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     this.realtime=installation?.realtime;
     if (!installation) { this.partitions=[]; this.consumers=[]; this.lastState="SOURCE_PROVIDER_NOT_INSTALLED"; return; }
     if (!Number.isSafeInteger(installation.cadence_ms) || installation.cadence_ms < 1000 || installation.cadence_ms > 300_000 ||
-      installation.partitions.length < 1 || installation.partitions.length > 3 ||
       !Number.isSafeInteger(installation.maximum_publication_reads)||installation.maximum_publication_reads<1||installation.maximum_publication_reads>4||
       new Set(installation.partitions.map(p=>key(p.scope))).size !== installation.partitions.length)
       throw new Error("MANAGER_RUNTIME_INSTALLATION_INVALID");
+    validateManagerProfileRegistry(installation.partitions,installation.profile_registry);
+    for(const partition of installation.partitions)if(partition.ordinary_domain){
+      // Signed normalized originals must not be rewritten before their source
+      // recheck. Derived/source separation needs an independently reviewed
+      // carrier; do not silently bypass signature equality for calculators.
+      if(partition.score||partition.composition||partition.regime||partition.series)
+        throw new Error("ORDINARY_MANAGER_DERIVED_CARRIER_NOT_COMMISSIONED");
+      const descriptor=ordinaryDomain.safeParse(partition.ordinary_domain);
+      if(!descriptor.success||descriptor.data.environment!==partition.scope.environment||descriptor.data.domain.profile_id!==partition.scope.profile_id)
+        throw new Error("MANAGER_RUNTIME_ORDINARY_DOMAIN_INVALID");
+      const authenticated=ordinaryManagerSourceDomain(partition.source,partition.publication);
+      if(!authenticated||accessDigest(authenticated)!==accessDigest(descriptor.data))
+        throw new Error("MANAGER_RUNTIME_ORDINARY_DOMAIN_INVALID");
+    }
     // Finite I/O is a prerequisite, not an optional production default. Explicit
     // injected pools must meet it too; otherwise abort/stop cannot be bounded.
     if ([pool.options.connectionTimeoutMillis,pool.options.query_timeout].some(n=>!Number.isSafeInteger(n)||Number(n)<1||Number(n)>60_000))
       throw new Error("MANAGER_RUNTIME_POOL_TIMEOUT_REQUIRED");
     this.partitions = installation.partitions.map(p=>({...p,scope:Object.freeze({...p.scope}),bounds:Object.freeze({...p.bounds}),
+      ...(p.ordinary_domain?{ordinary_domain:Object.freeze({...p.ordinary_domain,domain:Object.freeze({...p.ordinary_domain.domain})})}:{}),
       ...(p.score?{score:Object.freeze({...p.score,...(p.score.restatement?{restatement:Object.freeze({...p.score.restatement,
         ...(p.score.restatement.composition?{composition:Object.freeze({...p.score.restatement.composition})}:{})})}:{})})}:{}),
       ...(p.composition?{composition:Object.freeze({...p.composition})}:{}),
@@ -183,6 +209,10 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
   }
   /** Private operator/test state: never contains a source exception, URL or credential. */
   status() { return {state:this.lastState,partitions:this.partitions.length,automatic_loop:this.timer!==null}; }
+  /** Installed inventory only; never selects a default or confers authority. */
+  profilesFor(workspaceId:string,environment:ManagerLeaseScope["environment"]):readonly string[]{
+    return Object.freeze(this.partitions.filter(p=>p.scope.workspace_id===workspaceId&&p.scope.environment===environment).map(p=>p.scope.profile_id));
+  }
   /** Private reader dependency, never reconstructed from browser input. */
   recalculationFor(scope:ManagerLeaseScope):ManagerScoreRecalculation|undefined{return this.recalculations.get(key(scope));}
   restatementFor(scope:ManagerLeaseScope):ManagerScoreRestatement|undefined{return this.restatements.get(key(scope));}
@@ -218,7 +248,13 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         this.publicationFlights.add(flight);
         try {raw=await flight;if(cancellation.signal.aborted)throw cancellation.signal.reason;}
         finally{clearTimeout(timer);this.publicationReads--;this.publicationCancellations.delete(cancellation);this.publicationFlights.delete(flight);}
-        return raw===null?null:qualifyDatasetPublication(raw,copy,{purpose:"BUSINESS",commissioning:p.commissioning,nowMs:Date.now()}).authority;
+        if(raw===null)return null;
+        const authority=qualifyDatasetPublication(raw,copy,{purpose:"BUSINESS",commissioning:p.commissioning,nowMs:Date.now()}).authority;
+        // A wire-shaped descriptor cannot self-authenticate. Only the pinned
+        // descriptor checked against the actual source/publication pair above
+        // may leave this runtime; legacy partitions never inherit a raw field.
+        const {manager_domain:_untrustedDomain,...qualified}=authority;
+        return p.ordinary_domain?{...qualified,manager_domain:p.ordinary_domain}:qualified;
       } });
     trustDelegates.set(delegate, trust);
     return delegate;

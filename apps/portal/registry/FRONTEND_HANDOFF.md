@@ -1,5 +1,18 @@
 # Frontend Contract Handoff — Portal Registry & Command Center Summary
 
+## 2026-11-24 — G3 contracts delivered for consumer review (gates pending)
+
+[Exact backend scope, commissioning limits and consumer instructions](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#claude-handoff).
+Additive `profile_id` selects the concrete Manager model/series partition;
+omission keeps the pinned default, never array order. Two Paper profiles are
+not aliases. Existing ALLv1 still covers three environment defaults, not all
+four installed partitions; ALL+profile_id is rejected. Preserve component/UI.
+Accept optional `profile_id` in concrete response parsers, use generated types
+and canonical vectors. The ordinary delegation/revoke/step-up contract mounts
+only through private composition; no install endpoint or client-supplied grant
+authority. No source, runtime or browser acceptance is claimed. Await the final
+source pin/tests in the linked receipt before integrating; consumer ACK pending.
+
 ## 2026-11-24 15:13 UTC — G2 source accepted; Claude consumer action
 
 Source `e89b223996d5ebc191460ca44944230ea7ca80cb` on

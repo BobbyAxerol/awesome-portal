@@ -41,6 +41,18 @@
             }
           },
           {
+            "name": "profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order."
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "required": false,
@@ -1111,6 +1123,18 @@
                 "live",
                 "ALL"
               ]
+            }
+          },
+          {
+            "name": "profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order."
             }
           },
           {
@@ -2197,6 +2221,18 @@
             }
           },
           {
+            "name": "profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order."
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "required": false,
@@ -3277,6 +3313,18 @@
                 "live",
                 "ALL"
               ]
+            }
+          },
+          {
+            "name": "profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order."
             }
           },
           {
@@ -4363,6 +4411,18 @@
             }
           },
           {
+            "name": "profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order."
+            }
+          },
+          {
             "name": "q",
             "in": "query",
             "required": false,
@@ -5443,6 +5503,18 @@
                 "live",
                 "ALL"
               ]
+            }
+          },
+          {
+            "name": "profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+              "description": "Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order."
             }
           },
           {
@@ -8757,6 +8829,13 @@
               "ALL"
             ],
             "description": "A single environment, or ALL (Fleet only): navigation across separately authorized environments. An ALL body lists the authorized rows of every environment that answered, each row with its own environment and economic partitions, plus environment_coverage. It never carries a total over environments or partitions."
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+            "description": "Selected concrete source profile. Omitted for the backward-compatible three-environment ALL defaults view; not an all-installed-profile union."
           },
           "environment_coverage": {
             "type": "array",
@@ -14288,6 +14367,28 @@
         "allOf": [
           {
             "if": {
+              "properties": {
+                "environment": {
+                  "const": "ALL"
+                }
+              },
+              "required": [
+                "environment"
+              ]
+            },
+            "then": {
+              "not": {
+                "properties": {
+                  "profile_id": {}
+                },
+                "required": [
+                  "profile_id"
+                ]
+              }
+            }
+          },
+          {
+            "if": {
               "type": "object",
               "properties": {
                 "items": {
@@ -16008,6 +16109,13 @@
               "ALL"
             ]
           },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+            "description": "Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order."
+          },
           "q": {
             "type": "string",
             "minLength": 1,
@@ -16829,6 +16937,28 @@
           "environment"
         ],
         "allOf": [
+          {
+            "if": {
+              "properties": {
+                "environment": {
+                  "const": "ALL"
+                }
+              },
+              "required": [
+                "environment"
+              ]
+            },
+            "then": {
+              "not": {
+                "properties": {
+                  "profile_id": {}
+                },
+                "required": [
+                  "profile_id"
+                ]
+              }
+            }
+          },
           {
             "not": {
               "properties": {

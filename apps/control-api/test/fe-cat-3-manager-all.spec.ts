@@ -328,6 +328,41 @@ describe("FE-CAT-3 service fan-out (mocked repository, no database)", () => {
     expect(result.quality.completeness).toBe("PARTIAL");
   });
 
+  it("keeps ALL v1 at exactly three configured defaults with four installed profiles",async()=>{
+    const extra="TEST_ONLY:paper-second",profilesFor=vi.fn((_workspace:string,environment:string)=>
+      environment==="paper"?[extra,PROFILE.paper]:[PROFILE[environment as ManagerEnvironmentName]]);
+    const runtime={profilesFor,economicSourceFor:()=>undefined,recalculationFor:()=>undefined} as unknown as ExecutionManagerRuntime;
+    const s=service(runtime),result=await s.model.read(s.principal,"FLEET",{environment:"ALL"});
+    expect(result.environment_coverage).toHaveLength(3);expect(result.environment_coverage!.map(value=>value.environment)).toEqual(["paper","sandbox","live"]);
+    expect([...new Set(s.headSpy.mock.calls.map(call=>`${call[1]}|${call[2]}`))]).toEqual([
+      `paper|${PROFILE.paper}`,`sandbox|${PROFILE.sandbox}`,`live|${PROFILE.live}`]);
+    expect("profile_id" in result).toBe(false);expect(s.headSpy.mock.calls.some(call=>call[2]===extra)).toBe(false);
+    await expect(s.model.read(s.principal,"FLEET",{environment:"ALL",profile_id:extra})).rejects.toMatchObject({status:400});
+  });
+
+  it("selects either installed Paper exactly and rejects a cursor borrowed from the other profile",async()=>{
+    const extra="TEST_ONLY:paper-second",runtime={profilesFor:(_workspace:string,environment:string)=>environment==="paper"?[extra,PROFILE.paper]:[],
+      economicSourceFor:()=>undefined,recalculationFor:()=>undefined} as unknown as ExecutionManagerRuntime;
+    const s=service(runtime);
+    s.docSpy.mockImplementation((async(_workspace:string,environment:ManagerEnvironmentName,profile:string)=>({...s.doc(environment),profile_id:profile,
+      members:[{...member(OWN,"First",environment),valid_from_ms:0},{...member(PEER,"Second",environment),valid_from_ms:0}]})) as never);
+    const first=await s.model.read(s.principal,"FLEET",{environment:"paper",limit:1});
+    expect(first.profile_id).toBe(PROFILE.paper);expect(first.page.next_cursor).toBeTruthy();
+    const second=await s.model.read(s.principal,"FLEET",{environment:"paper",profile_id:extra,limit:1});
+    expect(second.profile_id).toBe(extra);expect(s.docSpy.mock.calls.at(-1)?.slice(0,3)).toEqual([s.principal.workspaceId,"paper",extra]);
+    await expect(s.model.read(s.principal,"FLEET",{environment:"paper",profile_id:extra,limit:1,after:first.page.next_cursor})).rejects.toMatchObject({status:400});
+    s.headSpy.mockClear();
+    await expect(s.model.read(s.principal,"FLEET",{environment:"paper",profile_id:"TEST_ONLY:not-installed"})).rejects.toMatchObject({status:404});
+    expect(s.headSpy).not.toHaveBeenCalled();
+  });
+
+  it("does not pick an installed Paper when the pinned default is absent",async()=>{
+    const runtime={profilesFor:()=>["TEST_ONLY:paper-a","TEST_ONLY:paper-b"]} as unknown as ExecutionManagerRuntime;
+    const s=service(runtime);s.config.EXECUTION_EDGE_PAPER_PROFILE_ID="";
+    await expect(s.model.read(s.principal,"FLEET",{environment:"paper"})).rejects.toMatchObject({status:503});
+    expect(s.headSpy).not.toHaveBeenCalled();
+  });
+
   it("a profile that is not configured is typed NOT_CONFIGURED without touching the repository", async () => {
     const s = service();
     (s.config as { EXECUTION_EDGE_SANDBOX_PROFILE_ID?: string }).EXECUTION_EDGE_SANDBOX_PROFILE_ID = "";

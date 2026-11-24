@@ -12,6 +12,7 @@ import { managerSeriesQuery } from "./manager-series.contract";
 import { queryManagerSeries, type SeriesSubjectScope } from "./manager-series";
 import { ExecutionManagerRuntime } from "./manager-runtime";
 import {NativeCurrentAccountScopes} from "./native-current-runtime";
+import {resolveManagerProfile} from "./manager-profile-registry";
 
 type SeriesResponse=ReturnType<typeof queryManagerSeries>;
 type NativeDelivery={response:ServerResponse;beforeDispatch?:()=>void};
@@ -34,6 +35,23 @@ export class ManagerSeriesService {
 
   hasNativeCurrentRelations():boolean{return this.nativeAccount?.scopes.hasNativeCurrentRelations()===true;}
 
+  shouldUseNativeCurrent(principal:ReadScopePrincipal,raw:unknown):boolean{
+    const parsed=managerSeriesQuery.safeParse(raw);
+    if(!parsed.success)throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE",400);
+    const profile=this.resolveProfile(principal,parsed.data.environment,parsed.data.profile_id);
+    return parsed.data.environment==="paper"&&profile===this.profileFor("paper")&&this.hasNativeCurrentRelations();
+  }
+  private profileFor(env:"paper"|"sandbox"|"live"){
+    return env==="paper"?this.config.EXECUTION_EDGE_PAPER_PROFILE_ID:env==="sandbox"?
+      this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID:this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
+  }
+  private resolveProfile(principal:ReadScopePrincipal,env:"paper"|"sandbox"|"live",requestedProfileId?:string):string{
+    try{return resolveManagerProfile({defaultProfileId:this.profileFor(env),requestedProfileId,
+      installedProfileIds:this.runtime?.profilesFor?.(principal.workspaceId,env)});}
+    catch(error){throw new ExecutionReadScopeError(error instanceof Error&&error.message==="EXECUTION_READ_NOT_AVAILABLE"?
+      "EXECUTION_READ_NOT_AVAILABLE":"EXECUTION_READ_AUTHORITY_UNAVAILABLE",error instanceof Error&&error.message==="EXECUTION_READ_NOT_AVAILABLE"?404:503);}
+  }
+
   read(principal:ReadScopePrincipal,raw:unknown):Promise<SeriesResponse>{return this.readPrepared(principal,raw);}
 
   readNative(principal:ReadScopePrincipal,raw:unknown,response:ServerResponse,beforeDispatch?:()=>void):Promise<void>{
@@ -49,12 +67,11 @@ export class ManagerSeriesService {
     if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
     const q = parsed.data, env = q.environment;
     if(native&&env!=="paper")throw new ExecutionReadScopeError("EXECUTION_READ_CURRENT_ONLY",503);
-    if(!native&&env==="paper"&&this.hasNativeCurrentRelations())
+    const profile=this.resolveProfile(principal,env,q.profile_id);
+    const selectedNative=env==="paper"&&profile===this.profileFor("paper")&&this.hasNativeCurrentRelations();
+    if(native&&!selectedNative||!native&&selectedNative)
       throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
     if (q.workspace_id && q.workspace_id !== principal.workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
-    const profile = env === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID : env === "sandbox" ?
-      this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
-    if (!profile) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
     const scopes=native?this.nativeAccount!.scopes:this.scopes;
     try {
       const head = await this.repository.head(principal.workspaceId, env, profile);
@@ -93,7 +110,7 @@ export class ManagerSeriesService {
         if (!doc || doc.qualification !== "SOURCE_VERIFIED") throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
         // Revision qualification occurs after subject authorization and exact
         // publication selection, not on other subjects' retained history.
-        const response = queryManagerSeries(inputs, doc, q, !economic, economic?.calculation_revision ?? null);
+        const response = {...queryManagerSeries(inputs, doc, q, !economic, economic?.calculation_revision ?? null),profile_id:doc.profile_id};
         await checkHead();
         return response;
       };
@@ -108,11 +125,10 @@ export class ManagerSeriesService {
                 throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);}}});
         return;
       }
-      // Ordinary compatibility path is unchanged. A native installation still
-      // refuses detached delivery rather than silently losing its source fence.
-      const deliverAll=<T>(index:number,read:()=>Promise<T>):Promise<T>=>
-        index>=inputs.length?read():scopes.deliver(inputs[index].scope,()=>deliverAll(index+1,read));
-      const response=await deliverAll(0,build);
+      // Retain EVERY subject through one final shared confirmation after the
+      // last publication await. Native physical custody stays separate above;
+      // the same composition also preserves scoped legacy authorization.
+      const response=await scopes.deliverScopedTogether(inputs.map(input=>input.scope),()=>build(),assertEconomic);
       assertEconomic();
       return response;
     } catch (error) {

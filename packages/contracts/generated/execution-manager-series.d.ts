@@ -33,6 +33,8 @@ export interface components {
             environment: "paper" | "sandbox" | "live";
             /** @constant */
             record_authority: "PORTAL_PROJECTION";
+            /** @description Selected concrete source profile; not inferred from the environment or array order. */
+            profile_id?: string;
             /** @constant */
             source_authority: "TRADING_SYSTEM";
             /** @enum {string} */
@@ -150,6 +152,8 @@ export interface components {
             environment: "paper" | "sandbox" | "live";
             /** @enum {string} */
             metric: "NAV" | "NET_PNL" | "RETURN" | "DRAWDOWN";
+            /** @description Exact installed concrete profile; omission uses the pinned environment default. Two Paper profiles are distinct authority scopes. */
+            profile_id?: string;
             subjects: ({
                 /** @enum {string} */
                 subject_type: "FUND" | "PORTFOLIO" | "ALPHA";
@@ -329,6 +333,7 @@ export interface operations {
             query: {
                 environment: "paper" | "sandbox" | "live";
                 workspace_id?: string;
+                profile_id?: string;
                 metric: "NAV" | "NET_PNL" | "RETURN" | "DRAWDOWN";
                 subjects: string;
                 window: string;

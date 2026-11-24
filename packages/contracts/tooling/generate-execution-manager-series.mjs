@@ -126,6 +126,8 @@ function querySemantics(query) {
 }
 
 const response = json(contract.managerSeriesResponse), query = json(contract.managerSeriesQuery);
+query.properties.profile_id.description='Exact installed concrete profile; omission uses the pinned environment default. Two Paper profiles are distinct authority scopes.';
+response.properties.profile_id.description='Selected concrete source profile; not inferred from the environment or array order.';
 responseSemantics(response); querySemantics(query);
 const entry = json(contract.managerSeriesEntry); entrySemantics(entry);
 const comparison = json(contract.managerSeriesComparison); comparisonSemantics(comparison);
@@ -148,6 +150,7 @@ const operation = { get: { operationId: 'executionManagerSeriesGetV1', security:
     'The financial normalized source that fills a series is MISSING today: every profile answers SERIES_SOURCE_NOT_PUBLISHED until a producer publishes one.',
   parameters: [{ name: 'environment', in: 'query', required: true, schema: query.properties.environment },
     { name: 'workspace_id', in: 'query', required: false, schema: query.properties.workspace_id },
+    { name: 'profile_id', in: 'query', required: false, schema: query.properties.profile_id },
     { name: 'metric', in: 'query', required: true, schema: query.properties.metric },
     jsonParam('subjects', query.properties.subjects, true), jsonParam('window', query.properties.window, true),
     jsonParam('economic_partition', query.properties.economic_partition, false)],

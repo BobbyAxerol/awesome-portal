@@ -66,10 +66,14 @@ function json(schema) {
   throw new Error('Unsupported Zod node: ' + type);
 }
 const response = json(contract.managerDatasetResponse), query = json(contract.managerModelQuery);
+query.properties.profile_id.description = 'Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order.';
+response.properties.profile_id.description = 'Selected concrete source profile. Omitted for the backward-compatible three-environment ALL defaults view; not an all-installed-profile union.';
+response.allOf=[...(response.allOf??[]),{if:{properties:{environment:{const:'ALL'}},required:['environment']},then:{not:{properties:{profile_id:{}},required:['profile_id']}}}];
 query.properties.group_limit.description = 'Independent group page size, default 200; row limit does not limit the authorized group population.';
 query.properties.group_after.description = 'Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query.';
 query.properties.group_before.description = 'Opaque backward group cursor; mutually exclusive with group_after.';
 query.allOf = [...(query.allOf ?? []),
+  {if:{properties:{environment:{const:'ALL'}},required:['environment']},then:{not:{properties:{profile_id:{}},required:['profile_id']}}},
   {not:{properties:{group_after:{},group_before:{}},required:['group_after','group_before']}},
   {if:{anyOf:['group_limit','group_after','group_before'].map(name=>({properties:{[name]:{}},required:[name]}))},
     then:{required:['group_by'],properties:{group_by:{type:'array',minItems:1}}}},
@@ -175,6 +179,11 @@ for(const [name,context] of [
   contract.managerDatasetResponse.parse(sample.value);
   outputs['fixtures/'+name]=sample;
   if(name==='execution-manager-dataset.rows.synthetic.valid.json'){
+    const profiles=['TEST_ONLY:paper-default','TEST_ONLY:paper-second'];
+    const cases=profiles.map(profile_id=>({query:{environment:'paper',workspace_id:sample.value.workspace_id,profile_id},
+      response:{...structuredClone(sample.value),profile_id}}));
+    for(const c of cases){contract.managerModelQuery.parse(c.query);contract.managerDatasetResponse.parse(c.response);}
+    outputs['fixtures/execution-manager-profile-selection.synthetic.valid.json']={lane:sample.lane,cases};
     const contributors=structuredClone(sample);
     const row=contributors.value.items[0];
     contributors.value.surface='FUND';

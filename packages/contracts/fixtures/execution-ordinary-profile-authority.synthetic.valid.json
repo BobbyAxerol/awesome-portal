@@ -1,0 +1,55 @@
+{
+  "schema_version": "execution-ordinary-profile-authority.synthetic.v1",
+  "runtime_qualified": false,
+  "cases": {
+    "delegate": {
+      "operation_id": "synthetic-delegate-0001",
+      "workspace_id": "synthetic-workspace",
+      "subject_user_id": "synthetic-employee",
+      "parent_grant_id": "synthetic-stan-grant",
+      "expected_parent_revision": "synthetic-parent-1",
+      "expected_head": {
+        "revision": "synthetic-ordinary-head-1",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "valid_from_ms": 1800000000000,
+      "valid_until_ms": 1800000060000,
+      "reason": "SYNTHETIC contract vector"
+    },
+    "revoke": {
+      "operation_id": "synthetic-revoke-0001",
+      "workspace_id": "synthetic-workspace",
+      "grant_id": "synthetic-child-grant",
+      "expected_grant_revision": "synthetic-child-1",
+      "expected_head": {
+        "revision": "synthetic-ordinary-head-1",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "reason": "SYNTHETIC contract vector"
+    },
+    "receipt": {
+      "schema_version": "portal.ordinary-profile-operation.v1",
+      "operation_id": "synthetic-delegate-0001",
+      "operation": "DELEGATE",
+      "workspace_id": "synthetic-workspace",
+      "head_revision": "synthetic-ordinary-head-2",
+      "head_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "grant_id": "synthetic-child-grant",
+      "outcome": "APP_APPLIED",
+      "decided_at_ms": 1800000000000,
+      "source_qualified": false,
+      "stream_commissioned": false,
+      "command_commissioned": false
+    },
+    "step_up_request": {
+      "workspace_id": "synthetic-workspace",
+      "password": "SYNTHETIC_NOT_A_CREDENTIAL"
+    },
+    "step_up_response": {
+      "schema_version": "portal.access-step-up.v1",
+      "state": "ACTIVE",
+      "family": "ACCESS_ADMIN",
+      "expires_at_ms": 1800000060000
+    }
+  }
+}

@@ -17,6 +17,23 @@ const fixture = load("fixtures/execution-manager-dataset.synthetic.valid.json");
 const ajv = new Ajv2020({strict:true,allErrors:true});
 const validate = ajv.compile(schema);
 describe("ELP2-06 generated named Manager BFF contract",()=>{
+  it("keeps two explicit Paper profiles distinct without changing ALLv1",()=>{
+    const sample=load("fixtures/execution-manager-profile-selection.synthetic.valid.json");
+    const queryCheck=ajv.compile(api.components.schemas.ManagerDatasetQuery);
+    expect(sample.cases).toHaveLength(2);
+    expect(new Set(sample.cases.map((c:any)=>c.query.profile_id)).size).toBe(2);
+    for(const c of sample.cases){
+      expect(queryCheck(c.query),JSON.stringify(queryCheck.errors)).toBe(true);
+      expect(managerModelQuery.safeParse(c.query).success).toBe(true);
+      expect(validate(c.response),JSON.stringify(validate.errors)).toBe(true);
+      expect(managerDatasetResponse.safeParse(c.response).success).toBe(true);
+      expect(queryCheck({...c.query,environment:"ALL"})).toBe(false);
+      expect(managerModelQuery.safeParse({...c.query,environment:"ALL"}).success).toBe(false);
+    }
+    const all=load("fixtures/execution-manager-dataset.all-environments.synthetic.valid.json").value;
+    expect(validate({...all,profile_id:sample.cases[0].query.profile_id})).toBe(false);
+    expect(managerDatasetResponse.safeParse({...all,profile_id:sample.cases[0].query.profile_id}).success).toBe(false);
+  });
   it("publishes bounded typed IN with exclusive value/values shapes and no duplicate members",()=>{
     const sample=load("fixtures/execution-manager-query-in.synthetic.valid.json");
     const check=ajv.compile(api.components.schemas.ManagerDatasetQuery);

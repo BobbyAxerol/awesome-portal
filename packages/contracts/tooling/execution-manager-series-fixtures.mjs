@@ -209,6 +209,8 @@ export function buildManagerSeriesFixtures(contract) {
     'fixtures/execution-manager-series.return-scale-not-published.synthetic.valid.json': wrap(returnScaleUnpublished),
     'fixtures/execution-manager-series.metric-unit.synthetic.negative.json': metricUnit,
     'fixtures/execution-manager-series-query.synthetic.valid.json': { lane: SERIES_FIXTURE_LANE, cases: [
+      ...['TEST_ONLY:paper-default','TEST_ONLY:paper-second'].map(profile_id=>({environment:'paper',profile_id,
+        metric:'NAV',window:'30D',subjects:[{subject_type:'FUND'}]})),
       { environment: 'paper', metric: 'NAV', window: '30D', subjects: [{ subject_type: 'FUND' }] },
       { environment: 'paper', metric: 'NAV', window: '30D',
         subjects: [portfolio('TEST_ONLY:portfolio-a'), portfolio('TEST_ONLY:portfolio-b')], economic_partition: partition('USDT') },

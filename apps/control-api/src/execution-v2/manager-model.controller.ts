@@ -56,7 +56,7 @@ export class ManagerModelController {
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       const principal = { user: r.portalUser, session: r.portalSession, workspaceId: workspace,
         viewerWorkspaceId: r.portalViewerWorkspaceId ?? r.portalWorkspaceId };
-      if ((query.environment === undefined || query.environment === "paper") && this.models.hasNativeCurrentRelations?.()) {
+      if (this.models.shouldUseNativeCurrent(principal,query)) {
         // Every named finite Paper dataset uses its own ordinary requirement
         // inside the native final-authority / physical-delivery boundary. This
         // does not enable ALL, another environment, STREAM or a mutation.

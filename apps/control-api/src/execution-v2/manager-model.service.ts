@@ -23,6 +23,7 @@ import type { ManagerCompositionPublication } from "./manager-composition-public
 import type { ManagerRegimePublication } from "./manager-regime-publication.contract";
 import { NativeCurrentAccountScopes } from "./native-current-runtime";
 import type { ManagerEconomicSourceRuntime } from "./manager-economic-source-runtime";
+import { resolveManagerProfile } from "./manager-profile-registry";
 
 interface ManagerReadObligation {
   scope: AuthorizedExecutionReadScope;
@@ -63,14 +64,25 @@ export class ManagerModelService {
     if (q.stage_filter.some(stage => !allowedStages.includes(stage)))
       throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
     if (q.workspace_id && q.workspace_id !== principal.workspaceId) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+    if(this.shouldUseNativeCurrent(principal,q))throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
     return this.readEnvironment(principal, env, surface, q, id, (scope, doc, fences) =>
-      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic, true));
+      ({...queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic, true),profile_id:doc.profile_id}));
   }
 
   /** Actual installed composition, never a browser/profile flag. Optional
    * invocation keeps old explicit test doubles compatible; real scopes always
    * implement this accessor. No native path falls back to ordinary delivery. */
   hasNativeCurrentRelations(): boolean { return this.nativeAccount?.scopes.hasNativeCurrentRelations() === true; }
+
+  /** Routing only. The native provider must independently prove its selected
+   * binding at authorization and physical delivery; config grants no authority. */
+  shouldUseNativeCurrent(principal:ReadScopePrincipal,raw:unknown):boolean {
+    const parsed=managerModelQuery.safeParse(raw);
+    if(!parsed.success)throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE",400);
+    if(parsed.data.environment==="ALL")return false;
+    const profile=this.resolveProfile(principal,parsed.data.environment,parsed.data.profile_id);
+    return parsed.data.environment==="paper"&&profile===this.profileFor("paper")&&this.hasNativeCurrentRelations();
+  }
 
   /** Closed named public finite slices. Ordinary per-surface requirements still
    * select the exact resource and action; CURRENT never grants ALL/history/STREAM. */
@@ -98,12 +110,14 @@ export class ManagerModelService {
     if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
     const q = parsed.data;
     if (q.environment !== "paper") throw new ExecutionReadScopeError("EXECUTION_READ_CURRENT_ONLY", 503);
+    if(this.resolveProfile(principal,"paper",q.profile_id)!==this.profileFor("paper"))
+      throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
     if ((["ACCOUNT", "ALPHA", "PORTFOLIO", "DEPLOYMENT"].includes(surface) && !id) ||
       id !== undefined && (!id || id.length > 256) || q.workspace_id && q.workspace_id !== principal.workspaceId)
       throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
     if (q.stage_filter.some(stage => stage !== "PAPER")) throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID", 400);
     await this.readEnvironment(principal, "paper", surface, q, id, (scope, doc, fences) =>
-      queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic, true),
+      ({...queryManagerModel(scope, doc, q, this.codec, surface, id, fences.score, fences.composition, fences.regime, fences.economic, true),profile_id:doc.profile_id}),
       undefined, { response, beforeDispatch }, this.nativeAccount!.scopes);
   }
 
@@ -111,8 +125,15 @@ export class ManagerModelService {
     return env === "paper" ? this.config.EXECUTION_EDGE_PAPER_PROFILE_ID : env === "sandbox" ?
       this.config.EXECUTION_EDGE_SANDBOX_PROFILE_ID : this.config.EXECUTION_EDGE_LIVE_PROFILE_ID;
   }
+  private resolveProfile(principal:ReadScopePrincipal,env:ManagerEnvironmentName,requestedProfileId?:string):string {
+    try{return resolveManagerProfile({defaultProfileId:this.profileFor(env),requestedProfileId,
+      installedProfileIds:this.runtime?.profilesFor?.(principal.workspaceId,env)});}
+    catch(error){throw new ExecutionReadScopeError(error instanceof Error&&error.message==="EXECUTION_READ_NOT_AVAILABLE"?
+      "EXECUTION_READ_NOT_AVAILABLE":"EXECUTION_READ_AUTHORITY_UNAVAILABLE",error instanceof Error&&error.message==="EXECUTION_READ_NOT_AVAILABLE"?404:503);}
+  }
 
-  /** FE-CAT-3: the ALL lens. An initially unavailable environment has a typed reason; every successful contribution remains an
+  /** FE-CAT-3 v1: exactly three configured environment defaults, NOT all installed
+   * profiles and never an economic union. An initially unavailable environment has a typed reason; every successful contribution remains an
    * obligation at the final whole-response fence. Sequential on purpose: the repository bounds its concurrent flights. */
   private async readAll(principal: ReadScopePrincipal, surface: ManagerSurface, q: ManagerModelQuery, id?: string) {
     if (surface !== "FLEET" || id !== undefined) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
@@ -141,14 +162,13 @@ export class ManagerModelService {
 
   /** One environment's read under its own scope: authorize, load the current head's document, `compute` inside `deliver`, and verify
    * that the head, the recalculation and every accepted publication are still current when the answer is returned. */
-  private async readEnvironment<T>(principal: ReadScopePrincipal, env: ManagerEnvironmentName, surface: ManagerSurface, q: { workspace_id?: string },
+  private async readEnvironment<T>(principal: ReadScopePrincipal, env: ManagerEnvironmentName, surface: ManagerSurface, q: { workspace_id?: string;profile_id?:string },
     id: string | undefined, compute: (scope: AuthorizedExecutionReadScope, doc: ManagerModelDocument,
       fences: { score?: ManagerScoreReadFence; composition?: ManagerCompositionReadFence; regime?: ManagerRegimeReadFence;
         economic?: ManagerEconomicSourceRuntime }) => T,
     retain?: (obligation: ManagerReadObligation) => void, native?: NativeManagerDelivery,
     scopes: ExecutionReadScopes = this.scopes): Promise<T> {
-    const profile = this.profileFor(env);
-    if (!profile) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
+    const profile = this.resolveProfile(principal,env,q.profile_id);
     try {
       const head = await this.repository.head(principal.workspaceId, env, profile);
       const action = surface === "FUND" ? "business.read_all" : surface === "PORTFOLIO" ? "portfolio.read" :

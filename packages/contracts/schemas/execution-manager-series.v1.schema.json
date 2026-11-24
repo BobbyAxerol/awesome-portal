@@ -23,6 +23,12 @@
     "record_authority": {
       "const": "PORTAL_PROJECTION"
     },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Selected concrete source profile; not inferred from the environment or array order."
+    },
     "source_authority": {
       "const": "TRADING_SYSTEM"
     },

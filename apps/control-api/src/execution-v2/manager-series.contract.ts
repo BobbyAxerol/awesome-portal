@@ -33,6 +33,7 @@ export const managerSeriesSubjectQuery = z.object({ subject_type: z.enum(["FUND"
       c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_SERIES_SUBJECT_INVALID" });
   });
 export const managerSeriesQuery = z.object({ workspace_id: text.optional(), environment: executionEnvironment, metric: seriesMetric,
+  profile_id: text.optional(),
   subjects: z.array(managerSeriesSubjectQuery).min(1).max(MAX_SERIES_SUBJECTS),
   // Explicit on purpose: a series with no stated window is the opposite of a methodology.
   window: managerWindowQuery, economic_partition: seriesPartition.optional(),
@@ -132,6 +133,7 @@ export function deriveSeriesComparison(entries: readonly Comparable[]): ManagerS
 export const managerSeriesResponse = z.object({
   schema_version: z.literal("portal.execution.manager-series.v1"),
   workspace_id: text, environment: executionEnvironment, record_authority: z.literal("PORTAL_PROJECTION"),
+  profile_id: text.optional(),
   source_authority: z.literal("TRADING_SYSTEM"), metric: seriesMetric, selected_window: managerSelectedWindow,
   // Profile-level honesty: whether ANY series publication exists for this profile at all.
   series_source: z.object({ state: z.enum(["PUBLISHED", "NOT_PUBLISHED"]),

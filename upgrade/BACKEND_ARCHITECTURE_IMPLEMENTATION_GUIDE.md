@@ -650,6 +650,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**24Nov G3 — private writer/CAS/delegation and producer integration:**
+[Scope, migration159, test results and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md).
+Separate ordinary head/grant/event tables avoid activating legacy SCOPED_V2.
+Real coordinator serializes CAS and native drain; no install route or ENV switch.
+Each Paper profile is selected explicitly and authorized separately. Signed
+normalized source factory verifies installed signer/seals/census/receipt bytes;
+it is not a claim that current Edge bounded rows supply this export. Integration
+gates pending, NOT_ACTIVATED; no UI/runtime/permission/source qualification.
+
 **24Nov G2 source exit met / NOT_ACTIVATED — Verification: R2:**
 [Final receipt and exact source/dependency/backup pins](execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).
 Source `e89b22399`: exact Access pins/bounded intake/dry-run provenance, offline

@@ -1,5 +1,15 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 24 Nov — G3 assigned / implementation verification
+
+[Writer/CAS/delegation, source boundary and Claude handoff](evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md).
+Migration159 and private ordinary authority are separate from legacy/native
+policy. Explicit concrete profile selection supports two Paper installations
+without borrowing native rights. New generated ordinary admin contract and
+Manager profile fields await final tests/source pin and Claude consumer ACK.
+Signed normalized producer is a proposal requiring real Edge signer/export/
+census/receipt inputs. No runtime/grant install, UI, push or full G3/phase PASS.
+
 ## 24 Nov 15:13 UTC — G2 source returned / consumer ACK pending
 
 [Final source return and A1–A4/O1–O6 dispositions](evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).

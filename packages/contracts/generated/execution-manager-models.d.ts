@@ -266,6 +266,8 @@ export interface components {
              * @enum {string}
              */
             environment: "paper" | "sandbox" | "live" | "ALL";
+            /** @description Selected concrete source profile. Omitted for the backward-compatible three-environment ALL defaults view; not an all-installed-profile union. */
+            profile_id?: string;
             /** @description ALL only: exactly one entry per environment, in the order paper, sandbox, live. INCLUDED carries that environment's own snapshot, clocks, quality and counts (a counted zero is INCLUDED with 0). UNAVAILABLE carries a closed reason and nothing else: a missing environment is typed, never absent and never zero. page.authorized_filtered_count and page.returned_count are the sums of the INCLUDED entries (rows, never money); quality is never COMPLETE while an environment is UNAVAILABLE (MANAGER_ALL_*). */
             environment_coverage?: ({
                 /** @enum {string} */
@@ -919,11 +921,13 @@ export interface components {
                 revision: string;
                 supersedes_revision: string | null;
             };
-        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerDatasetQuery: {
             workspace_id?: string;
             /** @enum {string} */
             environment: "paper" | "sandbox" | "live" | "ALL";
+            /** @description Optional exact installed profile for a concrete environment. Omitted uses its explicitly pinned default; not allowed with ALL. Two Paper profiles are distinct scopes, never selected by array order. */
+            profile_id?: string;
             q?: string;
             /** @enum {string} */
             q_mode?: "PREFIX" | "CONTAINS";
@@ -987,7 +991,7 @@ export interface components {
             group_after?: string;
             /** @description Opaque backward group cursor; mutually exclusive with group_after. */
             group_before?: string;
-        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerMetric: {
             value: string | null;
             unit: string;
@@ -3015,6 +3019,7 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live" | "ALL";
+                profile_id?: string;
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3098,6 +3103,7 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live" | "ALL";
+                profile_id?: string;
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3181,6 +3187,7 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live" | "ALL";
+                profile_id?: string;
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3266,6 +3273,7 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live" | "ALL";
+                profile_id?: string;
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3351,6 +3359,7 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live" | "ALL";
+                profile_id?: string;
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3436,6 +3445,7 @@ export interface operations {
             query: {
                 workspace_id?: string;
                 environment: "paper" | "sandbox" | "live" | "ALL";
+                profile_id?: string;
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;

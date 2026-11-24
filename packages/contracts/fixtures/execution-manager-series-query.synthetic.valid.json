@@ -3,6 +3,28 @@
   "cases": [
     {
       "environment": "paper",
+      "profile_id": "TEST_ONLY:paper-default",
+      "metric": "NAV",
+      "window": "30D",
+      "subjects": [
+        {
+          "subject_type": "FUND"
+        }
+      ]
+    },
+    {
+      "environment": "paper",
+      "profile_id": "TEST_ONLY:paper-second",
+      "metric": "NAV",
+      "window": "30D",
+      "subjects": [
+        {
+          "subject_type": "FUND"
+        }
+      ]
+    },
+    {
+      "environment": "paper",
       "metric": "NAV",
       "window": "30D",
       "subjects": [

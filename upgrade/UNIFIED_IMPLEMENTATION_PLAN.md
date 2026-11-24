@@ -9424,6 +9424,17 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**24 Nov — G3 implementation assigned; private composition, NOT_ACTIVATED.**
+[Writer/CAS, delegation, profile isolation, signed producer and gate ledger](execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md).
+Codex implements G3 on `integrate/v13-candidate-20261122`: separate ordinary
+authority tables/migration159, real current-human mutation coordinator, bounded
+owner→administrator→employee READ, own-password step-up, final multi-scope
+authority check, explicit profile selection and aggregate four-partition budget.
+Native2h/Paper/source-terminal fences and legacy policy/grants are unchanged.
+The signed normalized producer is a **proposal**, not an existing qualified
+Edge export. No runtime/grant/migration install, UI or push. Tests and source
+closeout follow in the linked ledger; no G3/connected/consumer PASS inferred.
+
 **24 Nov 15:13 UTC — G2_OFFLINE_SOURCE_EXIT_MET / NOT_ACTIVATED, Verification: R2.**
 [Final source return, ID dispositions, dependency pins and cleanup](execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).
 Source `e89b223996d5ebc191460ca44944230ea7ca80cb` on

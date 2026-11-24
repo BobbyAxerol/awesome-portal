@@ -34,7 +34,7 @@ export class ManagerSeriesController {
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       const principal={user:r.portalUser,session:r.portalSession,workspaceId:workspace,
         viewerWorkspaceId:r.portalViewerWorkspaceId??r.portalWorkspaceId};
-      if(query.environment==="paper"&&this.series.hasNativeCurrentRelations?.()){
+      if(this.series.shouldUseNativeCurrent(principal,query)){
         if(!reply)throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
         const beforeDispatch=()=>{
           if(nativeOwnsResponse)return;

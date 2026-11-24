@@ -12,12 +12,17 @@ import {accessDigest,type AccessEvaluationContext} from "../src/execution-v2/acc
 import {unqualifiedAccessTrust} from "../src/execution-v2/access-trust";
 import {ManagerSeriesController} from "../src/execution-v2/manager-series.controller";
 import {ManagerSeriesService} from "../src/execution-v2/manager-series.service";
+import {ManagerModelService} from "../src/execution-v2/manager-model.service";
+import {ManagerModelController} from "../src/execution-v2/manager-model.controller";
 import {managerScorePopulationDigest} from "../src/execution-v2/manager-score-publication";
 import type {ExecutionManagerRuntime} from "../src/execution-v2/manager-runtime";
 import type {ManagerModelDocument} from "../src/execution-v2/manager-model.contract";
 import {NativeCurrentAccountScopes} from "../src/execution-v2/native-current-runtime";
 import type {NativeCurrentRelationsPort} from "../src/execution-v2/native-current-relations-port";
-import {ExecutionReadScopeError,type ExecutionReadScopes,type AuthorizedExecutionReadScope} from "../src/execution-v2/read-scope";
+import {ExecutionReadScopeError,ExecutionReadScopes,type AuthorizedExecutionReadScope} from "../src/execution-v2/read-scope";
+import type {OrdinaryProfileAuthority} from "../src/execution-v2/ordinary-profile-authority";
+import type {OrdinaryProfileReadDecision} from "../src/execution-v2/ordinary-profile-authority.contract";
+import type {ExecutionReadPublicationRequest} from "../src/execution-v2/read-publication";
 import {BUSINESS_READ_FIELDS} from "../src/execution-v2/read-fields";
 import {EXECUTION_PUBLICATION_CATALOGUE} from "../src/execution-v2/publication-source.generated";
 import {productReadFixture,OWN,PEER,PRIVATE} from "./elp2-product-read.fixture";
@@ -76,7 +81,7 @@ function fixture(native=true){
   const query=(count=4)=>({environment:"paper",metric:"NAV",window:"30D",subjects:JSON.stringify(SUBJECTS.slice(0,count))});
   const dataset={dataset_id:doc.family_id,source_revision:doc.revision,projection_generation:doc.projection_generation,
     catalogue_revision:doc.catalogue_digest,window:null};
-  return{...f,service,repository,doc,head,controller,request,raw,reply,query,composition,sent,order,dataset,profile,ordinaryAuthorize,ordinaryDeliver,
+  return{...f,service,repository,doc,head,controller,request,raw,reply,query,composition,sent,order,dataset,profile,runtime,ordinaryScopes,ordinaryAuthorize,ordinaryDeliver,
     setFinal:(fn:typeof finalContexts)=>{finalContexts=fn;},expireEconomic:()=>{economicCurrent=false;}};
 }
 
@@ -118,6 +123,78 @@ describe("Manager Series selects the actual native scope composition (TEST_ONLY 
     const f=fixture(),q={...f.query(),subjects:SUBJECTS};
     await expect(f.service.read(f.principal,q)).rejects.toMatchObject({code:"EXECUTION_READ_AUTHORITY_UNAVAILABLE",status:503});
     await expect(f.controller.read(f.request,f.query())).rejects.toMatchObject({status:503});
+    expect(f.repository.head).not.toHaveBeenCalled();expect(f.composition).not.toHaveBeenCalled();
+  });
+  it("does not let a second Paper profile borrow the pinned default's native authority",async()=>{
+    const f=fixture(),extra="TEST_ONLY:paper-second";
+    Object.assign(f.runtime,{profilesFor:()=>[extra,f.profile]});
+    const q={...f.query(1),profile_id:extra};
+    expect(f.service.shouldUseNativeCurrent(f.principal,{...q,subjects:SUBJECTS.slice(0,1)})).toBe(false);
+    await expect(f.service.readNative(f.principal,{...q,subjects:SUBJECTS.slice(0,1)},{} as ServerResponse)).rejects.toMatchObject({status:503});
+    expect(f.repository.head).not.toHaveBeenCalled();
+    // No ordinary authority was installed in this vector: route through that
+    // independent check and refuse, never borrow the native CURRENT provider.
+    await expect(f.controller.read(f.request,q,f.reply)).rejects.toMatchObject({status:503});
+    expect(f.ordinaryAuthorize).toHaveBeenCalledWith(expect.anything(),{environment:"paper",profileId:extra},expect.anything());
+    expect(f.composition).not.toHaveBeenCalled();expect(f.reply.hijack).not.toHaveBeenCalled();
+  });
+  it("applies the same exact profile routing and direct native-entry guard to finite Manager datasets",async()=>{
+    const f=fixture(),extra="TEST_ONLY:paper-second";
+    Object.assign(f.runtime,{profilesFor:()=>[extra,f.profile]});
+    const model=new ManagerModelService({} as Pool,f.ordinaryScopes,f.config,f.runtime,new NativeCurrentAccountScopes(f.scopes));
+    const repository=(model as unknown as {repository:{head:(...args:unknown[])=>Promise<unknown>}}).repository;
+    const head=vi.spyOn(repository,"head").mockResolvedValue(f.head);
+    const controller=new ManagerModelController(model,{canReadExecution:async()=>true} as never);
+    expect(model.shouldUseNativeCurrent(f.principal,{environment:"paper"})).toBe(true);
+    expect(model.shouldUseNativeCurrent(f.principal,{environment:"paper",profile_id:f.profile})).toBe(true);
+    expect(model.shouldUseNativeCurrent(f.principal,{environment:"paper",profile_id:extra})).toBe(false);
+    await expect(model.readNativeManager(f.principal,{environment:"paper",profile_id:extra},"FLEET",undefined,{} as ServerResponse,()=>{})).rejects.toMatchObject({status:503});
+    await expect(model.read(f.principal,"FLEET",{environment:"paper"})).rejects.toMatchObject({status:503});
+    expect(head).not.toHaveBeenCalled();
+    await expect(controller.fleet(f.request,{environment:"paper",profile_id:extra},f.reply)).rejects.toMatchObject({status:503});
+    expect(f.ordinaryAuthorize).toHaveBeenCalledWith(expect.anything(),{environment:"paper",profileId:extra},expect.anything());
+    expect(f.composition).not.toHaveBeenCalled();expect(f.reply.hijack).not.toHaveBeenCalled();
+  });
+  it("serves an explicitly installed second Paper through ordinary scopes, with exact profile output",async()=>{
+    const f=fixture(false),extra="TEST_ONLY:paper-second";
+    Object.assign(f.runtime,{profilesFor:()=>[extra,f.profile]});f.doc.profile_id=extra;
+    const body=await f.controller.read(f.request,{...f.query(1),profile_id:extra});
+    expect(body?.profile_id).toBe(extra);expect(f.repository.document).toHaveBeenCalledWith(f.principal.workspaceId,"paper",extra,f.head.revision);
+    expect(f.composition).not.toHaveBeenCalled();
+  });
+  it("retains all ordinary Series purposes through the final shared DB cut, including a late sibling revoke",async()=>{
+    // TEST_ONLY authority/source ports: real minted scopes, no PG/qualification.
+    const f=fixture(false),domain={profile_id:f.profile,catalogue_sha256:"a".repeat(64),profile_sha256:"b".repeat(64),field_policy_sha256:"c".repeat(64)};
+    const deadline=Date.now()+60_000,actor={user_id:f.principal.user.userId,session_id:f.principal.session.sessionId,session_generation:1};
+    const decision={schema_version:"portal.ordinary-profile-read-decision.v1",actor,workspace_id:f.principal.workspaceId,
+      environment:"paper",domain,field_policy_ref:"TEST_ONLY:ordinary-fields",fingerprint:accessDigest("TEST_ONLY:ordinary-decision"),
+      valid_until_ms:deadline,head_revision:"TEST_ONLY:ordinary-head",grant_id:"TEST_ONLY:ordinary-grant",grant_revision:"TEST_ONLY:ordinary-grant-r1"} as OrdinaryProfileReadDecision;
+    const db={query:vi.fn(async()=>({rows:[{role:"USER",session_version:1,policy:null,policy_revision:null,policy_seen:false,
+      workspace_exists:true,member:true,owner:false,retained:[]}]}))} as unknown as Pool;
+    let revoked=false;
+    const confirmMany=vi.fn(async(decisions:readonly OrdinaryProfileReadDecision[])=>{
+      // The final coordinator cut sees a revoke after body/source awaits. A
+      // sequence of single-purpose confirmations must not stand in for it.
+      if(decisions.length===SUBJECTS.length)revoked=true;
+      return revoked?null:{assertCurrent:()=>{if(revoked)throw Error("TEST_ONLY:revoked");}};
+    });
+    const ordinary={usesPool:(candidate:unknown)=>candidate===db,read:vi.fn(async()=>structuredClone(decision)),confirmMany} as unknown as
+      Pick<OrdinaryProfileAuthority,"read"|"confirmMany"|"usesPool">;
+    const publication=vi.fn(async(request:ExecutionReadPublicationRequest)=>({...await f.access.readPublication(request),qualification:"SOURCE_VERIFIED",
+      manager_domain:{environment:"paper",domain,field_policy_ref:decision.field_policy_ref}}));
+    const scopes=new ExecutionReadScopes(db,{readPublication:publication,hasNativeCurrentRelations:()=>false} as unknown as ExecutionAccessService,f.config,ordinary);
+    const service=new ManagerSeriesService({} as Pool,scopes,f.config,f.runtime);
+    const repository=(service as unknown as {repository:{head:(...args:unknown[])=>Promise<unknown>;document:(...args:unknown[])=>Promise<unknown>}}).repository;
+    vi.spyOn(repository,"head").mockResolvedValue(f.head);const doc=vi.spyOn(repository,"document").mockResolvedValue(f.doc);
+    await expect(service.read(f.principal,{environment:"paper",metric:"NAV",window:"30D",subjects:SUBJECTS}))
+      .rejects.toMatchObject({code:"EXECUTION_READ_ACCESS_CHANGED",status:409});
+    expect(doc).toHaveBeenCalledOnce();expect(confirmMany.mock.calls.at(-1)?.[0]).toHaveLength(SUBJECTS.length);
+    expect(f.composition).not.toHaveBeenCalled();expect(f.sent).toHaveLength(0);
+  });
+  it("refuses an unknown or invalid profile before a repository/native source read",async()=>{
+    const f=fixture();
+    await expect(f.controller.read(f.request,{...f.query(1),profile_id:"TEST_ONLY:not-installed"},f.reply)).rejects.toMatchObject({status:404});
+    await expect(f.controller.read(f.request,{...f.query(1),profile_id:42},f.reply)).rejects.toMatchObject({status:400});
     expect(f.repository.head).not.toHaveBeenCalled();expect(f.composition).not.toHaveBeenCalled();
   });
   it("keeps ordinary uninstalled Paper compatibility and refuses uninstalled explicit native entry",async()=>{

@@ -1802,6 +1802,13 @@
       ],
       "description": "A single environment, or ALL (Fleet only): navigation across separately authorized environments. An ALL body lists the authorized rows of every environment that answered, each row with its own environment and economic partitions, plus environment_coverage. It never carries a total over environments or partitions."
     },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+      "description": "Selected concrete source profile. Omitted for the backward-compatible three-environment ALL defaults view; not an all-installed-profile union."
+    },
     "environment_coverage": {
       "type": "array",
       "items": {
@@ -7330,6 +7337,28 @@
     "lineage"
   ],
   "allOf": [
+    {
+      "if": {
+        "properties": {
+          "environment": {
+            "const": "ALL"
+          }
+        },
+        "required": [
+          "environment"
+        ]
+      },
+      "then": {
+        "not": {
+          "properties": {
+            "profile_id": {}
+          },
+          "required": [
+            "profile_id"
+          ]
+        }
+      }
+    },
     {
       "if": {
         "type": "object",

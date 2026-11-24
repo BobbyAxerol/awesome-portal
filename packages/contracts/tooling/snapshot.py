@@ -20,6 +20,12 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "fixtures/execution-manager-profile-selection.synthetic.valid.json",
+    "tooling/generate-execution-ordinary-profile-authority.mjs",
+    "schemas/execution-ordinary-profile-authority.v1.schema.json",
+    "openapi/execution-ordinary-profile-authority.openapi.json",
+    "generated/execution-ordinary-profile-authority.d.ts",
+    "fixtures/execution-ordinary-profile-authority.synthetic.valid.json",
     "tooling/generate-execution-observed-read.mjs",
     "schemas/execution-observed-read.v1.schema.json",
     "openapi/execution-observed-read.openapi.json",

@@ -12,7 +12,7 @@ function fixture(allowed = true) {
     if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 400);
     return parsed.data;
   });
-  const controller = new ManagerModelController({ read } as any, { canReadExecution } as any);
+  const controller = new ManagerModelController({ read,shouldUseNativeCurrent:()=>false } as any, { canReadExecution } as any);
   const request = { portalUser: { userId: "TEST_ONLY:viewer" }, portalSession: {},
     portalWorkspaceId: "TEST_ONLY:source", portalViewerWorkspaceId: "TEST_ONLY:viewer-workspace" } as any;
   return { controller, request, read, canReadExecution };

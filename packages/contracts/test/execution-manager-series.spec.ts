@@ -21,7 +21,7 @@ describe("BE-P4 FE-013/FE-033 generated Manager series contract", () => {
     const op = api.paths["/api/v1/execution/manager/series"].get;
     expect(op.operationId).toBe("executionManagerSeriesGetV1");
     expect(op.responses["200"].content["application/json"].schema.$ref).toBe("#/components/schemas/ManagerSeries");
-    expect(op.parameters.map((p: { name: string }) => p.name)).toEqual(["environment", "workspace_id", "metric", "subjects", "window", "economic_partition"]);
+    expect(op.parameters.map((p: { name: string }) => p.name)).toEqual(["environment", "workspace_id", "profile_id", "metric", "subjects", "window", "economic_partition"]);
     expect(op.parameters.filter((p: { required: boolean }) => p.required).map((p: { name: string }) => p.name)).toEqual(["environment", "metric", "subjects", "window"]);
     expect(Object.keys(op.responses).sort()).toEqual(["200", "400", "401", "404", "409", "503"]);
     expect(api.components.schemas.ManagerSeries).toEqual(Object.fromEntries(Object.entries(schema).filter(([k]) => !["$schema", "$id"].includes(k))));

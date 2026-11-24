@@ -39,6 +39,17 @@
             }
           },
           {
+            "name": "profile_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "description": "Exact installed concrete profile; omission uses the pinned environment default. Two Paper profiles are distinct authority scopes."
+            }
+          },
+          {
             "name": "metric",
             "in": "query",
             "required": true,
@@ -364,6 +375,12 @@
           },
           "record_authority": {
             "const": "PORTAL_PROJECTION"
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Selected concrete source profile; not inferred from the environment or array order."
           },
           "source_authority": {
             "const": "TRADING_SYSTEM"
@@ -1601,6 +1618,12 @@
               "RETURN",
               "DRAWDOWN"
             ]
+          },
+          "profile_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "description": "Exact installed concrete profile; omission uses the pinned environment default. Two Paper profiles are distinct authority scopes."
           },
           "subjects": {
             "type": "array",

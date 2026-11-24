@@ -1,5 +1,12 @@
 # Backend Architecture Deep Dives
 
+**24Nov G3 — implementation under verification, NOT_ACTIVATED:**
+[Authority writer/DB CAS, delegation, explicit profiles and producer boundary](../execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md).
+Migration159 creates ordinary-only immutable authority; legacy/native authority
+is preserved. Signed normalized source is proposed and unmounted, not qualified
+Edge data. No runtime install, grant issue, UI or push; final gate/source status
+and outstanding producer inputs are recorded in the receipt, not inferred.
+
 **24Nov G2 source closeout — G2_OFFLINE_SOURCE_EXIT_MET / NOT_ACTIVATED:**
 [Normal-hook result, source SHA, ID dispositions and consumer handoff](../execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).
 Source `e89b22399`, 57 files/+8,042/−19; Core12,947 PASS/1 expected-fail/166 SKIP,

@@ -19,6 +19,8 @@ import { scopedReplayBinding,scopedRealtimeFrame } from "./realtime.contract";
 import { ScopedReplayCursorCodec,decodeScopedReplayContinuation } from "./scoped-replay-cursor";
 import { retainedReview } from "../execution/retained-read-profile";
 import { currentAccessRelations } from "./access-current-relations";
+import type { OrdinaryProfileAuthority } from "./ordinary-profile-authority";
+import type { OrdinaryProfileReadDecision } from "./ordinary-profile-authority.contract";
 
 export type ReadEnvironment="paper"|"sandbox"|"live";
 export interface ReadScopePrincipal {user:PortalUser;session:AuthSession;workspaceId:string;viewerWorkspaceId?:string;}
@@ -71,6 +73,7 @@ type ManagerNativeState={source:SelectedNativeBusinessReadSource;
   domain:Readonly<{profile_id:string;catalogue_sha256:string;profile_sha256:string;field_policy_sha256:string}>;
   source_identity_digest:string;decision:Readonly<ManagerDomainStreamDecision>;fingerprint:string;};
 type ScopeState={kind:"ENTITY"|"MANAGER";manager?:ManagerNativeState;issuer:ExecutionReadScopes;principal:ReadScopePrincipal;binding:ReadScopeBinding;
+  ordinary?:Readonly<OrdinaryProfileReadDecision>;
   requirement:ReadScopeRequirement;tuples:ExecutionReadPublication["tuples"];resources:AccessResource[];
   population:ExecutionReadPublication["tuples"];fields:readonly string[];context:AccessEvaluationContext|null;
   /** null = the whole record-detail vocabulary (full-business read); an array = the reviewed researcher subset. */
@@ -203,9 +206,14 @@ export const scopeAllowsQueryField = scopeAllowsField;
  * the minted current authority after all asynchronous work. */
 export function scopeAllowsFullAccountingPopulation(scope:AuthorizedExecutionReadScope,portfolioId?:string,alphaId?:string):boolean {
   assertExecutionReadScope(scope);const state=minted.get(scope)!;
-  if(scope.mode!=="SCOPED_V2"||!state.context||!state.requirement.dataset||!businessReads.has(state.requirement.action))return false;
-  const full=(resource:AccessResource)=>!businessReadDenied(state.context!,resource,scope.environment)&&
-    evaluateBusinessRead(state.context!,"business.read_all",resource,scope.environment).allowed;
+  if(scope.mode!=="SCOPED_V2"||(!state.context&&!state.ordinary)||!state.requirement.dataset||!businessReads.has(state.requirement.action))return false;
+  // Ordinary decisions already intersect every current DENY and bind one full
+  // qualified correlated census. They confer population visibility only, not
+  // economic ownership, method/calibration or a commissioned financial input.
+  const full=(resource:AccessResource)=>state.ordinary
+    ? scope.wholePopulation&&state.resources.some(r=>exactKey(r)===exactKey(resource))
+    : !businessReadDenied(state.context!,resource,scope.environment)&&
+      evaluateBusinessRead(state.context!,"business.read_all",resource,scope.environment).allowed;
   const population=state.population.filter(t=>(portfolioId===undefined||t.portfolio_id===portfolioId)&&(alphaId===undefined||t.alpha_id===alphaId));
   if(!population.length)return alphaId!==undefined?state.resources.some(r=>r.kind==="ALPHA"&&r.id===alphaId)&&full({kind:"ALPHA",id:alphaId}):
     portfolioId===undefined?scope.wholePopulation:
@@ -228,7 +236,9 @@ export function scopeRealtimeIdentity(scope:NativeExecutionReadScope):string {
   return accessDigest({mode:scope.mode,actor:s.principal.user.userId,session:s.principal.session.sessionId,
     session_generation:s.principal.session.sessionVersion,workspace:scope.workspaceId,viewer:scope.viewerWorkspaceId,
     binding:s.binding,action:s.requirement.action,resource:s.requirement.resource??null,
-    dataset:dataset&&{...dataset,source_revision:undefined},authority:s.context&&{
+    dataset:dataset&&{...dataset,source_revision:undefined},ordinary_authority:s.ordinary?{
+      fingerprint:s.ordinary.fingerprint,head_revision:s.ordinary.head_revision,grant_id:s.ordinary.grant_id,
+      grant_revision:s.ordinary.grant_revision,domain:s.ordinary.domain}:undefined,authority:s.context&&{
       db:s.context.authority_fingerprint,role:s.context.actor_role,policy:s.context.policy,
       grants:s.context.grants.map(g=>[g,Object.hasOwn(s.context!.relationsFor(g.subject_user_id),"current_authority")?
         s.resources.some(resource=>grantCurrent(g,s.context!,new Set(),{resource,environment:scope.environment})):grantCurrent(g,s.context!)]),active:[...s.context.active_principals].sort(),
@@ -514,7 +524,10 @@ function assertPortfolioPurposeSource(context:AccessEvaluationContext,action:Por
  * legacy. This service alone can mint scopes; every delivery is freshly fenced. */
 export class ExecutionReadScopes {
   constructor(private readonly pool:Pool,private readonly access:ExecutionAccessService,
-    private readonly config:ControlApiConfig) {}
+    private readonly config:ControlApiConfig,
+    private readonly ordinary?:Pick<OrdinaryProfileAuthority,"read"|"confirmMany"|"usesPool">) {
+    if(ordinary&&!ordinary.usesPool(pool))fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+  }
 
   /** Policy routing only, NOT a data capability. Callers must authorize a
    * concrete action/dataset before accessing V2 records. Sticky activation
@@ -887,6 +900,11 @@ export class ExecutionReadScopes {
   private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement,optional?:PortfolioPurposeOptions):Promise<AuthorizedExecutionReadScope|PortfolioCollectionPurpose> {
     const identity=await this.identity(p);
     if(identity.role!==p.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // Ordinary app authority is a separate, explicitly installed family. It
+    // never changes sticky workspace routing for the other legacy readers.
+    // A failed ordinary Manager purpose MUST NOT fall back to legacy/native.
+    if(this.ordinary&&r.dataset?.dataset_id==="alpha_fleet_overview"&&businessReads.has(r.action)&&!optional)
+      return this.mintOrdinary(p,b,r);
     if(optional&&identity.policy===null&&!identity.policy_seen)fail("EXECUTION_READ_ACCESS_CHANGED",409);
     let context:AccessEvaluationContext|null=null,publication:ExecutionReadPublication|null=null;
     let bindingPairs:{binding_id:string;account_id:string}[]=[];
@@ -1146,6 +1164,45 @@ export class ExecutionReadScopes {
     return scope;
   }
 
+  private async mintOrdinary(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope>{
+    if(!this.ordinary||!r.dataset||r.dataset.dataset_id!=="alpha_fleet_overview"||r.dataset.window!==null||
+      !businessReads.has(r.action))fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const actor={user_id:p.user.userId,session_id:p.session.sessionId,session_generation:p.session.sessionVersion};
+    const decision=await this.ordinary.read(actor,p.workspaceId,b.environment,b.profileId);
+    if(!decision)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const request:ExecutionReadPublicationRequest={workspace_id:p.workspaceId,environment:b.environment,
+      profile_id:b.profileId,binding:r.dataset};
+    const first=readPublication.safeParse(await this.access.readPublication(request));
+    if(!first.success)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const publication=first.data,domain=publication.manager_domain;
+    if(publication.qualification!=="SOURCE_VERIFIED"||publication.workspace_id!==p.workspaceId||
+      publication.environment!==b.environment||publication.profile_id!==b.profileId||
+      publication.population_coverage!=="COMPLETE_FOR_DATASET_WINDOW"||
+      accessDigest(publication.binding)!==accessDigest(r.dataset)||!domain||domain.environment!==b.environment||
+      accessDigest(domain.domain)!==accessDigest(decision.domain)||domain.field_policy_ref!==decision.field_policy_ref)
+      fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const resources=publication.resources,keys=new Set(resources.map(exactKey));
+    if(keys.size!==resources.length||new Set(publication.tuples.map(t=>accessDigest(t))).size!==publication.tuples.length||
+      publication.tuples.some(t=>tupleLineage(t).some(resource=>!keys.has(exactKey(resource))))||
+      r.resource&&!keys.has(exactKey(r.resource)))fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const second=readPublication.safeParse(await this.access.readPublication(request));
+    if(!second.success||accessDigest(second.data)!==accessDigest(publication))fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // DB-only after the LAST source await. Grant/seal/delegation/deny/session
+    // changes during either publication read cannot leave an earlier ALLOW.
+    const fence=await this.ordinary.confirmMany([decision]);
+    if(!fence)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    fence.assertCurrent();
+    const fields=[...BUSINESS_READ_FIELDS],fingerprint=accessDigest({ordinary:decision.fingerprint,
+      actor,workspace:p.workspaceId,viewer:p.viewerWorkspaceId,binding:b,requirement:r,publication,fields});
+    const scope=Object.freeze({mode:"SCOPED_V2" as const,fingerprint,workspaceId:p.workspaceId,
+      viewerWorkspaceId:p.viewerWorkspaceId??p.workspaceId,environment:b.environment,profileId:b.profileId,
+      policyRevision:decision.head_revision,fieldPolicyRef:decision.field_policy_ref,wholePopulation:true}) as AuthorizedExecutionReadScope;
+    minted.set(scope,{kind:"ENTITY",issuer:this,principal:p,binding:b,requirement:r,ordinary:decision,
+      resources:structuredClone(resources),tuples:structuredClone(publication.tuples),population:structuredClone(publication.tuples),
+      fields,detail:null,context:null,strategyPairs:[],bindingPairs:[]});
+    return scope;
+  }
+
   async revalidate(scope:AuthorizedExecutionReadScope):Promise<void> {
     assertExecutionReadScope(scope);
     const state=minted.get(scope)!;
@@ -1180,7 +1237,7 @@ export class ExecutionReadScopes {
     for(const scope of initial){
       assertExecutionReadScope(scope);
       const state=minted.get(scope)!;
-      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||(!state.context&&!state.ordinary)||
         state.requirement.action!=="alpha.read"||state.requirement.resource!==undefined||
         state.requirement.requireWholePopulation===true||
         state.requirement.dataset?.dataset_id!=="alpha_fleet_overview"||
@@ -1286,6 +1343,8 @@ export class ExecutionReadScopes {
   private async deliverReadComposition<T>(initial:readonly AuthorizedExecutionReadScope[],
     read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,
     validateBeforeRelease:(()=>void)|undefined,actorKey:(state:ScopeState)=>string,scopeLimit=16):Promise<T>{
+    const allOrdinary=Array.isArray(initial)&&initial.length>0&&initial.every(scope=>minted.get(scope)?.ordinary!==undefined);
+    if(allOrdinary)return this.deliverOrdinaryTogether(initial,read,validateBeforeRelease,actorKey,scopeLimit);
     if(this.access.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
     if(!Array.isArray(initial)||!initial.length||initial.length>scopeLimit)fail("EXECUTION_READ_SCOPE_REQUIRED");
     const original:AuthorizedExecutionReadScope[]=[],states:ScopeState[]=[];
@@ -1373,6 +1432,37 @@ export class ExecutionReadScopes {
     return result as T;
   }
 
+  private async deliverOrdinaryTogether<T>(initial:readonly AuthorizedExecutionReadScope[],
+    read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,validateBeforeRelease:(()=>void)|undefined,
+    actorKey:(state:ScopeState)=>string,scopeLimit:number):Promise<T>{
+    if(!this.ordinary||!initial.length||initial.length>scopeLimit)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const scopes:AuthorizedExecutionReadScope[]=[],states:ScopeState[]=[];
+    let key:string|undefined;
+    const retain=(scope:AuthorizedExecutionReadScope)=>{
+      assertExecutionReadScope(scope);const state=minted.get(scope)!;
+      if(state.issuer!==this||!state.ordinary||scope.mode!=="SCOPED_V2")fail("EXECUTION_READ_SCOPE_REQUIRED");
+      const next=actorKey(state);if(key!==undefined&&next!==key)fail("EXECUTION_READ_SCOPE_REQUIRED");key=next;
+      if(scopes.includes(scope))return;if(scopes.length>=scopeLimit)fail("EXECUTION_READ_SCOPE_LIMIT",503);
+      scopes.push(scope);states.push(state);
+    };
+    initial.forEach(retain);
+    for(const scope of scopes)await this.revalidate(scope);
+    let result:T|undefined,error:unknown,failed=false;
+    try{result=await read(retain);}catch(e){error=e;failed=true;}
+    for(const scope of scopes)await this.revalidate(scope);
+    const fence=await this.ordinary.confirmMany(states.map(state=>state.ordinary!));
+    if(!fence)fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    // Pure release checks only; never grant STREAM/ROOT/native send custody.
+    const checked=validateBeforeRelease?.() as unknown;
+    if(checked!==undefined){
+      if(checked&&typeof (checked as {then?:unknown}).then==="function")
+        void Promise.resolve(checked).catch(()=>undefined);
+      fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);
+    }
+    fence.assertCurrent();
+    if(failed)throw error;return result as T;
+  }
+
   hasNativeCurrentRelations():boolean{return this.access.hasNativeCurrentRelations();}
 
   /** Pure lifetime check only. This neither settles source custody nor claims
@@ -1425,6 +1515,9 @@ export class ExecutionReadScopes {
   }
 
   async deliver<T>(scope:AuthorizedExecutionReadScope,read:()=>Promise<T>):Promise<T> {
+    if(minted.get(scope)?.ordinary)return this.deliverOrdinaryTogether([scope],()=>read(),undefined,
+      state=>JSON.stringify([state.principal.user.userId,state.principal.session.sessionId,
+        state.principal.workspaceId,state.principal.viewerWorkspaceId,state.binding]),1);
     // A returned DTO is NOT the physical final HTTP boundary. Native CURRENT
     // composition must use deliverNative; never silently fall back detached.
     if(this.access.hasNativeCurrentRelations())fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE",503);

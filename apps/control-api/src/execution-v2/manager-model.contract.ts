@@ -121,6 +121,7 @@ const groupMetricKey = z.string().regex(/^[a-z][a-z0-9_]{1,63}$/);
 export const managerGroupSort = z.object({ metric_key: groupMetricKey, direction: z.enum(["asc", "desc"]) }).strict();
 export const managerGroupFilter = z.object({ metric_key: groupMetricKey, op: z.enum(["GTE", "LTE", "IS_NULL"]), value: text.optional() }).strict();
 export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: managerEnvironmentScope,
+  profile_id: text.optional(),
   q: managerSearchText.optional(), q_mode: managerSearchMode.optional(), window: managerWindowQuery.optional(),
   stage_filter: z.array(financialStage).max(4).default([]), lifecycle_filter: text.optional(),
   filters: z.array(filter).max(16).default([]),
@@ -133,6 +134,8 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
   group_limit: z.number().int().min(1).max(200).optional(),
   group_after: z.string().min(1).max(4096).optional(), group_before: z.string().min(1).max(4096).optional(),
 }).strict().superRefine((q, c) => {
+  if (q.environment === "ALL" && q.profile_id !== undefined)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ALL_PROFILE_NOT_APPLICABLE" });
   if (q.q_mode !== undefined && q.q === undefined)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_SEARCH_QUERY_REQUIRED" });
   if (q.group_after && q.group_before || !q.group_by.length && (q.group_limit !== undefined || q.group_after || q.group_before))
@@ -213,6 +216,7 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   surface: z.enum(["FUND", "FLEET", "PORTFOLIO", "ALPHA", "ACCOUNT", "DEPLOYMENT"]), workspace_id: text,
   stage_lifecycle: managerStageLifecyclePolicy,
   environment: managerEnvironmentScope,
+  profile_id: text.optional(),
   // FE-CAT-3: exactly when `environment` is ALL: one entry per environment (paper, sandbox, live), in that order.
   environment_coverage: z.array(managerEnvironmentCoverage).length(3).optional(),
   record_authority: z.literal("PORTAL_PROJECTION"), source_authority: z.literal("TRADING_SYSTEM"),
@@ -244,4 +248,7 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),
-}).strict().superRefine(validateManagerAllScope).superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine(validateManagerDatasetInvariants).superRefine(validateManagerDisplayText);
+}).strict().superRefine((v,c)=>{
+  if(v.environment==="ALL"&&v.profile_id!==undefined)
+    c.addIssue({code:"custom",path:["profile_id"],message:"ALL_PROFILE_SELECTION_NOT_SUPPORTED"});
+}).superRefine(validateManagerAllScope).superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine(validateManagerDatasetInvariants).superRefine(validateManagerDisplayText);
