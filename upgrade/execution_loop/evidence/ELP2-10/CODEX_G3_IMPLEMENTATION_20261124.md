@@ -403,3 +403,37 @@ credential file or preview mount. Retain the small source/failed/success logs as
 evidence, not abandoned cache. No shared image/cache/backup was pruned. Capacity
 sample:145,521,396KiB disk available (78%used), MemAvailable9,884,356KiB; these
 are point samples, not peak-resource, production-budget or G2 measurements.
+
+### Ordinary follow-through source return — 2026-11-24 18:19 UTC
+
+- Source commit: `be26f15bb6ca2ba091981c563b7832530dae0707`, predecessor
+  `974b0435b01cde76a8296c081b937b34bcf64402`; committed tree equals the
+  frozen index `043f0ce0a4288e2fc5b2a6f28fae5f3958385192`.
+- **18 files, +1,165/-4**: source/tests/isolated runner and seven Markdown
+  tracking/handoff files, zero frontend implementation. Branch remains
+  `integrate/v13-candidate-20261122`; historical Research receives docs only.
+- Verification **R1**: ordinary7 unique PG PASS, legacy10 PG PASS, pure21 PASS,
+  both whole Core typecheck projects exit0, diff/link/tracking/shell checks
+  PASS. Independent implementation and handoff reviews ACCEPT within the
+  explicitly UNMOUNTED/NOT_CUTOVER scope. No new normal R2 hook or landing,
+  runtime install, grant/session issuance, UI change, remote push or dev/main/
+  stable operation is claimed.
+- Local preservation bundle `g3-ordinary-restore-source.bundle` in the state
+  directory above verifies with Git; requires predecessor974b0435b and carries
+  sourcebe26f15bb. SHA256
+  `10f658372cb1d7fa05446bc2b653e5478042785e3188ff7be6395992b7c27bde`.
+- Full task and exact consumer files are in the
+  [Claude handoff](CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md). Delivery here is
+  local mailbox publication, **not a Claude/Edge receipt or consumer ACK**.
+
+**G3 remains OPEN:** Core metadata preservation/validation and confirmed
+producer mapping, real-source qualification, and Claude compatibility ACK
+have explicit owners/actions in that handoff. The ordinary comparison gate
+above is independently qualified; complete operational V2/native restore,
+source/terminal/ACK reconciliation and connected/browser gates are separate
+and remain unproven. Do not reopen a new TS-signing requirement or demand
+already supplied physical pin triples to excuse Core-owned mapping work.
+
+This final-pin/index publication is **R0** under campaign§10.10d, Markdown only.
+Its source/dependency bytes equal the focused-tested source. Keep the next
+normal hook for the one reconciled Claude-consumer/restore landing candidate.

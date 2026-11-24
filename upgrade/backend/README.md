@@ -1,6 +1,7 @@
 # Backend Architecture Deep Dives
 
 **24Nov — G3 ordinary restore and full Claude return:**
+Sourcebe26f15bb, R1 focused checkpoint; pin/index mirror is R0, no new R2 landing.
 [Implementation/qualification, compatibility checklist and remaining source inputs](../execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
 Ordinary drill7PASS/legacy10PASS/pure21PASS; UNMOUNTED/NOT_CUTOVER, both tsc
 projects exit0, R1 only. Old profiles refuse ordinary tables/views rather than omit

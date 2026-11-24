@@ -2,6 +2,7 @@
 
 ## 2026-11-24 — consolidated G3 consumer and backend return
 
+Sourcebe26f15bb (v1.3 integration), R1 follow-through; actual Claude ACK pending.
 [One Claude entry point: source lane, exact files, vectors and acceptance](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
 Thread optional profile_id through both strict readers, encoders, query match,
 Fleet filters AND publication probe, request/cursor identity. Existing components

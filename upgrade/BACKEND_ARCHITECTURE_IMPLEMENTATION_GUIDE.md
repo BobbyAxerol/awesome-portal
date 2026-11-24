@@ -651,6 +651,7 @@ deep-dive → ADR → slice → evidence discipline documented above.
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
 **24Nov — G3 restore follow-through / consolidated handoff:**
+R1 sourcebe26f15bb,18files/+1,165/-4; final pins are R0 documentation only.
 [Ordinary profile qualification and exact Core/Claude/Edge actions](execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
 Frozen inventories refuse ordinary authority; separate populated restore/revoke
 drill7PASS, legacy10PASS, pure21PASS; UNMOUNTED/NOT_CUTOVER, both tsc projects exit0.

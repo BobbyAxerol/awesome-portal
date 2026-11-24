@@ -160,7 +160,14 @@ The unchanged normal hook remains pinned to prior source tree
 `6930a1892e891ee54b6a63e53fc8885216185729`; it does not cover this new code.
 Final legacy PG10/10 and pure21/21 retakes completed exit0. Whole Core
 typecheck completed **exit0 for both projects**; exact logs/hashes and cleanup
-are in the implementation receipt. Source pin follows in the R0 source return.
+are in the implementation receipt; exact source pin is recorded below.
+
+**Follow-through source:** `be26f15bb6ca2ba091981c563b7832530dae0707`, tree
+`043f0ce0a4288e2fc5b2a6f28fae5f3958385192`; **18 files, +1,165/-4**, no
+frontend implementation. It is a local **R1 source checkpoint**, not R2 landing.
+Prior authority/profile contracts remain at `d402a594e`; checkout the new
+checkpoint for the combined source and restore tests. The following R0 commit
+only records these pins and mirrors documentation to historical Research.
 
 ## 6. Ready-to-assign continuation — no new design campaign
 

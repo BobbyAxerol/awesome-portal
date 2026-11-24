@@ -9425,6 +9425,8 @@ No remote push, dev/main merge, signed release or production/source activation.
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
 **24 Nov — G3 ordinary restore follow-through and consolidated Claude handoff.**
+R1 source `be26f15bb6ca2ba091981c563b7832530dae0707`,18files/+1,165/-4;
+R0 pin/index publication only, no new landing/runtime/consumer ACK.
 [Exact owned implementation, source-as-is clarification, consumer checklist and gates](execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
 Old restore profiles now refuse installed ordinary authority rather than omit
 it. Separate populated-ordinary four-stage drill:7uniquePASS; legacy10PASS,

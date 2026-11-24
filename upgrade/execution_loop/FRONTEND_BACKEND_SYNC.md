@@ -2,6 +2,7 @@
 
 ## 24 Nov — G3 complete handoff / ordinary restore follow-through
 
+R1 sourcebe26f15bb,18files/+1,165/-4; no installed source or consumer ACK implied.
 [Claude task map, exact source lane, producer clarification and qualification](evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
 ACK remains AWAITING_CONSUMER_REVIEW. Preserve current design; include Fleet
 publication probe in profile/workspace identity. Old restore profiles refuse
