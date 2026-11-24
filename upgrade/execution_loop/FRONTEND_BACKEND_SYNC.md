@@ -7,7 +7,9 @@ QuantBT producer Overview/bare run now uses the existing EvidenceFlow contract;
 workspace/query/hash preserved, legacy readers unchanged. Definite authenticated
 pre-publish refusal atomically closes only its unstarted claim; ambiguous publish
 stays UNKNOWN. No design/public DTO/migration change. FE166/service54/Python5/PG7,
-Core build/restore and FE typecheck PASS; no new bundle/runtime/browser receipt.
+Core build/restore and FE typecheck PASS. Source `14368c9c3` passed one normal
+hook (Core12813 PASS/1 expected-fail/166 SKIP, contracts1962, restore/tracking);
+no new product bundle/runtime/browser receipt. Markdown closeout is R0 only.
 Old queued run still needs authorized lifecycle disposition. Claude can review
 the binding and test the eventual built candidate without rerunning the engine.
 

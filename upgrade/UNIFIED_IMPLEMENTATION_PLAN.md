@@ -9429,8 +9429,9 @@ No remote push, dev/main merge, signed release or production/source activation.
 producer Overview uses the existing Research reader, not legacy; definite
 pre-publish refusal settles the exact unstarted claim atomically, while unknown
 transport stays UNKNOWN. FE166, service54, Python5, real-PG7 + Core build/restore
-and FE typecheck PASS; normal hook recorded separately after freeze. Source-only,
-no runtime swap. Old queued run and final browser acceptance remain open.
+and FE typecheck PASS. Source `14368c9c3` passed one normal hook: contracts1962,
+Core12813 PASS/1 expected-fail/166 SKIP, preservation/restore and tracking PASS.
+Source-only, no runtime swap; old queued run and browser acceptance remain open.
 [Access/Observed independent review and Claude actions](execution_loop/evidence/ELP2-10/CODEX_G2_ACCESS_OBSERVED_REVIEW_20261124.md)
 preserve both existing worktrees/WIP; no activation or full-phase PASS.
 

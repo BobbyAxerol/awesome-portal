@@ -52,8 +52,10 @@ normal request ID outside `detail`.
 
 ## Actual validation (all heavy commands in primus-build)
 
-Envelope: shared 3 CPU, memory.high 6 GiB, memory.max 8 GiB, one slot. No
-dependency installation, live engine run, runtime write or parallel heavy gates.
+Envelope: shared 3 CPU, memory.high 6 GiB, memory.max 8 GiB, one slot. Focused
+host tests reused existing dependencies; the PG runner installed dependencies
+only inside its disposable cell. No live engine run, runtime write or parallel
+heavy gates.
 
 | Gate / command | Actual result |
 | --- | --- |
@@ -140,3 +142,37 @@ backup deletion, shared dependency cleanup, service restart or account changes.
 - Rollback: source-only reviewed revert; there is no schema/runtime operation
   to reverse. If source is deployed later, preserve refusal receipts and FAILED
   lifecycle/audit; never erase them to make an old same-intent retry dispatch.
+
+## Same-day closeout — normal hook and source commit
+
+Confirmed 2026-11-24 at 07:35 UTC. **Verification: R2** for source commit
+`14368c9c3876bc289a08feac0018cd0e27e2f4ae`, tree
+`1df5d02241f8e7b83f2a81ba4da8741327979852`, on the assigned
+`integrate/v13-candidate-20261122` worktree. Ten code/test paths are
+**+526/−20**; including seven tracking/handoff Markdown paths, the commit is
+17 files, **+817/−20**. Source remained frozen throughout the hook.
+
+Exactly one normal-hook invocation completed, exit 0:
+`/usr/local/bin/primus-build -- git commit -m "fix: route producer overview and settle definite dispatch refusals"`.
+The normal hook ran the monorepo verifier, including contracts **113 files /
+1,962 PASS**, generated-type verification, Core build, the full PostgreSQL
+suite (**631 files PASS / 32 files SKIP; 12,813 tests PASS / 1 expected-fail /
+166 SKIP**) and the preservation/restore drill. Final messages included
+`Execution tracking reconciliation passed` and `Portal monorepo verification passed`.
+The Core suite duration was 3,175.38 seconds; no duplicate heavy run was started.
+Focused results above overlap this suite and must not be added as new coverage.
+SKIP/expected-fail are not connected-source, issuer, custody or independent
+recovery acceptance. No product image or frontend bundle was built by this slice.
+
+Post-exit checks found no container/network with the owned hook suffix
+`13188591590723886`, no owned temporary image
+`portal-source-proxy-d4-offline:tmp.GCVGd73L0h`, and no diagnostic dependency links.
+Free disk remained 140 GiB; available host memory was 9,700 MiB, no swap.
+**NO_ACTION_NEEDED for owned disposable resources**; retained source harness,
+other worktrees, dependencies, data, audit and backups were not deleted.
+
+This closeout and index mirrors use **Verification: R0**, Markdown-only under
+campaign §10.10d: explicit paths, diff/link and tracking checks; no second full
+hook merely for recording its result. Research receives the exact receipt and
+review/index updates, not a merge of its divergent historical codebase.
+G1 runtime/browser/orphan gates and G2 CHANGES_REQUESTED remain as listed above.
