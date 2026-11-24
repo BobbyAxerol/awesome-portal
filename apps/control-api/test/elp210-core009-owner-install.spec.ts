@@ -32,7 +32,7 @@ beforeEach(() => {
   vi.mocked(lstat).mockImplementation((async (path: unknown) => { const f = files.get(String(path)); if (!f) throw Error("ENOENT"); return stat(f); }) as any);
   vi.mocked(open).mockImplementation((async (path: unknown, flags: unknown) => {
     const f = files.get(String(path)); if (!f) throw Error("ENOENT");
-    expect(flags).toBe(constants.O_RDONLY | constants.O_NOFOLLOW);
+    expect(flags).toBe(constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     let offset = 0;
     return { stat: async () => stat(f.swap ? { ...f, ino: f.ino + 1 } : f), close: vi.fn(async () => undefined),
       read: async (buffer: Buffer, start: number, length: number) => {

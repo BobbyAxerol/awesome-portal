@@ -51,6 +51,7 @@ import { ResearchCompareError } from "./research/compare.error";
 import { ResearchReleaseCandidateError } from "./research/release-candidate.error";
 import {isReadStoreUnavailable} from "./db/read-unavailable";
 import { ExecutionReadScopeError } from "./execution-v2/read-scope";
+import { ObservedReadError } from "./execution-v2/observed-read.contract";
 import { CommandHttpError } from "./execution-v2/command.error";
 
 @Catch()
@@ -63,11 +64,12 @@ export class HttpErrorFilter implements ExceptionFilter {
     const request = context.getRequest<FastifyRequest>();
     const requestId =
       (request.headers["x-request-id"] as string | undefined) ?? "unknown";
-    // A guard can reject Approval Evidence before Nest applies the method's
+    // A guard can reject a private reader before Nest applies the method's
     // @Header metadata. Keep even unauthenticated/refused responses private,
     // matching the route contract and avoiding cached authorization results.
     if ((request.method === "GET" || request.method === "HEAD") &&
-      /^\/api\/v1\/execution\/governance\/approvals\/[^/?]+\/evidence(?:\?|$)/.test(request.url)) {
+      (/^\/api\/v1\/execution\/governance\/approvals\/[^/?]+\/evidence(?:\?|$)/.test(request.url) ||
+        /^\/api\/v1\/execution\/observed\/overview(?:\?|$)/.test(request.url))) {
       void reply.header("Cache-Control", "private, no-store");
     }
     if (exception instanceof Error && (exception as Error & {code?:string}).code === "EXECUTION_POOL_BUSY") {
@@ -79,6 +81,7 @@ export class HttpErrorFilter implements ExceptionFilter {
     if (
       exception instanceof AuthError ||
       exception instanceof ExecutionReadScopeError ||
+      exception instanceof ObservedReadError ||
       exception instanceof FacadeError ||
       exception instanceof GovernanceError ||
       exception instanceof QueryContractError ||

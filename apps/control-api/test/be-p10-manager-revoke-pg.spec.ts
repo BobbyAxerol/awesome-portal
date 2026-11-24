@@ -40,7 +40,7 @@ describe.skipIf(!DATABASE)("BE-P10 manager-domain revoke on real PostgreSQL (SYN
     const st = { uid: 0, mode: 0o100600, ino: 5, dev: 1, size: bytes.length, isFile: () => true, isSymbolicLink: () => false };
     vi.mocked(lstat).mockResolvedValue(st as any);
     vi.mocked(open).mockImplementation((async (_p: unknown, flags: unknown) => {
-      expect(flags).toBe(constants.O_RDONLY | constants.O_NOFOLLOW);
+      expect(flags).toBe(constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
       let done = false;
       return { stat: async () => st, close: async () => undefined, read: async (b: Buffer, start: number) => {
         if (done) return { bytesRead: 0, buffer: b }; done = true; bytes.copy(b, start); return { bytesRead: bytes.length, buffer: b }; } };

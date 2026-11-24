@@ -164,14 +164,14 @@ describe("EDS-11R rich-screen named warm-up", () => {
     });
     await expect(missing.instance.relation(
       principal(), "paper", "PAPER_TRADING_SCREEN", "manager.sessions", "execution_sessions", { limit: 1 },
-    )).rejects.toMatchObject<Partial<CurrentSourceProxyError>>({ code: "N31_PROJECTION_NOT_READY" });
+    )).rejects.toMatchObject({ code: "N31_PROJECTION_NOT_READY" } satisfies Partial<CurrentSourceProxyError>);
     expect(missing.relationPage).not.toHaveBeenCalled();
 
     // Projection disabled: the named operation is the whole path, and it is BINANCE-bound.
     const off = source({ ...okx, FEATURE_EXECUTION_LOCAL_PROJECTION: "false" });
     await expect(off.instance.relation(
       principal(), "paper", "PAPER_TRADING_SCREEN", "manager.sessions", "execution_sessions", { limit: 1 },
-    )).rejects.toMatchObject<Partial<CurrentSourceProxyError>>({ code: "EDS11R_PANEL_REQUIRES_PROJECTION" });
+    )).rejects.toMatchObject({ code: "EDS11R_PANEL_REQUIRES_PROJECTION" } satisfies Partial<CurrentSourceProxyError>);
     expect(off.relationPage).not.toHaveBeenCalled();
 
     // Explicitly back on BINANCE: the warm-up serves as before.

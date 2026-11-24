@@ -68,6 +68,13 @@ const FORBIDDEN_FIELD = /(?:^|_)(?:raw|secret|credential|password|token|dsn)(?:_
 const FRESHNESS = new Set(["FRESH", "AGING", "STALE", "UNKNOWN"]);
 const COMPLETENESS = new Set(["COMPLETE", "PARTIAL", "UNKNOWN"]);
 
+/** Lossless ordering of Manager INTEGER scalars. Never round a source row id. */
+export function managerIntegerOrder(value: unknown): bigint | null {
+  if (typeof value === "number") return Number.isSafeInteger(value) ? BigInt(value) : null;
+  if (typeof value !== "string" || value.length > 96 || !/^-?(?:0|[1-9]\d*)$(?![\s\S])/.test(value)) return null;
+  return BigInt(value);
+}
+
 /**
  * Converts the versioned Manager-v2 tagged-value envelope into a narrow Portal
  * record. Opaque record keys, relation metadata and non-allowlisted fields are
@@ -220,12 +227,11 @@ function taggedValue(value: unknown, errorPrefix: "N22" | "N23"): Scalar | reado
   const item = tagged.value;
   if (kind === "NULL" && item === null) return null;
   if (kind === "BOOLEAN" && typeof item === "boolean") return item;
-  if (kind === "INTEGER" && typeof item === "number" && Number.isSafeInteger(item)) return item;
+  if (kind === "INTEGER" && typeof item === "number" && managerIntegerOrder(item) !== null) return item;
   // EDS-11R's safe named BFF preserves potentially-large database integers
   // as decimal strings.  Do not coerce them through JavaScript Number merely
   // to satisfy an older Manager-page composer.
-  if (kind === "INTEGER" && typeof item === "string" && item.length <= 96 &&
-      /^-?(?:0|[1-9]\d*)$/.test(item)) return item;
+  if (kind === "INTEGER" && typeof item === "string" && managerIntegerOrder(item) !== null) return item;
   if (kind === "DECIMAL" && typeof item === "string" && /^-?\d+(?:\.\d+)?$/.test(item)) return item;
   if ((kind === "TEXT" || kind === "TIMESTAMP") && typeof item === "string") return item;
   if (kind === "ARRAY" && Array.isArray(item) && item.length <= 100) {

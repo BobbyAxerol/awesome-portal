@@ -1,5 +1,13 @@
 # Backend Architecture Deep Dives
 
+**24Nov G2 Access / Observed implementation:**
+[Work package and validation ledger](../execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md)
+continues preserved Claude source rather than rebuilding readers. Exact pins,
+bounded offline intake, independent census and retained snapshot fencing are
+under integration tests. Canonical Observed contract is additive, defaults OFF;
+Access stays offline. Runtime authority/delegation is G3, not an artifact-build
+success. No source, browser or full ELP2-10 closeout follows from these tests.
+
 **24Nov G1 QuantBT / G2 review:**
 [Source changes, hashes, focused tests and remaining gates](../execution_loop/evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md)
 cover producer Overview and atomic definite refusal; unknown dispatch stays

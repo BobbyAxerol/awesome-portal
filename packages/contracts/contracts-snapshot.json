@@ -1,6 +1,6 @@
 {
   "file_digests": {
-    "README.md": "sha256:26fec59e6e6ca9d94486e44880dfcc4641da5f561123098b2d1067eadec171ad",
+    "README.md": "sha256:2d4ba60a484fd5f96a714c07304cc864c3773428b274eb02c6d294c62fdb419f",
     "fixtures/command.valid.json": "sha256:9792bac391b74bfd6a2581768d6ea60ae0e880f9504063d82a52c4f8893f39ce",
     "fixtures/event.valid.json": "sha256:c245b69c773d205d6edec800db8cee5410769b0d8e256905ea8827fcf08ae11e",
     "fixtures/execution-access.synthetic.valid.json": "sha256:6d679d05a1639cb278aa1a4eb4bd662c6da22b8b3aef1becef9c3cc12af359cf",
@@ -191,6 +191,8 @@
     "fixtures/execution-obligations.not-read.synthetic.valid.json": "sha256:8537e902f8cecd878c13c805ce4c6e6a0ff0dc2761f0603d9049b0ee427b33e2",
     "fixtures/execution-obligations.published.synthetic.valid.json": "sha256:ff9b7f91851135e1de81a9d3a5bfe06299a8c74415094f06b3fdb758092ee5ba",
     "fixtures/execution-obligations.synthetic.negative.json": "sha256:0a54b66c392d332557b8ec63a42ebf1d58a10267f0f2e979839870ea2869ee42",
+    "fixtures/execution-observed-read.synthetic.invalid.json": "sha256:f9ea6d3224d15c940eb5957e0734c70ca31b6de994b2b4b81799e9a00138943d",
+    "fixtures/execution-observed-read.synthetic.valid.json": "sha256:966aa8a92803f0ef42b2aefefa376566b27c81a4ecdee1a3e33b1548d80ca921",
     "fixtures/execution-observed-timeline.v1.synthetic.valid.json": "sha256:46b950d59857232ee24128413cc03bb9a6e67a1d08dc94fb3797af9b38dc533e",
     "fixtures/execution-operation-workflow.valid.json": "sha256:aef1473d5b88795ec7f89f2de2e34fbe99eb6d18097f30b86ef1520bc7f5aa95",
     "fixtures/execution-operational-current.synthetic.valid.json": "sha256:01755db262d19235b252376693796d09383d1b6b58ce8f12c51d12c1b977f1f1",
@@ -409,6 +411,7 @@
     "generated/execution-manager-series.d.ts": "sha256:3edb11b8dcf0eecaeec963a4427060009ad0c649c29364559af860f096bdd8f3",
     "generated/execution-market-context.d.ts": "sha256:39758c72a6720b11505c55fb2fa78dc53f60e58a976732443ca944e548b7a172",
     "generated/execution-obligations.d.ts": "sha256:bb16b10e5a36ecd714a2f5acb4ce1e0702355714474300fa1431b20eb270f9b9",
+    "generated/execution-observed-read.d.ts": "sha256:b7c03ae4084eac10fd13354cebea4432d64b2014fd06b871ea034a78c921daba",
     "generated/execution-operations-audit.d.ts": "sha256:03c9dd022ce1c1aaad623c0a3ac8f75f569f715d4f9d8e6832eb5694df454b26",
     "generated/execution-operations.d.ts": "sha256:a525a21bb66fa5fb0efa743ba540f35231a2f72cb9b5c8c2e493f4ea11a41b79",
     "generated/execution-order-detail.d.ts": "sha256:eb5b1c0caa80ca7f70355a3119fb4b77f130cf25220964e08f5e4861e4d8553c",
@@ -494,6 +497,7 @@
     "openapi/execution-manager-series.openapi.json": "sha256:0619a321442e657b73764d755d196d89270285847d122d5b4eb73629c7bebd9f",
     "openapi/execution-market-context.openapi.json": "sha256:5b415866daa9b534466418e4d68a1efd084c911fecad4bfcb8959dc357b32d8a",
     "openapi/execution-obligations.openapi.json": "sha256:69796cd5232b0fc9a08b2a517b22350e974aaa165503a8d81796337298e42725",
+    "openapi/execution-observed-read.openapi.json": "sha256:bb45bc15aa841316ce65e9b9a52ae8205a0c14903b19dd03f6422ae4799e1717",
     "openapi/execution-operations-audit.openapi.json": "sha256:606eff740476a6e3bccc7b1b852ddff5e988d73223c57c7e03c1a8f6179c0337",
     "openapi/execution-operations.openapi.json": "sha256:9347a4dcf6eacdead9607b80259ddae5ad91e29c6b7311d9503620dff3f52f79",
     "openapi/execution-order-detail.openapi.json": "sha256:6ad339c597c741cf6b07d4a0232ed7f70df099740ce47851a013b349425762d7",
@@ -543,7 +547,7 @@
     "openapi/research-search.openapi.json": "sha256:507da27c00fd9154f84f3c29e0f15034021cd80871c4db9647fa88edb8bdbe53",
     "openapi/research-split.openapi.json": "sha256:4897e1bf7086cc302fc3d07237c3ac157c8a8b6df9bcfef2f4de9f3fb13add7e",
     "openapi/research-window-execution.openapi.json": "sha256:5c007a46f847a695e9d9b7d73d55a92cd09a07db5f1e80afa619db436f6e9d3b",
-    "package.json": "sha256:75aac12619e62e9c8d09c1c014668058476876f82ff584ed3ef814fb3d645278",
+    "package.json": "sha256:936f5911493717dbb5e8867ddd331b9578713f2dfd070e660ec610193154204f",
     "schemas/command-envelope.v1.schema.json": "sha256:53c6f3ccf66d1b74de59945fe33f480ae58bb00ae500b7696d0411d8094d4cb1",
     "schemas/common.v1.schema.json": "sha256:a74a2c08ff7e87f8cb9110932099c66520bb942788000f5499c594d1c6ef5f88",
     "schemas/event-envelope.v1.schema.json": "sha256:527a2d5128758d088bfcd9e86291ac1a0be1b993821c90be2bd2a36890d10a95",
@@ -595,6 +599,7 @@
     "schemas/execution-market-candles.v1.schema.json": "sha256:4dbb635ae40fb04bed08d6272f196eae20d47d0382a542afdfd7bb5d85a556e7",
     "schemas/execution-market-context.v1.schema.json": "sha256:34d24debaaa4d3cb4db6500f0f392381a162b59ebb2ba46870009bd335dc2281",
     "schemas/execution-obligations.v1.schema.json": "sha256:e78471209437081557f0fa0a07cf2391fcefab8fccad102e9fc5d490f74a54c8",
+    "schemas/execution-observed-read.v1.schema.json": "sha256:d245fab38abf9a53dffb362220cf2b93b4108fef63e0bffed7fe3a7518c2b41a",
     "schemas/execution-observed-timeline.v1.schema.json": "sha256:129b0d54fd9ad3ac5116b794f61f89e9acd5efe24d2728e0b047d2105d5414fc",
     "schemas/execution-operations-audit.v1.schema.json": "sha256:8887d5a4ae43a2a7f8a2aba229fb54cc147e2368e76390355a2ddd36ccb8875a",
     "schemas/execution-operations.v1.schema.json": "sha256:81cca48d4289d81de6d9388bb2820cbc5f5c834082876fb5bbdf489eb86f1889",
@@ -670,6 +675,7 @@
     "tooling/generate-execution-manager-models.mjs": "sha256:d0378b198c3c061959cefded4e2da010c6d39629d661797d910e2cb2e1b6b960",
     "tooling/generate-execution-manager-scoped.mjs": "sha256:c8731c6e0304952d3df61bd0160ecedec836473c600a20afdc8954da853190d6",
     "tooling/generate-execution-manager-series.mjs": "sha256:a69f1d05535b0e336418389e5faf2284d67fe6da19d4f25dc9222a6b2f52e8c8",
+    "tooling/generate-execution-observed-read.mjs": "sha256:dbb8953f3e4b508625893f41eebec719ad3d7b209dce97bbead48f8e6a0be2da",
     "tooling/generate-execution-pending-control.mjs": "sha256:612373ff75a6c4bf43c9a4cea45d6d02fc4d9184cd3ed81d7d655b30f41aa59d",
     "tooling/generate-execution-resource-scoped.mjs": "sha256:f2d794783b6f3847610fc575e16925ec646b59f414d1abc3a2fd3734feda80ba",
     "tooling/generate-execution-retained-scoped.mjs": "sha256:1e1cf05176903fd51b8ba4b31f01114e0e89ee3b548c10221f7ddb3804541ba4",
@@ -728,7 +734,7 @@
     "tooling/generate-research-window-execution.mjs": "sha256:8cfe6e1cf9623ba6b0290aed00815eea6c965bc91b85ca2bf14042a0388855b0",
     "tooling/native-read-fixtures.mjs": "sha256:12b97e776051d6f754a04ae544be428ab5946699967e2d1827e1f60156d81032",
     "tooling/research-window-views.mjs": "sha256:c53c0fb02aa0948c9fc5cc18b20489871b48423dd4eaa9156c1b4e854e058602",
-    "tooling/verify-generated.sh": "sha256:bcba23bb5e38f23e12629b4bea9ab4ad984779227c60ef053051bcb2331dbf52"
+    "tooling/verify-generated.sh": "sha256:f42b09ffb4da4bdfd195eb73d87891f4f5280e1239e37bc246b9aa519045db1f"
   },
   "schema_version": "contracts.snapshot.v1"
 }

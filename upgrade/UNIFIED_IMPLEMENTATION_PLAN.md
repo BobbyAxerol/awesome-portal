@@ -9424,6 +9424,17 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**24 Nov — Bobby assigns complete G2 offline Access / Observed source package.**
+[Implementation, exact scopes and gate ledger](execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md)
+supersedes the earlier review-only next action, not its findings or history.
+Codex integrates the preserved Access WIP and Observed commit on the G1 source
+checkpoint. Fixed intake/pins, retained-view/census/freshness/ID handling and
+the additive Observed HTTP publication are under validation. Offline renewal
+and hot-add author new artifacts, not installed permissions. Actual ordinary
+authority/delegation and qualified producer are G3; no native successor fence
+is relaxed. Access offline / Observed OFF, no runtime or UI change.
+Normal-hook closeout and final SHA must be recorded before claiming source done.
+
 **24 Nov — Codex G1 source implemented; G2 review CHANGES_REQUESTED.**
 [QuantBT changes, exact hashes, focused tests and remaining runtime gates](execution_loop/evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md):
 producer Overview uses the existing Research reader, not legacy; definite

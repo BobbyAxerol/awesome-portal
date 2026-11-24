@@ -19,7 +19,9 @@ export async function readRootOwnedPinnedFile(path: string, approvedSha256: stri
   const before = await lstat(path);
   if (!before.isFile() || before.isSymbolicLink() || before.uid !== 0 || (before.mode & 0o7777) !== 0o600 ||
     before.size < 1 || before.size > maximumBytes) return REFUSED();
-  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+  // A replaceable parent can swap the checked regular file for a FIFO between
+  // lstat and open. Do not wait for a writer before fstat can reject that race.
+  const file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   let raw: Buffer;
   try {
     const actual = await file.stat();

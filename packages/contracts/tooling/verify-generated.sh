@@ -37,6 +37,8 @@ node tooling/generate-execution-manager-models.mjs --check
 generate_and_compare openapi/execution-manager-models.openapi.json generated/execution-manager-models.d.ts
 node tooling/generate-execution-manager-series.mjs --check
 generate_and_compare openapi/execution-manager-series.openapi.json generated/execution-manager-series.d.ts
+node tooling/generate-execution-observed-read.mjs --check
+generate_and_compare openapi/execution-observed-read.openapi.json generated/execution-observed-read.d.ts
 node tooling/generate-execution-trusted-commands.mjs --check
 generate_and_compare openapi/execution-trusted-commands.openapi.json generated/execution-trusted-commands.d.ts
 node tooling/generate-execution-workflows.mjs --check

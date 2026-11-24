@@ -258,6 +258,8 @@ const EnvSchema = z.object({
     .enum(["legacy_shadow", "manager_projection"])
     .default("legacy_shadow"),
   FEATURE_EXECUTION_ANALYTICS_QUERY: z.enum(["true", "false"]).default("false"),
+  /** Core-observed lane (never TS-qualified): /api/v1/execution/observed/*. Default OFF; see observed-read.contract.ts. */
+  FEATURE_EXECUTION_OBSERVED_READ: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_SHADOW_QUERY: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_PAPER_WORKBENCH_SHADOW: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_COMMAND_CENTER_SNAPSHOT: z.enum(["true", "false"]).default("false"),

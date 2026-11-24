@@ -61,7 +61,7 @@ beforeEach(() => {
     expect(String(path)).toBe(PATH); return stat(mounted) as Awaited<ReturnType<typeof lstat>>;
   });
   vi.mocked(open).mockImplementation(async (path, flags) => {
-    expect(String(path)).toBe(PATH); expect(flags).toBe(constants.O_RDONLY | constants.O_NOFOLLOW);
+    expect(String(path)).toBe(PATH); expect(flags).toBe(constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
     let offset = 0;
     return { stat: async () => stat(mounted.swap ? { ...mounted, ino: 8 } : mounted), close: vi.fn(async () => undefined),
       read: async (buffer: Buffer, start: number, length: number) => {

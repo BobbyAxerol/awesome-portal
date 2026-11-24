@@ -650,6 +650,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**24Nov G2 implementation assigned — validation in progress:**
+[Access/Observed implementation ledger](execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md)
+tracks source intake, exact workspace/owner pins, bounded authoring and target
+provenance, same-MVCC retained/census view and late source+authority checks.
+Observed has its own canonical HTTP schema/types/fixtures, not a change to
+qualified Manager semantics. No migration, installation or feature activation;
+offline artifact lifecycle is not runtime delegation. G3 authority and connected
+source/consumer qualification remain separately owned.
+
 **24Nov G1 QuantBT / G2 review — source-only:**
 [G1 receipt](execution_loop/evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md)
 records producer Overview routing and exact-claim atomic pre-publish refusal;

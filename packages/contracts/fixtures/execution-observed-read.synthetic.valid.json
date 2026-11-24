@@ -1,0 +1,548 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "cases": {
+    "paper": {
+      "schema_version": "portal.execution.observed-read.v1",
+      "surface": "FUND",
+      "workspace_id": "ws_TEST_ONLY",
+      "environment": "paper",
+      "trust": {
+        "class": "CORE_OBSERVED_NOT_QUALIFIED",
+        "qualified": false,
+        "source_confidence": "UNKNOWN",
+        "label_code": "OBSERVED_BY_CORE_FROM_EDGE_SNAPSHOT",
+        "not_ts_qualified": true
+      },
+      "record_authority": "PORTAL_OBSERVATION",
+      "source_authority": "EDGE_SNAPSHOT_VIA_CORE",
+      "observation_semantics": "BOUNDED_CURRENT_WINDOW",
+      "access_mode": "LEGACY_COMPATIBILITY",
+      "coverage": "WORKSPACE_WHOLE_POPULATION",
+      "as_of": {
+        "read_at_ms": 1795478400000,
+        "snapshot_source_as_of_ms": 1795478400000,
+        "snapshot_received_ms": 1795478400000,
+        "last_refresh_ms": 1795478400000,
+        "oldest_figure_ts_ms": 1795478400000,
+        "newest_figure_ts_ms": 1795478400000
+      },
+      "projection": {
+        "profile_id": "paper_TEST_ONLY",
+        "epoch_id": "epoch_TEST_ONLY",
+        "sequence": 10,
+        "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_catalogue_sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "quality": {
+        "completeness": "COMPLETE",
+        "freshness": "FRESH",
+        "reasons": []
+      },
+      "figures": [
+        {
+          "figure_id": "NAV",
+          "method_id": "OBSERVED_NAV_LATEST_EQUITY_PER_ACCOUNT_V1",
+          "value": "20000",
+          "unit": "MONEY",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": {
+            "from_ts_ms": 1795478400000,
+            "to_ts_ms": 1795478400000
+          },
+          "availability": "AVAILABLE",
+          "reason_code": null,
+          "quality": {
+            "completeness": "COMPLETE",
+            "freshness": "FRESH",
+            "reasons": []
+          },
+          "accounts_total": 2,
+          "accounts_reported": 2,
+          "oldest_ts_ms": 1795478400000,
+          "newest_ts_ms": 1795478400000,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "NET_PNL",
+          "method_id": "OBSERVED_NET_PNL_LATEST_SOURCE_CUMULATIVE_V1",
+          "value": "0",
+          "unit": "MONEY",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": {
+            "from_ts_ms": 1795478400000,
+            "to_ts_ms": 1795478400000
+          },
+          "availability": "AVAILABLE",
+          "reason_code": null,
+          "quality": {
+            "completeness": "COMPLETE",
+            "freshness": "FRESH",
+            "reasons": []
+          },
+          "accounts_total": 2,
+          "accounts_reported": 2,
+          "oldest_ts_ms": 1795478400000,
+          "newest_ts_ms": 1795478400000,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "RETURN",
+          "method_id": "OBSERVED_RETURN_NAV_GRID_EQUITY_CHANGE_V1",
+          "value": null,
+          "unit": "FRACTION",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": {
+            "from_ts_ms": 1795478400000,
+            "to_ts_ms": 1795478400000
+          },
+          "availability": "UNAVAILABLE",
+          "reason_code": "NAV_GRID_COVERAGE_POLICY_PENDING",
+          "quality": {
+            "completeness": "COMPLETE",
+            "freshness": "FRESH",
+            "reasons": []
+          },
+          "accounts_total": 2,
+          "accounts_reported": 2,
+          "oldest_ts_ms": 1795478400000,
+          "newest_ts_ms": 1795478400000,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "DRAWDOWN",
+          "method_id": "OBSERVED_DRAWDOWN_NAV_GRID_PEAK_TO_TROUGH_V1",
+          "value": null,
+          "unit": "FRACTION",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": {
+            "from_ts_ms": 1795478400000,
+            "to_ts_ms": 1795478400000
+          },
+          "availability": "UNAVAILABLE",
+          "reason_code": "NAV_GRID_COVERAGE_POLICY_PENDING",
+          "quality": {
+            "completeness": "COMPLETE",
+            "freshness": "FRESH",
+            "reasons": []
+          },
+          "accounts_total": 2,
+          "accounts_reported": 2,
+          "oldest_ts_ms": 1795478400000,
+          "newest_ts_ms": 1795478400000,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        }
+      ],
+      "not_published": [
+        {
+          "figure": "SCORE",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "REGIME",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "COMPOSITION",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "PORTFOLIO_NAV",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "CAPITAL_MARKERS",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "STAGE_TIMING",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "FUNDING_BUCKET_PNL",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        }
+      ]
+    },
+    "unavailable": {
+      "schema_version": "portal.execution.observed-read.v1",
+      "surface": "FUND",
+      "workspace_id": "ws_TEST_ONLY",
+      "environment": "paper",
+      "trust": {
+        "class": "CORE_OBSERVED_NOT_QUALIFIED",
+        "qualified": false,
+        "source_confidence": "UNKNOWN",
+        "label_code": "OBSERVED_BY_CORE_FROM_EDGE_SNAPSHOT",
+        "not_ts_qualified": true
+      },
+      "record_authority": "PORTAL_OBSERVATION",
+      "source_authority": "EDGE_SNAPSHOT_VIA_CORE",
+      "observation_semantics": "BOUNDED_CURRENT_WINDOW",
+      "access_mode": "LEGACY_COMPATIBILITY",
+      "coverage": "WORKSPACE_WHOLE_POPULATION",
+      "as_of": {
+        "read_at_ms": 1795478400000,
+        "snapshot_source_as_of_ms": 1795478400000,
+        "snapshot_received_ms": 1795478400000,
+        "last_refresh_ms": 1795478400000,
+        "oldest_figure_ts_ms": 1795478400000,
+        "newest_figure_ts_ms": 1795478400000
+      },
+      "projection": {
+        "profile_id": "paper_TEST_ONLY",
+        "epoch_id": "epoch_TEST_ONLY",
+        "sequence": 10,
+        "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_catalogue_sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "quality": {
+        "completeness": "UNRESOLVED",
+        "freshness": "UNKNOWN",
+        "reasons": [
+          "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED"
+        ]
+      },
+      "figures": [
+        {
+          "figure_id": "NAV",
+          "method_id": "OBSERVED_NAV_LATEST_EQUITY_PER_ACCOUNT_V1",
+          "value": null,
+          "unit": "MONEY",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": null,
+          "availability": "UNAVAILABLE",
+          "reason_code": "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED",
+          "quality": {
+            "completeness": "UNRESOLVED",
+            "freshness": "UNKNOWN",
+            "reasons": [
+              "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED"
+            ]
+          },
+          "accounts_total": 0,
+          "accounts_reported": 0,
+          "oldest_ts_ms": null,
+          "newest_ts_ms": null,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "NET_PNL",
+          "method_id": "OBSERVED_NET_PNL_LATEST_SOURCE_CUMULATIVE_V1",
+          "value": null,
+          "unit": "MONEY",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": null,
+          "availability": "UNAVAILABLE",
+          "reason_code": "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED",
+          "quality": {
+            "completeness": "UNRESOLVED",
+            "freshness": "UNKNOWN",
+            "reasons": [
+              "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED"
+            ]
+          },
+          "accounts_total": 0,
+          "accounts_reported": 0,
+          "oldest_ts_ms": null,
+          "newest_ts_ms": null,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "RETURN",
+          "method_id": "OBSERVED_RETURN_NAV_GRID_EQUITY_CHANGE_V1",
+          "value": null,
+          "unit": "FRACTION",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": null,
+          "availability": "UNAVAILABLE",
+          "reason_code": "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED",
+          "quality": {
+            "completeness": "UNRESOLVED",
+            "freshness": "UNKNOWN",
+            "reasons": [
+              "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED"
+            ]
+          },
+          "accounts_total": 0,
+          "accounts_reported": 0,
+          "oldest_ts_ms": null,
+          "newest_ts_ms": null,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "DRAWDOWN",
+          "method_id": "OBSERVED_DRAWDOWN_NAV_GRID_PEAK_TO_TROUGH_V1",
+          "value": null,
+          "unit": "FRACTION",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": null,
+          "availability": "UNAVAILABLE",
+          "reason_code": "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED",
+          "quality": {
+            "completeness": "UNRESOLVED",
+            "freshness": "UNKNOWN",
+            "reasons": [
+              "EXPECTED_ACCOUNT_CENSUS_NOT_PUBLISHED"
+            ]
+          },
+          "accounts_total": 0,
+          "accounts_reported": 0,
+          "oldest_ts_ms": null,
+          "newest_ts_ms": null,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        }
+      ],
+      "not_published": [
+        {
+          "figure": "SCORE",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "REGIME",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "COMPOSITION",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "PORTFOLIO_NAV",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "CAPITAL_MARKERS",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "STAGE_TIMING",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "FUNDING_BUCKET_PNL",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        }
+      ]
+    },
+    "retained": {
+      "schema_version": "portal.execution.observed-read.v1",
+      "surface": "FUND",
+      "workspace_id": "ws_TEST_ONLY",
+      "environment": "paper",
+      "trust": {
+        "class": "CORE_OBSERVED_NOT_QUALIFIED",
+        "qualified": false,
+        "source_confidence": "UNKNOWN",
+        "label_code": "OBSERVED_BY_CORE_FROM_EDGE_SNAPSHOT",
+        "not_ts_qualified": true
+      },
+      "record_authority": "PORTAL_OBSERVATION",
+      "source_authority": "EDGE_SNAPSHOT_VIA_CORE",
+      "observation_semantics": "BOUNDED_CURRENT_WINDOW",
+      "access_mode": "LEGACY_COMPATIBILITY",
+      "coverage": "WORKSPACE_WHOLE_POPULATION",
+      "as_of": {
+        "read_at_ms": 1795478400000,
+        "snapshot_source_as_of_ms": 1795478400000,
+        "snapshot_received_ms": 1795478400000,
+        "last_refresh_ms": 1795478400000,
+        "oldest_figure_ts_ms": 1795478400000,
+        "newest_figure_ts_ms": 1795478400000
+      },
+      "projection": {
+        "profile_id": "paper_TEST_ONLY",
+        "epoch_id": "epoch_TEST_ONLY",
+        "sequence": 10,
+        "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "source_catalogue_sha256": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      },
+      "quality": {
+        "completeness": "PARTIAL",
+        "freshness": "STALE",
+        "reasons": [
+          "RETAINED_REVIEW_PARTIAL_SOURCE"
+        ]
+      },
+      "figures": [
+        {
+          "figure_id": "NAV",
+          "method_id": "OBSERVED_NAV_LATEST_EQUITY_PER_ACCOUNT_V1",
+          "value": "20000",
+          "unit": "MONEY",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": {
+            "from_ts_ms": 1795478400000,
+            "to_ts_ms": 1795478400000
+          },
+          "availability": "PARTIAL",
+          "reason_code": "RETAINED_REVIEW_PARTIAL_SOURCE",
+          "quality": {
+            "completeness": "PARTIAL",
+            "freshness": "STALE",
+            "reasons": [
+              "RETAINED_REVIEW_PARTIAL_SOURCE"
+            ]
+          },
+          "accounts_total": 2,
+          "accounts_reported": 1,
+          "oldest_ts_ms": 1795478400000,
+          "newest_ts_ms": 1795478400000,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "NET_PNL",
+          "method_id": "OBSERVED_NET_PNL_LATEST_SOURCE_CUMULATIVE_V1",
+          "value": "0",
+          "unit": "MONEY",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": {
+            "from_ts_ms": 1795478400000,
+            "to_ts_ms": 1795478400000
+          },
+          "availability": "PARTIAL",
+          "reason_code": "RETAINED_REVIEW_PARTIAL_SOURCE",
+          "quality": {
+            "completeness": "PARTIAL",
+            "freshness": "STALE",
+            "reasons": [
+              "RETAINED_REVIEW_PARTIAL_SOURCE"
+            ]
+          },
+          "accounts_total": 2,
+          "accounts_reported": 1,
+          "oldest_ts_ms": 1795478400000,
+          "newest_ts_ms": 1795478400000,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "RETURN",
+          "method_id": "OBSERVED_RETURN_NAV_GRID_EQUITY_CHANGE_V1",
+          "value": null,
+          "unit": "FRACTION",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": {
+            "from_ts_ms": 1795478400000,
+            "to_ts_ms": 1795478400000
+          },
+          "availability": "UNAVAILABLE",
+          "reason_code": "NAV_GRID_COVERAGE_POLICY_PENDING",
+          "quality": {
+            "completeness": "PARTIAL",
+            "freshness": "STALE",
+            "reasons": [
+              "RETAINED_REVIEW_PARTIAL_SOURCE"
+            ]
+          },
+          "accounts_total": 2,
+          "accounts_reported": 2,
+          "oldest_ts_ms": 1795478400000,
+          "newest_ts_ms": 1795478400000,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        },
+        {
+          "figure_id": "DRAWDOWN",
+          "method_id": "OBSERVED_DRAWDOWN_NAV_GRID_PEAK_TO_TROUGH_V1",
+          "value": null,
+          "unit": "FRACTION",
+          "currency": "USD",
+          "basis": "CORE_TEST_ONLY_ACCOUNT_EQUITY",
+          "window": {
+            "from_ts_ms": 1795478400000,
+            "to_ts_ms": 1795478400000
+          },
+          "availability": "UNAVAILABLE",
+          "reason_code": "NAV_GRID_COVERAGE_POLICY_PENDING",
+          "quality": {
+            "completeness": "PARTIAL",
+            "freshness": "STALE",
+            "reasons": [
+              "RETAINED_REVIEW_PARTIAL_SOURCE"
+            ]
+          },
+          "accounts_total": 2,
+          "accounts_reported": 2,
+          "oldest_ts_ms": 1795478400000,
+          "newest_ts_ms": 1795478400000,
+          "caveats": [],
+          "source_confidence": "UNKNOWN",
+          "calculation_revision": "core-observed.v1",
+          "policy_revision": "NONE"
+        }
+      ],
+      "not_published": [
+        {
+          "figure": "SCORE",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "REGIME",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "COMPOSITION",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "PORTFOLIO_NAV",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "CAPITAL_MARKERS",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "STAGE_TIMING",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        },
+        {
+          "figure": "FUNDING_BUCKET_PNL",
+          "reason_code": "NOT_PUBLISHED_IN_OBSERVED_MODE"
+        }
+      ]
+    }
+  }
+}

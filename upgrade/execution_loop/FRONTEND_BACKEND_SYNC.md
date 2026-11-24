@@ -1,5 +1,13 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 24 Nov — G2 assigned to Codex, implementation IN_PROGRESS
+
+Bobby giao Codex trọn gói G2. [Scope/pins, disjoint writers và gate matrix](evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md).
+Access original7 WIP đã snapshot; Observed b34eb1582 sạch. Đã đối chiếu,
+không phát sinh commit/request mới ở hai làn. Root giữ contract/generated/docs;
+Access/Observed writers sửa đúng allowlist, authority reviewer chỉ đọc.
+Không đổi UI, grants, flag OFF hoặc runtime; chưa có consumer ACK/PASS mới.
+
 ## 24 Nov — G1 source delivered / G2 review to Claude
 
 [G1 source, tests, exact pins and remaining runtime acceptance](evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md).

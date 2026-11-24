@@ -1,0 +1,1246 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution Core-observed read (not TS-qualified)",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/observed/overview": {
+      "get": {
+        "operationId": "executionObservedOverviewGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "description": "Explicit opt-in read lane; feature defaults OFF. Whole-workspace legacy-compatible access only. SCOPED_V2 is refused before repository work and rechecked before delivery. Paper figures are exact-decimal per-currency observations from one bounded snapshot, never inferred TS ownership. Sandbox/Live and unsupported figures publish typed absence. Missing coverage calibration cannot produce numeric Return/Drawdown.",
+        "x-strict-query-keys": [
+          "workspace_id",
+          "environment"
+        ],
+        "x-server-invariants": [
+          "METHOD_FIGURE_MISMATCH",
+          "UNIT_FIGURE_MISMATCH",
+          "VALUE_AVAILABILITY_MISMATCH",
+          "REASON_REQUIRED",
+          "ACCOUNT_COUNT_INVALID",
+          "WINDOW_ORDER_INVALID",
+          "TIMESTAMP_ORDER_INVALID",
+          "DUPLICATE_FIGURE_PARTITION",
+          "RESPONSE_TOO_LARGE"
+        ],
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ],
+              "default": "paper"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Core observation only. Not TS-qualified, not a qualified Manager fallback.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedOverview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "EXECUTION_OBSERVED_QUERY_INVALID: closed scalar query.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authenticated current session required.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedProblem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Current access policy refused the read.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Lane disabled or workspace/profile/membership unavailable; no existence disclosure.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedProblem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Policy, source snapshot or retained mirror changed during delivery.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Bounded read capability unavailable.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "ObservedOverview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.observed-read.v1"
+          },
+          "surface": {
+            "const": "FUND"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "trust": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "class": {
+                "const": "CORE_OBSERVED_NOT_QUALIFIED"
+              },
+              "qualified": {
+                "const": false
+              },
+              "source_confidence": {
+                "const": "UNKNOWN"
+              },
+              "label_code": {
+                "const": "OBSERVED_BY_CORE_FROM_EDGE_SNAPSHOT"
+              },
+              "not_ts_qualified": {
+                "const": true
+              }
+            },
+            "required": [
+              "class",
+              "qualified",
+              "source_confidence",
+              "label_code",
+              "not_ts_qualified"
+            ]
+          },
+          "record_authority": {
+            "const": "PORTAL_OBSERVATION"
+          },
+          "source_authority": {
+            "const": "EDGE_SNAPSHOT_VIA_CORE"
+          },
+          "observation_semantics": {
+            "const": "BOUNDED_CURRENT_WINDOW"
+          },
+          "access_mode": {
+            "const": "LEGACY_COMPATIBILITY"
+          },
+          "coverage": {
+            "const": "WORKSPACE_WHOLE_POPULATION"
+          },
+          "as_of": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "read_at_ms": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 8640000000000000
+              },
+              "snapshot_source_as_of_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "snapshot_received_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "last_refresh_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "oldest_figure_ts_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "newest_figure_ts_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "read_at_ms",
+              "snapshot_source_as_of_ms",
+              "snapshot_received_ms",
+              "last_refresh_ms",
+              "oldest_figure_ts_ms",
+              "newest_figure_ts_ms"
+            ]
+          },
+          "projection": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "profile_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "epoch_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "sequence": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "payload_digest": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source_catalogue_sha256": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "profile_id",
+              "epoch_id",
+              "sequence",
+              "payload_digest",
+              "source_catalogue_sha256"
+            ]
+          },
+          "quality": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "completeness": {
+                "type": "string",
+                "enum": [
+                  "COMPLETE",
+                  "PARTIAL",
+                  "UNRESOLVED"
+                ]
+              },
+              "freshness": {
+                "type": "string",
+                "enum": [
+                  "FRESH",
+                  "STALE",
+                  "UNKNOWN"
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]{2,95}$(?![\\s\\S])"
+                },
+                "maxItems": 16
+              }
+            },
+            "required": [
+              "completeness",
+              "freshness",
+              "reasons"
+            ]
+          },
+          "figures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "figure_id": {
+                  "type": "string",
+                  "enum": [
+                    "NAV",
+                    "NET_PNL",
+                    "RETURN",
+                    "DRAWDOWN"
+                  ]
+                },
+                "method_id": {
+                  "type": "string",
+                  "enum": [
+                    "OBSERVED_NAV_LATEST_EQUITY_PER_ACCOUNT_V1",
+                    "OBSERVED_NET_PNL_LATEST_SOURCE_CUMULATIVE_V1",
+                    "OBSERVED_RETURN_NAV_GRID_EQUITY_CHANGE_V1",
+                    "OBSERVED_DRAWDOWN_NAV_GRID_PEAK_TO_TROUGH_V1"
+                  ]
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^-?(?:0|[1-9]\\d{0,29})(?:\\.\\d{1,18})?$(?![\\s\\S])"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "unit": {
+                  "type": "string",
+                  "enum": [
+                    "MONEY",
+                    "FRACTION"
+                  ]
+                },
+                "currency": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "basis": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "window": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "from_ts_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 8640000000000000
+                        },
+                        "to_ts_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 8640000000000000
+                        }
+                      },
+                      "required": [
+                        "from_ts_ms",
+                        "to_ts_ms"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "availability": {
+                  "type": "string",
+                  "enum": [
+                    "AVAILABLE",
+                    "PARTIAL",
+                    "UNAVAILABLE"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^[A-Z][A-Z0-9_]{2,95}$(?![\\s\\S])"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "quality": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "completeness": {
+                      "type": "string",
+                      "enum": [
+                        "COMPLETE",
+                        "PARTIAL",
+                        "UNRESOLVED"
+                      ]
+                    },
+                    "freshness": {
+                      "type": "string",
+                      "enum": [
+                        "FRESH",
+                        "STALE",
+                        "UNKNOWN"
+                      ]
+                    },
+                    "reasons": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "pattern": "^[A-Z][A-Z0-9_]{2,95}$(?![\\s\\S])"
+                      },
+                      "maxItems": 16
+                    }
+                  },
+                  "required": [
+                    "completeness",
+                    "freshness",
+                    "reasons"
+                  ]
+                },
+                "accounts_total": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "accounts_reported": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "oldest_ts_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 8640000000000000
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "newest_ts_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 8640000000000000
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "caveats": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]{2,95}$(?![\\s\\S])"
+                  },
+                  "maxItems": 8
+                },
+                "source_confidence": {
+                  "const": "UNKNOWN"
+                },
+                "calculation_revision": {
+                  "const": "core-observed.v1"
+                },
+                "policy_revision": {
+                  "const": "NONE"
+                }
+              },
+              "required": [
+                "figure_id",
+                "method_id",
+                "value",
+                "unit",
+                "currency",
+                "basis",
+                "window",
+                "availability",
+                "reason_code",
+                "quality",
+                "accounts_total",
+                "accounts_reported",
+                "oldest_ts_ms",
+                "newest_ts_ms",
+                "caveats",
+                "source_confidence",
+                "calculation_revision",
+                "policy_revision"
+              ],
+              "allOf": [
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "figure_id": {
+                        "const": "NAV"
+                      }
+                    }
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "method_id": {
+                        "const": "OBSERVED_NAV_LATEST_EQUITY_PER_ACCOUNT_V1"
+                      },
+                      "unit": {
+                        "const": "MONEY"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "figure_id": {
+                        "const": "NET_PNL"
+                      }
+                    }
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "method_id": {
+                        "const": "OBSERVED_NET_PNL_LATEST_SOURCE_CUMULATIVE_V1"
+                      },
+                      "unit": {
+                        "const": "MONEY"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "figure_id": {
+                        "const": "RETURN"
+                      }
+                    }
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "method_id": {
+                        "const": "OBSERVED_RETURN_NAV_GRID_EQUITY_CHANGE_V1"
+                      },
+                      "unit": {
+                        "const": "FRACTION"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "figure_id": {
+                        "const": "DRAWDOWN"
+                      }
+                    }
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "method_id": {
+                        "const": "OBSERVED_DRAWDOWN_NAV_GRID_PEAK_TO_TROUGH_V1"
+                      },
+                      "unit": {
+                        "const": "FRACTION"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "const": "UNAVAILABLE"
+                      }
+                    }
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "null"
+                      }
+                    }
+                  },
+                  "else": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "type": "object",
+                    "properties": {
+                      "availability": {
+                        "enum": [
+                          "PARTIAL",
+                          "UNAVAILABLE"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "type": "object",
+                    "properties": {
+                      "reason_code": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "maxItems": 64
+          },
+          "not_published": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "figure": {
+                  "type": "string",
+                  "enum": [
+                    "NAV",
+                    "NET_PNL",
+                    "RETURN",
+                    "DRAWDOWN",
+                    "SCORE",
+                    "REGIME",
+                    "COMPOSITION",
+                    "PORTFOLIO_NAV",
+                    "CAPITAL_MARKERS",
+                    "STAGE_TIMING",
+                    "FUNDING_BUCKET_PNL"
+                  ]
+                },
+                "reason_code": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]{2,95}$(?![\\s\\S])"
+                }
+              },
+              "required": [
+                "figure",
+                "reason_code"
+              ]
+            },
+            "maxItems": 64
+          }
+        },
+        "required": [
+          "schema_version",
+          "surface",
+          "workspace_id",
+          "environment",
+          "trust",
+          "record_authority",
+          "source_authority",
+          "observation_semantics",
+          "access_mode",
+          "coverage",
+          "as_of",
+          "projection",
+          "quality",
+          "figures",
+          "not_published"
+        ],
+        "x-server-invariants": [
+          "METHOD_FIGURE_MISMATCH",
+          "UNIT_FIGURE_MISMATCH",
+          "VALUE_AVAILABILITY_MISMATCH",
+          "REASON_REQUIRED",
+          "ACCOUNT_COUNT_INVALID",
+          "WINDOW_ORDER_INVALID",
+          "TIMESTAMP_ORDER_INVALID",
+          "DUPLICATE_FIGURE_PARTITION",
+          "RESPONSE_TOO_LARGE"
+        ]
+      },
+      "ObservedFigure": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "figure_id": {
+            "type": "string",
+            "enum": [
+              "NAV",
+              "NET_PNL",
+              "RETURN",
+              "DRAWDOWN"
+            ]
+          },
+          "method_id": {
+            "type": "string",
+            "enum": [
+              "OBSERVED_NAV_LATEST_EQUITY_PER_ACCOUNT_V1",
+              "OBSERVED_NET_PNL_LATEST_SOURCE_CUMULATIVE_V1",
+              "OBSERVED_RETURN_NAV_GRID_EQUITY_CHANGE_V1",
+              "OBSERVED_DRAWDOWN_NAV_GRID_PEAK_TO_TROUGH_V1"
+            ]
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^-?(?:0|[1-9]\\d{0,29})(?:\\.\\d{1,18})?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "unit": {
+            "type": "string",
+            "enum": [
+              "MONEY",
+              "FRACTION"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "basis": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "from_ts_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000
+                  },
+                  "to_ts_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8640000000000000
+                  }
+                },
+                "required": [
+                  "from_ts_ms",
+                  "to_ts_ms"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "availability": {
+            "type": "string",
+            "enum": [
+              "AVAILABLE",
+              "PARTIAL",
+              "UNAVAILABLE"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]{2,95}$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "completeness": {
+                "type": "string",
+                "enum": [
+                  "COMPLETE",
+                  "PARTIAL",
+                  "UNRESOLVED"
+                ]
+              },
+              "freshness": {
+                "type": "string",
+                "enum": [
+                  "FRESH",
+                  "STALE",
+                  "UNKNOWN"
+                ]
+              },
+              "reasons": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]{2,95}$(?![\\s\\S])"
+                },
+                "maxItems": 16
+              }
+            },
+            "required": [
+              "completeness",
+              "freshness",
+              "reasons"
+            ]
+          },
+          "accounts_total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "accounts_reported": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000
+          },
+          "oldest_ts_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 8640000000000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "newest_ts_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 8640000000000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "caveats": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]{2,95}$(?![\\s\\S])"
+            },
+            "maxItems": 8
+          },
+          "source_confidence": {
+            "const": "UNKNOWN"
+          },
+          "calculation_revision": {
+            "const": "core-observed.v1"
+          },
+          "policy_revision": {
+            "const": "NONE"
+          }
+        },
+        "required": [
+          "figure_id",
+          "method_id",
+          "value",
+          "unit",
+          "currency",
+          "basis",
+          "window",
+          "availability",
+          "reason_code",
+          "quality",
+          "accounts_total",
+          "accounts_reported",
+          "oldest_ts_ms",
+          "newest_ts_ms",
+          "caveats",
+          "source_confidence",
+          "calculation_revision",
+          "policy_revision"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "figure_id": {
+                  "const": "NAV"
+                }
+              }
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "method_id": {
+                  "const": "OBSERVED_NAV_LATEST_EQUITY_PER_ACCOUNT_V1"
+                },
+                "unit": {
+                  "const": "MONEY"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "figure_id": {
+                  "const": "NET_PNL"
+                }
+              }
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "method_id": {
+                  "const": "OBSERVED_NET_PNL_LATEST_SOURCE_CUMULATIVE_V1"
+                },
+                "unit": {
+                  "const": "MONEY"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "figure_id": {
+                  "const": "RETURN"
+                }
+              }
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "method_id": {
+                  "const": "OBSERVED_RETURN_NAV_GRID_EQUITY_CHANGE_V1"
+                },
+                "unit": {
+                  "const": "FRACTION"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "figure_id": {
+                  "const": "DRAWDOWN"
+                }
+              }
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "method_id": {
+                  "const": "OBSERVED_DRAWDOWN_NAV_GRID_PEAK_TO_TROUGH_V1"
+                },
+                "unit": {
+                  "const": "FRACTION"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "availability": {
+                  "const": "UNAVAILABLE"
+                }
+              }
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "availability": {
+                  "enum": [
+                    "PARTIAL",
+                    "UNAVAILABLE"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "reason_code": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ObservedOverviewQuery": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          }
+        },
+        "required": []
+      },
+      "ObservedProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "minLength": 1
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

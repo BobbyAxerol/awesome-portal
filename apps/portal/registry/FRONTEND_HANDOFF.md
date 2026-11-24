@@ -1,5 +1,24 @@
 # Frontend Contract Handoff — Portal Registry & Command Center Summary
 
+## 2026-11-24 — G2 Core-observed contract (consumer review pending)
+
+Source package is under validation; see
+[G2 ledger](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md).
+The exact reader is `GET /api/v1/execution/observed/overview`, optional scalar
+`workspace_id` and `environment` (default `paper`). Shared type is
+`packages/contracts/generated/execution-observed-read.d.ts`, schema
+`portal.execution.observed-read.v1`; canonical vectors are
+`execution-observed-read.synthetic.{valid,invalid}.json`. Do not copy a fixture
+into a live source adapter or introduce a new component/baseline.
+
+Keep qualified and observed ports distinct. The response is always
+`trust.qualified=false`, `source_confidence=UNKNOWN`; respect figure
+`availability`, `reason_code`, per-currency accounts counts and source clocks.
+A retained view stays PARTIAL/STALE. Numeric zero is not missing, and absence
+is not zero. Return/Drawdown stay unavailable without a coverage policy.
+SCOPED_V2 returns a typed409, never fallback to a broader legacy read. No stream,
+polling, runtime activation, grant installation or Claude ACK is implied here.
+
 ## 2026-11-24 — G1 producer Overview routing / G2 review
 
 G1 changes only route/data binding: producer bare/Overview entries use the

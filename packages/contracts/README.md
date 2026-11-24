@@ -1,5 +1,16 @@
 # Portal Contracts — canonical schema authority (U09 / BAR-06)
 
+G2 adds `openapi/execution-observed-read.openapi.json` and generated
+`execution-observed-read.d.ts` for the opt-in
+`GET /api/v1/execution/observed/overview`. Generate/check through
+`npm run generate:execution-observed-read` / `tooling/verify-generated.sh`.
+This is a separate **Core observation**, never a qualified Manager fallback.
+Paper values are exact-decimal currency partitions with an independent account
+census; missing census, incomplete coverage and unsupported figures stay typed.
+Canonical synthetic vectors cover partial/stale/missing data and trust/refusal
+negatives. They are not source receipts. Access remains offline and the observed
+feature defaults OFF; production coverage calibration and activation are separate.
+
 ELP2-05 publication inventory: `npm run generate:execution-publication` pins the
 three committed Edge logical manifests in `fixtures/execution-publication-source/`
 and generates `execution-publication-catalogue.d.ts`. The existing authenticated
