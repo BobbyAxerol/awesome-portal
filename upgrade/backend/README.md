@@ -1,5 +1,13 @@
 # Backend Architecture Deep Dives
 
+**24Nov G2 source closeout — G2_OFFLINE_SOURCE_EXIT_MET / NOT_ACTIVATED:**
+[Normal-hook result, source SHA, ID dispositions and consumer handoff](../execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).
+Source `e89b22399`, 57 files/+8,042/−19; Core12,947 PASS/1 expected-fail/166 SKIP,
+contracts1,978 PASS, build/PG restore/tracking PASS. Preserves Claude source and
+WIP; no UI/runtime/grant/migration/push. Access offline, Observed OFF. Next G3
+installed authority/qualified producer and Claude consumer ACK/browser remain
+OPEN; this is source R2, not full ELP2-10/11 or owner acceptance. Recording R0.
+
 **24Nov G2 Access / Observed implementation:**
 [Work package and validation ledger](../execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md)
 continues preserved Claude source rather than rebuilding readers. Exact pins,

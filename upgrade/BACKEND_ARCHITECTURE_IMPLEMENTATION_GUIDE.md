@@ -650,6 +650,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**24Nov G2 source exit met / NOT_ACTIVATED — Verification: R2:**
+[Final receipt and exact source/dependency/backup pins](execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).
+Source `e89b22399`: exact Access pins/bounded intake/dry-run provenance, offline
+BOOTSTRAP/RENEW/HOT_ADD; Observed MVCC/census/freshness/authority fences and
+canonical contracts. Normal hook: Core12,947 PASS/1 expected-fail/166 SKIP,
+contracts1,978 PASS, build/PG restore/tracking PASS. Access offline/Observed OFF;
+no migration/runtime/grant install/UI change. G3 installed authority/delegation
+and qualified producer, consumer ACK/browser and ELP2-10/11 remain separate.
+This supersedes only the named source findings in the historical entries below.
+
 **24Nov G2 implementation assigned — validation in progress:**
 [Access/Observed implementation ledger](execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md)
 tracks source intake, exact workspace/owner pins, bounded authoring and target

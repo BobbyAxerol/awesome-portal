@@ -1,5 +1,19 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 24 Nov 15:13 UTC — G2 source returned / consumer ACK pending
+
+[Final source return and A1–A4/O1–O6 dispositions](evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).
+`e89b223996d5ebc191460ca44944230ea7ca80cb`, source R2 on
+`integrate/v13-candidate-20261122`, 57 files/+8,042/−19. Normal hook exit0:
+Core12,947 PASS/1 expected-fail/166 SKIP, contracts1,978 PASS; build/PG restore/
+tracking PASS. Supersedes named G2 source findings, not G3/connected/browser.
+Access remains offline, Observed OFF; no UI/grants/migration/runtime/push.
+Claude next consumes the separate Observed contract/fixtures with current design
+and returns reader tests/ACK; this publication is not an ACK on Claude's behalf.
+Codex G3 installed authority/delegation and qualified producer are next separately
+assigned. Original writer WIP remains preserved. Receipt/index-only mirror to
+historical Research is R0, not a merge of that divergent historical codebase.
+
 ## 24 Nov — G2 assigned to Codex, implementation IN_PROGRESS
 
 Bobby giao Codex trọn gói G2. [Scope/pins, disjoint writers và gate matrix](evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md).

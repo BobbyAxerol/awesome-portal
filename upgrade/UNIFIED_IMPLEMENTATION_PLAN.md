@@ -9424,6 +9424,19 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**24 Nov 15:13 UTC — G2_OFFLINE_SOURCE_EXIT_MET / NOT_ACTIVATED, Verification: R2.**
+[Final source return, ID dispositions, dependency pins and cleanup](execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).
+Source `e89b223996d5ebc191460ca44944230ea7ca80cb` on
+`integrate/v13-candidate-20261122`: 57 files, +8,042/−19 including preserved
+Claude source/generated/tests/docs. Normal hook exit0: Core12,947 PASS /
+1 expected-fail / 166 SKIP; contracts1,978 PASS; build/PG restore/tracking PASS.
+Supersedes the named G2 source findings below, not G3/connected/consumer gates.
+Access remains offline, Observed OFF; no UI, installed grant, migration, runtime
+or push. Claude next consumes the canonical Observed port/types/fixtures and
+returns ACK; Codex next separately assigned G3 is ordinary authority writer/DB
+CAS, bounded delegation and qualified per-environment/profile producer. Full
+ELP2-10/11 and owner/browser acceptance stay OPEN. Final recording/mirror is R0.
+
 **24 Nov — Bobby assigns complete G2 offline Access / Observed source package.**
 [Implementation, exact scopes and gate ledger](execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md)
 supersedes the earlier review-only next action, not its findings or history.

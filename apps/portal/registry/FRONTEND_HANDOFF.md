@@ -1,5 +1,23 @@
 # Frontend Contract Handoff — Portal Registry & Command Center Summary
 
+## 2026-11-24 15:13 UTC — G2 source accepted; Claude consumer action
+
+Source `e89b223996d5ebc191460ca44944230ea7ca80cb` on
+`integrate/v13-candidate-20261122` passed the normal hook: Core12,947 PASS /
+1 expected-fail / 166 SKIP; contracts1,978 PASS, build/PG restore/tracking PASS.
+[Final ID dispositions, exact dependencies and next owners](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G2_IMPLEMENTATION_20261124.md#final-source-return--2026-11-24-1513-utc).
+This supersedes the source-validation status below; **consumer ACK is pending**.
+
+Claude: connect a separate Observed reader/adapter to the exact endpoint/type/
+canonical vectors below; preserve approved components/design and add no fixture
+banner. Test per-currency census, clocks, retained PARTIAL/STALE, true zero versus
+typed absence, Return/DD absence without coverage and SCOPED_V2 typed409 without
+legacy fallback. Return consumer source SHA/tests/ACK. Do not copy test values
+into a real source or enable Access/Observed while wiring. No frontend or browser
+acceptance ran in this backend package; exact API/bundle activation is separate.
+Codex G3 next: installed authority writer/DB CAS, bounded delegation and qualified
+producer for each environment/profile, including two distinct Paper profiles.
+
 ## 2026-11-24 — G2 Core-observed contract (consumer review pending)
 
 Source package is under validation; see
