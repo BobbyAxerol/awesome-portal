@@ -1,5 +1,11 @@
 # Backend Architecture Deep Dives
 
+**24Nov G1 QuantBT / G2 review:**
+[Source changes, hashes, focused tests and remaining gates](../execution_loop/evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md)
+cover producer Overview and atomic definite refusal; unknown dispatch stays
+UNKNOWN. No schema/runtime change. [Access/Observed review](../execution_loop/evidence/ELP2-10/CODEX_G2_ACCESS_OBSERVED_REVIEW_20261124.md)
+is CHANGES_REQUESTED; existing Claude branches/WIP remain preserved and offline.
+
 **08Nov N25 aged source:** snapshot-bound oldest/newest feed as-of is checked
 against the existing shadow policy, so stale/future proof downgrades analytics.
 PG14 26/26, Edge 3/3, synthetic schema 1/1 and scoped Clippy PASS; source-only,

@@ -650,6 +650,14 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**24Nov G1 QuantBT / G2 review — source-only:**
+[G1 receipt](execution_loop/evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md)
+records producer Overview routing and exact-claim atomic pre-publish refusal;
+ambiguous broker outcomes remain UNKNOWN. Focused FE166/service54/Python5/PG7,
+Core build/restore and FE typecheck passed. No migration/deploy; old orphan and
+browser acceptance remain open. [G2 review](execution_loop/evidence/ELP2-10/CODEX_G2_ACCESS_OBSERVED_REVIEW_20261124.md)
+returns CHANGES_REQUESTED on preserved Access/Observed candidates, not activation.
+
 **28Oct Core ACK follow-through — BOUNDED_SOURCE_TESTED / CONNECTED_NOT_MET:**
 [journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#28oct--core-e1e5-consumption-ack-follow-through)
 and [Core return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_CONSUMPTION_FOLLOWTHROUGH_2026-10-28.md)

@@ -4,6 +4,7 @@ import {INDEXED_DELTA_BINDINGS} from "./full06-delta.binding";
 import {recipeDigest as sha256ResearchJson,executionRecipe,executionRecipes} from "./execution-recipes";
 import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
+import { z } from "zod";
 
 import { newUlid } from "../id";
 import { CONTROL_API_POOL } from "../tokens";
@@ -70,6 +71,18 @@ import { RETRY_WAIT_DISPATCH_GRACE_SECONDS, retryNotDispatchedReason } from "./r
 import { ResearchUtilitySaturated, assertUtilityCapacity } from "./utility-admission";
 
 type ScopedClient = PoolClient;
+
+/** Private producer evidence, not a browser-supplied lifecycle command. */
+export const ResearchRunDispatchRefusalSchema = z.object({
+  schema_version: z.literal("research.run-dispatch-refusal.v1"),
+  outcome: z.literal("NOT_DISPATCHED"),
+  reason_code: z.enum(["PRODUCER_DISABLED", "PUBLISHER_NOT_INSTALLED"]),
+  workspace_id: z.string().min(1).max(191),
+  run_id: z.string().min(1).max(191),
+  job_id: z.string().min(1).max(191),
+  worker_attempt_id: z.string().min(1).max(191),
+  lease_epoch: z.number().int().positive().safe(),
+}).strict();
 
 interface AttemptRow {
   workspace_id: string;
@@ -2118,7 +2131,7 @@ export class ResearchMetadataRepository {
             SET worker_attempt_id = $4, lease_epoch = $5, updated_at = now()
            FROM research.jobs job
           WHERE producer.workspace_id = $1 AND producer.run_id = $2 AND producer.job_id = $3
-            AND producer.dispatch_state = 'PENDING'
+            AND producer.dispatch_state = 'PENDING' AND producer.portal_receipt IS NULL
             -- A P10 transport-unknown retry may legitimately get a fresh P06
             -- lease after recovery. Bind only to the *current* DB-fenced job
             -- lease; never require the old, expired producer lease to match.
@@ -2150,7 +2163,8 @@ export class ResearchMetadataRepository {
           [scope.workspaceId, input.runId, input.jobId],
         );
         const replay = existing.rows[0];
-        if (replay && replay.worker_attempt_id === input.workerAttemptId &&
+        if (replay && (replay.portal_receipt == null || replay.dispatch_state === "DISPATCHED") &&
+            replay.worker_attempt_id === input.workerAttemptId &&
             replay.lease_epoch != null && asNumber(replay.lease_epoch) === input.leaseEpoch) {
           return rowToRunProducer(replay);
         }
@@ -2164,7 +2178,88 @@ export class ResearchMetadataRepository {
     });
   }
 
-  /** Store only Portal's bounded 202 receipt after the private route accepts it. */
+  /** Retain a definite pre-publish refusal and close ONLY its unstarted claim.
+   * Unknown transport failures cannot enter this path. Receipt and lifecycle
+   * commit together so same-intent replay cannot claim/publish the failed job. */
+  async recordRunProducerNotDispatched(
+    scope: ResearchScope,
+    input: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch"> & {
+      runId: string; receipt: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    this.assertScope(scope);
+    this.assertClaim(input);
+    requireOpaqueId(input.runId, "runId");
+    const parsed = ResearchRunDispatchRefusalSchema.safeParse(input.receipt);
+    if (!parsed.success || parsed.data.workspace_id !== scope.workspaceId || parsed.data.run_id !== input.runId ||
+        parsed.data.job_id !== input.jobId || parsed.data.worker_attempt_id !== input.workerAttemptId ||
+        parsed.data.lease_epoch !== input.leaseEpoch) {
+      throw new ResearchMetadataError("RESEARCH_INVALID_INPUT", "Research dispatch refusal does not match its claim.", 400);
+    }
+    const receipt = parsed.data;
+    const reason = `P10_DISPATCH_NOT_ATTEMPTED: ${receipt.reason_code}`;
+    await this.withScopedWrite(scope, async (client) => {
+      const selected = await client.query<{ attempt_id: string }>(
+        `SELECT producer.attempt_id
+           FROM research.run_producers producer
+           JOIN research.jobs job ON job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
+           JOIN research.runs run ON run.workspace_id = producer.workspace_id AND run.run_id = producer.run_id
+           JOIN research.attempts attempt ON attempt.workspace_id = run.workspace_id AND attempt.attempt_id = run.attempt_id
+           JOIN research.worker_attempts worker ON worker.workspace_id = job.workspace_id AND worker.job_id = job.job_id
+          WHERE producer.workspace_id = $1 AND producer.run_id = $2 AND producer.job_id = $3
+            AND producer.dispatch_state = 'PENDING' AND producer.portal_receipt IS NULL
+            AND producer.worker_attempt_id = $4 AND producer.lease_epoch = $5
+            AND job.run_id = producer.run_id AND run.attempt_id = producer.attempt_id
+            -- P06 already marks the run RUNNING when it claims; only the
+            -- still-CLAIMED attempt/worker prove this claim never started.
+            AND run.state = 'RUNNING' AND attempt.state = 'CLAIMED'
+            AND job.current_worker_attempt_id = $4 AND job.current_lease_epoch = $5 AND job.state = 'CLAIMED'
+            AND job.cancel_version = 0 AND job.cancellation_requested_at IS NULL
+            AND worker.worker_attempt_id = $4 AND worker.lease_epoch = $5
+            AND worker.state = 'CLAIMED' AND worker.expires_at > now()
+            AND NOT EXISTS (SELECT 1 FROM research.run_progress_events event
+              WHERE event.workspace_id = producer.workspace_id AND event.run_id = producer.run_id
+                AND event.worker_attempt_id = $4)
+          FOR UPDATE OF producer, job, run, attempt, worker`,
+        [scope.workspaceId, input.runId, input.jobId, input.workerAttemptId, input.leaseEpoch],
+      );
+      if (selected.rowCount !== 1) this.throwLeaseRejected();
+      await client.query(
+        `UPDATE research.worker_attempts SET state = 'FAILED', exit_reason = $4, updated_at = now()
+          WHERE workspace_id = $1 AND worker_attempt_id = $2 AND lease_epoch = $3`,
+        [scope.workspaceId, input.workerAttemptId, input.leaseEpoch, reason],
+      );
+      await client.query(
+        `UPDATE research.jobs SET state = 'FAILED', terminal_reason = $3, retry_not_before = NULL, updated_at = now()
+          WHERE workspace_id = $1 AND job_id = $2`,
+        [scope.workspaceId, input.jobId, reason],
+      );
+      await client.query(
+        `UPDATE research.attempts SET state = 'FAILED', updated_at = now()
+          WHERE workspace_id = $1 AND attempt_id = $2`,
+        [scope.workspaceId, selected.rows[0].attempt_id],
+      );
+      await client.query(
+        `UPDATE research.runs SET state = 'FAILED', state_version = state_version + 1, updated_at = now()
+          WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, input.runId],
+      );
+      await client.query(
+        `UPDATE research.run_producers SET portal_receipt = $3::jsonb, updated_at = now()
+          WHERE workspace_id = $1 AND run_id = $2`,
+        [scope.workspaceId, input.runId, JSON.stringify(receipt)],
+      );
+      await this.recordJobEvent(client, scope, input.jobId, input.workerAttemptId, "JOB_FAILED", {
+        reason, lease_epoch: input.leaseEpoch, dispatch_outcome: "NOT_DISPATCHED",
+      });
+      await this.audit(client, scope, "RESEARCH_RUN_PRODUCER_NOT_DISPATCHED", "run", input.runId, {
+        reason_code: receipt.reason_code, job_id: input.jobId,
+        worker_attempt_id: input.workerAttemptId, lease_epoch: input.leaseEpoch,
+      });
+    });
+  }
+
+  /** Store Portal's bounded 202 receipt after the private route accepts it. */
   async recordRunProducerDispatched(
     scope: ResearchScope,
     input: Pick<ResearchDurableJobClaim, "jobId" | "workerAttemptId" | "leaseEpoch"> & {
@@ -2184,7 +2279,7 @@ export class ResearchMetadataRepository {
            FROM research.jobs job, research.worker_attempts worker
           WHERE producer.workspace_id = $1 AND producer.run_id = $2 AND producer.job_id = $3
             AND producer.worker_attempt_id = $4 AND producer.lease_epoch = $5
-            AND producer.dispatch_state = 'PENDING'
+            AND producer.dispatch_state = 'PENDING' AND producer.portal_receipt IS NULL
             AND job.workspace_id = producer.workspace_id AND job.job_id = producer.job_id
             AND job.current_worker_attempt_id = $4 AND job.current_lease_epoch = $5
             AND worker.workspace_id = job.workspace_id AND worker.job_id = job.job_id

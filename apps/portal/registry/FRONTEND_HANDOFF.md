@@ -1,5 +1,17 @@
 # Frontend Contract Handoff — Portal Registry & Command Center Summary
 
+## 2026-11-24 — G1 producer Overview routing / G2 review
+
+G1 changes only route/data binding: producer bare/Overview entries use the
+existing EvidenceFlow reader, preserving workspace/query/hash. Legacy IDs and
+explicit Research screens retain their behavior; no design/baseline/public DTO
+change. Focused routing/Evidence suites: 166 PASS, FE typecheck exit 0.
+[Source receipt and runtime/browser remainder](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md).
+No new bundle is deployed. Claude next checks the authorized built candidate,
+not a new component. [G2 Access/Observed review](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G2_ACCESS_OBSERVED_REVIEW_20261124.md)
+returns CHANGES_REQUESTED on the preserved lanes; neither activation nor Claude
+consumer ACK is implied.
+
 > **Slice:** BAR-01-BE6 · **Version:** 1 · **Updated:** 2026-08-15
 > **Cho:** frontend agent của U02 Shared Foundations và U03 Unified Shell.
 > **Authority:** [BAR-01 deep dive](../../../upgrade/backend/BAR_01_FEATURE_REGISTRY_AND_SUMMARY_CONTRACT.md).

@@ -12,6 +12,7 @@ import {
   QUANTBT_TABS,
   canonicalQuantBTPath,
   isQuantBTTab,
+  producerOverviewTarget,
   runPath,
   runTabPath,
 } from "./routes";
@@ -31,6 +32,25 @@ describe("canonical run paths", () => {
     for (const tab of QUANTBT_TABS) expect(isQuantBTTab(tab)).toBe(true);
     expect(isQuantBTTab("runs")).toBe(false);
     expect(isQuantBTTab("new")).toBe(false);
+  });
+});
+
+describe("producer overview routing (not authorization)", () => {
+  const id = "rrun_ee2a335d9de38bf91477910e20a7b43c";
+  it.each(["", "/", "/overview", "/overview/"])("recognizes only producer entry %s", (suffix) => {
+    expect(producerOverviewTarget(`${runPath(id)}${suffix}`)).toBe(`${runPath(id)}/evidence`);
+  });
+  it("keeps explicit Research screens, legacy ids and malformed ids out of compatibility routing", () => {
+    for (const path of [runPath("run_old"), runPath("rrun_short"), `${runPath(id)}/report`,
+      `${runPath(id)}/evidence`, `${runPath(id)}/optimization`, `${QUANTBT_ROOT}/runs/new`,
+      `${QUANTBT_ROOT}/runs/%ZZ/overview`, `${QUANTBT_ROOT}/runs/${id}%2Fother/overview`]) {
+      expect(producerOverviewTarget(path)).toBeNull();
+    }
+  });
+  it("recognizes an encoded run id and the query-style Overview alias without reading any source", () => {
+    expect(producerOverviewTarget(`${QUANTBT_ROOT}/runs/%72${id.slice(1)}/overview`)).toBe(`${runPath(id)}/evidence`);
+    expect(producerOverviewTarget(`${QUANTBT_ROOT}/overview`, `?run=${id}&workspace_id=ws_a`)).toBe(`${runPath(id)}/evidence`);
+    expect(producerOverviewTarget(`${QUANTBT_ROOT}/overview`, "?run=run_old")).toBeNull();
   });
 });
 

@@ -33,7 +33,7 @@ import { fmtShortHash } from "../../lib/format";
 import { QuantBTSubnav } from "./QuantBTSubnav";
 import { RunExportAction } from "./RunExportAction";
 import { RunPassport } from "./RunPassport";
-import { QUANTBT_ROOT, isQuantBTTab, runPath, runTabPath } from "./routes";
+import { QUANTBT_ROOT, isQuantBTTab, producerOverviewTarget, runPath, runTabPath } from "./routes";
 import { PortalApiError } from "../../lib/api";
 import "../../research/researchScreen.css";
 import { ResearchNotFound } from "../../research/ResearchNotFound";
@@ -99,6 +99,12 @@ function defaultRun(runs: RunSummary[] | undefined): RunSummary | null {
  * ---------------------------------------------------------------------- */
 
 function RunWorkspace() {
+  const location = useLocation();
+  const target = producerOverviewTarget(location.pathname);
+  return target ? <LegacyScreenRedirect to={target} /> : <LegacyRunWorkspace />;
+}
+
+function LegacyRunWorkspace() {
   const { runId = "" } = useParams();
   const [finishedNow, setFinishedNow] = useState(false);
   const previousStatus = useRef<string | null>(null);
@@ -240,9 +246,15 @@ export function LegacyScreenRedirect({ to }: { to: string }) {
 function LegacyTabRedirect() {
   const { tab = "" } = useParams();
   const [params] = useSearchParams();
+  const location = useLocation();
   const runId = params.get("run");
   if (!isQuantBTTab(tab)) return <ResearchNotFound />;
-  if (runId) return <Navigate to={runTabPath(runId, tab)} replace />;
+  if (runId) {
+    const rest = new URLSearchParams(params);
+    rest.delete("run");
+    const target = producerOverviewTarget(location.pathname, location.search) ?? runTabPath(runId, tab);
+    return <Navigate to={{ pathname: target, search: rest.toString() ? `?${rest}` : "", hash: location.hash }} replace />;
+  }
   return <ResolveDefaultRun tab={tab} />;
 }
 
@@ -270,7 +282,8 @@ export function QuantBTModule() {
      (polled every 4 s, forever) and strategy list were fetched on every one of
      them for a header count and a chip those screens do not show (RF-04,
      FE-X-03). */
-  const onResearchScreen = RESEARCH_SCREEN.test(location.pathname);
+  const producerEntry = producerOverviewTarget(location.pathname, location.search);
+  const onResearchScreen = Boolean(producerEntry) || RESEARCH_SCREEN.test(location.pathname);
   useResearchDocumentTitle(location.pathname);
   const strategies = useQuery({ queryKey: ["strategies"], queryFn: api.strategies, enabled: !onResearchScreen });
 
@@ -278,6 +291,7 @@ export function QuantBTModule() {
   // URL keeps the header, passport and export action in agreement by
   // construction, instead of tracking a second copy of the selection.
   const activeRunId = useMemo(() => {
+    if (producerEntry) return null;
     const match = /\/runs\/([^/]+)/.exec(location.pathname);
     if (!match) return null;
     const segment = decodeURIComponent(match[1]);
@@ -291,7 +305,7 @@ export function QuantBTModule() {
        which is the same defect one level down. */
     if (/\/runs\/[^/]+\/(progress|evidence|split|search|freeze|execute|report|release-candidate)(\/|$)/.test(location.pathname)) return null;
     return segment;
-  }, [location.pathname]);
+  }, [location.pathname, producerEntry]);
 
   const activeRun = useQuery({
     queryKey: ["run", activeRunId ?? ""],

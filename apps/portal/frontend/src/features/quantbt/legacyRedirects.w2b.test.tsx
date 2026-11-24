@@ -12,10 +12,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { QuantBTModule } from "./QuantBTModule";
 
 const originalFetch = globalThis.fetch;
+let requests: string[];
 
 beforeEach(() => {
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify({ error: { code: "NOT_UNDER_TEST", message: "not under test" } }), { status: 404 })) as unknown as typeof fetch;
+  requests = [];
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    requests.push(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+    return new Response(JSON.stringify({ error: { code: "NOT_UNDER_TEST", message: "not under test" } }), { status: 404 });
+  }) as typeof fetch;
 });
 
 afterEach(() => {
@@ -52,6 +56,38 @@ function mountAt(entry: string) {
 const where = () => document.querySelector("[data-where]")?.textContent;
 
 describe("W2B · retired QuantBT screens redirect, keeping query and hash", () => {
+  const producer = "rrun_ee2a335d9de38bf91477910e20a7b43c";
+
+  it.each(["", "/overview", "/overview/"])("G1 · producer entry %s uses Evidence, never the legacy store", async (tail) => {
+    mountAt(`/research/quantbt/runs/${producer}${tail}?workspace_id=research-workspace&from=library#stage=execute&fold=2`);
+    await waitFor(() => expect(where()).toBe(
+      `/research/quantbt/runs/${producer}/evidence?workspace_id=research-workspace&from=library#stage=execute&fold=2`,
+    ), { timeout: 10_000 });
+    await waitFor(() => expect(requests.some((path) => path.includes(`/quantbt/runs/${producer}/evidence`))).toBe(true));
+    expect(requests.filter((path) => /\/api\/(runs|strategies)(\/|\?|$)/.test(path))).toEqual([]);
+    const producerRequests = requests.filter((path) => path.includes(`/runs/${producer}/`));
+    expect(producerRequests.length).toBeGreaterThan(0);
+    expect(producerRequests.every(
+      (path) => new URL(path, "http://localhost").searchParams.get("workspace_id") === "research-workspace",
+    )).toBe(true);
+    expect(document.querySelector(".portal-module-header")).toBeNull();
+  });
+
+  it("G1 · old query-style producer overview retains workspace and cursor", async () => {
+    mountAt(`/research/quantbt/overview?run=${producer}&workspace_id=another-workspace#stage=execute&fold=2`);
+    await waitFor(() => expect(where()).toBe(
+      `/research/quantbt/runs/${producer}/evidence?workspace_id=another-workspace#stage=execute&fold=2`,
+    ), { timeout: 10_000 });
+    expect(requests.filter((path) => /\/api\/(runs|strategies)(\/|\?|$)/.test(path))).toEqual([]);
+  });
+
+  it("G1 · a legacy run remains on the legacy reader, without a Research fallback", async () => {
+    mountAt("/research/quantbt/runs/run_legacy/overview?workspace_id=research-workspace");
+    await waitFor(() => expect(requests.some((path) => /\/api\/runs\/run_legacy(?:\?|$)/.test(path))).toBe(true));
+    expect(where()).toBe("/research/quantbt/runs/run_legacy/overview?workspace_id=research-workspace");
+    expect(requests.some((path) => path.includes("/research/runs/run_legacy"))).toBe(false);
+  });
+
   it.each([
     ["/research/quantbt/new", "/research/quantbt/runs/new"],
     ["/research/quantbt/new?from=rrun_1#step=3", "/research/quantbt/runs/new?from=rrun_1#step=3"],

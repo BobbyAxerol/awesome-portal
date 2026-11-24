@@ -9424,6 +9424,16 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**24 Nov — Codex G1 source implemented; G2 review CHANGES_REQUESTED.**
+[QuantBT changes, exact hashes, focused tests and remaining runtime gates](execution_loop/evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md):
+producer Overview uses the existing Research reader, not legacy; definite
+pre-publish refusal settles the exact unstarted claim atomically, while unknown
+transport stays UNKNOWN. FE166, service54, Python5, real-PG7 + Core build/restore
+and FE typecheck PASS; normal hook recorded separately after freeze. Source-only,
+no runtime swap. Old queued run and final browser acceptance remain open.
+[Access/Observed independent review and Claude actions](execution_loop/evidence/ELP2-10/CODEX_G2_ACCESS_OBSERVED_REVIEW_20261124.md)
+preserve both existing worktrees/WIP; no activation or full-phase PASS.
+
 **Approved 23 October: six backend support packages, sequential acceptance.**
 [24October consolidated Claude handoff](./execution_loop/evidence/ELP2-10/CLAUDE_SIX_PACKAGES_INTEGRATION_HANDOFF_2026-10-24.md):
 integrate packages5/6 first, verify existing1–4 consumer progress without redoing

@@ -1,5 +1,22 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 24 Nov — G1 source delivered / G2 review to Claude
+
+[G1 source, tests, exact pins and remaining runtime acceptance](evidence/ELP2-10/CODEX_G1_QUANTBT_IMPLEMENTATION_20261124.md).
+QuantBT producer Overview/bare run now uses the existing EvidenceFlow contract;
+workspace/query/hash preserved, legacy readers unchanged. Definite authenticated
+pre-publish refusal atomically closes only its unstarted claim; ambiguous publish
+stays UNKNOWN. No design/public DTO/migration change. FE166/service54/Python5/PG7,
+Core build/restore and FE typecheck PASS; no new bundle/runtime/browser receipt.
+Old queued run still needs authorized lifecycle disposition. Claude can review
+the binding and test the eventual built candidate without rerunning the engine.
+
+[G2 Access/Observed: CHANGES_REQUESTED](evidence/ELP2-10/CODEX_G2_ACCESS_OBSERVED_REVIEW_20261124.md).
+Fix exact user/workspace pins, bounded/non-echoing CLI validation, snapshot fence,
+census/freshness/coverage, lossless ID order and published contract in the current
+two lanes. Their files/grants/flags remain untouched. Return exact source pins
+and focused tests; publication here is not consumer ACK or activation approval.
+
 ## 2 Nov — STATUS durable ACK / no UI change
 
 The [STATUS custody receipt](evidence/ELP2-10/COMMAND_STATUS_DURABLE_ACK_2026-11-02.md)

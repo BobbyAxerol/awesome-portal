@@ -12,7 +12,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { sha256ResearchJson } from "./preflight.service";
 import {executionRecipe, executionRecipeResources} from "./execution-recipes";
 import {isNativeRecipe} from './native-delta.binding';
-import { ResearchMetadataRepository } from "./repository";
+import { ResearchMetadataRepository, ResearchRunDispatchRefusalSchema } from "./repository";
 import {
   ResearchRunCreateResponseSchema,
   type ResearchRunCreateRequest,
@@ -354,6 +354,16 @@ export class ResearchRunCreateService {
     }
 
     const producer = produced.producer;
+    const priorRefusal = ResearchRunDispatchRefusalSchema.safeParse(producer.portalReceipt);
+    if (priorRefusal.success && priorRefusal.data.workspace_id === scope.workspaceId &&
+        priorRefusal.data.run_id === producer.runId && priorRefusal.data.job_id === producer.jobId &&
+        priorRefusal.data.worker_attempt_id === producer.workerAttemptId && priorRefusal.data.lease_epoch === producer.leaseEpoch &&
+        producer.dispatchState === "PENDING") {
+      // This receipt was committed atomically with FAILED. Never claim a new
+      // lease or republish a terminal, explicitly rejected immutable intent.
+      throw new ResearchRunCreateError("RESEARCH_RUN_PRODUCER_UNAVAILABLE",
+        "This Research intent failed before dispatch. Start a new run after the producer is available.", 503);
+    }
     if (producer.dispatchState === "DISPATCHED") {
       return this.response(producer, true, input.lineage?.relation === "REPRODUCTION_OF" ? input.lineage.parent_run_id : undefined);
     }
@@ -424,13 +434,35 @@ export class ResearchRunCreateService {
         503,
       );
     }
+    const refusal = ResearchRunDispatchRefusalSchema.safeParse(write.body?.detail);
+    if (write.status === 503 && refusal.success && refusal.data.workspace_id === scope.workspaceId &&
+        refusal.data.run_id === producer.runId && refusal.data.job_id === producer.jobId &&
+        refusal.data.worker_attempt_id === claim.workerAttemptId && refusal.data.lease_epoch === claim.leaseEpoch) {
+      try {
+        await this.repository.recordRunProducerNotDispatched(scope, {
+          runId: producer.runId, jobId: producer.jobId, workerAttemptId: claim.workerAttemptId,
+          leaseEpoch: claim.leaseEpoch, receipt: refusal.data,
+        });
+      } catch {
+        // A newer lease, source observation or lost commit acknowledgement
+        // cannot be rewritten as a definite failure of the current job.
+        throw new ResearchRunCreateError("RESEARCH_RUN_TRANSPORT_UNKNOWN",
+          "The Research dispatch refusal is being reconciled; retry with the same intent.", 503);
+      }
+      throw new ResearchRunCreateError("RESEARCH_RUN_PRODUCER_UNAVAILABLE",
+        "The Research run failed before dispatch because the private producer is unavailable.", 503);
+    }
     if (write.status !== 202 || typeof write.body?.run_id !== "string" || write.body.run_id !== producer.runId) {
+      if (write.status >= 500 || write.status === 202) {
+        // A generic 5xx may follow a committed broker publish. Neither an
+        // incomplete 202 nor an old/unbound refusal proves non-dispatch.
+        throw new ResearchRunCreateError("RESEARCH_RUN_TRANSPORT_UNKNOWN",
+          "The Research intent is durable, but dispatch outcome is unknown; retry with the same intent.", 503);
+      }
       throw new ResearchRunCreateError(
-        write.status === 503 ? "RESEARCH_RUN_PRODUCER_UNAVAILABLE" : "RESEARCH_RUN_UPSTREAM_REJECTED",
-        write.status === 503
-          ? "The private Portal run adapter is temporarily unavailable."
-          : "The private Portal run adapter did not accept the exact durable run identity.",
-        write.status === 503 ? 503 : 502,
+        "RESEARCH_RUN_UPSTREAM_REJECTED",
+        "The private Portal run adapter did not accept the exact durable run identity.",
+        502,
       );
     }
     try {

@@ -216,17 +216,32 @@ async def _queue_research_producer(
     request: Request,
 ) -> dict:
     """Accept a P10 intent without touching the legacy ProcessPool path."""
-    if not _research_producer_enabled():
-        raise HTTPException(status_code=503, detail="research durable producer is disabled")
     try:
         principal = require_internal_principal(request.headers)
     except InternalPrincipalError as exc:
         raise HTTPException(status_code=401, detail="private service authentication failed") from exc
     if principal.role != "ADMIN" or "research_run_producer" not in principal.authn_methods:
         raise HTTPException(status_code=403, detail="private research producer is not authorized")
+
+    def not_dispatched(reason: str) -> HTTPException:
+        # Only these guards run before publish is attempted. A broker timeout
+        # can follow a committed message and MUST NOT carry this assertion.
+        return HTTPException(status_code=503, detail={
+            "schema_version": "research.run-dispatch-refusal.v1",
+            "outcome": "NOT_DISPATCHED",
+            "reason_code": reason,
+            "workspace_id": payload.workspace_id,
+            "run_id": payload.run_id,
+            "job_id": payload.job_id,
+            "worker_attempt_id": payload.worker_attempt_id,
+            "lease_epoch": payload.lease_epoch,
+        })
+
+    if not _research_producer_enabled():
+        raise not_dispatched("PRODUCER_DISABLED")
     publisher = getattr(request.app.state, "research_run_publisher", None)
     if publisher is None:
-        raise HTTPException(status_code=503, detail="research durable producer is unavailable")
+        raise not_dispatched("PUBLISHER_NOT_INSTALLED")
     try:
         await publisher.publish(
             "quant.run.requested.research",
@@ -243,7 +258,7 @@ async def _queue_research_producer(
                 "request_json": payload.model_dump(mode="json"),
             },
         )
-    except Exception as exc:  # no false 202 if the durable broker did not accept it
+    except Exception as exc:  # Publish may have committed before its acknowledgement failed.
         raise HTTPException(status_code=503, detail="research durable producer is unavailable") from exc
     return {
         "run_id": payload.run_id,

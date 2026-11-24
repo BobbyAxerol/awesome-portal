@@ -841,6 +841,77 @@ async def test_p10_t06_private_ingress_requires_exact_signed_authn_and_never_fal
     ]
 
 
+@pytest.mark.anyio
+@pytest.mark.parametrize("reason", ["PRODUCER_DISABLED", "PUBLISHER_NOT_INSTALLED"])
+async def test_p10_pre_publish_refusal_is_authenticated_and_exactly_bound(
+    monkeypatch: pytest.MonkeyPatch, reason: str,
+) -> None:
+    secret = "p10-test-principal-secret-0123456789"
+    monkeypatch.setenv("INTERNAL_PRINCIPAL_SECRET", secret)
+    monkeypatch.setenv("PORTAL_FEATURE_RESEARCH_RUN_PRODUCER", "false" if reason == "PRODUCER_DISABLED" else "true")
+    broker = InMemoryJobBroker()
+    app = create_app(research_run_publisher=broker)
+    if reason == "PUBLISHER_NOT_INSTALLED":
+        app.state.research_run_publisher = None
+    payload = _request(
+        snapshot_id="dss_0123456789abcdef0123456789abcdef", snapshot_content_hash="a" * 64,
+        run_id="rrun_p10_refusal", job_id="rjob_p10_refusal", worker_attempt_id="rwa_p10_refusal",
+    )
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            unsigned = await client.post("/api/runs", json=payload)
+            refused = await client.post("/api/runs", json=payload, headers={
+                "x-portal-principal": _signed_internal_principal(secret, methods=["portal_session", "research_run_producer"]),
+            })
+    finally:
+        app.state.run_manager.shutdown()
+    assert unsigned.status_code == 401
+    assert refused.status_code == 503
+    assert refused.json()["detail"] == {
+        "schema_version": "research.run-dispatch-refusal.v1", "outcome": "NOT_DISPATCHED", "reason_code": reason,
+        "workspace_id": payload["workspace_id"], "run_id": payload["run_id"], "job_id": payload["job_id"],
+        "worker_attempt_id": payload["worker_attempt_id"], "lease_epoch": payload["lease_epoch"],
+    }
+    assert refused.json()["request_id"]
+    assert refused.json()["request_id"] == refused.headers["x-request-id"]
+    assert broker.published == []
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("accepted_before_error", [False, True])
+async def test_p10_publish_exception_never_asserts_not_dispatched(
+    monkeypatch: pytest.MonkeyPatch, accepted_before_error: bool,
+) -> None:
+    secret = "p10-test-principal-secret-0123456789"
+    monkeypatch.setenv("INTERNAL_PRINCIPAL_SECRET", secret)
+    monkeypatch.setenv("PORTAL_FEATURE_RESEARCH_RUN_PRODUCER", "true")
+
+    class AmbiguousPublisher(InMemoryJobBroker):
+        async def publish(self, subject: str, payload: dict) -> None:
+            if accepted_before_error:
+                await super().publish(subject, payload)
+            raise OSError("publisher acknowledgement unavailable")
+
+    broker = AmbiguousPublisher()
+    app = create_app(research_run_publisher=broker)
+    payload = _request(
+        snapshot_id="dss_0123456789abcdef0123456789abcdef", snapshot_content_hash="a" * 64,
+        run_id="rrun_p10_ambiguous", job_id="rjob_p10_ambiguous", worker_attempt_id="rwa_p10_ambiguous",
+    )
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/api/runs", json=payload, headers={
+                "x-portal-principal": _signed_internal_principal(secret, methods=["portal_session", "research_run_producer"]),
+            })
+    finally:
+        app.state.run_manager.shutdown()
+    assert response.status_code == 503
+    assert response.json()["detail"] == "research durable producer is unavailable"
+    assert response.json()["request_id"]
+    assert response.json()["request_id"] == response.headers["x-request-id"]
+    assert len(broker.published) == int(accepted_before_error)
+
+
 def test_rf02_p14_split_source_timeline_starts_at_warmup_when_warmup_exists() -> None:
     """RS-01's ingress rule, on the producer side (found on the RF-02 real-API lane).
 

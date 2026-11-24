@@ -35,6 +35,25 @@ export function runPath(runId: string): string {
 }
 
 /**
+ * A producer run never lives in the legacy /api/runs store. Its bare and
+ * old Overview bookmarks open the existing Research Evidence hub instead.
+ * This is URL routing only, not proof of existence or permission: the hub
+ * still reads its named contract with the exact run and workspace.
+ */
+export function producerOverviewTarget(pathname: string, search = ""): string | null {
+  const match = /^\/research\/quantbt\/runs\/([^/]+)(?:\/overview)?\/?$/.exec(pathname);
+  let id: string | null = null;
+  try {
+    if (match) id = decodeURIComponent(match[1]);
+    else if (/^\/research\/quantbt\/overview\/?$/.test(pathname)) id = new URLSearchParams(search).get("run");
+  } catch {
+    return null;
+  }
+  // The published Research run identity grammar; no fallback after a failed read.
+  return id && /^rrun_[a-f0-9]{32}$/.test(id) ? `${runPath(id)}/evidence` : null;
+}
+
+/**
  * Translates a legacy QuantBT location to its canonical equivalent.
  *
  * - `/overview?run=abc`   -> `/research/quantbt/runs/abc/overview`
