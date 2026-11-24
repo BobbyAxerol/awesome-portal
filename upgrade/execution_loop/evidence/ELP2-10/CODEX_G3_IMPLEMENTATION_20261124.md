@@ -22,7 +22,7 @@ The current source exports bounded row projections, not the required normalized 
 
 ## Validation and closeout
 
-Status: SOURCE_CANDIDATE_UNDER_VERIFICATION / NOT_ACTIVATED. The actual results below supersede this packet's initial implementation status; no runtime readiness or completed real-producer gate is claimed.
+Status: CORE_SOURCE_VERIFIED / PRODUCER_QUALIFICATION_OPEN / NOT_ACTIVATED. The final source return below supersedes the initial verification status; full G3, runtime readiness and the real-producer gate remain OPEN.
 
 Focused tests will cover CAS/replay/rollback, delegation and parent revoke, protected owner, two-Paper isolation, negative source proofs, late authority checks and unchanged native/legacy behavior. Heavy checks use `primus-build`; one normal hook follows a frozen integrated candidate. Final source SHA, test results, resource cleanup, Claude contract handoff and remaining connected gates will be appended after verification.
 
@@ -41,7 +41,7 @@ Backend can implement the independent authority and producer modules now. Claude
 
 ## Claude handoff
 
-Delivery state: **AWAITING_FINAL_SOURCE_PIN**, then AWAITING_CONSUMER_REVIEW;
+Delivery state: **AWAITING_CONSUMER_REVIEW**; source `d402a594e28984498b9d36efbe90599ac7d9c394`;
 no ACK, browser acceptance or frontend modification by Codex in this slice.
 
 1. Preserve current components, layouts, colours and baseline. Concrete Manager
@@ -120,7 +120,7 @@ Code/gate results and final pins will be appended after the frozen normal hook.
 | Initial focused contract retake | exit1: Ajv strict-required condition; next retake **159 PASS / 1 FAIL**: new anonymous canonical schema collided in catalogue | Fixed generator conditions and added the receipt schema's unique canonical `$id`; full final contract gate must verify both fixes |
 | Final whole Core test-inclusive typecheck (`tsc --noEmit && tsc -p tsconfig.cross-loop.json`) | **exit0** | Both configured projects completed; earlier two test-only typing errors were fixed, not bypassed |
 | Initial normal-hook entry | exit1 before build/tests: static route ledger missing the three new private admin declarations | Regenerated the repository's static ledger (348→351, no removed routes), reviewed exact additions and passed `--live-routes`; this does not say routes are runtime mounted |
-| Final normal hook on frozen index | NOT_RUN | One integrated invocation after source/code/contract review |
+| Final normal hook on frozen index | **exit0**, source `d402a594e`; Core **13,101 PASS / 1 expected-fail / 166 SKIP**, contracts **1,995 PASS** | Build, migrations, generic PostgreSQL preservation/restore and tracking PASS; not real-source/browser/ordinary restore commissioning |
 
 Reviews: authority/coordinator provenance, DB CAS, immutable grant history,
 parent revoke, DENY intersection and explicit source/ordinary/native separation
@@ -133,6 +133,149 @@ No expired custody is deleted or marked settled by this implementation.
 All heavy commands use one `primus-build` slot (3CPU/high6GiB/max8GiB), with
 disposable PostgreSQL/Node cells only. First focused cell exited and its owned
 containers/network/temp directory were removed by the existing trap. Local
-contract generation temporarily reuses an existing dependency tree; the link
-will be removed after closeout. No runtime image, grant, session, private key,
+contract generation temporarily reused an existing dependency tree; the exact
+temporary link has been removed, preserving that shared tree. No runtime image, grant, session, private key,
 source database or protected owner data was installed, changed or cleaned.
+
+<a id="final-source-return"></a>
+
+## Final source return — 2026-11-24 17:25 UTC
+
+**CORE_SOURCE_VERIFIED / PRODUCER_QUALIFICATION_OPEN / NOT_ACTIVATED.**
+This is source Verification: R2, not full G3 or ELP2-10/11 acceptance.
+
+- Code repository/worktree: `/home/bobby/portal-t3-core-20261122`, common Git
+  repository `/home/bobby/portal`; branch `integrate/v13-candidate-20261122`.
+- Source commit: `d402a594e28984498b9d36efbe90599ac7d9c394`;
+  predecessor `a888f67b588144923f3d81f20334234a005a0104`.
+- Committed tree equals the frozen/tested tree exactly:
+  `6930a1892e891ee54b6a63e53fc8885216185729`.
+- Source package: **61 files, +5,546 / -49 lines**, including source, migration,
+  generated contracts, tests and tracking; zero frontend implementation paths.
+- Normal hook completed exit0: contracts115 files/**1,995 PASS**; Core648 files
+  PASS/32 files SKIP, **13,101 PASS / 1 expected-fail / 166 SKIP**. Skips and the
+  expected-fail are not passes. Focused203 overlaps this run; do not add counts.
+- Exact new Core suites passed: authority33, controller11, composition5,
+  ordinary read-scope13, registry19, signed source52 and **real PostgreSQL13**.
+  The PostgreSQL fixture mocks the private root-file input; it does not prove
+  an installed root artifact, genuine source, or actual permission issuance.
+- Whole Core test-inclusive typecheck completed exit0 for both configured
+  projects. Build/migrations and the hook's generic legacy + versioned identity,
+  session, command and custody preservation/restore drill passed. This is not
+  a restore rehearsal with populated ordinary authority or a connected receipt.
+- One preflight entry stopped before builds/tests for missing route declarations;
+  the corrected full hook passed. Static inventory351/collisions0/kernel MATCH
+  means declarations only, not three newly mounted runtime admin routes.
+
+### Result by requirement and next owner
+
+| Requirement | Source disposition | Remaining action / owner |
+| --- | --- | --- |
+| Authority writer / DB CAS | ACCEPTED_SOURCE: real coordinator, same-transaction CAS/rollback, replay, immutable lineage, target checks and native drain guards | Core installs only in an approved exact target package; no installed permissions are claimed |
+| Delegation | ACCEPTED_SOURCE: owner ceiling, one live parent, child cannot delegate, parent revoke/subject/session/DENY/clock checks, own-password step-up | Claude may connect the published contracts; no new admin UI or automatic grant issuance is assigned |
+| Profile routing | ACCEPTED_SOURCE: exact registry and aggregate initial-work budget; explicit second-Paper isolation; ALLv1 unchanged | Claude consumes exact profile identity; registry historical work remains refused pending separate aggregate accounting |
+| Signed source boundary | ACCEPTED_SOURCE_IMPLEMENTATION, not an accepted Edge wire | Edge supplies/reviews the exact normalized export, signer, independent commissioning/seal/receipt and current/rebuild inputs in the table above; Core binds and qualifies real source |
+| Producer qualified | **OPEN** | Genuine source/transport/field-policy receipts, correlated population and missing Live physical artifact; fixture signatures are not sufficient |
+| Runtime / consumer / connected | **OPEN** | Coordinated parser rollout, exact private composition/backup/migration, source qualification and API/browser receipts; no STREAM/HISTORY/command inferred |
+
+Ambiguous overlapping physical seals under the same profile ID deliberately
+refuse a string-only selection; consumers must not pick the first match or
+parse names to choose a physical source. A reviewed exact/non-overlapping
+installation or distinct profile identity is required.
+
+### Precise Claude consumer work — no component redesign
+
+Start a fresh consumer lane from the source SHA in the **Portal common Git
+repository above**; preserve existing worktrees/WIP and do not merge the entire
+older Access/Observed branches again. Historical `/home/bobby/portal-research`
+receives this receipt/index mirror only, not this source history.
+
+1. `apps/portal/frontend/src/execution/v2/readers/managerDataset.ts`:
+   `ROOT_OPTIONAL` and `readManagerDataset`; accept/expose optional scalar
+   `profile_id` as `profileId`. Preserve validation of all existing fields.
+2. `.../readers/managerSeries.ts`: split optional `profile_id` from `ROOT_KEYS`
+   currently used by both `hasOnly` and `hasAll`; old bodies must still parse.
+   Update `ManagerSeriesQuery`, encoder and `seriesAnswersQuery` together.
+3. `.../api/managerDatasetQuery.ts`: query types/encoder and
+   `datasetQueryMismatch`; thread scalar profile identity through `ports.ts`,
+   `httpApi.ts` and `fixtureApi.ts`. Omitted profile remains the server's pinned
+   default. Reject ALL+profile, malformed query values and explicitly requested
+   profile versus response mismatches; never substitute a different profile.
+4. Include workspace+environment+profile in request/cache identity, cursor
+   use and stale-response cancellation (`screens/fleet/useFleetDataset.ts`,
+   `screens/series/useManagerSeries.ts`). Test switching Paper A→B while A is
+   pending; A must not draw as B. Keep two Paper partitions separate.
+5. Reuse canonical `execution-manager-profile-selection.synthetic.valid.json`,
+   `execution-manager-series-query.synthetic.valid.json` and
+   `execution-ordinary-profile-authority.synthetic.valid.json`. Extend reader
+   and `managerDataset.port.test.ts` / `managerSeries.port.test.ts` coverage for
+   new/old bodies, wrong profile/workspace, ALL refusal, cursor isolation and
+   revoke. Preserve components, layout, colours, typography and baselines;
+   add no fixture banner and do not turn an absence into real AVAILABLE.
+6. Return exact consumer SHA, focused test results and ACCEPTED/CHANGES_REQUESTED.
+   No consumer ACK is inferred here. Browser acceptance needs the installed
+   exact API/bundle and is separate from canonical fixture tests.
+
+**Rollout dependency:** current closed frontend parsers reject the new field.
+This source emits selected `profile_id` on concrete Manager responses, including
+omitted-profile requests. Do not install that API for the current consumer
+before the parser compatibility changes above are ACKed. No existing runtime
+was changed, so this packet does not claim a current UI regression or fix it
+by silently weakening parsers.
+
+### Commissioning and restore boundary
+
+The frozen diagnostic/C2 inventory in `restore-inventory.ts` /
+`restore-c2-inventory.ts` does not enumerate the three new ordinary tables.
+Its old MATCH cannot qualify ordinary authority restoration. Core must review
+the extended authority inventory/checkpoint profile and rehearse populated
+ordinary head/grant/event preservation and post-snapshot revocation before
+ordinary runtime/DR commissioning. Do not silently widen the frozen C2 profile
+or claim the generic hook drill closes this gate. Full G3 remains OPEN.
+
+Backend next-ready work is the independent commissioning/restore preparation
+and binding of an accepted genuine producer within G3, not automatic entry to
+another phase. Claude can immediately do the consumer work above without
+waiting for actual source commissioning. Edge is the only source coordinator;
+no direct TS/PM authority or new user grant is inferred.
+
+### Evidence pins, source preservation and cleanup
+
+Local evidence directory:
+`/home/bobby/.local/state/portal-integrations/20261124-g3-implementation/`.
+
+| Artifact | SHA256 |
+| --- | --- |
+| `normal-hook-final.log` | `36485216373b18025a0a5a9c86711d07f86348f731b2bf80884fd9ecfe491ac5` |
+| `core-focused.log` | `a6257334119324f2503722adf999e390d199281beafd5a8a800edb1441ab6a35` |
+| `typecheck.log` | `a6543d5da92fbf5f5abbb49d3530d6310a5b933eb8652129b2cd50ed04c0536d` |
+| `G3_SOURCE_d402a594e.bundle` | `22062557edb798f7860ef9ff2f85f00e71555d060aba4d2f8afe319cda48be8f` |
+
+Bundle verify PASS; it contains the source ref with prerequisite `a888f67b5`,
+not private inputs. Raw typecheck log records the command; its real exit0 was
+captured by the execution tool, not invented from an empty error stream.
+
+Post-exit: no owned cell/container/network suffix `3880530389419582`; no owned
+test image `portal-source-proxy-d4-offline:tmp.*`; `/tmp/tmp.jQAk5BueE9` removed
+by the runner trap; no PG anonymous-volume mount; temporary contracts dependency
+link removed and the shared dependency tree preserved. State692KiB, disk free
+140GiB and available host memory9,889MiB are point observations, not peaks/SLO.
+During the gate Node754.5MiB and PG165.2MiB were point samples. All heavy checks
+used the one `primus-build` slot (3CPU/high6GiB/max8GiB); no G2/load calibration
+or coexistence claim follows from these samples. Source bundle/logs are retained
+for rollback and evidence, not abandoned build cache. No shared resources pruned.
+
+Source rollback is reviewed revert. Migration159 down preserves any ordinary
+history by refusing removal; do not delete evidence to force downgrade. There
+was no runtime change to roll back, no push, UI edit, permission issuance,
+command/Live activation or dev/main/stable operation.
+
+Recording this return and mirroring the five indices is **Verification: R0**
+under campaign§10.10d: explicit Markdown only, diff/link/tracking checks, no
+source/dependency change and no second full hook just to record the first.
+
+Local R0 checks completed: diff whitespace PASS; ten local index links/anchors
+PASS; `scripts/execution-tracking-test.sh` PASS. Exactly six Markdown paths
+are selected for recording. Historical Research's unrelated tracked WIP remains
+excluded and byte-identical (SHA256
+`1a655f6c335151a5249a68d943fd47afcf7266f67fc6b523a41130ba57da0c35`).

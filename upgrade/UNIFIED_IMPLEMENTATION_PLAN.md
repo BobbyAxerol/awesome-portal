@@ -9424,6 +9424,18 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**24 Nov 17:25 UTC — G3 CORE_SOURCE_VERIFIED / NOT_ACTIVATED; full G3 OPEN.**
+[Source pin, gate result, exact Claude actions and remaining producer/restore gates](execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).
+`d402a594e28984498b9d36efbe90599ac7d9c394`, 61files/+5,546/-49 on
+`integrate/v13-candidate-20261122`. Normal R2 hook exit0: Core13,101PASS/
+1expected-fail/166SKIP; contracts1,995PASS; build/PG preservation-restore/tracking
+PASS. Writer/CAS/delegation and private source verifier are source-delivered,
+not installed authority or a qualified real Edge producer. Claude next consumes
+optional profile_id through both closed parsers/query/cache identity and returns
+ACK before API rollout. Real source/seals/receipts, Live artifact, populated
+ordinary restore qualification and connected/browser remain OPEN. No UI/grant/
+migration/runtime/push; receipt/index mirror to historical Research is R0 only.
+
 **24 Nov — G3 implementation assigned; private composition, NOT_ACTIVATED.**
 [Writer/CAS, delegation, profile isolation, signed producer and gate ledger](execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md).
 Codex implements G3 on `integrate/v13-candidate-20261122`: separate ordinary

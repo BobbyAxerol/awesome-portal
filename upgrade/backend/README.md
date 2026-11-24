@@ -1,5 +1,14 @@
 # Backend Architecture Deep Dives
 
+**24Nov17:25 G3 — CORE_SOURCE_VERIFIED / NOT_ACTIVATED:**
+[Source pin, normal-hook receipt and Claude handoff](../execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).
+`d402a594e`, 61files/+5,546/-49; Core13,101PASS/1expected-fail/166SKIP,
+contracts1,995PASS; build/PG preservation-restore/tracking PASS. Writer/CAS and
+delegation are source-delivered; real producer qualification, ordinary restore
+profile and consumer/browser remain OPEN. Claude must accept optional profile_id
+and bind query/cache identity before API install. No UI/grant/runtime/push;
+full G3/ELP2-10/11 is not closed by this source R2 return. Recording is R0.
+
 **24Nov G3 — implementation under verification, NOT_ACTIVATED:**
 [Authority writer/DB CAS, delegation, explicit profiles and producer boundary](../execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md).
 Migration159 creates ordinary-only immutable authority; legacy/native authority

@@ -1,5 +1,18 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 24 Nov 17:25 UTC — G3 source returned / consumer ACK pending
+
+[Exact source/gate/cleanup, Claude actions and remaining owner inputs](evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).
+Source `d402a594e28984498b9d36efbe90599ac7d9c394`, 61files/+5,546/-49,
+normal R2 hook exit0: Core13,101PASS/1expected-fail/166SKIP; contracts1,995PASS;
+build/PG preservation-restore/tracking PASS. Writer/CAS/delegation source and
+private signed producer verifier are delivered, not installed/qualified source.
+Claude: optional profile_id in closed parsers/query/cache/cursor and negatives,
+no design change; return SHA/tests/ACK before API rollout. Edge: accepted
+export/signer/seals/receipts/census and missing Live artifact. Core: ordinary
+restore profile qualification before installation. Full G3/ELP2-10/11 OPEN;
+no UI/grant/migration/runtime/push. Historical Research mirror is R0 only.
+
 ## 24 Nov — G3 assigned / implementation verification
 
 [Writer/CAS/delegation, source boundary and Claude handoff](evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md).

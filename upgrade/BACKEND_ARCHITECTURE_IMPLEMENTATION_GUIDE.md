@@ -650,6 +650,16 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**24Nov17:25 G3 — CORE_SOURCE_VERIFIED / NOT_ACTIVATED; full G3 OPEN:**
+[Final source, tests, rollback and exact next owners](execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).
+Source `d402a594e`, 61files/+5,546/-49; normal R2 hook Core13,101PASS/
+1expected-fail/166SKIP, contracts1,995PASS, build/PG preservation-restore/tracking
+PASS. Separate writer/CAS, bounded delegation and private signed source boundary
+preserve native/legacy authority. Edge's actual producer/seals/receipts and Live
+artifact remain inputs; populated ordinary restore needs its own inventory/
+checkpoint qualification. Claude parser/query/cache ACK is required before
+API rollout. No runtime/grant/migration/UI/push; historical mirror is R0 only.
+
 **24Nov G3 — private writer/CAS/delegation and producer integration:**
 [Scope, migration159, test results and Claude handoff](execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md).
 Separate ordinary head/grant/event tables avoid activating legacy SCOPED_V2.

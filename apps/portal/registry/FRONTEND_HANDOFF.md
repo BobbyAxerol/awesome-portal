@@ -1,5 +1,20 @@
 # Frontend Contract Handoff — Portal Registry & Command Center Summary
 
+## 2026-11-24 17:25 UTC — G3 source pinned; Claude action / ACK pending
+
+[Exact parser/query/cache locations, vectors, negatives and rollout fence](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).
+Use source `d402a594e28984498b9d36efbe90599ac7d9c394` in Portal's
+`integrate/v13-candidate-20261122`, not a whole merge of old writer lanes.
+Normal R2 hook: Core13,101PASS/1expected-fail/166SKIP, contracts1,995PASS;
+build/PG preservation-restore/tracking PASS. No frontend edits or consumer ACK.
+Connect optional profile_id in BOTH closed readers, query encoding, response
+matching and cache/cursor identity. Preserve absent-field legacy bodies; test
+two Paper profiles, wrong workspace/profile, ALL refusal, pending old-response
+switch and revoke. No component/layout/colour/baseline changes or new banner.
+Current parsers reject the additive field: ACK consumer compatibility BEFORE
+API install. No runtime/grant/source qualification is implied. Full G3 remains
+OPEN for real producer/restore/connected inputs; Claude can wire fixtures now.
+
 ## 2026-11-24 — G3 contracts delivered for consumer review (gates pending)
 
 [Exact backend scope, commissioning limits and consumer instructions](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#claude-handoff).
