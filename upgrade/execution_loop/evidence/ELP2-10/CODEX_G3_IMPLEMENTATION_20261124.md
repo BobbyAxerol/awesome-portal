@@ -279,3 +279,127 @@ PASS; `scripts/execution-tracking-test.sh` PASS. Exactly six Markdown paths
 are selected for recording. Historical Research's unrelated tracked WIP remains
 excluded and byte-identical (SHA256
 `1a655f6c335151a5249a68d943fd47afcf7266f67fc6b523a41130ba57da0c35`).
+
+## Ordinary restore follow-through — implementation round
+
+Bobby assigned the remaining independently runnable G3 work and full Claude
+handoff. Entry: `974b0435b01cde76a8296c081b937b34bcf64402`, clean v1.3
+integration worktree. No installation, permission issuance, remote push or
+frontend redesign is included. The existing source verification remains valid
+for unchanged producer/authority contracts; it does not qualify populated
+ordinary restore.
+
+Ownership: root owns legacy restore-profile refusal, runner, integration and
+five indices; authority agent owns a separate versioned ordinary restore
+overlay and isolated tests; producer reviewer reads current local Edge inputs;
+profile reviewer audits the precise consumer handoff. No parallel heavy tests.
+The overlay must not silently widen the frozen C2 commitment or act as a
+cutover permit. Qualification covers populated ordinary history/security and
+post-snapshot revoke; real source, independent operational fencing and Claude
+consumer ACK remain distinct. Focused PG/typecheck results and cleanup will be
+recorded after execution, not inferred from this plan.
+
+The [consolidated Claude return](CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md)
+clarifies source-as-is commissioning: no mandatory new TS signing mechanism,
+no request to resend the three existing physical pin triples. Existing Core
+metadata preservation and normalized producer mapping remain owned work, not
+an external Edge-only blocker. The Live physical artifact is a separate input.
+Consumer review also identified the Fleet publication probe's request identity,
+not only the visible rows and Series parsers. No Claude ACK is inferred.
+
+### Failed qualification retained — actual constraint deparse difference
+
+Two real disposable PostgreSQL attempts exited1 during CHECK_COPY; neither
+ran POST_SNAPSHOT/VERIFY_STALE or qualifies as a completed restore drill.
+The second attempt isolated exactly one security component:
+`elp210_candidate.leases`, `leases_human_issuer_check`. Data, other security
+facts and routines matched. PostgreSQL's raw constraint deparse retains an
+AND grouping that its own dump/reparse can flatten. The new, unpublished
+ordinary profile now uses PostgreSQL's `pg_get_constraintdef(oid,true)` for
+constraint text, keeping all constraint names and full predicates. No regex
+normalization, dropped security hash or legacy-profile hash change is used.
+The retake explicitly compares raw/pretty definitions and changes the actual
+CHECK bound128→127 to require refusal, then restores128 and requires a match.
+
+Retained local logs under
+`/home/bobby/.local/state/portal-integrations/20261124-g3-implementation/`:
+
+- `ordinary-restore-pg.log`: SHA256
+  `e0486db31fb7c4aef6c476e86cede02913a2de8077f1d13c6fcf956550fc5ee3`.
+- `ordinary-restore-diagnostic.log`: SHA256
+  `5bb63ea906f9cbaf0f11c32ef9091d4f68b5db23d658d8cf5efa441e45c3f68f`.
+
+The second attempt's real lock-contention negative passed: bounded lock
+refusal and same-operation retry produced no extra checkpoint event. That is
+not a substitute for the pending complete four-stage retake.
+
+### Actual final focused qualification
+
+| Scope | Actual result | Evidence / boundary |
+| --- | --- | --- |
+| Four-stage ordinary restore | **exit0, 7 unique tests PASS**: SEED1 / CHECK_COPY4 / POST_SNAPSHOT1 / VERIFY_STALE1 | Real migration159, ordinary install/delegate/revoke and dump/restore; two disposable clusters. Other phases' tests are filtered per invocation, not additive skipped coverage |
+| Frozen legacy checkpoint authority | **exit0, 10/10 PASS** | Old profiles reject empty/populated/unknown ordinary tables and views; actual preordinary migration boundary is pinned158 |
+| Final pure restore unit retake | **exit0, 21/21 PASS**, two files | No real-source or installed-runtime claim |
+| First whole Core typecheck | **exit2**, five TS2564 diagnostics in new verifier constructor | Replaced early constructor `return fail(...)` with direct same-code throw; strict/compiler/nullability unchanged |
+| Final whole Core typecheck | **exit0**, both configured projects completed | `tsc --noEmit && tsc -p tsconfig.cross-loop.json`; frozen final source, not inferred from the previous hook |
+
+The CHECK_COPY probe proved the sole raw-deparse difference is
+`leases_human_issuer_check`, with identical PostgreSQL pretty definitions.
+Changing its actual bound128→127 makes the independent verifier refuse;
+restoring the exact predicate returns MATCH. The journal remains at the same
+generation after contention/retry; no extra event is invented.
+
+POST_SNAPSHOT used the real ordinary owner writer to revoke the parent. Child
+READ/confirmation then refuse on the source; independent checkpoint advances
+to generation3. VERIFY_STALE uses the dump clone renamed to the **original
+DB name**, same system identifier and role, preserving the original grant
+target. The old ordinary reader/confirmation allow; the actual latest
+independent journal makes the new verifier reject `ORDINARY_RESTORE_MISMATCH`.
+This is stronger than a clone-name mismatch negative, but remains an UNMOUNTED
+comparison, not an installed old-holder/HTTP/source-ACK/fresh-floor barrier.
+
+No Portal schema migration or public contract changed in this follow-through.
+The separate SQL file prepares only the independent journal's explicit new
+capture kind; no installation or implicit rights upgrade occurred. Old
+checkpoint hashes/kinds remain unchanged and old closed readers refuse the
+new ordinary profile. Scripted empty C2 fixture relations are inventory
+coverage only, not a real C2 quiescence/fencing/source reconciliation proof.
+
+Retained logs in the directory above:
+
+- `ordinary-restore-final.log`: SHA256
+  `443ff1c32113beae36e3c9cf91e58a88b8c7cffa2fe8ad2123fbb68365fbfbbb`.
+- `restore-legacy-final.log`: SHA256
+  `58e0a9504957f8f90fd33ec43e115c122095ee07756e4c1291e40799195ce628`.
+- `restore-pure-final.log`: SHA256
+  `3b8c24cedfeeebe1dca21b6e0a222e78f12861bac82107604fc9f3f2c0e8112d`.
+- Failed first `core-typecheck.log`: SHA256
+  `570f00e7e35cd6184ac6c00120306728f155caa2183363d4bfb1f342658dee5a`.
+- Final `core-typecheck-final.log`: SHA256
+  `c3013b9a551f68a0b6c502aad2b2b6c6860fc7461c36629f231d6da06db38d13`.
+
+**Verification tier: R1 source checkpoint, R2 landing pending**, under campaign
+§10.10c. Focused PG/units/typecheck are the impacted gate; one full normal hook
+belongs to the later reconciled Claude-consumer/restore candidate before
+landing/install. The previous R2 tree is evidence only for unchanged code;
+it is not claimed as coverage of this overlay. Source-only rollback is a
+reviewed revert; do not remove ordinary authority/history or restore an old
+checkpoint to force downgrade. Real producer qualification, Claude ACK and
+the separate operational/connected gates remain OPEN.
+
+Independent reviews ACCEPT the frozen implementation for **UNMOUNTED
+MATCH_NOT_CUTOVER** only, and the revised source-as-is/Claude task wording.
+Constructor typing, schema-qualification of guards, PostgreSQL-owned constraint
+canonicalization, exact retry and bounded lock-order contention were reviewed.
+No review is counted as execution or connected acceptance. Ambiguous source
+timeout after an independent append still requires exact-operation recapture/
+reconciliation; neither the receipt nor this verifier proves held-through-commit
+source locks or a nonrollbackable operational authority floor.
+
+Cleanup decision C4: **NO_ACTION_NEEDED** beyond the completed runner traps.
+Read-only inventory after both PG gates found no `elp2-ckpt-*` containers or
+networks. They used tmpfs, no persistent volume, image build, runtime port,
+credential file or preview mount. Retain the small source/failed/success logs as
+evidence, not abandoned cache. No shared image/cache/backup was pruned. Capacity
+sample:145,521,396KiB disk available (78%used), MemAvailable9,884,356KiB; these
+are point samples, not peak-resource, production-budget or G2 measurements.

@@ -9,6 +9,7 @@ case "${1:-all}" in
   authority) readonly tests=(test/restore-checkpoint-authority-pg.spec.ts) ;;
   upgrade) readonly tests=(test/restore-authority-upgrade-pg.spec.ts) ;;
   witness) readonly tests=(test/restore-checkpoint-witness-producer-pg.spec.ts) ;;
+  ordinary) readonly tests=(test/ordinary-profile-restore-pg.spec.ts) ;;
   *) exit 2 ;;
 esac
 exec 9>/tmp/portal-heavy.lock
@@ -53,12 +54,33 @@ for name in "${clusters[@]}"; do
   done
   [[ "$ready" == true ]] || exit 1
 done
+run_node() {
 "${d[@]}" run --rm --name "$node" --network "$net" --read-only --cpus "$node_cpu" --memory "$node_memory" --pids-limit 256 \
   -v "$root/apps/control-api:/cell/work:ro" \
   --tmpfs /cell/work/node_modules/.vite-temp:rw,exec,mode=1777,size=32m \
   --tmpfs /tmp:rw,exec,mode=1777,size=64m -w /cell/work -e HOME=/tmp \
   -e TEST_DATABASE_URL="postgres://portal:portal@$source:5432/$db" \
   -e TEST_AUTHORITY_DATABASE_URL="postgres://portal:portal@$authority:5432/$db" \
+  -e TEST_ORDINARY_RESTORED_DATABASE_URL="postgres://portal:portal@$source:5432/${db}_copy" \
+  -e PORTAL_TEST_ORDINARY_RESTORE_PHASE="${1:-}" \
   "${witness_env[@]}" \
   -e PORTAL_TEST_RESTORE_CHECKPOINT=TEST_ONLY_DISPOSABLE_TWO_CLUSTERS \
   "$node_image" npm test -- "${tests[@]}"
+}
+if [[ "${1:-all}" == ordinary ]]; then
+  # All names are generated and validated above, all bytes remain inside the
+  # owned disposable cluster. Preserve the source/dump/history; no live DB is
+  # contacted. Restoring back to the ORIGINAL physical DB name demonstrates
+  # the stale-revoke risk rather than relying on a name-mismatch refusal.
+  run_node SEED
+  "${d[@]}" exec "$source" pg_dump -U portal -d "$db" -Fc -f /tmp/ordinary.dump
+  "${d[@]}" exec "$source" createdb -U portal "${db}_copy"
+  "${d[@]}" exec "$source" pg_restore -U portal --exit-on-error -d "${db}_copy" /tmp/ordinary.dump
+  run_node CHECK_COPY
+  run_node POST_SNAPSHOT
+  "${d[@]}" exec "$source" psql -U portal -d postgres -v ON_ERROR_STOP=1 -c "ALTER DATABASE $db RENAME TO ${db}_history"
+  "${d[@]}" exec "$source" psql -U portal -d postgres -v ON_ERROR_STOP=1 -c "ALTER DATABASE ${db}_copy RENAME TO $db"
+  run_node VERIFY_STALE
+else
+  run_node
+fi

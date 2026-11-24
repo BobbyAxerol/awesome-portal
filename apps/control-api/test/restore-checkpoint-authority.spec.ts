@@ -116,6 +116,9 @@ describe("restore checkpoint authority, SQL-flow fake", () => {
     const result = restoreCheckpointEventHash(checkpoint, write, "1", "0".repeat(64));
     expect(result).toMatch(/^[a-f0-9]{64}$/);
     expect(result).not.toBe(restoreCheckpointEventHash(checkpoint,write,"1","0".repeat(64),"LOCKED_SOURCE_CAPTURE"));
+    const ordinary = restoreCheckpointEventHash(checkpoint,write,"1","0".repeat(64),"LOCKED_ORDINARY_SOURCE_CAPTURE");
+    expect(ordinary).not.toBe(result);
+    expect(ordinary).not.toBe(restoreCheckpointEventHash(checkpoint,write,"1","0".repeat(64),"LOCKED_SOURCE_CAPTURE"));
     expect(result).not.toBe(restoreCheckpointEventHash(checkpoint, { ...write, inventory_digest: "b".repeat(64) }, "1", "0".repeat(64)));
     for (const invalid of ["01", "-1", "9223372036854775808"]) {
       expect(() => restoreCheckpointEventHash(checkpoint, { ...write, expected_generation: invalid }, "1", "0".repeat(64)))

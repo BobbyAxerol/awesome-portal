@@ -1,5 +1,15 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 24 Nov — G3 complete handoff / ordinary restore follow-through
+
+[Claude task map, exact source lane, producer clarification and qualification](evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
+ACK remains AWAITING_CONSUMER_REVIEW. Preserve current design; include Fleet
+publication probe in profile/workspace identity. Old restore profiles refuse
+ordinary authority; four-stage ordinary drill7PASS, legacy10PASS, pure21PASS.
+UNMOUNTED/NOT_CUTOVER, R1 only, both Core typecheck projects exit0. Existing Edge
+pins need not be resent and no new TS signature is mandated. Source metadata
+preservation/mapping is Core-owned work; real commissioning remains distinct.
+
 ## 24 Nov 17:25 UTC — G3 source returned / consumer ACK pending
 
 [Exact source/gate/cleanup, Claude actions and remaining owner inputs](evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).

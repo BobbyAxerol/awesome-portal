@@ -212,6 +212,23 @@ describe.skipIf(!enabled)("restore checkpoint authority on two disposable PG clu
     await source.query("CREATE TABLE elp210_c2_p7_candidate.test_only_unexpected(value text)");
     await expect(store.captureAndAppendDrainedSource(input,drain,10)).rejects.toThrow("V2_C2_INVENTORY_SCOPE_UNSUPPORTED");
     await source.query("DROP TABLE elp210_c2_p7_candidate.test_only_unexpected");
+    for (const table of ["portal_ordinary_profile_authority", "portal_ordinary_profile_grants",
+      "portal_ordinary_profile_events", "portal_ordinary_profile_future_authority"]) {
+      await source.query(`CREATE TABLE public.${table}(test_only_value text)`);
+      try {
+        // An empty installed authority is already outside the frozen profile;
+        // a matching legacy checkpoint must not silently omit it.
+        await expect(store.captureAndAppendDrainedSource(input,drain,10))
+          .rejects.toThrow("V2_C2_INVENTORY_SCOPE_UNSUPPORTED");
+        await source.query(`INSERT INTO public.${table} VALUES('TEST_ONLY')`);
+        await expect(store.captureAndAppendDrainedSource(input,drain,10))
+          .rejects.toThrow("V2_C2_INVENTORY_SCOPE_UNSUPPORTED");
+      } finally { await source.query(`DROP TABLE public.${table}`); }
+    }
+    await source.query("CREATE VIEW public.portal_ordinary_profile_authority AS SELECT 'TEST_ONLY'::text AS test_only_value");
+    try { await expect(store.captureAndAppendDrainedSource(input,drain,10))
+      .rejects.toThrow("V2_C2_INVENTORY_SCOPE_UNSUPPORTED"); }
+    finally { await source.query("DROP VIEW public.portal_ordinary_profile_authority"); }
     await source.query(`CREATE FUNCTION elp210_c2_p7_candidate.test_only_observed() RETURNS integer
       LANGUAGE sql AS 'SELECT 1'`);
     await expect(store.captureAndAppendDrainedSource(input,drain,10)).resolves.toMatchObject({generation:"5",replayed:false,
@@ -287,8 +304,11 @@ describe.skipIf(!enabled)("restore checkpoint authority on two disposable PG clu
     await source.query(`CREATE DATABASE ${dbName}`);
     const url=new URL(sourceUrl!);url.pathname=`/${dbName}`;
     const migrate=(require("node-pg-migrate") as {runner:(options:Record<string,unknown>)=>Promise<unknown>}).runner;
+    // This is deliberately the frozen PRE-ORDINARY C2 profile. The separate
+    // ordinary test covers migration159 with populated history. Pin the actual
+    // migration boundary, not "latest minus one" as future migrations arrive.
     await migrate({databaseUrl:url.toString(),dir:join(__dirname,"../migrations"),direction:"up",
-      migrationsTable:"pgmigrations",count:Infinity,noLock:true,log:()=>{}});
+      migrationsTable:"pgmigrations",count:1723680000158,timestamp:true,noLock:true,log:()=>{}});
     const actual=new Pool({connectionString:url.toString(),max:3,connectionTimeoutMillis:2000,query_timeout:15000});
     actual.on("error",()=>undefined);
     const id=randomUUID(),drain=`restore_v2:${randomUUID()}`;

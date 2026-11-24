@@ -57,10 +57,15 @@ export async function captureV2RestoreInventory(pool: Pool, maximumRows = 100_00
     // This v2 format cannot represent candidate C2 authority, preparation,
     // delivery or independent-restore state. Never return a misleading
     // partial match when any such schema, or an extra candidate relation,
-    // exists in this same snapshot. Unknown external schemas are not covered.
+    // exists in this same snapshot. Ordinary authority added in migration159
+    // needs its own versioned restore overlay; even empty installed tables
+    // must not be silently omitted by this frozen pre-C2 profile.
+    // Unknown external schemas are not covered.
     const coverage = await client.query<{ unsupported: boolean }>(`SELECT
       EXISTS(SELECT 1 FROM pg_catalog.pg_namespace n WHERE left(n.nspname,10)='elp210_c2_'
         OR n.nspname IN ('portal_local_write_fence','portal_restore_authority','portal_restore_original_custody'))
+      OR EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relname ~ '^portal_ordinary_profile_' AND c.relkind IN ('r','p','f','m','v'))
       OR EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname='elp210_candidate' AND c.relkind IN ('r','p','f','m')
           AND NOT (n.nspname||'.'||c.relname=ANY($1::text[]))) AS unsupported`, [RESTORE_V2_TABLES]);

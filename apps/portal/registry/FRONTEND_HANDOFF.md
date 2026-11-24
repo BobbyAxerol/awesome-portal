@@ -1,5 +1,14 @@
 # Frontend Contract Handoff — Portal Registry & Command Center Summary
 
+## 2026-11-24 — consolidated G3 consumer and backend return
+
+[One Claude entry point: source lane, exact files, vectors and acceptance](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
+Thread optional profile_id through both strict readers, encoders, query match,
+Fleet filters AND publication probe, request/cursor identity. Existing components
+and baselines stay unchanged. Current API rollout waits for actual Claude ACK;
+this handoff does not fabricate it. Restore verification/source mapping and
+real producer inputs are distinguished in the same packet.
+
 ## 2026-11-24 17:25 UTC — G3 source pinned; Claude action / ACK pending
 
 [Exact parser/query/cache locations, vectors, negatives and rollout fence](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).

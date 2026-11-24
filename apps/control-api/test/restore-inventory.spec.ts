@@ -86,6 +86,8 @@ describe("Execution V2 restore inventory is never an automatic cutover grant", (
     const result = await captureV2RestoreInventory(pool);
     expect(result.coverage).toBe("pre-c2-candidate-absence-checked-v2");
     expect(compareV2RestoreInventories(result,result).state).toBe("LOCAL_MATCH_NOT_A_CUTOVER_FENCE");
+    const coverage = query.mock.calls.find(([sql]) => sql.startsWith("SELECT\n      EXISTS"))?.[0];
+    expect(coverage).toContain("c.relname ~ '^portal_ordinary_profile_'");
   });
   it("discards a connection when rollback fails", async () => {
     const query = vi.fn(async (sql: string) => {

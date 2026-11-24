@@ -1,5 +1,12 @@
 # Backend Architecture Deep Dives
 
+**24Nov — G3 ordinary restore and full Claude return:**
+[Implementation/qualification, compatibility checklist and remaining source inputs](../execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
+Ordinary drill7PASS/legacy10PASS/pure21PASS; UNMOUNTED/NOT_CUTOVER, both tsc
+projects exit0, R1 only. Old profiles refuse ordinary tables/views rather than omit
+them. Core source metadata/mapping is not external debt.
+Real producer, consumer ACK and connected gates stay separate; no activation.
+
 **24Nov17:25 G3 — CORE_SOURCE_VERIFIED / NOT_ACTIVATED:**
 [Source pin, normal-hook receipt and Claude handoff](../execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).
 `d402a594e`, 61files/+5,546/-49; Core13,101PASS/1expected-fail/166SKIP,

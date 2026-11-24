@@ -9424,6 +9424,16 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**24 Nov — G3 ordinary restore follow-through and consolidated Claude handoff.**
+[Exact owned implementation, source-as-is clarification, consumer checklist and gates](execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
+Old restore profiles now refuse installed ordinary authority rather than omit
+it. Separate populated-ordinary four-stage drill:7uniquePASS; legacy10PASS,
+pure21PASS. This is UNMOUNTED/NOT_CUTOVER, not proof from the previous full
+hook; R1 source checkpoint, both Core typecheck projects exit0. Claude receives parser/query/publication
+probe work and Core-owned source metadata/mapping, not an Edge-only blocker.
+No mandatory new TS signing mechanism; reuse delivered pins. No runtime/UI/
+grant/push; consumer ACK and real producer/connected gates remain OPEN.
+
 **24 Nov 17:25 UTC — G3 CORE_SOURCE_VERIFIED / NOT_ACTIVATED; full G3 OPEN.**
 [Source pin, gate result, exact Claude actions and remaining producer/restore gates](execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).
 `d402a594e28984498b9d36efbe90599ac7d9c394`, 61files/+5,546/-49 on

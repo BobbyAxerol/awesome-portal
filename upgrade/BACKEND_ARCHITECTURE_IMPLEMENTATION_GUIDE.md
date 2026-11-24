@@ -650,6 +650,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**24Nov — G3 restore follow-through / consolidated handoff:**
+[Ordinary profile qualification and exact Core/Claude/Edge actions](execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).
+Frozen inventories refuse ordinary authority; separate populated restore/revoke
+drill7PASS, legacy10PASS, pure21PASS; UNMOUNTED/NOT_CUTOVER, both tsc projects exit0.
+R1 source checkpoint is not a new R2 landing. Source-as-is alternative
+is permitted; preserving physical metadata and mapping it is still Core work.
+Consumer ACK is required before API rollout. No installed producer/authority,
+runtime change or full G3/ELP2-10/11 closure is claimed.
+
 **24Nov17:25 G3 — CORE_SOURCE_VERIFIED / NOT_ACTIVATED; full G3 OPEN:**
 [Final source, tests, rollback and exact next owners](execution_loop/evidence/ELP2-10/CODEX_G3_IMPLEMENTATION_20261124.md#final-source-return).
 Source `d402a594e`, 61files/+5,546/-49; normal R2 hook Core13,101PASS/

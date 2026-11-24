@@ -39,6 +39,8 @@ export async function captureLockedC2Inventory(db:PoolClient,maximumRows:number)
     JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace WHERE
     (n.nspname='elp210_candidate' OR left(n.nspname,10)='elp210_c2_' OR n.nspname='portal_local_write_fence')
     AND c.relkind IN ('r','p','f','m') AND NOT (n.nspname||'.'||c.relname=ANY($1::text[])))
+    OR EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+      WHERE n.nspname='public' AND c.relname ~ '^portal_ordinary_profile_' AND c.relkind IN ('r','p','f','m','v'))
     OR EXISTS(SELECT 1 FROM pg_catalog.pg_namespace WHERE nspname IN
       ('portal_restore_authority','portal_restore_original_custody')) AS unsupported`,[names]);
   if(unknown.rows.length!==1||unknown.rows[0]?.unsupported!==false)throw new Error("V2_C2_INVENTORY_SCOPE_UNSUPPORTED");

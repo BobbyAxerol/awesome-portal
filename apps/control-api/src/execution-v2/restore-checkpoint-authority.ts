@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import type { Pool, PoolClient } from "pg";
 import {captureLockedC2Inventory,RESTORE_C2_INVENTORY_TABLES} from "./restore-c2-inventory";
+import {assertOrdinaryRestoreSourceBinding,captureLockedOrdinaryInventory,
+  ordinaryRestoreCheckpointDigest} from "./ordinary-profile-restore";
 
 /**
  * UNMOUNTED recovery preparation. A checkpoint is a durable observation, NOT
@@ -28,7 +30,7 @@ export type RestoreCheckpointPin = Readonly<{ checkpoint_id: string; source_syst
 export type RestoreCheckpointWrite = Readonly<{ operation_id: string; expected_generation: string;
   source_revision: string; inventory_digest: string }>;
 export type RestoreCheckpointCaptureKind = "CALLER_CLAIM" | "DRAIN_BOUND_CLAIM" | "LOCKED_SOURCE_CAPTURE" | "FROZEN_SOURCE_CAPTURE" |
-  "FROZEN_NOLOGIN_SOURCE_OBSERVATION" | "FROZEN_CLOSED_DB_OBSERVATION";
+  "FROZEN_NOLOGIN_SOURCE_OBSERVATION" | "FROZEN_CLOSED_DB_OBSERVATION" | "LOCKED_ORDINARY_SOURCE_CAPTURE";
 export type RestoreCheckpointReceipt = Readonly<{ state: "STORED_NOT_CUTOVER"; generation: string;
   event_hash: string; replayed: boolean; storage: "DISTINCT_PG_CLUSTERS_ONLY";
   capture_kind: RestoreCheckpointCaptureKind }>;
@@ -39,7 +41,8 @@ type Event = RestoreCheckpointWrite & { generation: string; predecessor_hash: st
   capture_kind: RestoreCheckpointCaptureKind };
 const captureKind = (value:unknown):value is RestoreCheckpointCaptureKind =>
   value==="CALLER_CLAIM" || value==="DRAIN_BOUND_CLAIM" || value==="LOCKED_SOURCE_CAPTURE" ||
-  value==="FROZEN_SOURCE_CAPTURE" || value==="FROZEN_NOLOGIN_SOURCE_OBSERVATION" || value==="FROZEN_CLOSED_DB_OBSERVATION";
+  value==="FROZEN_SOURCE_CAPTURE" || value==="FROZEN_NOLOGIN_SOURCE_OBSERVATION" || value==="FROZEN_CLOSED_DB_OBSERVATION" ||
+  value==="LOCKED_ORDINARY_SOURCE_CAPTURE";
 
 type ClosedDatabasePin=Readonly<{target_oid:string;observer_pid:number;observer_start:string;operator_role:string;application_name:string}>;
 
@@ -144,6 +147,43 @@ export class RestoreCheckpointAuthority {
         throw new Error("V2_CHECKPOINT_DRAIN_OR_REVISION_CHANGED");
       const receipt=await this.#appendWithVerifiedSource({...captured,inventory_digest:
         drainedDigest(this.#pin,drainId,captured.source_revision,digest)},"LOCKED_SOURCE_CAPTURE",this.#pin.source_system_identifier);
+      await source.query("COMMIT");return receipt;
+    } catch(error) {try {await source.query("ROLLBACK");}catch {discard=true;}throw error;}
+    finally {source.release(discard);}
+  }
+
+  /** Separate migration159 ordinary profile; never widens the frozen C2 hash.
+   * Captures the actual locked source and exact physical ordinary binding,
+   * then appends to the independently provisioned journal. This is a bounded
+   * local observation, NOT a restore/cutover or old-holder/source/HTTP fence.
+   * The independent journal requires its explicit ordinary-kind upgrade.
+   * Source locks are time-bounded: disconnect/timeout can follow a durable
+   * independent append. A receipt alone does not prove locks held through
+   * that commit or current source state. Reconcile ambiguous completion using
+   * the SAME operation/drain and a fresh capture; never use it to enable DR. */
+  async captureOrdinaryAndAppend(input:Omit<RestoreCheckpointWrite,"inventory_digest">,drainId:string,
+    maximumRows:number):Promise<RestoreCheckpointReceipt> {
+    if(!input||typeof input!=="object"||Array.isArray(input)||
+      JSON.stringify(Object.keys(input).sort())!==JSON.stringify(["expected_generation","operation_id","source_revision"])||
+      typeof drainId!=="string"||!DRAIN.test(drainId))return invalid();
+    const write=Object.freeze({operation_id:input.operation_id,expected_generation:input.expected_generation,
+      source_revision:input.source_revision});
+    if(!uuid(write.operation_id)||!dec(write.expected_generation)||!dec(write.source_revision)||
+      BigInt(write.expected_generation)>=PG_MAX||!Number.isSafeInteger(maximumRows)||maximumRows<1||maximumRows>10000)return invalid();
+    const source=await this.#source.connect();let discard=false;
+    try {
+      await source.query("BEGIN");
+      await source.query("SET LOCAL lock_timeout='1000ms'; SET LOCAL statement_timeout='3000ms'; SET LOCAL idle_in_transaction_session_timeout='5000ms'");
+      if(await identity(source)!==this.#pin.source_system_identifier)throw new Error("V2_CHECKPOINT_SOURCE_ID_MISMATCH");
+      const digest=await captureLockedOrdinaryInventory(source,maximumRows);
+      await assertOrdinaryRestoreSourceBinding(source);
+      const selected=await source.query<{revision:string;drain_id:string|null}>(
+        "SELECT revision::text,drain_id FROM elp210_candidate.authority WHERE singleton FOR UPDATE");
+      if(selected.rows.length!==1||selected.rows[0]?.drain_id!==drainId||selected.rows[0]?.revision!==write.source_revision)
+        throw new Error("V2_CHECKPOINT_DRAIN_OR_REVISION_CHANGED");
+      const receipt=await this.#appendWithVerifiedSource({...write,inventory_digest:
+        ordinaryRestoreCheckpointDigest(this.#pin,drainId,write.source_revision,digest)},
+      "LOCKED_ORDINARY_SOURCE_CAPTURE",this.#pin.source_system_identifier);
       await source.query("COMMIT");return receipt;
     } catch(error) {try {await source.query("ROLLBACK");}catch {discard=true;}throw error;}
     finally {source.release(discard);}
