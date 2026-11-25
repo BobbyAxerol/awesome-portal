@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { readAlphaFleet, type AlphaFleetItem } from "../../../api/profileRead";
 import {
   BOARD_READINESS, COUNT_NOT_AVAILABLE, FE, FLEET_LENSES, PAGE_LIMIT, SORT_OPTIONS, boardColumns, alphaHref, fleetKpis, fleetQuery, healthView, humanize, inStages,
-  lensCounts, lensForStages, notPublished, queryKey, serverStageParam, sortValueOf, stageLabel, stagesForLens, toFleetRow,
+  lensCounts, lensForStages, MONEY_FIGURE_BASIS, notPublished, queryKey, serverStageParam, sortValueOf, stageLabel, stagesForLens, toFleetRow,
 } from "./fleetModel";
 
 const FIXTURE = resolve(__dirname, "../../../../../../../../packages/contracts/fixtures/execution-alpha-fleet-list.v2.valid.json");
@@ -46,11 +46,42 @@ describe("fixture to model", () => {
     expect(row.updatedAt).toBe(item.updatedAt);
   });
 
-  it("carries no money: nothing of allocations, balances, PnL or exposure reaches the row", () => {
-    const text = JSON.stringify(toFleetRow(item));
-    for (const money of [item.deployments[0]!.allocation!, item.deployments[0]!.netPnl, item.deployments[0]!.balanceTotal!, "USDT"]) {
-      expect(text).not.toContain(money);
+  it("carries the register's own money per currency, as Source-reported figures, never summed or windowed", () => {
+    const row = toFleetRow(item);
+    expect(row.allocation).toEqual({ state: "reported", lines: [{ currency: "USDT", value: "20000", detail: null }] });
+    expect(row.netPnl).toEqual({ state: "reported", lines: [{ currency: "USDT", value: "123.19605", detail: "realized 123.19605, unrealized 0" }] });
+    expect(row.balance).toEqual({ state: "reported", lines: [{ currency: "USDT", value: "20123.19605", detail: "free 20123.19605, locked 0" }] });
+    expect(MONEY_FIGURE_BASIS.pnl).toContain("not a 7D or 30D");
+    for (const basis of Object.values(MONEY_FIGURE_BASIS)) expect(basis).toContain("not TS-qualified");
+  });
+
+  it("a figure the register marks unavailable, or an empty list, is a typed absence, never a 0", () => {
+    const unavailable = toFleetRow(variant({
+      positionPnl: [],
+      metricsAvailability: { ...item.metricsAvailability, current_position_pnl: { state: "UNAVAILABLE", reasonCode: "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" } },
+    }));
+    expect(unavailable.netPnl).toEqual({ state: "absent", reason: "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" });
+    // the register's word wins even when a list is present
+    const contradicted = toFleetRow(variant({
+      metricsAvailability: { ...item.metricsAvailability, account_balance: { state: "UNAVAILABLE", reasonCode: "NO_ACCOUNT" } },
+    }));
+    expect(contradicted.balance).toEqual({ state: "absent", reason: "NO_ACCOUNT" });
+    const none = toFleetRow(variant({ allocations: [], balances: [] }));
+    expect(none.allocation).toEqual({ state: "absent", reason: null });
+    expect(none.balance).toEqual({ state: "absent", reason: "NO_FIGURE_IN_THE_READ" });
+    // two currencies stay two lines
+    const two = toFleetRow(variant({ allocations: [{ currency: "USDT", value: "1" }, { currency: "EUR", value: "2" }] }));
+    expect(two.allocation.state === "reported" && two.allocation.lines.map((l) => l.currency)).toEqual(["USDT", "EUR"]);
+  });
+
+  it("names the typed cause on the counts when their read failed, and says nothing extra when it did not", () => {
+    const failed = fleetKpis(null, { status: "unavailable", reason: "WORKSPACE_NOT_FOUND" });
+    for (const id of ["alphas", "deployments", "portfolios", "attention", "research"]) {
+      expect(failed.find((k) => k.id === id)).toMatchObject({ value: null, note: "Not read (unavailable): Workspace not found" });
     }
+    expect(fleetKpis(null).every((k) => k.id === "exit-review" || k.id === "archive" || k.note === undefined)).toBe(true);
+    // a summary that is present wins over a stale failure
+    expect(fleetKpis(envelope.summary!, { status: "unavailable", reason: "X" }).find((k) => k.id === "alphas")?.note).toBeUndefined();
   });
 
   it("links to the V1 Alpha 360 route and escapes the id", () => {

@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { JourneySpine, NaWhy, SPINE_STAGE_IDS, type SpineStageId } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { MONEY_COLUMN_WHY, humanize, notPublished, type FleetColumnKey, type FleetRow } from "./fleetModel";
+import { MONEY_COLUMN_WHY, MONEY_FIGURE_BASIS, humanize, notPublished, type FleetColumnKey, type FleetMoney, type FleetRow } from "./fleetModel";
 
 import "../../css/fleet.css";
 
@@ -25,6 +25,22 @@ export function NotPublishedText({ fact }: { fact: { fe: string; what: string } 
 /** A money cell the register does not give this table. The visible word is "Not available"; the reason is behind its disclosure (RV-06). */
 function MoneyGap({ why }: { why: string }) {
   return <NaWhy reason={why} className="exec-fleet-np" />;
+}
+
+/**
+ * A money cell from the fleet read: one line per currency (never summed across currencies), the figure verbatim, and the
+ * honest basis under it. A figure the register does not give is the typed "Not available" with its reason, never a 0.
+ */
+function MoneyCell({ money, basis, gap }: { money: FleetMoney; basis: string; gap: string }) {
+  if (money.state === "absent") return <MoneyGap why={money.reason ? `${gap} The register says: ${humanize(money.reason)}.` : gap} />;
+  return (
+    <span className="exec-fleet-alpha" data-money="source-reported">
+      {money.lines.map((line) => (
+        <span key={line.currency} className="exec-fleet-name" title={line.detail ?? undefined}>{line.value} {line.currency}</span>
+      ))}
+      <span className="exec-fleet-version">{basis}</span>
+    </span>
+  );
 }
 
 function AlphaCell({ row }: { row: FleetRow }) {
@@ -104,9 +120,20 @@ export function FleetTable({ rows, selectedKey, onOpen, empty, hidden }: FleetTa
       render: (row) => (row.portfolios.length > 0 ? row.portfolios.join(", ") : <span className="exec-fleet-none">None attached</span>),
     },
     { key: "stage", label: "Stage", render: (row) => <StageCell row={row} /> },
-    { key: "allocation", label: "Allocation", numeric: true, render: () => <MoneyGap why={MONEY_COLUMN_WHY.allocation} /> },
-    { key: "pnl", label: "Net PnL", numeric: true, render: () => <MoneyGap why={MONEY_COLUMN_WHY.pnl} /> },
-    { key: "equity", label: "Equity", render: (row) => <MoneyGap why={row.equityReason ? `${MONEY_COLUMN_WHY.equity} The register says: ${humanize(row.equityReason)}.` : MONEY_COLUMN_WHY.equity} /> },
+    { key: "allocation", label: "Allocation", numeric: true, render: (row) => <MoneyCell money={row.allocation} basis={MONEY_FIGURE_BASIS.allocation} gap={MONEY_COLUMN_WHY.allocation} /> },
+    { key: "pnl", label: "Net PnL", numeric: true, render: (row) => <MoneyCell money={row.netPnl} basis={MONEY_FIGURE_BASIS.pnl} gap={MONEY_COLUMN_WHY.pnl} /> },
+    {
+      key: "equity",
+      label: "Equity",
+      // No equity figure is published; a balance is shown only as a balance, with the equity series' own reason kept in the disclosure.
+      render: (row) => (
+        <MoneyCell
+          money={row.balance}
+          basis={MONEY_FIGURE_BASIS.balance}
+          gap={row.equityReason ? `${MONEY_COLUMN_WHY.equity} The register says: ${humanize(row.equityReason)}.` : MONEY_COLUMN_WHY.equity}
+        />
+      ),
+    },
     { key: "health", label: "Health", render: (row) => <HealthCell row={row} /> },
     { key: "deployments", label: "Deployments", render: (row) => <DeploymentsCell row={row} /> },
   ];

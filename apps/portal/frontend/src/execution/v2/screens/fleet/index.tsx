@@ -265,7 +265,10 @@ export default function FleetScreen({ api, workspaceId, profileId, streamFlag = 
   // The lens counts and the KPI strip are the fleet read's summary (the whole scope, whatever the filters): never the dataset's.
   const summary = datasetMode ? countsRead.summary : read.summary;
   const counts = useMemo(() => lensCounts(summary), [summary]);
-  const kpis = useMemo(() => fleetKpis(summary), [summary]);
+  // The counts' own read failed: the KPI tiles name the typed cause (status + the server's reason) instead of a bare "Not available".
+  const countsState = datasetMode ? countsRead.state : read.state;
+  const countsFailure = countsState.phase === "error" ? { status: countsState.status, reason: countsState.reason } : null;
+  const kpis = useMemo(() => fleetKpis(summary, countsFailure), [summary, countsFailure?.status, countsFailure?.reason]);
 
   // Owner and Health options come from rows the page has shown, and are kept
   // while filtering: choosing one health must not remove the others.

@@ -115,6 +115,15 @@ export interface FleetDeploymentView {
   portfolio: string | null;
 }
 
+/**
+ * One money column of a fleet-read row (`GET /alphas`): the per-currency figures the register states, or the typed
+ * reason there are none. Never summed across currencies, never a 0 for a missing figure. These are Source-reported
+ * values, not Manager-dataset (TS-qualified) ones: the dataset table, when it is published, wins over them.
+ */
+export type FleetMoney =
+  | { state: "reported"; lines: readonly { currency: string; value: string; detail: string | null }[] }
+  | { state: "absent"; reason: string | null };
+
 export interface FleetRow {
   key: string;
   alphaId: string;
@@ -132,6 +141,12 @@ export interface FleetRow {
   healthCode: string;
   /** Why the 30-day equity series is not available, as the register states it (`metrics_availability.equity_series_30d`). */
   equityReason: string | null;
+  /** Allocation per currency (`allocations`), as the register reports it. */
+  allocation: FleetMoney;
+  /** Current position Net PnL per currency (`position_pnl.net`): cumulative, not a 7D/30D window. */
+  netPnl: FleetMoney;
+  /** Account balance per currency (`balances.total`): a balance, not equity. */
+  balance: FleetMoney;
   attention: readonly { code: string; label: string }[];
   deployments: { count: number; worst: HealthView | null; items: readonly FleetDeploymentView[] };
   updatedAt: string;
@@ -139,6 +154,16 @@ export interface FleetRow {
 
 /** The V1 route, kept: the Alpha 360 of this alpha. */
 export const alphaHref = (alphaId: string): string => `/deployments/alphas/${encodeURIComponent(alphaId)}`;
+
+function moneyOf<T>(
+  rows: readonly T[], availability: { state: string; reasonCode: string | null } | undefined,
+  line: (row: T) => { currency: string; value: string; detail: string | null },
+): FleetMoney {
+  // The register's own word wins: a metric it says is unavailable is a typed absence even if a list is present.
+  if (availability !== undefined && availability.state !== "AVAILABLE") return { state: "absent", reason: availability.reasonCode ?? availability.state };
+  if (rows.length === 0) return { state: "absent", reason: availability === undefined ? null : "NO_FIGURE_IN_THE_READ" };
+  return { state: "reported", lines: rows.map(line) };
+}
 
 export function toFleetRow(item: AlphaFleetItem): FleetRow {
   const stageCodes = item.stages.map((s) => s.toUpperCase());
@@ -159,6 +184,12 @@ export function toFleetRow(item: AlphaFleetItem): FleetRow {
     health: healthView(item.health),
     healthCode: item.health,
     equityReason: item.metricsAvailability.equity_series_30d?.reasonCode ?? null,
+    // The allocation has no availability key of its own in the register: an empty list is "no figure", not 0.
+    allocation: moneyOf(item.allocations, undefined, (a) => ({ currency: a.currency, value: a.value, detail: null })),
+    netPnl: moneyOf(item.positionPnl, item.metricsAvailability.current_position_pnl,
+      (p) => ({ currency: p.currency, value: p.net, detail: `realized ${p.realized}, unrealized ${p.unrealized}` })),
+    balance: moneyOf(item.balances, item.metricsAvailability.account_balance,
+      (b) => ({ currency: b.currency, value: b.total, detail: `free ${b.free}, locked ${b.locked}` })),
     attention: item.attentionReasons.map((code) => ({ code, label: humanize(code) })),
     deployments: {
       count: item.deployments.length,
@@ -234,18 +265,23 @@ export const queryKey = (filters: FleetFilters): string => JSON.stringify(fleetQ
 
 export interface Kpi { id: string; label: string; value: number | null; note?: string }
 
-export function fleetKpis(summary: AlphaFleetSummary | null): readonly Kpi[] {
+/** The typed failure of the read the counts come from (status and the server's reason), or null when it did not fail. */
+export interface CountsReadFailure { status: string; reason: string }
+
+export function fleetKpis(summary: AlphaFleetSummary | null, failure: CountsReadFailure | null = null): readonly Kpi[] {
   const v = (n: number | undefined): number | null => (summary ? n ?? null : null);
+  // A count with no summary because the read failed says why, in the server's own typed words (never an invented cause).
+  const why = summary === null && failure !== null ? `Not read (${failure.status}): ${humanize(failure.reason)}` : undefined;
   return [
-    { id: "alphas", label: "Alphas", value: v(summary?.alphaCount) },
-    { id: "deployments", label: "Deployments", value: v(summary?.deploymentCount) },
-    { id: "portfolios", label: "Portfolios", value: v(summary?.portfolioCount) },
-    { id: "attention", label: "Need attention", value: v(summary?.needsAttentionCount) },
+    { id: "alphas", label: "Alphas", value: v(summary?.alphaCount), note: why },
+    { id: "deployments", label: "Deployments", value: v(summary?.deploymentCount), note: why },
+    { id: "portfolios", label: "Portfolios", value: v(summary?.portfolioCount), note: why },
+    { id: "attention", label: "Need attention", value: v(summary?.needsAttentionCount), note: why },
     // The design's two lifecycle tiles. The fleet summary carries neither count (UXM-07 audit: FE-027 readiness, FE-034 archive list), so they
     // are typed absences with their request ids, never a 0 and never a count derived from the loaded rows.
     { id: "exit-review", label: "Ready for exit review", value: null, note: notPublished({ fe: "FE-027", what: FE.readiness.what }) },
     { id: "archive", label: "Archive in progress", value: null, note: notPublished(FE.archived) },
-    { id: "research", label: "Research only", value: v(summary?.researchOnlyCount) },
+    { id: "research", label: "Research only", value: v(summary?.researchOnlyCount), note: why },
   ];
 }
 
@@ -361,6 +397,14 @@ export const MONEY_COLUMN_WHY = {
   allocation: "The register publishes allocation per alpha as one list per currency but does not say whether that list spans Real-funded and Simulated books, so no figure is printed until the contract says (backend question BQ-FLEET-ALLOC).",
   pnl: `${NOT_PUBLISHED}: windowed Net PnL needs the window.`,
   equity: `${NOT_PUBLISHED}: the equity series is not published.`,
+} as const;
+/** The honest label under a fleet-read money figure: it is the register's own number, not a Manager-dataset (TS-qualified) one. */
+export const SOURCE_REPORTED = "Source-reported, not TS-qualified";
+/** What each fleet-read money figure is, so it is never read as a windowed or qualified figure. */
+export const MONEY_FIGURE_BASIS = {
+  allocation: `${SOURCE_REPORTED}. The register does not say whether it spans Real-funded and Simulated books.`,
+  pnl: `${SOURCE_REPORTED}. Current position PnL, cumulative: not a 7D or 30D figure.`,
+  balance: `${SOURCE_REPORTED}. Account balance, not equity.`,
 } as const;
 export type FleetColumnKey = (typeof FLEET_COLUMNS)[number]["key"];
 

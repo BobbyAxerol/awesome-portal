@@ -104,14 +104,28 @@ describe("identity table", () => {
     expect(tile("Portfolios")).toContain("2");
     expect(tile("Need attention")).toContain("1");
     expect(tile("Research only")).toContain("1");
-    expect(container.textContent).not.toMatch(/USDT/);
-    // The hi-fi money columns are kept, and every cell in them is Not available: no figure is drawn.
+    // The hi-fi money columns are kept. A row whose register carries no figure says Not available; a row that carries one prints it
+    // under the honest label (Source-reported, not TS-qualified), and the strip itself still holds counts only.
     for (const label of ["Allocation", "Net PnL", "Equity"]) {
       const cells = [...container.querySelectorAll(`td[data-l="${label}"]`)];
       expect(cells.length, label).toBeGreaterThan(0);
-      for (const td of cells) expect(td.textContent, label).toMatch(/^Not available/);
+      for (const td of cells) {
+        const text = td.textContent ?? "";
+        expect(text, label).toMatch(/^Not available|not TS-qualified/);
+        if (/USDT|EUR/.test(text)) expect(text, label).toContain("Source-reported, not TS-qualified");
+      }
     }
+    expect(within(strip).queryByText(/USDT/)).toBeNull();
     expect(container.querySelector("svg, canvas")).toBeNull();
+  });
+
+  it("names the typed cause on the count tiles when the read failed (D12), instead of a bare Not available", async () => {
+    const getAlphaFleet = vi.fn(async () => ({ ok: false as const, status: "unavailable" as const, reason: "WORKSPACE_NOT_FOUND" }));
+    mount({ getAlphaFleet } as unknown as ExecutionApi);
+    const strip = await screen.findByRole("group", { name: "Fleet counts" }, SLOW);
+    const tile = within(strip).getByText("Alphas").parentElement!.textContent ?? "";
+    expect(tile).toContain("Not available");
+    expect(tile).toContain("Not read (unavailable): Workspace not found");
   });
 
   it("never renders a dash, N/A or a bare zero for an absent value", async () => {

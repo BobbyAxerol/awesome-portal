@@ -311,8 +311,15 @@ function rowProblems(raw: Draft): string[] {
     const read = item.metricsAvailability[key];
     if (read?.state !== published.state || read?.reasonCode !== published.reason_code) wrong.push(`metric ${key} changed`);
   }
-  // Identity only: no money word of the row reaches the model.
-  if (JSON.stringify(row).includes(raw.deployments[0]?.net_pnl ?? "\u0000none")) wrong.push("money reached the row");
+  // Money: the row carries the ALPHA-level lists the register states (Source-reported), per currency, exactly as published; a deployment's own
+  // money never reaches a deployment view, and nothing is summed across currencies.
+  if (JSON.stringify(row.deployments.items).includes(raw.deployments[0]?.net_pnl ?? "\u0000none")) wrong.push("deployment money reached the row");
+  const lines = (money: { state: string; lines?: readonly { currency: string; value: string }[] }) =>
+    (money.state === "reported" ? (money.lines ?? []).map((l) => `${l.currency}=${l.value}`) : []).join();
+  const available = (key: string) => raw.metrics_availability[key]?.state === "AVAILABLE";
+  if (lines(row.allocation) !== (raw.allocations ?? []).map((a: Draft) => `${a.currency}=${a.value}`).join()) wrong.push("allocation lines");
+  if (lines(row.netPnl) !== (available("current_position_pnl") ? (raw.position_pnl ?? []).map((a: Draft) => `${a.currency}=${a.net}`).join() : "")) wrong.push("net pnl lines");
+  if (lines(row.balance) !== (available("account_balance") ? (raw.balances ?? []).map((a: Draft) => `${a.currency}=${a.total}`).join() : "")) wrong.push("balance lines");
   return wrong;
 }
 
