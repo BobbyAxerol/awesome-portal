@@ -224,7 +224,7 @@ if (
 # retains `false` as the safe default for unreviewed local builds.
 web_build = by_name.get("Build and publish web image", {})
 web_options = web_build.get("with")
-if not isinstance(web_options, dict) or web_options.get("build-args") != "EXECUTION_PREVIEW_ENABLED=true\nEXECUTION_V2_SCREENS=shell,overview,fleet,alpha,portfolios,compare,account,workbench,sandbox,canary,live,blotter,ops,cockpit,profile\n":
+if not isinstance(web_options, dict) or web_options.get("build-args") != "EXECUTION_PREVIEW_ENABLED=true\nEXECUTION_V2_SCREENS=shell,overview,fleet,alpha,portfolios,compare,account,workbench,sandbox,canary,live,blotter,ops,cockpit,profile,request,admin,users\n":
     raise SystemExit("Main Portal web publication must compile the reviewed Execution product routes.")
 if "ARG EXECUTION_PREVIEW_ENABLED=false" not in web_dockerfile:
     raise SystemExit("Portal web Dockerfile must retain its safe local Execution-route default.")
