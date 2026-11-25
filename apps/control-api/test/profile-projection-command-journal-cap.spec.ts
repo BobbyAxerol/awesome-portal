@@ -18,7 +18,10 @@ function journalRows(total: number) {
   }));
 }
 
-async function run(total: number, declared: "COMPLETE" | "PARTIAL" = "COMPLETE") {
+type Declared = "EDGE" | "COMPLETE" | "PARTIAL";
+/** EDGE mimics manager_facade.py: a page is PARTIAL while it has a next_cursor, COMPLETE on the last one. */
+async function run(total: number, declared: Declared = "EDGE", options: { relation?: string; foreignEvery?: number } = {}) {
+  const target = options.relation ?? "command_journal";
   const config = testConfig({
     FEATURE_EXECUTION_EDGE: "true",
     EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/test/delegation.pem",
@@ -39,22 +42,28 @@ async function run(total: number, declared: "COMPLETE" | "PARTIAL" = "COMPLETE")
     _source: string, relation: string, query: { limit?: number; cursor?: string }) => {
     let fieldsList: Array<Record<string, unknown>> = [];
     let next: string | null = null;
-    if (relation === "command_journal") {
+    if (relation === target) {
       journalPages += 1;
       expect(query.limit).toBe(PAGE);
       const start = query.cursor ? Number(query.cursor.replace("TEST_ONLY-p", "")) : 0;
-      fieldsList = rows.slice(start, start + PAGE).map((row) => ({
-        command_id: { kind: "TEXT", value: row.command_id },
-        account_id: { kind: "TEXT", value: "TEST_ONLY-account" },
-        accepted_at: { kind: "TIMESTAMP", value: row.accepted_at },
-      }));
+      fieldsList = rows.slice(start, start + PAGE).map((row, offset) => {
+        const account = options.foreignEvery && (start + offset) % options.foreignEvery === 0 ? "TEST_ONLY-other" : "TEST_ONLY-account";
+        return target === "orders" ? {
+          order_id: { kind: "TEXT", value: row.command_id }, account_id: { kind: "TEXT", value: account },
+          updated_at: { kind: "TIMESTAMP", value: new Date().toISOString() },
+        } : {
+          command_id: { kind: "TEXT", value: row.command_id },
+          account_id: { kind: "TEXT", value: account },
+          accepted_at: { kind: "TIMESTAMP", value: row.accepted_at },
+        };
+      });
       next = start + PAGE < rows.length ? `TEST_ONLY-p${start + PAGE}` : null;
     } else if (relation === "accounts") {
       fieldsList = [{ account_id: { kind: "TEXT", value: "TEST_ONLY-account" }, mode: { kind: "TEXT", value: environment } }];
     }
     return { profile_id: "PAPER_BINANCE_USDM", source_environment: environment,
       source: { profile_id: "PAPER_BINANCE_USDM", catalogue_sha256: edgeSealFor("PAPER_BINANCE_USDM"), authority: "EXECUTION_CELL",
-        availability: "AVAILABLE", freshness: "FRESH", completeness: relation === "command_journal" ? declared : "COMPLETE", as_of: stamp,
+        availability: "AVAILABLE", freshness: "FRESH", completeness: relation === target ? (declared === "EDGE" ? (next ? "PARTIAL" : "COMPLETE") : declared) : "COMPLETE", as_of: stamp,
         data: { relation: { schema: "public", relation }, items: fieldsList.map((fields) => ({ relation: { schema: "public", relation }, fields })),
           next_cursor: next } } };
   }) };
@@ -111,6 +120,34 @@ describe("command_journal page cap", () => {
     expect(JSON.parse(walk)).toMatchObject({ outcome: "DRAINED", pages: 27, rows: 5_226,
       declared_completeness: { PARTIAL: 27 }, source_projected_total: null });
     log.mockRestore();
+  });
+
+  it("is COMPLETE when Edge's pages are [PARTIAL, PARTIAL, COMPLETE] (walked to the end)", async () => {
+    const { commits, journalPages } = await run(450);
+    const relation = commits[0].document.relations[JOURNAL_KEY];
+    expect(journalPages()).toBe(3);
+    expect(relation).toMatchObject({ completeness: "COMPLETE", reason_code: null });
+    expect(relation.items).toHaveLength(450);
+  });
+
+  it("is COMPLETE for a single COMPLETE page", async () => {
+    const { commits } = await run(10);
+    expect(commits[0].document.relations[JOURNAL_KEY]).toMatchObject({ completeness: "COMPLETE", reason_code: null });
+  });
+
+  it("does not treat scoped-out rows as partial", async () => {
+    const { commits } = await run(450, "EDGE", { foreignEvery: 3 });
+    const relation = commits[0].document.relations[JOURNAL_KEY];
+    expect(relation.lineage_scoped_out).toEqual({ account: 150 });
+    expect(relation.items).toHaveLength(300);
+    expect(relation).toMatchObject({ completeness: "COMPLETE", reason_code: null });
+  });
+
+  it("keeps the worst-of-pages merge for a ladder relation (orders), unchanged", async () => {
+    const { commits } = await run(450, "EDGE", { relation: "orders" });
+    const relation = commits[0].document.relations["manager.orders:orders"];
+    expect(relation.items).toHaveLength(450);
+    expect(relation).toMatchObject({ completeness: "PARTIAL", reason_code: "SOURCE_PARTIAL" });
   });
 
   it("sorts unparseable timestamps last and breaks ties by command_id", () => {

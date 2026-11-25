@@ -460,6 +460,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     let asOf: string | null = null;
     let freshness: ManagerPage["freshness"] = "FRESH";
     let completeness: ManagerPage["completeness"] = "COMPLETE";
+    let sawUnknown = false;
     let catalogueSeal: string | null = null;
     const provenanceOf = (nextCursor: string | null): ManagerPage["provenance"] => ({
       contractVersion: null, catalogueSha256: catalogueSeal, relation: binding.relation, asOf,
@@ -504,7 +505,17 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       asOf = [asOf, page.asOf].filter((value): value is string => value !== null).sort().at(0) ?? null;
       freshness = worseFreshness(freshness, page.freshness);
       completeness = worseCompleteness(completeness, page.completeness);
+      if (page.completeness === "UNKNOWN") sawUnknown = true;
       if (!page.nextCursor) {
+        // Edge declares completeness PER PAGE ("PARTIAL" while a next_cursor
+        // exists, "COMPLETE" on the last page: manager_facade.py ~l.964), so
+        // every earlier page of a multi-page walk is PARTIAL by construction.
+        // A non-ladder walk that started at the head and ended on a cursor-less
+        // page took the whole population: its completeness is the LAST page's
+        // declaration (a last page that is itself PARTIAL stays PARTIAL; any
+        // UNKNOWN page keeps it UNKNOWN). Ladder walks resume mid-stream and
+        // keep the worst-of-pages merge exactly as before.
+        if (!binding.ladder) completeness = sawUnknown && page.completeness === "COMPLETE" ? "UNKNOWN" : page.completeness;
         // Tail dwell: the source's cursors expire five minutes after issue,
         // and a tail page issues none — so a held position would age out and
         // force a full head re-walk. When the final page carries K > 1 rows,
