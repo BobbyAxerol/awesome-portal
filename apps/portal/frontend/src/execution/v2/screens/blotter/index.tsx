@@ -50,7 +50,7 @@ import { ClosedFlag } from "./ClosedFlag";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
   CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, MID_HIDDEN, MID_QUERY, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, feePrecisionByCurrency, filtersKey, formatFee, isStageRefusal, serverScopeActive, unchippedStatusCounts,
-  fillsFor, groupExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
+  fillsFor, trimExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
 
@@ -725,7 +725,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
                   <td>{stage.name}</td>
                   <td><Flag kind={stage.state === "OBSERVED" ? "ok" : stage.state === "PARTIAL" ? "partial" : "na"} label={stage.state === "MISSING" ? "Not observed" : humanize(stage.state)} size="sm" /></td>
                   <td data-numeric="true">{stage.eventCount !== null ? stage.eventCount : <span className="exec-blt2-na">Not available</span>}</td>
-                  <td data-numeric="true">{stage.events[0]?.quantity ? <span className="exec-blt2-num">{groupExact(stage.events[0].quantity)}</span> : <span className="exec-blt2-na">No quantity at this hop</span>}</td>
+                  <td data-numeric="true">{stage.events[0]?.quantity ? <span className="exec-blt2-num">{trimExact(stage.events[0].quantity)}</span> : <span className="exec-blt2-na">No quantity at this hop</span>}</td>
                 </tr>
               ))}
             </tbody>

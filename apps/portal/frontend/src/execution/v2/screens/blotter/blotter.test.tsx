@@ -121,8 +121,8 @@ describe("exact numbers", () => {
     await loaded();
     const rows = bodyRows();
     const btc = rows.find((r) => cellOf(r, "Symbol") === "BTCUSDT")!;
-    expect(cellOf(btc, "Filled / Qty")).toMatch(/\/ 0\.0400$/);
-    expect(cellOf(btc, "Price")).toMatch(/^6\d,\d{3}\.\d{2}$/);
+    expect(cellOf(btc, "Filled / Qty")).toMatch(/\/ 0\.04$/);
+    expect(cellOf(btc, "Price")).toMatch(/^6\d,\d{3}(\.\d+)?$/);
     const doge = rows.find((r) => cellOf(r, "Symbol") === "DOGEUSDT")!;
     expect(cellOf(doge, "Filled / Qty")).toMatch(/\/ 1,250$/);
     expect(rows.some((r) => cellOf(r, "Price") === "At market")).toBe(true);
@@ -361,7 +361,7 @@ describe("expanding an order", () => {
     sawBnb = fees.some((f) => f.endsWith("BNB"));
     expect(sawBnb).toBe(true);
     expect(fees.some((f) => f.endsWith("USDT"))).toBe(true);
-    expect(fees.filter((f) => f.endsWith("BNB")).every((f) => f.startsWith("0.00042100"))).toBe(true);
+    expect(fees.filter((f) => f.endsWith("BNB")).every((f) => f.startsWith("0.000421"))).toBe(true);
   });
 
   it("reads the order path from the funnel read, once per order", async () => {
@@ -399,7 +399,7 @@ describe("expanding an order", () => {
     const legRows = [...legs.querySelector("table tbody")!.querySelectorAll("tr")];
     const labels = legRows.map((r) => (r as HTMLTableRowElement).cells[0]!.textContent);
     expect(labels).toEqual(["Entry", "Take profit", "Stop loss"]);
-    expect(legRows.slice(1).every((r) => /^[\d,]+\.\d+$/.test((r as HTMLTableRowElement).cells[1]!.textContent ?? ""))).toBe(true);
+    expect(legRows.slice(1).every((r) => /^[\d,]+(\.\d+)?$/.test((r as HTMLTableRowElement).cells[1]!.textContent ?? ""))).toBe(true);
   });
 
   it("the expander is a keyboard control with a state", async () => {

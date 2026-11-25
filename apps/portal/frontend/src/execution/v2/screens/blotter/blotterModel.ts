@@ -85,6 +85,17 @@ export function groupExact(text: string): string {
   return `${negative ? "-" : ""}${grouped}${fraction === undefined ? "" : `.${fraction}`}`;
 }
 
+/**
+ * The blotter's display form of an exact decimal: lossless. Every significant digit is kept; only insignificant trailing fractional
+ * zeros (and a dot with nothing after it) are dropped, and thousands are grouped. `2.000000000000000000` -> `2`,
+ * `58312.900000000000000000` -> `58,312.9`. Strings only, no Number(): nothing is rounded. A text outside the decimal grammar is returned as is.
+ */
+export function trimExact(text: string): string {
+  if (!DECIMAL.test(text)) return text;
+  const trimmed = text.includes(".") ? text.replace(/0+$/, "").replace(/\.$/, "") : text;
+  return groupExact(trimmed);
+}
+
 /* ── rows ──────────────────────────────────────────────────────────────── */
 
 function text(value: unknown): string | null {

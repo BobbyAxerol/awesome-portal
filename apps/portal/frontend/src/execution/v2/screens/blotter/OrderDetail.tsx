@@ -15,7 +15,7 @@ import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
 import type { FlagKind } from "../../flagKinds";
 import { ClosedFlag } from "./ClosedFlag";
-import { groupExact, humanize, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder, type Exact } from "./blotterModel";
+import { humanize, trimExact, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder, type Exact } from "./blotterModel";
 
 export type FunnelRead =
   | { phase: "loading" }
@@ -24,7 +24,7 @@ export type FunnelRead =
 
 /** An exact field as text: the digits as published, or the honest reason there are none. */
 export function ExactText({ value, absent = "Not available" }: { value: Exact; absent?: string }) {
-  if (value.kind === "value") return <span className="exec-blt2-num" title={value.text}>{groupExact(value.text)}</span>;
+  if (value.kind === "value") return <span className="exec-blt2-num" title={value.text}>{trimExact(value.text)}</span>;
   if (value.kind === "unreadable") return <span className="exec-blt2-na">Not available · unreadable value</span>;
   return <span className="exec-blt2-na">{absent}</span>;
 }
