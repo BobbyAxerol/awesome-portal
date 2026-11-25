@@ -2,6 +2,25 @@ import { CurrentSourceProxyError } from "../execution/current-source.proxy";
 
 type Scalar = string | number | boolean | null;
 
+/**
+ * Bounded physical metadata the Edge answered with for ONE page. Nothing here
+ * is synthesized: a field the Edge did not send is null. `catalogueSha256` is
+ * the seal the Edge itself named (never a Core constant); the caller decides
+ * whether that seal is acceptable for its profile.
+ */
+export interface ManagerPageProvenance {
+  contractVersion: string | null;
+  catalogueSha256: string | null;
+  relation: string;
+  asOf: string | null;
+  /** What the Edge declared before Core downgraded a paged COMPLETE. */
+  declaredCompleteness: ManagerPage["completeness"];
+  /** A continuation cursor is present: this page is not the whole population. */
+  hasMore: boolean;
+  /** True when this page alone cannot be called complete (cursor present or not declared COMPLETE). */
+  partial: boolean;
+}
+
 export interface ManagerPage {
   asOf: string | null;
   freshness: "FRESH" | "AGING" | "STALE" | "UNKNOWN";
@@ -12,6 +31,8 @@ export interface ManagerPage {
   exactTotal?: number | null;
   filteredTotal?: number | null;
   aggregates?: Record<string, Record<string, number>> | null;
+  /** Physical metadata the Edge returned for this page; absent on aggregated/mirror pages. */
+  provenance?: ManagerPageProvenance | null;
   /** Internal Portal resource-scope proof, emitted only by the local mirror. */
   scope?: {
     state: "EXACT" | "PARTIAL";
@@ -67,6 +88,7 @@ export function paperReadContext(profileId: string | undefined): ManagerReadCont
 const FORBIDDEN_FIELD = /(?:^|_)(?:raw|secret|credential|password|token|dsn)(?:_|$)/i;
 const FRESHNESS = new Set(["FRESH", "AGING", "STALE", "UNKNOWN"]);
 const COMPLETENESS = new Set(["COMPLETE", "PARTIAL", "UNKNOWN"]);
+const CATALOGUE_SEAL = /^sha256:[0-9a-f]{64}$/;
 
 /** Lossless ordering of Manager INTEGER scalars. Never round a source row id. */
 export function managerIntegerOrder(value: unknown): bigint | null {
@@ -152,12 +174,29 @@ export function managerPage(
   const freshness = typeof source.freshness === "string" && FRESHNESS.has(source.freshness)
     ? source.freshness as ManagerPage["freshness"]
     : "UNKNOWN";
-  const completeness = typeof source.completeness === "string" && COMPLETENESS.has(source.completeness)
+  const declaredCompleteness = typeof source.completeness === "string" && COMPLETENESS.has(source.completeness)
     ? source.completeness as ManagerPage["completeness"]
     : "UNKNOWN";
+  // `completeness` stays what the Edge declared: a drain aggregates it across
+  // pages and the final cursor-less page is the one that closes a population.
+  // The paging fact is carried separately in `provenance.partial`.
+  const completeness = declaredCompleteness;
+  const asOf = source.as_of;
+  if (asOf !== undefined && asOf !== null && (typeof asOf !== "string" || asOf.length > 64 || Number.isNaN(Date.parse(asOf)))) {
+    throw contractError(`${context.errorPrefix}_MANAGER_AS_OF_INVALID`);
+  }
+  const seal = source.catalogue_sha256;
+  if (seal !== undefined && seal !== null && (typeof seal !== "string" || !CATALOGUE_SEAL.test(seal))) {
+    throw contractError(`${context.errorPrefix}_MANAGER_CATALOGUE_SEAL_INVALID`);
+  }
+  const contractVersion = source.contract_version;
+  if (contractVersion !== undefined && contractVersion !== null &&
+      (typeof contractVersion !== "string" || contractVersion.length === 0 || contractVersion.length > 191)) {
+    throw contractError(`${context.errorPrefix}_MANAGER_CONTRACT_VERSION_INVALID`);
+  }
   const projection = optionalProjection(bff.projection, context.errorPrefix);
   return {
-    asOf: typeof source.as_of === "string" ? source.as_of : null,
+    asOf: typeof asOf === "string" ? asOf : null,
     freshness,
     completeness,
     items,
@@ -168,6 +207,15 @@ export function managerPage(
     aggregates,
     scope,
     projection,
+    provenance: {
+      contractVersion: typeof contractVersion === "string" ? contractVersion : null,
+      catalogueSha256: typeof seal === "string" ? seal : null,
+      relation: expectedRelation,
+      asOf: typeof asOf === "string" ? asOf : null,
+      declaredCompleteness,
+      hasMore: nextCursor !== null,
+      partial: nextCursor !== null || declaredCompleteness !== "COMPLETE",
+    },
   };
 }
 

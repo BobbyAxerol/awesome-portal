@@ -16,6 +16,7 @@ import { managerRelationOperationByRelation, managerRelationProfileBinding } fro
 import { NAMED_RETAINED_PURPOSES, namedRetainedRelationAction } from "../src/execution/retained-operation-page";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
 import { productReadFixture, PRIVATE } from "./elp2-product-read.fixture";
+import { edgeSealFor } from "./edge-seal-fixture";
 
 const WS = productReadFixture().principal.workspaceId, TIME = "2026-10-17T00:00:00.000Z";
 const SOURCE = "manager.current.account-policies", RELATION = "account_policies", KEY = SOURCE + ":" + RELATION;
@@ -44,7 +45,7 @@ type Override = (environment: Environment, relation: string, query: { limit: num
 function response(environment: Environment, relation: string, rows: Row[] = [], next: string | null = null,
   completeness: Quality = "COMPLETE", freshness = "FRESH", asOf: string | null = TIME) {
   return { schema_version: "portal.execution.current-source-bff.v2", source_environment: environment, profile_id: profile(environment),
-    source: { authority: "EXECUTION_CELL", profile_id: profile(environment), availability: "AVAILABLE", freshness,
+    source: { authority: "EXECUTION_CELL", profile_id: profile(environment), catalogue_sha256: edgeSealFor(profile(environment)), availability: "AVAILABLE", freshness,
       completeness, as_of: asOf, data: { relation: { schema: "public", relation }, next_cursor: next,
         items: rows.map(fields => ({ relation: { schema: "public", relation }, record_key: "TEST_ONLY-opaque-not-the-current-PK",
           fields: Object.fromEntries(Object.entries(fields).map(([name, value]) => [name, { kind: value === null ? "NULL"

@@ -7,6 +7,7 @@ import { CurrentSourceProxyError, ExecutionCurrentSourceProxy } from "./current-
 import { enforceProfileLineage } from "./profile-lineage";
 import { profileProjectionCatalog, ProfileProjectionBinding, WARM_WINDOW_DAYS, WARM_WINDOW_MAX_ROWS } from "./profile-projection.catalog";
 import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
+import { acceptCatalogueDigest } from "./catalogue-digest-allowlist";
 import {
   ExecutionProfileProjectionRepository,
   ProfileProjectionDocument,
@@ -23,7 +24,9 @@ import { retainedReview } from "./retained-read-profile";
 import { nativeResearchReview } from "./native-review-profile";
 
 const SOURCE_CONTRACT_REVISION = MAXIMUM_DATA_INTAKE_V1.returnPack.managerContractRevision;
-const SOURCE_CATALOGUE_SHA256 = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
+// The catalogue seal is NOT a Core constant: each cycle records the seal the Edge
+// actually answered with for that profile (see admitCatalogueSeal). The legacy
+// October digest is only ever stored when the Edge itself served it.
 // Owner directive 2026-09-03 ("call hết dữ liệu có thể"): every relation
 // drains to the snapshot document's own 2,000-row invariant — ten pages of
 // two hundred — inside the unchanged paced source admission. Larger source
@@ -133,6 +136,8 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         carryForward?: ProfileProjectionDocument["relations"][string];
       }> = [];
       const relationCursors: DurableMirrorRelationCursor[] = [];
+      // The one seal every relation of this cycle was answered under.
+      let observedSeal: string | null = null;
       const previousRelationCursors = new Map<string, string | null>();
       for (const binding of profileProjectionCatalog(environment)) {
         let page: ManagerPage;
@@ -145,6 +150,11 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           const drained = await this.drain(workspaceId, environment, binding, context, resumeCursor);
           page = drained.page;
           resumePoint = drained.resumePoint;
+          const answered = drained.page.provenance?.catalogueSha256 ?? null;
+          if (answered !== null && observedSeal !== null && answered !== observedSeal) {
+            throw sealRejection("N31_SOURCE_CATALOGUE_SEAL_INCONSISTENT");
+          }
+          observedSeal = answered ?? observedSeal;
         } catch (error) {
           if (resumeCursor !== null) {
             // A persisted cursor can outlive its signature (catalogue digest
@@ -226,6 +236,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           reasonCode: page.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
         });
       }
+      // No relation produced a page, so nothing physical was proven for this
+      // profile: never fall back to a constant, keep the last committed head.
+      if (observedSeal === null) throw sealRejection("N31_SOURCE_CATALOGUE_SEAL_ABSENT");
+      const catalogueSeal: string = observedSeal;
       // The lineage guard passes every entry through by spread, so the
       // carry-forward association survives it at runtime; its signature just
       // does not model extra fields.
@@ -249,7 +263,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             workspace_id: workspaceId,
             profile_id: profileId,
             source_contract_revision: SOURCE_CONTRACT_REVISION,
-            source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
+            source_catalogue_sha256: catalogueSeal,
           },
           fields,
         }))]];
@@ -295,10 +309,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           // facts as though they arrived under that newer catalogue — rows
           // that cannot stand next to it are left out, and the relation
           // itself names the document's catalogue as every relation does.
-          const kept = provenanceCompatibleRows(carried.items, SOURCE_CATALOGUE_SHA256);
+          const kept = provenanceCompatibleRows(carried.items, catalogueSeal);
           return [key, {
             ...carried,
-            source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
+            source_catalogue_sha256: catalogueSeal,
             items: kept.rows,
             reason_code: "N31_LADDER_REFRESH_DEFERRED",
             completeness: "PARTIAL" as const,
@@ -309,7 +323,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             workspace_id: workspaceId,
             profile_id: profileId,
             source_contract_revision: SOURCE_CONTRACT_REVISION,
-            source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
+            source_catalogue_sha256: catalogueSeal,
           },
           fields,
         }));
@@ -319,7 +333,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         // relabelled. Dev 2026-09-07: without this the paper projection was
         // refused every cycle, and a refused document is never replaced.
         const retained = binding.ladder && item.page
-          ? provenanceCompatibleRows(previous?.document.relations[key]?.items ?? [], SOURCE_CATALOGUE_SHA256)
+          ? provenanceCompatibleRows(previous?.document.relations[key]?.items ?? [], catalogueSeal)
           : { rows: [], dropped: 0 };
         if (retained.dropped > 0) {
           this.logger.warn(JSON.stringify({
@@ -342,7 +356,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           as_of: item.page?.asOf ?? null,
           freshness: item.page?.freshness ?? "UNKNOWN" as const,
           completeness: item.page?.completeness ?? "UNKNOWN" as const,
-          source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
+          source_catalogue_sha256: catalogueSeal,
           items: merged.items,
           ...(binding.ladder && item.page ? {
             window: {
@@ -368,7 +382,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         environment,
         profile_id: profileId,
         source_contract_revision: SOURCE_CONTRACT_REVISION,
-        source_catalogue_sha256: SOURCE_CATALOGUE_SHA256,
+        source_catalogue_sha256: catalogueSeal,
         relations,
       };
       const sourceAsOf = oldestAsOf(isolated.flatMap((item) => item.page ? [item.page] : []));
@@ -378,7 +392,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         : isolated.some((item) => item.page?.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
       const sourceCursor = projectionDigest(relations);
       const receipt = await this.repository.commit(document, {
-        sourceEpoch: `manager-v2:${profileId}:${SOURCE_CONTRACT_REVISION}:${SOURCE_CATALOGUE_SHA256}`,
+        sourceEpoch: `manager-v2:${profileId}:${SOURCE_CONTRACT_REVISION}:${catalogueSeal}`,
         sourceCursor,
         sourceAsOf,
         receivedAt: new Date(),
@@ -432,6 +446,12 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     let asOf: string | null = null;
     let freshness: ManagerPage["freshness"] = "FRESH";
     let completeness: ManagerPage["completeness"] = "COMPLETE";
+    let catalogueSeal: string | null = null;
+    const provenanceOf = (nextCursor: string | null): ManagerPage["provenance"] => ({
+      contractVersion: null, catalogueSha256: catalogueSeal, relation: binding.relation, asOf,
+      declaredCompleteness: completeness, hasMore: nextCursor !== null,
+      partial: nextCursor !== null || completeness !== "COMPLETE",
+    });
     const pageBudget = binding.ladder ? LADDER_MAXIMUM_SOURCE_PAGES : MAXIMUM_SOURCE_PAGES;
     for (let pageNumber = 0; pageNumber < pageBudget; pageNumber += 1) {
       const response = await this.source.relationForProjection(
@@ -441,6 +461,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         context.profileId,
       );
       const page = managerPage(response, binding.relation, binding.fields, context);
+      catalogueSeal = admitCatalogueSeal(context.profileId, page, catalogueSeal);
       items.push(...page.items);
       // Paired with `worseFreshness` below: the oldest page, not the newest.
       asOf = [asOf, page.asOf].filter((value): value is string => value !== null).sort().at(0) ?? null;
@@ -469,7 +490,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           }
         }
         return {
-          page: { items, asOf, freshness, completeness, nextCursor: null },
+          page: { items, asOf, freshness, completeness, nextCursor: null, provenance: provenanceOf(null) },
           resumePoint: tailCursor,
         };
       }
@@ -485,7 +506,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     // the authoritative head; cold/full-history reads remain a later, explicit
     // query-plane concern.
     return {
-      page: { items, asOf, freshness, completeness: "PARTIAL", nextCursor: cursor ?? null },
+      page: { items, asOf, freshness, completeness: "PARTIAL", nextCursor: cursor ?? null, provenance: provenanceOf(cursor ?? null) },
       resumePoint: lastHeldCursor,
     };
   }
@@ -644,6 +665,29 @@ export function provenanceCompatibleRows<T extends { lineage: { source_catalogue
     ? row.lineage.source_catalogue_sha256 === undefined
     : typeof row.lineage.source_catalogue_sha256 === "string" && /^sha256:[0-9a-f]{64}$/.test(row.lineage.source_catalogue_sha256));
   return { rows: kept, dropped: rows.length - kept.length };
+}
+
+/**
+ * Checks the seal one Edge page answered with. Absent, outside the profile's
+ * exact allow-list, or different from an earlier page of the same relation are
+ * all typed 502 rejections: the profile is deferred and the last committed
+ * snapshot stays the truth. The legacy constant is accepted by the allow-list
+ * but is recorded only because the Edge served it.
+ */
+export function admitCatalogueSeal(profileId: string, page: ManagerPage, current: string | null): string {
+  const answered = page.provenance?.catalogueSha256 ?? null;
+  if (answered === null) throw sealRejection("N31_SOURCE_CATALOGUE_SEAL_ABSENT");
+  if (acceptCatalogueDigest(profileId, "relations", answered) === undefined) {
+    throw sealRejection("N31_SOURCE_CATALOGUE_SEAL_MISMATCH");
+  }
+  if (current !== null && current !== answered) throw sealRejection("N31_SOURCE_CATALOGUE_SEAL_INCONSISTENT");
+  return answered;
+}
+
+function sealRejection(code: string): CurrentSourceProxyError {
+  return new CurrentSourceProxyError(code, 502, {
+    availability: "UNAVAILABLE", reason_code: "SOURCE_CONTRACT_REJECTED", retryable: false,
+  });
 }
 
 function safeFailureCode(error: unknown): string {

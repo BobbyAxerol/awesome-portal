@@ -12,6 +12,7 @@ import { INTERNAL_PROJECTION_SCREEN, profileProjectionCatalog, profileObservatio
 import { managerRelationOperationByRelation, managerRelationProfileBinding } from "../src/execution/eds11r-manager-relation.registry";
 import { namedRetainedRelationAction } from "../src/execution/retained-operation-page";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
+import { edgeSealFor } from "./edge-seal-fixture";
 
 const WS = "TEST_ONLY-heartbeat-capture", TIME = "2026-10-17T00:00:00.000Z";
 const SOURCE = "manager.current.service-heartbeats", RELATION = "service_heartbeats", KEY = SOURCE + ":" + RELATION;
@@ -45,7 +46,7 @@ afterAll(async () => pool.end());
 function response(environment: Environment, relation: string, rows: Row[] = [], next: string | null = null,
   completeness: Quality = "COMPLETE", freshness = "FRESH", asOf: string | null = TIME) {
   return { schema_version: "portal.execution.current-source-bff.v2", source_environment: environment, profile_id: profile(environment),
-    source: { authority: "EXECUTION_CELL", profile_id: profile(environment), availability: "AVAILABLE", freshness,
+    source: { authority: "EXECUTION_CELL", profile_id: profile(environment), catalogue_sha256: edgeSealFor(profile(environment)), availability: "AVAILABLE", freshness,
       completeness, as_of: asOf, data: { relation: { schema: "public", relation }, next_cursor: next,
         items: rows.map(row => ({ relation: { schema: "public", relation }, record_key: "TEST_ONLY-private-source-key",
           fields: Object.fromEntries(Object.entries(row).map(([key, value]) => [key, {

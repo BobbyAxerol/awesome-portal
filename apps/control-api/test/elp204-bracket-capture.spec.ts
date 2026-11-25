@@ -10,6 +10,7 @@ import { ExecutionProfileProjectionWorker } from "../src/execution/profile-proje
 import { profileProjectionCatalog, profileObservationAffectedScreens } from "../src/execution/profile-projection.catalog";
 import { enforceProfileLineage } from "../src/execution/profile-lineage";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
+import { edgeSealFor } from "./edge-seal-fixture";
 
 const WS = "TEST_ONLY-bracket-capture", TIME = "2026-10-17T00:00:00.000Z";
 const PARENT = "manager.current.order-brackets:order_brackets";
@@ -53,7 +54,7 @@ afterAll(async () => pool.end());
 function response(environment: Environment, relation: string, rows: Row[] = [], next: string | null = null,
   completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN" = "COMPLETE", freshness = "FRESH", asOf = TIME) {
   return { schema_version: "portal.execution.current-source-bff.v2", source_environment: environment, profile_id: profile(environment),
-    source: { authority: "EXECUTION_CELL", profile_id: profile(environment), availability: "AVAILABLE",
+    source: { authority: "EXECUTION_CELL", profile_id: profile(environment), catalogue_sha256: edgeSealFor(profile(environment)), availability: "AVAILABLE",
       freshness, completeness, as_of: asOf, data: { relation: { schema: "public", relation }, next_cursor: next,
         items: rows.map(row => ({ relation: { schema: "public", relation }, record_key: "TEST_ONLY-private-source-key",
           fields: Object.fromEntries(Object.entries(row).map(([key, value]) => [key, {

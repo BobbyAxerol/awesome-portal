@@ -3,6 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { ExecutionProfileProjectionWorker } from "../src/execution/profile-projection.worker";
 import { testConfig } from "./harness";
+import { edgeSealFor } from "./edge-seal-fixture";
 
 const EQUITY_KEY = "manager.performance:account_equity_snapshots";
 
@@ -40,7 +41,7 @@ describe("profile projection lineage and source cursor", () => {
         equity: { kind: "DECIMAL", value: "10" },
       } : null;
       return { profile_id: "PAPER_BINANCE_USDM", source_environment: environment,
-        source: { profile_id: "PAPER_BINANCE_USDM", authority: "EXECUTION_CELL", availability: "AVAILABLE",
+        source: { profile_id: "PAPER_BINANCE_USDM", catalogue_sha256: edgeSealFor("PAPER_BINANCE_USDM"), authority: "EXECUTION_CELL", availability: "AVAILABLE",
           freshness: "FRESH", completeness: relation === "accounts" && !parentReady ? "PARTIAL" : "COMPLETE", as_of: stamp,
           data: { relation: { schema: "public", relation }, items: fields
             ? [{ relation: { schema: "public", relation }, fields }] : [],

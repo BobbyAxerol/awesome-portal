@@ -16,6 +16,7 @@ import { querySigningKeys } from "../src/config";
 import { namedRetainedBusinessResourceId } from "../src/execution/retained-business-aliases";
 import { productReadFixture, OWN, PRIVATE } from "./elp2-product-read.fixture";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
+import { edgeSealFor } from "./edge-seal-fixture";
 
 type Fixture = ReturnType<typeof productReadFixture>;
 type Environment = "paper" | "sandbox" | "live";
@@ -63,7 +64,7 @@ function row(alias: Alias, account = PRIVATE.account_id, id = "PRIVATE-sync", ex
 function response(environment: Environment, relation: string, rows: Row[] = [], next: string | null = null,
   completeness: "COMPLETE" | "PARTIAL" | "UNKNOWN" = "COMPLETE", freshness = "FRESH") {
   return { schema_version: "portal.execution.current-source-bff.v2", source_environment: environment, profile_id: profile(environment),
-    source: { authority: "EXECUTION_CELL", profile_id: profile(environment), availability: "AVAILABLE", freshness, completeness,
+    source: { authority: "EXECUTION_CELL", profile_id: profile(environment), catalogue_sha256: edgeSealFor(profile(environment)), availability: "AVAILABLE", freshness, completeness,
       as_of: TIME, data: { relation: { schema: "public", relation }, next_cursor: next,
         items: rows.map(fields => ({ relation: { schema: "public", relation }, record_key: "TEST_ONLY-private-source-key",
           fields: Object.fromEntries(Object.entries(fields).map(([name, value]) => [name, { kind: value === null ? "NULL"

@@ -32,6 +32,7 @@ import {
 import { WARM_WINDOW_MAX_ROWS } from "../src/execution/profile-projection.catalog";
 import { MAXIMUM_DATA_INTAKE_V1 } from "../src/execution/maximum-data-intake";
 import { migrateTestDatabase, testConfig, truncateAll } from "./harness";
+import { edgeSealFor } from "./edge-seal-fixture";
 
 const workspaceId = "ws_projection_test";
 const profileId = "PAPER_BINANCE_USDM";
@@ -1118,7 +1119,7 @@ describe("Phase 1 SGP-local profile projection", () => {
     const worker = new ExecutionProfileProjectionWorker(config, source as never, repository);
     await worker.runOnce();
 
-    const expected = MAXIMUM_DATA_INTAKE_V1.returnPack.catalogueDigest;
+    const expected = edgeSealFor(profileId);
     const snapshot = await repository.snapshot(workspaceId, "paper", profileId);
     expect(snapshot?.sourceCatalogueSha256).toBe(expected);
     expect(snapshot?.sourceEpoch).toContain(expected);
@@ -1310,7 +1311,7 @@ function emptyManagerResponse(environment: string, relation: string) {
     source_environment: environment,
     profile_id: profileId,
     source: {
-      authority: "EXECUTION_CELL", profile_id: profileId, availability: "AVAILABLE",
+      authority: "EXECUTION_CELL", profile_id: profileId, availability: "AVAILABLE", catalogue_sha256: edgeSealFor(profileId),
       freshness: "FRESH", completeness: "COMPLETE", as_of: "2026-09-02T00:00:00.000Z",
       data: { relation: { schema: "public", relation }, items: [], next_cursor: null },
     },
