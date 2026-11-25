@@ -94,6 +94,23 @@ function served(body: Draft): Draft {
 }
 const base = (): Draft => served(paperWire(RICH));
 
+describe("D3 · both Paper profiles Core can serve are read", () => {
+  it.each(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"])("a %s workbench body conforms to the schema, passes the guard and is read", (profile) => {
+    const body = base();
+    body.delivery_profile = profile;
+    expect(validateAgainst(SCHEMA, "", body)).toEqual([]);
+    expect(paperReadViolations(body)).toEqual([]);
+    expect(refused(read(body))).toBe(false);
+  });
+  it("names the unknown profile in the violation, and the schema agrees it is not served", () => {
+    const body = base();
+    body.delivery_profile = "PAPER_DNSE_VNM";
+    expect(paperReadViolations(body)).toEqual([expect.stringMatching(/^delivery_profile: not one of PAPER_BINANCE_USDM, PAPER_OKX_SWAP/)]);
+    expect(validateAgainst(SCHEMA, "", body).length).toBeGreaterThan(0);
+    expect(refused(read(body))).toBe(true);
+  });
+});
+
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
   it.each(FILES)("%s conforms to the schema, is read, and its facts are the fixture's", (file) => {
@@ -541,7 +558,7 @@ describe("L3 · generated negatives, schema as oracle", () => {
         }
       }
     }
-    for (const bad of ["paper_binance_usdm", "LIVE", "", null]) {
+    for (const bad of ["paper_binance_usdm", "paper_okx_swap", "LIVE", "PAPER_DNSE_VNM", "SANDBOX_BINANCE_USDM", "PAPER_OKX", "", null]) {
       const body = base();
       body.delivery_profile = bad;
       expect(refused(read(body)), `delivery_profile <- ${bad}`).toBe(true);

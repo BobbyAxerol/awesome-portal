@@ -58,11 +58,15 @@ interface RelationSpec {
   fields: readonly string[];
   limit: number;
   cursor?: string;
+  /** Not read in the first pass: the fetch's follow-up supplies this relation. */
+  deferred?: boolean;
   localQuery?: {
     stage?: PaperBlotterQuery["stage"];
     deployment_id?: string; account_id?: string; alpha_id?: string;
     status?: string; venue?: string; symbol?: string; side?: "BUY" | "SELL";
     statuses?: readonly string[];
+    /** Blotter fills: only fills whose client_order_id is one of the page's orders. */
+    client_order_ids?: readonly string[];
     sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
   };
 }
@@ -163,6 +167,9 @@ import {
   ORDER_STATUS_MAP_VERSION as ORDER_STATUS_SOURCE_MAP_VERSION,
   ORDER_STATUS_SOURCE_MAP,
 } from "./order-status-map";
+
+/** One bounded read of fills for a Blotter page (the Manager page maximum); a longer list is a stated PARTIAL. */
+const BLOTTER_FILLS_LIMIT = 200;
 
 const OVERVIEW_SPECS: readonly RelationSpec[] = [
   spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 200),
@@ -568,7 +575,9 @@ export class PaperReadService {
           sort: query.sort ?? "submitted_at_desc",
         },
       },
-      spec("fills", "manager.fills", "fills", FILL_FIELDS, 100),
+      // Placeholder in the fixed relation order: read by the follow-up below,
+      // narrowed to the page's own orders (never a flat first-N of the window).
+      { ...spec("fills", "manager.fills", "fills", FILL_FIELDS, BLOTTER_FILLS_LIMIT), deferred: true },
       spec("conditional_groups", "manager.conditional-orders", "conditional_order_groups", GROUP_FIELDS, 100),
       spec("conditional_legs", "manager.conditional-orders", "conditional_order_group_legs", LEG_FIELDS, 200),
       spec("sessions", "manager.sessions", "execution_sessions", SESSION_FIELDS, 100),
@@ -578,11 +587,33 @@ export class PaperReadService {
     // Every branch is narrowed at the authorized source boundary, before its
     // own limit. Joining a single orders page cannot scope the auxiliary
     // relations correctly and would turn missing lineage into a false empty.
-    const relations = await this.fetch(principal, "EXECUTION_FULL_BLOTTER_SCREEN", specs.map((item) => ({
+    const scopedSpecs = specs.map((item) => ({
       ...item,
       localQuery: { ...scopeQuery, ...item.localQuery },
-    })));
+    }));
+    // The Manager facade (and so the retained window) lists oldest-first, so a
+    // flat first-N fills read never meets the newest page of orders. Read the
+    // fills that belong to THIS page's orders instead: the page's client order
+    // ids select them at the same authorized population, before the limit.
+    const fillsFor = (first: readonly RelationResult[]): readonly RelationSpec[] => {
+      const ordersPage = first.find((item) => item.spec.key === "orders")?.page;
+      const base = scopedSpecs.find((item) => item.key === "fills")!;
+      // Orders unreadable: nothing to match the fills to, so read them unmatched.
+      if (!ordersPage) return [{ ...base, deferred: false }];
+      const ids = [...new Set(ordersPage.items.flatMap((row) =>
+        typeof row.client_order_id === "string" && row.client_order_id !== "" ? [row.client_order_id] : []))];
+      return [{ ...base, deferred: false, localQuery: { ...base.localQuery, client_order_ids: ids } }];
+    };
+    const fetched = await this.fetch(principal, "EXECUTION_FULL_BLOTTER_SCREEN", scopedSpecs, undefined, fillsFor);
+    const relations = fetched.map((item) => item.spec.key === "fills" && item.page?.nextCursor
+      && item.spec.localQuery?.client_order_ids !== undefined && item.state !== "UNAVAILABLE"
+      // More fills than one bounded read holds for this page: a stated gap,
+      // never a silently short list that the screen would total as complete.
+      ? { ...item, state: "PARTIAL" as const, reasonCode: item.reasonCode ?? "N22_BLOTTER_FILLS_PAGE_CAPPED" }
+      : item);
     const orders = relations.find((item) => item.spec.key === "orders");
+    const deploymentJoin = await this.joinOrderDeployments(principal, orders);
+    if (orders?.page && deploymentJoin.rows) orders.page = { ...orders.page, items: deploymentJoin.rows };
     const nextCursor = orders?.page?.nextCursor
       ? this.encodeCursor(orders.page.nextCursor, principal.workspaceId, query, "after")
       : null;
@@ -636,11 +667,89 @@ export class PaperReadService {
           authority: exactQuery.authority,
           formula_version: exactQuery.formulaVersion,
         },
+        capability("blotter.deployment-join", deploymentJoin.state, ["strategy_deployments"], deploymentJoin.reasonCode),
       ],
     );
   }
 
+  /**
+   * Orders carry no deployment id (the Manager `orders` relation has none), so
+   * the Blotter's Deployment column used to be empty on every row. Derive it
+   * in Core from strategy_id + account_id, and ONLY when exactly one deployment
+   * of this profile matches and the deployment census read is complete: a
+   * second, unseen deployment would make the pair ambiguous. Every other case
+   * leaves the id null and says why. A deployment id the order already carries
+   * is never overwritten. This is a Portal join, not a source fact.
+   */
+  private async joinOrderDeployments(principal: PaperPrincipal, orders: RelationResult | undefined): Promise<{
+    rows: ManagerPage["items"] | null;
+    state: CapabilityState;
+    reasonCode: string | null;
+  }> {
+    if (!orders?.page) return { rows: null, state: "UNAVAILABLE", reasonCode: "N22_DEPLOYMENT_JOIN_ORDERS_UNAVAILABLE" };
+    if (orders.page.items.length === 0) return { rows: null, state: "EMPTY", reasonCode: null };
+    // The overview screen binds the deployments relation; the blotter's own
+    // binding set is a published capability list and is not widened for this.
+    const [deployments] = await this.readSpecs(principal, "PAPER_TRADING_SCREEN", [
+      spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 200),
+    ]).catch((error): RelationResult[] => {
+      if (error instanceof ExecutionReadScopeError &&
+          (error.code === "EXECUTION_READ_ACCESS_CHANGED" || error.code === "EXECUTION_READ_AUTHORITY_UNAVAILABLE")) throw error;
+      return [{ spec: spec("deployments", "manager.deployments", "strategy_deployments", DEPLOYMENT_FIELDS, 200),
+        page: null, state: "UNAVAILABLE", reasonCode: safeReason(error) }];
+    });
+    if (!deployments.page || deployments.state === "UNAVAILABLE") {
+      return { rows: null, state: "UNAVAILABLE", reasonCode: "N22_DEPLOYMENT_JOIN_DEPLOYMENTS_UNAVAILABLE" };
+    }
+    const census = deployments.state !== "PARTIAL" && deployments.page.nextCursor === null &&
+      deployments.page.completeness !== "PARTIAL";
+    const text = (value: unknown) => typeof value === "string" && value !== "" ? value : null;
+    let none = 0, ambiguous = 0, incomplete = 0, joined = 0;
+    const rows = orders.page.items.map((row) => {
+      if (text(row.deployment_id) !== null) return row;
+      const strategy = text(row.strategy_id), account = text(row.account_id);
+      if (strategy === null || account === null) { none += 1; return row; }
+      const matches = deployments.page!.items.filter((item) =>
+        text(item.strategy_id) === strategy && text(item.account_id) === account);
+      if (matches.length > 1) { ambiguous += 1; return row; }
+      if (matches.length === 0) { if (census) none += 1; else incomplete += 1; return row; }
+      if (!census) { incomplete += 1; return row; }
+      joined += 1;
+      return { ...row, deployment_id: text(matches[0].deployment_id) };
+    });
+    const unresolved = none + ambiguous + incomplete;
+    const reasonCode = ambiguous > 0 ? "N22_DEPLOYMENT_JOIN_AMBIGUOUS"
+      : incomplete > 0 ? "N22_DEPLOYMENT_JOIN_CENSUS_INCOMPLETE"
+        : none > 0 ? "N22_DEPLOYMENT_JOIN_NO_DEPLOYMENT" : null;
+    return { rows, state: unresolved === 0 ? "AVAILABLE" : joined === 0 && unresolved === rows.length ? "UNAVAILABLE" : "PARTIAL", reasonCode };
+  }
+
   private async fetch(
+    principal: PaperPrincipal,
+    screenId: string,
+    specs: readonly RelationSpec[],
+    deploymentScope?: DeploymentResourceScope,
+    /**
+     * Second read, after the first has landed and before the lineage pass. It
+     * names relations that depend on the first read's rows (the Blotter's fills
+     * belong to the page's orders); each result replaces the first read of the
+     * same key. It is one extra bounded call, never one call per returned row.
+     */
+    followUp?: (first: readonly RelationResult[]) => readonly RelationSpec[],
+  ): Promise<RelationResult[]> {
+    const first = await this.readSpecs(principal, screenId, specs.filter((item) => !item.deferred), deploymentScope);
+    const extra = followUp ? followUp(first) : [];
+    const results = extra.length === 0 ? first : [
+      ...first.filter((item) => !extra.some((replacement) => replacement.key === item.spec.key)),
+      ...await this.readSpecs(principal, screenId, extra, deploymentScope),
+    ];
+    // Keep the caller's relation order: it is the order of `data` and panels.
+    const order = new Map(specs.map((item, index) => [item.key, index]));
+    results.sort((a, b) => (order.get(a.spec.key) ?? 0) - (order.get(b.spec.key) ?? 0));
+    return enforceProfileLineage(results, "N30");
+  }
+
+  private async readSpecs(
     principal: PaperPrincipal,
     screenId: string,
     specs: readonly RelationSpec[],
@@ -672,7 +781,7 @@ export class PaperReadService {
       (result.reason.code === "EXECUTION_READ_ACCESS_CHANGED" ||
        result.reason.code === "EXECUTION_READ_AUTHORITY_UNAVAILABLE"));
     if (unsafe?.status === "rejected") throw unsafe.reason;
-    return enforceProfileLineage(results.map((result, index) => {
+    return results.map((result, index): RelationResult => {
       const item = specs[index];
       if (result.status === "fulfilled") {
         const { page, quarantinedOrderRows } = result.value;
@@ -696,7 +805,7 @@ export class PaperReadService {
         state: "UNAVAILABLE",
         reasonCode: safeReason(result.reason),
       };
-    }), "N30");
+    });
   }
 
   private envelope(

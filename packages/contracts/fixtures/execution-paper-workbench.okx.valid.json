@@ -1,0 +1,54 @@
+{
+  "schema_version": "execution.paper-workbench.v1", "record_authority": "PORTAL_CONTROL", "source_authority": "TRADING_SYSTEM", "delivery_profile": "PAPER_OKX_SWAP",
+  "workspace_id": "ws_fixture", "read_at": "2026-08-30T12:00:01Z", "as_of": "2026-08-30T12:00:00Z", "state": "ready", "freshness": "FRESH", "completeness": "COMPLETE",
+  "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
+  "resource": { "kind": "DEPLOYMENT", "id": "dep_1" },
+  "capabilities": [{ "capability_id": "market.candles", "state": "UNAVAILABLE", "relations": ["market_candles"], "reason_code": "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED", "retryable": false }],
+  "data": { "deployment": { "deployment_id": "dep_1", "mode": "paper" }, "deployments": [{ "deployment_id": "dep_1", "mode": "paper" }], "positions": [], "orders": [], "fills": [], "performance": [], "account_equity": [], "portfolio_equity": [], "stage_facts": {
+    "schema_version": "execution.stage-facts.v1",
+    "runtime": {
+      "runtime_state": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "SOURCE_RUNTIME_STATE_FIELD_NOT_PUBLISHED"
+      },
+      "since": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "SOURCE_RUNTIME_STATE_FIELD_NOT_PUBLISHED"
+      }
+    },
+    "reconciliation": {
+      "basis": "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN",
+      "verdict": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN"
+      },
+      "open_finding_count": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN"
+      },
+      "unknown_order_count": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN"
+      },
+      "as_of": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN"
+      }
+    },
+    "sessions": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN",
+      "basis": "EXECUTION_SESSIONS_BOUNDED_WINDOW",
+      "rows": [],
+      "returned_count": 0,
+      "omitted_count": 0,
+      "source_complete": null
+    }
+  } }
+}

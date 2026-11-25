@@ -71,6 +71,24 @@ describe("FE-073 Paper served envelope", () => {
     bothPaper(load(`fixtures/${file}`), true);
   });
 
+  it.each([
+    "execution-paper-workbench.okx.valid.json",
+    "execution-full-blotter.okx.valid.json",
+  ])("accepts the PAPER_OKX_SWAP body %s in standalone and OpenAPI", file => {
+    const body = load(`fixtures/${file}`);
+    expect(body.delivery_profile).toBe("PAPER_OKX_SWAP");
+    bothPaper(body, true);
+  });
+
+  it("serves exactly the Paper profiles Core can read, and no other profile id", () => {
+    expect(paperSchema.properties.delivery_profile.enum).toEqual(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"]);
+    for (const profile of ["PAPER_DNSE_VNM", "SANDBOX_BINANCE_USDM", "LIVE_BINANCE_USDM", "paper_okx_swap", "PAPER_OKX", "", null]) {
+      const bad = copy(paper);
+      bad.delivery_profile = profile;
+      bothPaper(bad, false);
+    }
+  });
+
   it("keeps source-clock absence null and leaves optional additions backward compatible", () => {
     const missingClock = copy(paper);
     missingClock.as_of = null;

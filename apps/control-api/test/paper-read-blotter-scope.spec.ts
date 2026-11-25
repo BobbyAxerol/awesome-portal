@@ -245,8 +245,11 @@ describe("FE-052 product query propagation", () => {
     const filters = { stage: "PAPER" as const, deployment_id: PRIVATE.deployment_id,
       account_id: PRIVATE.account_id, alpha_id: OWN.alpha_id };
     const body = await f.service.blotter(f.principal, parse(filters)) as any;
-    expect(f.relation).toHaveBeenCalledTimes(7);
-    for (const call of f.relation.mock.calls) expect(call[5]).toMatchObject(filters);
+    // Six branches, the fills read narrowed to the page's orders, and the deployment census for the Deployment join.
+    expect(f.relation).toHaveBeenCalledTimes(8);
+    const blotterCalls = f.relation.mock.calls.filter(call => call[2] === "EXECUTION_FULL_BLOTTER_SCREEN");
+    expect(blotterCalls).toHaveLength(7);
+    for (const call of blotterCalls) expect(call[5]).toMatchObject(filters);
     expect(body.data.query.filters).toMatchObject(filters);
     expect(body.data.query.filter_allowlist).toEqual([
       "status", "venue", "symbol", "side", "stage", "deployment_id", "account_id", "alpha_id",
@@ -287,7 +290,7 @@ describe("FE-052 product query propagation", () => {
     await expect(f.service.blotter(f.principal, changed)).rejects.toMatchObject({
       code: axis === "stage" ? "N22_BLOTTER_STAGE_NOT_AVAILABLE" : "CURSOR_CONTEXT_MISMATCH",
     });
-    expect(f.relation).toHaveBeenCalledTimes(7);
+    expect(f.relation).toHaveBeenCalledTimes(8);
   });
 
   it("treats implicit and explicit Paper/default sort as the same cursor selection", async () => {
@@ -295,6 +298,6 @@ describe("FE-052 product query propagation", () => {
     const first = await f.service.blotter(f.principal, { limit: 1 }) as any;
     await expect(f.service.blotter(f.principal, { limit: 1, stage: "PAPER", sort: "submitted_at_desc", after: first.data.page.next_cursor }))
       .resolves.toHaveProperty("data.page");
-    expect(f.relation).toHaveBeenCalledTimes(14);
+    expect(f.relation).toHaveBeenCalledTimes(16);
   });
 });

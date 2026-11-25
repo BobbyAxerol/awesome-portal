@@ -1432,7 +1432,7 @@
         "required": ["schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "read_at", "as_of", "state", "freshness", "completeness", "actor", "capabilities", "data"],
         "properties": {
           "schema_version": { "type": "string", "enum": ["execution.paper-overview.v1", "execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1", "execution.full-blotter.v1"] },
-          "record_authority": { "type": "string", "const": "PORTAL_CONTROL" }, "source_authority": { "type": "string", "const": "TRADING_SYSTEM" }, "delivery_profile": { "type": "string", "const": "PAPER_BINANCE_USDM" },
+          "record_authority": { "type": "string", "const": "PORTAL_CONTROL" }, "source_authority": { "type": "string", "const": "TRADING_SYSTEM" }, "delivery_profile": { "type": "string", "enum": ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] },
           "workspace_id": { "$ref": "#/components/schemas/Identifier" }, "read_at": { "type": "string", "format": "date-time" }, "as_of": { "type": ["string", "null"], "format": "date-time" },
           "read_at_ms": { "$ref": "#/components/schemas/UtcEpochMs" },
           "as_of_ms": { "oneOf": [{ "$ref": "#/components/schemas/UtcEpochMs" }, { "type": "null" }] },

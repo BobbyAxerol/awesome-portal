@@ -32,6 +32,8 @@ export const PAPER_READ_SCHEMAS = [
   "execution.paper-workbench-vnm.v1",
   "execution.full-blotter.v1",
 ] as const;
+/** The Paper profiles Core can serve; the same set as `delivery_profile` in execution-paper-read.v1.schema.json. */
+export const PAPER_READ_PROFILES = ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] as const;
 const WORKBENCH_SCHEMAS: ReadonlySet<string> = new Set(["execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1"]);
 
 /** S-1: the Full Blotter's members. */
@@ -318,7 +320,7 @@ export function paperReadViolations(raw: unknown): readonly string[] {
   if (Object.hasOwn(raw, "schema_version") && !(PAPER_READ_SCHEMAS as readonly string[]).includes(version as string)) out.push("schema_version: not a paper-read version");
   if (Object.hasOwn(raw, "record_authority") && raw.record_authority !== "PORTAL_CONTROL") out.push("record_authority: not PORTAL_CONTROL");
   if (Object.hasOwn(raw, "source_authority") && raw.source_authority !== "TRADING_SYSTEM") out.push("source_authority: not TRADING_SYSTEM");
-  if (Object.hasOwn(raw, "delivery_profile") && raw.delivery_profile !== "PAPER_BINANCE_USDM") out.push("delivery_profile: not PAPER_BINANCE_USDM");
+  if (Object.hasOwn(raw, "delivery_profile") && !(PAPER_READ_PROFILES as readonly unknown[]).includes(raw.delivery_profile)) out.push(`delivery_profile: not one of ${PAPER_READ_PROFILES.join(", ")}`);
   if (Object.hasOwn(raw, "workspace_id") && (typeof raw.workspace_id !== "string" || !IDENTIFIER.test(raw.workspace_id))) out.push("workspace_id: not an identifier");
   if (Object.hasOwn(raw, "read_at") && typeof raw.read_at !== "string") out.push("read_at: not a string");
   if (Object.hasOwn(raw, "as_of") && raw.as_of !== null && typeof raw.as_of !== "string") out.push("as_of: not a string or null");

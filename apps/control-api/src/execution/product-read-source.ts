@@ -612,6 +612,7 @@ export class ExecutionProductReadSource {
         query.deployment_id !== undefined ? "deployment_id" : null,
         query.account_id !== undefined ? "account_id" : null,
         query.alpha_id !== undefined ? "alpha_id" : null,
+        query.client_order_ids !== undefined ? "client_order_id" : null,
         screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders" ?
           query.sort === "updated_at_desc" ? "updated_at" : "submitted_at" : null];
       if ((accountTarget !== undefined && (!retainedFieldAllowed(readScope, "account_id") ||
@@ -681,7 +682,9 @@ export class ExecutionProductReadSource {
       : resourceScoped;
     const scopedItems = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
       ? filterAndSort(scoped.items, query)
-      : scoped.items;
+      : screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "fills" && query.client_order_ids !== undefined
+        ? fillsOfOrders(scoped.items, query.client_order_ids)
+        : scoped.items;
     const limit = query.limit ?? 100;
     const cursorQuery = { ...query, cursor: undefined,
       ...(screenId === "EXECUTION_FULL_BLOTTER_SCREEN" ? { stage: query.stage ?? "PAPER" } : {}),
@@ -1001,12 +1004,15 @@ interface LocalProductQuery {
   venue?: string;
   symbol?: string;
   side?: "BUY" | "SELL";
+  /** Blotter fills only: the client order ids of the page being shown (Portal-derived, never a browser value). */
+  client_order_ids?: readonly string[];
   sort?: "submitted_at_desc" | "submitted_at_asc" | "updated_at_desc";
 }
 
 function hasLocalQuery(query: LocalProductQuery & DeploymentScopeQuery): boolean {
   return query.status !== undefined || query.statuses !== undefined || query.venue !== undefined || query.symbol !== undefined ||
-    query.side !== undefined || query.sort !== undefined || query.deploymentScope !== undefined || hasBlotterScope(query);
+    query.side !== undefined || query.sort !== undefined || query.deploymentScope !== undefined ||
+    query.client_order_ids !== undefined || hasBlotterScope(query);
 }
 
 function hasBlotterScope(query: LocalProductQuery): boolean {
@@ -1214,6 +1220,24 @@ function filterAndSort(
     String(left.fields[field] ?? "").localeCompare(String(right.fields[field] ?? "")) ||
     String(left.fields.order_id ?? "").localeCompare(String(right.fields.order_id ?? ""))
   ));
+}
+
+/**
+ * The fills that belong to a page's orders, newest first. The retained window
+ * is oldest-first, so a flat first-N would only ever hold the oldest fills.
+ * The selection happens on the same authorized population as every other
+ * Blotter relation, before the page limit and before any count.
+ */
+function fillsOfOrders(
+  rows: readonly { fields: Record<string, ProjectionScalar> }[],
+  clientOrderIds: readonly string[],
+) {
+  const wanted = new Set(clientOrderIds);
+  return rows
+    .filter((row) => typeof row.fields.client_order_id === "string" && wanted.has(row.fields.client_order_id))
+    .sort((left, right) =>
+      String(right.fields.trade_time ?? "").localeCompare(String(left.fields.trade_time ?? "")) ||
+      String(right.fields.fill_id ?? "").localeCompare(String(left.fields.fill_id ?? "")));
 }
 
 function countByDimensions(rows: readonly { fields: Record<string, ProjectionScalar> }[]) {

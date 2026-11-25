@@ -9,7 +9,7 @@
     "schema_version": { "enum": ["execution.paper-overview.v1", "execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1", "execution.full-blotter.v1"] },
     "record_authority": { "const": "PORTAL_CONTROL" },
     "source_authority": { "const": "TRADING_SYSTEM" },
-    "delivery_profile": { "const": "PAPER_BINANCE_USDM" },
+    "delivery_profile": { "enum": ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] },
     "workspace_id": { "$ref": "#/$defs/Identifier" },
     "read_at": { "$ref": "#/$defs/DateTime" },
     "as_of": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },

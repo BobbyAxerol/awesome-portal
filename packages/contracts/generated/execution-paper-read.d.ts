@@ -533,8 +533,8 @@ export interface components {
             record_authority: "PORTAL_CONTROL";
             /** @constant */
             source_authority: "TRADING_SYSTEM";
-            /** @constant */
-            delivery_profile: "PAPER_BINANCE_USDM";
+            /** @enum {string} */
+            delivery_profile: "PAPER_BINANCE_USDM" | "PAPER_OKX_SWAP";
             workspace_id: components["schemas"]["Identifier"];
             /** Format: date-time */
             read_at: string;
