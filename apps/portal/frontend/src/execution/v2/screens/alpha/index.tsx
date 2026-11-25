@@ -169,7 +169,11 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const env: ExecEnv = params.get("env") === null && namedDeployment?.env != null && deployed.includes(namedDeployment.env)
     ? namedDeployment.env
     : currentEnv !== null && deployed.includes(currentEnv) ? currentEnv : chooseEnv(url.value.env, deployed);
-  const settled = resource.phase === "ready" || resource.phase === "error";
+  // D5: the book (environment) every env-scoped read names must come from the alpha's real deployments or from the address. With neither
+  // (the resource read failed or is still loading, or the alpha has no deployment) `env` is only the URL default ("live"), a guess
+  // that the Portal answers with a 400 for a paper alpha: those reads are not asked at all, and the page says what it could not read.
+  const envKnown = params.get("env") !== null || deployed.includes(env);
+  const settled = (resource.phase === "ready" || resource.phase === "error") && envKnown;
   const wsId = explicitWs ?? view?.workspaceId ?? null;
 
   const drift = useStageDrift(api, alphaId, true);
@@ -257,11 +261,11 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const present = view !== null && view.present;
   // The Manager dataset for this alpha in the chosen Book: the Return tile and the windowed figures. Asked once the alpha is known; only a workspace the caller named is sent (never the body's own).
   // A window the address names is asked on the dataset too, so every tab states the same window as the Performance tab (QA7 N2-02); with no window in the address nothing is asked, as before.
-  const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs, params.get("window") === null ? undefined : url.value.window);
+  const dataset = useAlphaDataset(api, present && envKnown, alphaId, env, explicitWs, params.get("window") === null ? undefined : url.value.window);
   const datasetValue = dataset.phase === "ready" ? dataset.value : null;
   // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
   // WP-K: the published lifecycle read (stages with criteria, decider and receipt; the unified feed; regime fit; Net PnL per venue) wins over the open keys.
-  const lifecycle = useAlphaLifecycle(api, present, alphaId, env, explicitWs);
+  const lifecycle = useAlphaLifecycle(api, present && envKnown, alphaId, env, explicitWs);
   const life = useMemo(() => {
     const read = lifeEventsOfRead(lifecycle);
     const spans = stageSpansOfRead(lifecycle);

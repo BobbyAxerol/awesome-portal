@@ -49,6 +49,9 @@ export interface Visited {
 export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enabled: boolean, windowLabel: string, visited: Visited) {
   const resource = useResource(api, portfolioId, enabled);
   const ready = resource.phase === "ready" ? resource.value : null;
+  // D7: the book every env-scoped read names comes from the resource's own `selected_environment`. A resource that names none (the
+  // portfolio was found in no environment) gets no equity / NAV / dataset / correlation read: "live" is never a guess for it.
+  const envKnown = ready !== null && ready.selectedEnvironment !== null;
   const selected: FinancialEnvironment = ready?.selectedEnvironment ?? "live";
   const asOfMs = ready?.asOfMs ?? null;
   const present = useMemo(() => (ready ? environmentsOf(ready, readDeployments(ready)) : []), [ready]);
@@ -63,7 +66,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
 
   const chart = useRead(
     api,
-    enabled && ready !== null,
+    enabled && envKnown,
     `chart|${portfolioId}|${selected}|${range?.fromMs ?? "all"}`,
     (scoped) => scoped.getFinancialChart({
       environment: selected,
@@ -82,16 +85,16 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     () => (navWindow === null ? null : { environment: selected, metric: "NAV", window: navWindow, subjects: [{ subjectType: "PORTFOLIO", subjectId: portfolioId }], ...(ready?.workspaceId ? { workspaceId: ready.workspaceId } : {}) }),
     [selected, navWindow, portfolioId, ready?.workspaceId],
   );
-  const nav = useManagerSeries(api, enabled && ready !== null, navQuery);
+  const nav = useManagerSeries(api, enabled && envKnown, navQuery);
   // Net PnL and Return of the same portfolio, once the NAV read says the series port serves it (WP-F1): the Performance card's tabs.
   const navBody = nav.phase === "ready" ? nav.value : nav.phase === "loading" || nav.phase === "error" ? nav.last : null;
   const served = navBody !== null && navBody.seriesSource.state === "PUBLISHED";
   const pnlQuery = useMemo<ManagerSeriesQuery | null>(() => (navQuery === null ? null : { ...navQuery, metric: "NET_PNL" }), [navQuery]);
   const returnQuery = useMemo<ManagerSeriesQuery | null>(() => (navQuery === null ? null : { ...navQuery, metric: "RETURN" }), [navQuery]);
-  const pnl = useManagerSeries(api, enabled && ready !== null && served, pnlQuery);
-  const ret = useManagerSeries(api, enabled && ready !== null && served, returnQuery);
+  const pnl = useManagerSeries(api, enabled && envKnown && served, pnlQuery);
+  const ret = useManagerSeries(api, enabled && envKnown && served, returnQuery);
   const drawdownQuery = useMemo<ManagerSeriesQuery | null>(() => (navQuery === null ? null : { ...navQuery, metric: "DRAWDOWN" }), [navQuery]);
-  const drawdown = useManagerSeries(api, enabled && ready !== null && served, drawdownQuery);
+  const drawdown = useManagerSeries(api, enabled && envKnown && served, drawdownQuery);
 
   // The portfolio's Manager dataset (PORTFOLIO surface, grouped by portfolio so its own totals come as a group) for the selected
   // environment and the page window: capital statements and Net PnL per economic partition. Same port as everything else.
@@ -102,7 +105,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     }),
     [selected, navWindow, portfolioId, ready?.workspaceId],
   );
-  const dataset = useManagerDataset(api, enabled && ready !== null && servesDataset(api), datasetQuery);
+  const dataset = useManagerDataset(api, enabled && envKnown && servesDataset(api), datasetQuery);
   // Contributors: the same portfolio, environment and window grouped by alpha_id by the server (Net PnL, Return, Score per alpha).
   // Asked once the dataset above has said it offers alpha_id as a group field.
   const contributorsQuery = useMemo<ManagerDatasetQuery | null>(
@@ -110,7 +113,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     [datasetQuery],
   );
   const datasetValue = dataset.phase === "ready" ? dataset.value : null;
-  const contributors = useManagerDataset(api, enabled && ready !== null && servesDataset(api) && datasetValue !== null && alphaGroupOffered(datasetValue) === true, contributorsQuery);
+  const contributors = useManagerDataset(api, enabled && envKnown && servesDataset(api) && datasetValue !== null && alphaGroupOffered(datasetValue) === true, contributorsQuery);
 
   // The capital flow of the Allocations tab (WP-F1), one basis per environment: that environment's statements (group by portfolio, so the
   // portfolio's own totals come as a group) and its alpha groups. Asked once the tab has been opened and the portfolio has a book there.
@@ -119,7 +122,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
       surface: "PORTFOLIO", id: portfolioId, environment, window: navWindow, groupBy: [groupBy], limit: 1,
       ...(ready?.workspaceId ? { workspaceId: ready.workspaceId } : {}),
     };
-  const flowOn = (environment: Environment): boolean => enabled && visited.allocations && ready !== null && servesDataset(api) && present.includes(environment);
+  const flowOn = (environment: Environment): boolean => enabled && visited.allocations && envKnown && servesDataset(api) && present.includes(environment);
   const flows = {
     live: { statements: useManagerDataset(api, flowOn("live"), flowQuery("live", "portfolio_id")), alphas: useManagerDataset(api, flowOn("live"), flowQuery("live", "alpha_id")) },
     paper: { statements: useManagerDataset(api, flowOn("paper"), flowQuery("paper", "portfolio_id")), alphas: useManagerDataset(api, flowOn("paper"), flowQuery("paper", "alpha_id")) },
@@ -134,7 +137,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
 
   const correlation = useRead(
     api,
-    enabled && visited.risk && ready !== null,
+    enabled && visited.risk && envKnown,
     `correlation|${portfolioId}|${selected}`,
     (scoped) => scoped.getCorrelation(portfolioId, selected),
   );

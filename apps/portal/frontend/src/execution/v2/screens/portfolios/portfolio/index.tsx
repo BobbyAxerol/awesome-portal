@@ -51,7 +51,7 @@ import { compareOptionsFor } from "../../compare/model";
 import { Allocations } from "./Allocations";
 import { AccountsTab, AlphasTab } from "./AlphasAccounts";
 import type { TabCtx } from "./ctx";
-import { readAccounts, readDeployments, readIdentity, environmentsOf } from "./model";
+import { readAccounts, readDeployments, readIdentity, environmentsOf, branchSummary } from "./model";
 import { Overview } from "./Overview";
 import { PeopleTab } from "./People";
 import { ActionsRail, RAIL_SELECTION } from "./Rail";
@@ -222,7 +222,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
           <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> <span>Some relations may be missing</span><GapWhy name="Why relations may be missing" rows={[`The resource is ${humanize(resource.completeness).toLowerCase()}`]} next={null} /></p>
         ) : null}
         {resource.unavailableBranches.length > 0 ? (
-          <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Branch not whole" size="sm" /> Not available: {resource.unavailableBranches.map(humanize).join(", ")}</p>
+          <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Branch not whole" size="sm" /> Not available: {branchSummary(resource.unavailableBranches)}</p>
         ) : null}
         {accountsRefused ? <p className="exec-pf-banner" role="status">Accounts is not listed in your navigation read, so the Accounts tab is off. Showing Overview.</p> : null}
         {resolution.notice ? <p className="exec-pf-banner" role="status">{resolution.notice}</p> : null}

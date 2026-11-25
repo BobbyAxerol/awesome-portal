@@ -306,6 +306,31 @@ export interface BlotterRead {
   asOf: string | null;
   readAt: string | null;
   unavailableBranches: readonly string[];
+  /**
+   * The orders relation's own verdict when it says the rows were NOT read (UNAVAILABLE / DENIED / ERROR): `null` when the read
+   * did read them (READY, EMPTY, PARTIAL, STALE) or does not say. An empty `orders` array under this verdict is "not read", never "none".
+   */
+  ordersNotRead: OrdersNotRead | null;
+}
+
+export interface OrdersNotRead {
+  kind: "unavailable" | "denied";
+  /** The server's reason code (`N22_SOURCE_UNAVAILABLE`, ...), or `null` when it names none. */
+  reason: string | null;
+}
+
+/** The panel verdict first (`panels.orders`), the capability `source.orders` second; both are the server's own words. */
+export function ordersNotRead(profile: ProfileEnvelope): OrdersNotRead | null {
+  const panel = profile.panels.orders;
+  if (panel) {
+    if (panel.state === "UNAVAILABLE" || panel.state === "ERROR") return { kind: "unavailable", reason: panel.reason_code ?? null };
+    if (panel.state === "DENIED") return { kind: "denied", reason: panel.reason_code ?? null };
+    return null;
+  }
+  const cap = profile.capabilities.find((c) => c.capabilityId === "source.orders");
+  if (cap && (cap.state === "UNAVAILABLE" || cap.state === "ERROR")) return { kind: "unavailable", reason: cap.reasonCode };
+  if (cap && cap.state === "DENIED") return { kind: "denied", reason: cap.reasonCode };
+  return null;
 }
 
 function countMap(raw: unknown): Record<string, number> | null {
@@ -353,6 +378,7 @@ export function readBlotter(profile: ProfileEnvelope): BlotterRead {
     asOf: profile.asOf,
     readAt: profile.readAt,
     unavailableBranches: profile.unavailableBranches,
+    ordersNotRead: ordersNotRead(profile),
   };
 }
 

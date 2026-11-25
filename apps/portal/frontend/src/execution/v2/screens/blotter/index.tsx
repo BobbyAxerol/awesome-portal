@@ -602,13 +602,24 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
 
         {searching ? <p className="exec-blt2-note" role="status">Looking for this scope in older orders ({hops} of {SEEK_PAGES} pages read).</p> : null}
         <p className="exec-blt2-count-line" role="status" aria-live="polite">
-          {emptyPage
+          {emptyPage && page.ordersNotRead
+            ? "Orders were not read"
+            : emptyPage
             ? "No orders on this page"
             : <>Showing <b className="exec-blt2-num">{page.orders.length}</b> {page.filteredTotal !== null ? <>of <b className="exec-blt2-num">{page.filteredTotal}</b> {filtered ? "matching" : serverScopeActive(scope) ? "in this scope" : "authorized"}{filtered && page.exactTotal !== null ? <> · <span className="exec-blt2-num">{page.exactTotal}</span> {serverScopeActive(scope) ? "in this scope" : "authorized"}</> : null}</> : <>orders (the server did not state a total)</>} · newest first</>}
         </p>
 
         {narrow ? pager : null}
-        {emptyPage ? (
+        {emptyPage && page.ordersNotRead ? (
+          <div className="exec-blt2-empty" data-state={page.ordersNotRead.kind}>
+            <PanelState
+              status={page.ordersNotRead.kind}
+              title={page.ordersNotRead.kind === "denied" ? "Orders are outside your access" : "Orders are unavailable"}
+              reason={`The source did not deliver the orders${page.ordersNotRead.reason ? ` (${page.ordersNotRead.reason})` : ""}. This is not an empty blotter: whether orders exist is not known.`}
+              actions={<button type="button" className="exec-blt2-btn" onClick={() => setReloadTick((n) => n + 1)}>Try again</button>}
+            />
+          </div>
+        ) : emptyPage ? (
           <div className="exec-blt2-empty">
             {filtered || live ? <><p>No orders match these filters.</p><button type="button" className="exec-blt2-btn" onClick={() => { setCursor(null); clearAll(); }}>Clear all</button></> : <PanelState status="empty" reason={serverScopeActive(scope) ? "This scope has no orders in the blotter." : "No orders in this scope and window."} />}
           </div>

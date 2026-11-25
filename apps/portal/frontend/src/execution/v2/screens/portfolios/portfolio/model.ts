@@ -591,3 +591,14 @@ export function correlationView(correlation: Correlation, limit: number = CORREL
   all.sort((a, b) => compareAbsDecimal(b.coefficient, a.coefficient));
   return { entities: correlation.dimension, pairCount: all.length, pairs: all.slice(0, limit) };
 }
+
+/**
+ * The banner's list of branches that are not whole: one entry per distinct code, with how many reads carried it. The Portal lists one
+ * branch per relation and environment, so the same code (`EDS04_PORTFOLIO_NOT_FOUND`) can arrive a dozen times; printing it that many
+ * times hides every other code and says nothing the first line did not.
+ */
+export function branchSummary(branches: readonly string[]): string {
+  const counts = new Map<string, number>();
+  for (const code of branches) counts.set(code, (counts.get(code) ?? 0) + 1);
+  return [...counts].map(([code, n]) => (n > 1 ? `${humanize(code)} (${n} reads)` : humanize(code))).join(", ");
+}
