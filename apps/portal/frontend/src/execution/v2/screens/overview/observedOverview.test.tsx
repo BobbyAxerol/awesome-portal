@@ -75,11 +75,11 @@ describe("observed ON", () => {
     const { api, getObservedOverview } = withObserved({ ok: true, value: body("paper") });
     mount(api, true);
     await loaded();
-    await waitFor(() => expect(value("NAV")).toContain("20000"));
+    await waitFor(() => expect(value("NAV")).toContain("20,000.00"));
     expect(getObservedOverview).toHaveBeenCalledWith({ environment: "live" });
     expect(value("NAV")).toContain("USD");
     expect(note("NAV")).toContain(LABEL);
-    expect(value("Net PnL")).toMatch(/^0\s?USD/);
+    expect(value("Net PnL")).toBe("0.00USD");
     expect(note("Net PnL")).toContain(LABEL);
     expect(note("Net PnL")).toContain("Cumulative, source-reported");
     expect(note("Net PnL")).not.toMatch(/Window|7D|30D|90D/);
@@ -137,5 +137,30 @@ describe("observed ON", () => {
     mount({ ...httpApi(), withReadSignal: undefined, getObservedOverview: undefined } as unknown as ExecutionApi, true);
     await loaded();
     expect(value("NAV")).toBe("Not published");
+  });
+});
+
+describe("observed ON: money formatting is the qualified cells' formatter", () => {
+  it("a 17-decimal source value is grouped and cut by the qualified formatter, the currency is its own unit span; the exact value is the title", async () => {
+    const wide = structuredClone(cases.paper) as { figures: { figure_id: string; value: string | null }[] };
+    wide.figures.find((f) => f.figure_id === "NAV")!.value = "779218.40422916799456304";
+    wide.figures.find((f) => f.figure_id === "NET_PNL")!.value = "-781.59577083200543696";
+    const { api } = withObserved({ ok: true, value: readObservedOverview(wide) as ObservedOverview });
+    mount(api, true);
+    await loaded();
+    await waitFor(() => expect(value("NAV")).toContain("779"));
+    expect(value("NAV")).toBe("779,218.4042USD");
+    expect(value("NAV")).not.toContain("404229");
+    expect(kpi("NAV").querySelector(".exec-ov-unit")?.textContent).toBe("USD");
+    expect(value("Net PnL")).toMatch(/^-781\.\d{2,4}USD$/);
+    expect(kpi("NAV").querySelector("[title]")?.getAttribute("title")).toContain("779218.40422916799456304");
+  });
+  it("paper fixture NAV reads like the qualified cells and a null stays Not available", async () => {
+    const { api } = withObserved({ ok: true, value: body("paper") });
+    mount(api, true);
+    await loaded();
+    await waitFor(() => expect(value("NAV")).toContain("20,000.00"));
+    expect(value("NAV")).toBe("20,000.00USD");
+    expect(value("Return")).toContain("Not available");
   });
 });

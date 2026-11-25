@@ -14,7 +14,7 @@ export const OBSERVED_TITLE = "Observed by Core from the Edge snapshot (record P
 export type ObservedFigureId = ObservedFigure["figure_id"];
 
 export type ObservedLine =
-  | { kind: "value"; key: string; exact: string; currency: string; partial: boolean; stale: boolean; reasons: readonly string[]; accounts: string | null }
+  | { kind: "value"; key: string; exact: string; currency: string; unit: "MONEY" | "FRACTION"; partial: boolean; stale: boolean; reasons: readonly string[]; accounts: string | null }
   | { kind: "absent"; key: string; currency: string; code: string };
 
 export interface ObservedCellView {
@@ -32,7 +32,7 @@ export function observedCell(body: ObservedOverview | null, id: ObservedFigureId
     const key = `${f.figure_id}|${f.currency}`;
     if (f.value === null || f.availability === "UNAVAILABLE") return { kind: "absent", key, currency: f.currency, code: f.reason_code ?? "NOT_AVAILABLE" };
     return {
-      kind: "value", key, exact: f.value, currency: f.currency,
+      kind: "value", key, exact: f.value, currency: f.currency, unit: f.unit,
       partial: f.availability === "PARTIAL" || f.quality.completeness !== "COMPLETE",
       stale: f.quality.freshness === "STALE",
       reasons: [...f.quality.reasons, ...(f.reason_code === null ? [] : [f.reason_code])],

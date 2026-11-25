@@ -113,6 +113,13 @@ function ObservedCell({ label, view, cumulative = false }: { label: string; view
   );
 }
 
+/** The same formatter as the qualified cells (`seriesValueText`): grouped, 2 decimals, currency after a space; the exact string stays in the title. */
+function observedText(line: { exact: string; unit: "MONEY" | "FRACTION"; currency: string }): string {
+  return line.unit === "MONEY"
+    ? seriesValueText({ unit: "MONEY", ratioScale: null, currency: line.currency }, line.exact)
+    : seriesValueText({ unit: "RATIO", ratioScale: "FRACTION", currency: null }, line.exact);
+}
+
 function ObservedLines({ view }: { view: ObservedCellView }) {
   return (
     <>
@@ -120,7 +127,7 @@ function ObservedLines({ view }: { view: ObservedCellView }) {
         <span key={line.key} style={{ display: "block" }}><span className="exec-ov-na">Not available</span><GapWhy name="Why the Observed figure is not available" rows={[line.code]} next={null} /></span>
       ) : (
         <span key={line.key} style={{ display: "block" }}>
-          <span className="exec-ov-num" title={line.exact}><FigureUnit text={`${line.exact} ${line.currency}`} /></span>
+          <span className="exec-ov-num" title={`${line.exact} ${line.currency}`}><FigureUnit text={observedText(line)} /></span>
           {line.partial || line.stale ? <Flag kind={line.stale ? "stale" : "partial"} label={line.stale ? "Stale" : "Partial"} size="sm" /> : null}
           {line.partial || line.stale ? <GapWhy name="Why the Observed figure is not complete" rows={[...line.reasons, ...(line.accounts === null ? [] : [line.accounts])]} next={null} /> : null}
         </span>
