@@ -307,6 +307,9 @@ const EnvSchema = z.object({
   EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS: z.coerce.number().int().min(1_000).max(300_000).default(15_000),
   EXECUTION_LOCAL_PROJECTION_LEASE_TTL_MS: z.coerce.number().int().min(5_000).max(600_000).default(120_000),
   EXECUTION_LOCAL_PROJECTION_STALE_CEILING_MS: z.coerce.number().int().min(30_000).max(3_600_000).default(300_000),
+  /** Snapshot age (seconds since last_successful_refresh_at) above which the lag signal reads LAGGING / STALE. Signal only: never affects readiness. */
+  EXECUTION_PROJECTION_LAG_LAGGING_SECONDS: z.coerce.number().int().min(30).max(86_400).default(300),
+  EXECUTION_PROJECTION_LAG_STALE_SECONDS: z.coerce.number().int().min(60).max(172_800).default(900),
   EXECUTION_LOCAL_PROJECTION_JOURNAL_RETENTION_SECONDS: z.coerce.number().int().min(300).max(604_800).default(86_400),
   EXECUTION_LOCAL_PROJECTION_MAXIMUM_JOURNAL_ENTRIES: z.coerce.number().int().min(32).max(100_000).default(10_000),
   COMMAND_CENTER_MAX_RESPONSE_BYTES: z.coerce.number().int().min(16 * 1024).max(512 * 1024).default(128 * 1024),
@@ -861,6 +864,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     if (!currentSourceProfiles.some((profile) => profile.feature === "true")) {
       throw new Error("FEATURE_EXECUTION_MARKET_CONTEXT=true requires at least one current-source profile");
     }
+  }
+  if (config.EXECUTION_PROJECTION_LAG_STALE_SECONDS <= config.EXECUTION_PROJECTION_LAG_LAGGING_SECONDS) {
+    throw new Error("EXECUTION_PROJECTION_LAG_STALE_SECONDS must exceed EXECUTION_PROJECTION_LAG_LAGGING_SECONDS");
   }
   if (config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true") {
     if (config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID === undefined) {

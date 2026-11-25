@@ -607,7 +607,7 @@ export function mergeTimeSeriesWindow(
   return { items: ordered.slice(-WARM_WINDOW_MAX_ROWS).map((entry) => entry.row), truncated };
 }
 
-function enabledProfiles(config: ControlApiConfig): Array<{ environment: ProjectionEnvironment; profileId: string }> {
+export function enabledProfiles(config: ControlApiConfig): Array<{ environment: ProjectionEnvironment; profileId: string }> {
   return [
     { environment: "paper" as const, enabled: config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER, profileId: config.EXECUTION_EDGE_PAPER_PROFILE_ID },
     // P4-D taxonomy: the DNSE/VN paper family projects under its own profile.

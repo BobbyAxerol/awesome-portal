@@ -1,14 +1,34 @@
-import { Controller, Get, Inject, ServiceUnavailableException } from "@nestjs/common";
+import { Controller, Get, Inject, Optional, ServiceUnavailableException } from "@nestjs/common";
 import { Pool } from "pg";
 import { ControlApiConfig } from "../config";
-import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
+import { CONTROL_API_CONFIG, CONTROL_API_POOL, EXECUTION_DATA_POOL } from "../tokens";
+import { enabledProfiles } from "../execution/profile-projection.worker";
+import { readProjectionLag } from "./projection-lag";
 
 @Controller("/api/control")
 export class HealthController {
   constructor(
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
     @Inject(CONTROL_API_POOL) private readonly pool: Pool,
+    @Optional() @Inject(EXECUTION_DATA_POOL) private readonly executionPool?: Pool,
   ) {}
+
+  /**
+   * Per-profile snapshot age and lag state (OK / LAGGING / STALE).  A signal
+   * only: it always answers 200 and is not consulted by readyz, so a stalled
+   * profile can never cause a restart loop.  Scalars only; no payload, no secret.
+   */
+  @Get("/healthz/projection-lag")
+  async projectionLag() {
+    const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || !workspaceId || !this.executionPool) {
+      return { status: "disabled", profiles: [] };
+    }
+    return await readProjectionLag(this.executionPool, workspaceId, enabledProfiles(this.config), {
+      laggingSeconds: this.config.EXECUTION_PROJECTION_LAG_LAGGING_SECONDS,
+      staleSeconds: this.config.EXECUTION_PROJECTION_LAG_STALE_SECONDS,
+    });
+  }
 
   @Get("/healthz")
   health() {
