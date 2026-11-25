@@ -2,7 +2,7 @@
  * The Manager dataset as the Fleet table's source (FE-012 / FE-027 / FE-033), keyset-paged through the
  * `ExecutionApi.getManagerDataset` port. Two hooks:
  *
- * - `useDatasetPublication(api, environment)`: is the dataset PUBLISHED for this caller in this environment? One tiny read
+ * - `useDatasetPublication(api, environment, workspaceId?, profileId?)`: is the dataset PUBLISHED for this caller in this environment? One tiny read
  *   (`limit` 1, no filter) per environment, or `ALL` (FE-CAT-3: the authorized rows of every environment, each labelled, no combined
  *   money); the dataset's own `query_options` (the sort and group fields it offers) come back with it. Anything but a readable dataset
  *   of the environment that was asked (a refusal, a 404, an absence, a body that is not ALL-shaped when ALL was asked, a port without
@@ -51,14 +51,24 @@ export type DatasetPublication =
   | { phase: "published"; dataset: ManagerDataset }
   | { phase: "unpublished"; reason: string };
 
-export function useDatasetPublication(api: ExecutionApi, environment: ManagerEnvironmentScope | null): DatasetPublication {
+export function useDatasetPublication(
+  api: ExecutionApi,
+  environment: ManagerEnvironmentScope | null,
+  /** G3: the probe asks the SAME workspace and profile as the rows it gates (a probe of another profile would publish the wrong table). */
+  workspaceId?: string,
+  profileId?: string,
+): DatasetPublication {
   // A port without the method (a test double, an older shell) cannot publish a dataset: nothing is asked, nothing waits, and the answer is the same as a refusal.
   const serves = typeof api.getManagerDataset === "function";
   const read: ReadState<ManagerDataset> = useRead(
     api,
     environment !== null && serves,
-    `fleet-dataset-publication|${environment}`,
-    (scopedApi) => ask(scopedApi, { surface: "FLEET", environment: environment as ManagerEnvironmentScope, limit: 1 }),
+    `fleet-dataset-publication|${JSON.stringify([environment, workspaceId ?? null, profileId ?? null])}`,
+    (scopedApi) => ask(scopedApi, {
+      surface: "FLEET", environment: environment as ManagerEnvironmentScope, limit: 1,
+      ...(workspaceId ? { workspaceId } : {}),
+      ...(profileId ? { profileId } : {}),
+    }),
   );
   if (environment === null) return { phase: "off" };
   if (!serves) return { phase: "unpublished", reason: "The Manager dataset is not part of this port." };
@@ -68,6 +78,10 @@ export function useDatasetPublication(api: ExecutionApi, environment: ManagerEnv
   // FE-CAT-3: a body of another environment (or one that is not ALL-shaped when ALL was asked) is not this scope's dataset.
   if (read.value.environment !== environment || (environment === "ALL") !== (read.value.environmentCoverage !== undefined)) {
     return { phase: "unpublished", reason: "The Manager dataset did not answer the environment that was asked." };
+  }
+  // G3: the port already refuses another workspace or profile; this keeps the hook honest for a port that does not.
+  if ((workspaceId && read.value.workspaceId !== workspaceId) || (profileId && read.value.profileId !== profileId)) {
+    return { phase: "unpublished", reason: "The Manager dataset did not answer the workspace or profile that was asked." };
   }
   return { phase: "published", dataset: read.value };
 }

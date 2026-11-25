@@ -162,8 +162,18 @@ describe("L0 · canonical, verbatim", () => {
     expect([empty, rows, all].map((d) => [d.groups.length, d.capitalStatements.length])).toEqual([[0, 0], [0, 0], [0, 0]]);
   });
 
+  it("G3: the profile-selection fixture holds real dataset bodies (not another contract): each satisfies the published schema, reads as a dataset and states its profile", () => {
+    const cases = loadCanonical<{ cases: { query: { profile_id: string }; response: Draft }[] }>("execution-manager-profile-selection.synthetic.valid.json").cases;
+    expect(cases.length).toBeGreaterThanOrEqual(2);
+    for (const c of cases) {
+      expect(datasetViolations(c.response)).toEqual([]);
+      const read = readManagerDataset(c.response);
+      expect(read !== null && read.kind === "dataset" && read.dataset.profileId).toBe(c.query.profile_id);
+    }
+  });
+
   it("every other execution-manager-* family is another contract: its bodies read as unsupported_shape", () => {
-    const others = listCanonical().filter((file) => file.startsWith("execution-manager-") && !DATASET_FIXTURES.some((d) => file.startsWith(`${d}.`)) && !file.startsWith(`${FIXTURE_METRIC}.`));
+    const others = listCanonical().filter((file) => file.startsWith("execution-manager-") && !DATASET_FIXTURES.some((d) => file.startsWith(`${d}.`)) && !file.startsWith(`${FIXTURE_METRIC}.`) && !file.startsWith("execution-manager-profile-selection."));
     expect(others.length).toBeGreaterThanOrEqual(15);
     const versions = new Map<string, number>();
     const walk = (node: unknown, file: string): void => {

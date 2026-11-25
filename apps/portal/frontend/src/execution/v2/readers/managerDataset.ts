@@ -307,6 +307,12 @@ export interface ManagerDataset {
   stageTimingPublished?: true;
   surface: ManagerSurface;
   workspaceId: string;
+  /**
+   * G3: the exact, opaque id of the registered source profile the server selected (concrete environments only). Absent on a body that
+   * predates the field and on an ALL body (ALL is the three environment defaults, never a profile). It is never built from the
+   * environment, the venue or an artifact profile key, and two Paper profiles with different ids are two scopes.
+   */
+  profileId?: string;
   /** What `currentStage` means (constants of the response, BE-P4); print them, do not re-derive them. */
   stageLifecycle: typeof MANAGER_STAGE_LIFECYCLE;
   environment: ManagerEnvironmentScope;
@@ -351,7 +357,7 @@ const ROOT_REQUIRED = [
   "snapshot_id", "as_of_ms", "recorded_through_ms", "facts_through_ms", "quality", "coverage", "economic_aggregation", "query_policy", "page",
   "items", "groups", "capital_statements", "statement_scope", "scores", "funding_bucket_pnl", "lineage",
 ] as const;
-const ROOT_OPTIONAL = ["score_details", "composition_details", "regime_details", "environment_coverage", "group_query", "group_page"] as const;
+const ROOT_OPTIONAL = ["score_details", "composition_details", "regime_details", "environment_coverage", "group_query", "group_page", "profile_id"] as const;
 
 const ENVIRONMENT_STAGES: Readonly<Record<ManagerEnvironment, readonly ManagerStage[]>> = {
   paper: ["PAPER"],
@@ -942,6 +948,10 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   const surface = oneOf(root.surface, MANAGER_SURFACES);
   const environment = oneOf(root.environment, [...MANAGER_ENVIRONMENTS, MANAGER_ALL] as const);
   const workspaceId = managerText(root.workspace_id);
+  // G3: `profile_id` is optional and opaque. When present it is bounded text; an ALL body never carries one (the schema forbids it).
+  const hasProfile = Object.prototype.hasOwnProperty.call(root, "profile_id");
+  const profileId = hasProfile ? managerText(root.profile_id, 256) : null;
+  if (hasProfile && (profileId === null || environment === MANAGER_ALL)) return null;
   const snapshotId = digestRef(root.snapshot_id);
   const asOfMs = clockMs(root.as_of_ms);
   const recordedThroughMs = clockMs(root.recorded_through_ms);
@@ -1014,7 +1024,7 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   if (environmentCoverage !== null && !coverageAddsUp(environmentCoverage, items, page, quality)) return null;
 
   return {
-    surface, workspaceId, stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, ...(environmentCoverage === null ? {} : { environmentCoverage }), ...(groupQuery === undefined ? {} : { groupQuery }), ...(groupPage === undefined ? {} : { groupPage }), ...(stageTimingPublished ? { stageTimingPublished: true as const } : {}), snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
+    surface, workspaceId, ...(profileId === null ? {} : { profileId }), stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, ...(environmentCoverage === null ? {} : { environmentCoverage }), ...(groupQuery === undefined ? {} : { groupQuery }), ...(groupPage === undefined ? {} : { groupPage }), ...(stageTimingPublished ? { stageTimingPublished: true as const } : {}), snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
     capitalStatements, statementScope: MANAGER_STATEMENT_SCOPE, scores, fundingBucketPnl, lineage,
     unreadDetails: { scoreDetails, compositionDetails, regimeDetails }, hasMore: page.nextCursor !== null,
   };

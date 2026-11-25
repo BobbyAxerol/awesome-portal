@@ -58,9 +58,10 @@ function useFieldOptions(
   scope: DatasetScope | null,
   workspaceId: string | undefined,
   field: OptionField,
+  profileId?: string,
 ): PublishedOptions {
   const on = enabled && scope !== null;
-  const key = `fleet-options|${field}|${scope === null ? "" : scope.environment}|${scope === null ? "" : scope.stageFilter.join(",")}|${workspaceId ?? ""}`;
+  const key = `fleet-options|${field}|${scope === null ? "" : scope.environment}|${scope === null ? "" : scope.stageFilter.join(",")}|${workspaceId ?? ""}|${profileId ?? ""}`;
   const state = useRead(api, on, key, (scopedApi) =>
     ask(scopedApi, {
       surface: "FLEET",
@@ -69,6 +70,7 @@ function useFieldOptions(
       groupBy: [field as ManagerGroupField],
       ...((scope as DatasetScope).stageFilter.length > 0 ? { stageFilter: (scope as DatasetScope).stageFilter } : {}),
       ...(workspaceId ? { workspaceId } : {}),
+      ...(profileId ? { profileId } : {}),
     }),
   );
   return useMemo(() => (state.phase === "ready" ? optionsFromGroups(state.value, field) : LOADED_ONLY), [state, field]);
@@ -84,9 +86,10 @@ export function useDatasetOptions(
   scope: DatasetScope | null,
   workspaceId: string | undefined,
   offered: readonly ManagerGroupField[] | null,
+  profileId?: string,
 ): { owners: PublishedOptions; healths: PublishedOptions } {
-  const owners = useFieldOptions(api, enabled && offered !== null && offered.includes("owner_user_id"), scope, workspaceId, "owner_user_id");
-  const healths = useFieldOptions(api, enabled && offered !== null && offered.includes("health"), scope, workspaceId, "health");
+  const owners = useFieldOptions(api, enabled && offered !== null && offered.includes("owner_user_id"), scope, workspaceId, "owner_user_id", profileId);
+  const healths = useFieldOptions(api, enabled && offered !== null && offered.includes("health"), scope, workspaceId, "health", profileId);
   return { owners, healths };
 }
 

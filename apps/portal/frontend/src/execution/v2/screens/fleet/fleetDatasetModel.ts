@@ -120,6 +120,12 @@ export interface DatasetFilters {
   /** The second grouping level (`then=` in the URL); only meaningful with a `group` and never the same field. */
   then?: ManagerGroupField | null;
   workspaceId?: string;
+  /**
+   * G3: the exact opaque registered profile id the Fleet is read for (two Paper profiles are two scopes). Never built from the environment or
+   * venue. Absent: the server's pinned default. It is part of `datasetKey`, so changing it drops the loaded pages and cancels the flight.
+   * With the `ALL` lens the query is refused by the encoder (ALL is the three environment defaults, never a profile union).
+   */
+  profileId?: string;
   /** Alpha Fleet metrics (guide 8.2). Absent: the legacy single-key `sort` above. */
   sorts?: readonly SortKey[];
   ranges?: readonly Range[];
@@ -147,6 +153,7 @@ export const serializeHealths = (values: readonly string[]): string | null => (v
 export function datasetQuery(filters: DatasetFilters, offered: readonly ManagerSortField[] | null, after?: string | null): ManagerDatasetQuery {
   const query: ManagerDatasetQuery = { surface: "FLEET", environment: filters.scope.environment, limit: PAGE_LIMIT };
   if (filters.workspaceId) query.workspaceId = filters.workspaceId;
+  if (filters.profileId) query.profileId = filters.profileId;
   if (filters.q) { query.q = filters.q; query.qMode = "CONTAINS"; }
   if (filters.scope.stageFilter.length > 0) query.stageFilter = filters.scope.stageFilter;
   const list: ManagerDatasetFilter[] = [];

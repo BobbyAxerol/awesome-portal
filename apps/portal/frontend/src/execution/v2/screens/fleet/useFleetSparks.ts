@@ -21,6 +21,8 @@ export function useFleetSparks(
   api: ExecutionApi, enabled: boolean, rows: readonly ManagerRow[], datasetEnvironment: ManagerEnvironment | "ALL", workspaceId?: string,
   /** The owning dataset's lineage revision (its generation). A series read for another revision is never drawn beside these rows. */
   revision: string | null = null,
+  /** G3: the profile the owning dataset was read for. It is sent only on a concrete environment (ALL has no profile). */
+  profileId?: string,
 ): ReadonlyMap<string, SparkEntry> {
   const wanted = useMemo(() => {
     const seen = new Map<string, { environment: ManagerEnvironment; portfolioId: string }>();
@@ -35,7 +37,7 @@ export function useFleetSparks(
   const signature = wanted.map(([key]) => key).join("|");
   const [read, setRead] = useState<{ revision: string | null; entries: ReadonlyMap<string, SparkEntry> }>({ revision, entries: new Map() });
   const done = useRef(new Set<string>());
-  const flight = useRef<{ api: ExecutionApi; workspaceId: string | undefined; revision: string | null; controller: AbortController } | null>(null);
+  const flight = useRef<{ api: ExecutionApi; workspaceId: string | undefined; profileId: string | undefined; revision: string | null; controller: AbortController } | null>(null);
 
   // One controller per (port, workspace, dataset revision): another scope, or a dataset that moved to a new generation (the stream's refresh),
   // drops what was asked, cancels what is in flight (a late answer is refused: its signal is aborted) and forgets what was read.
@@ -46,11 +48,11 @@ export function useFleetSparks(
     setRead({ revision, entries: new Map() });
   };
   useEffect(() => {
-    if (flight.current !== null && (flight.current.api !== api || flight.current.workspaceId !== workspaceId || flight.current.revision !== revision)) drop();
+    if (flight.current !== null && (flight.current.api !== api || flight.current.workspaceId !== workspaceId || flight.current.profileId !== profileId || flight.current.revision !== revision)) drop();
     // The first revision of a dataset arrives after the hook mounted (null -> a revision): nothing was read for it yet.
     else setRead((current) => (current.revision === revision ? current : { revision, entries: new Map() }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, workspaceId, revision]);
+  }, [api, workspaceId, profileId, revision]);
   // UXM-08: access to the scope ended: nothing read for it stays on screen and nothing in flight may answer.
   useScopedCacheEviction(() => { drop(); });
   useEffect(() => () => { flight.current?.controller.abort(); }, []);
@@ -59,7 +61,7 @@ export function useFleetSparks(
     if (!enabled || typeof api.getManagerSeries !== "function") return;
     const todo = wanted.filter(([key]) => !done.current.has(key));
     if (todo.length === 0) return;
-    if (flight.current === null) flight.current = { api, workspaceId, revision, controller: new AbortController() };
+    if (flight.current === null) flight.current = { api, workspaceId, profileId, revision, controller: new AbortController() };
     const controller = flight.current.controller;
     const scoped = api.withReadSignal?.(controller.signal) ?? api;
     const byEnvironment = new Map<ManagerEnvironment, string[]>();
@@ -71,6 +73,7 @@ export function useFleetSparks(
         void Promise.resolve(scoped.getManagerSeries({
           environment, metric: "NAV", window: "30D", subjects: chunk.map((subjectId) => ({ subjectType: "PORTFOLIO" as const, subjectId })),
           ...(workspaceId ? { workspaceId } : {}),
+          ...(profileId && datasetEnvironment !== "ALL" ? { profileId } : {}),
         })).then((result) => {
           if (controller.signal.aborted) return;
           const next = new Map<string, SparkEntry>();
@@ -87,7 +90,7 @@ export function useFleetSparks(
     }
     // `signature` is the identity of the wanted set; `wanted` itself is rebuilt every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [api, enabled, signature, workspaceId, revision]);
+  }, [api, enabled, signature, workspaceId, profileId, revision]);
 
   // Rows of one revision never wear the sparkline read for another: until the effect above has dropped it, it is not returned.
   return read.revision === revision ? read.entries : EMPTY;

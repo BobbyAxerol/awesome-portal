@@ -73,6 +73,12 @@ export interface ManagerDatasetQueryBase {
   /** One environment, or `ALL` (Fleet only, no window): the server answers with the authorized rows of every environment, each labelled. */
   environment: ManagerEnvironmentScope;
   workspaceId?: string;
+  /**
+   * G3: the exact opaque registered profile id (never built from the environment, the venue or an artifact profile key). Omitted: the server's
+   * pinned default for the environment. Concrete environments only: `ALL` with a profile is refused (ALL is the three environment defaults,
+   * never a union of profiles) and two Paper profiles are two separate questions.
+   */
+  profileId?: string;
   /** Search over `name`; `qMode` needs `q`. */
   q?: string;
   qMode?: "PREFIX" | "CONTAINS";
@@ -172,6 +178,13 @@ export function encodeManagerDatasetQuery(query: ManagerDatasetQuery): ManagerDa
   }
   const wire: Record<string, string> = { environment };
 
+  if (query.profileId !== undefined) {
+    // ALL + profile is a 400 on the server: no request. The profile is the caller's exact id and is never defaulted or inferred here.
+    if (environment === MANAGER_ALL) return null;
+    const profile = managerText(query.profileId, 256);
+    if (profile === null) return null;
+    wire.profile_id = profile;
+  }
   if (query.workspaceId !== undefined) {
     const workspace = managerText(query.workspaceId, 256);
     if (workspace === null) return null;
@@ -346,6 +359,9 @@ export function datasetQueryMismatch(dataset: ManagerDataset, query: ManagerData
   if (query.environment === MANAGER_ALL ? dataset.environmentCoverage === undefined || dataset.items.some((row) => row.environment === undefined)
     : dataset.environmentCoverage !== undefined || dataset.items.some((row) => row.environment !== undefined)) return "environment";
   if (query.workspaceId !== undefined && dataset.workspaceId !== query.workspaceId) return "workspace";
+  // G3: an explicit profile is answered by that profile only; a body that names none cannot confirm it (an older server ignores the parameter and
+  // answers its default), so it is refused. An omitted profile accepts the server's default, with or without a `profile_id` on the body.
+  if (query.profileId !== undefined && dataset.profileId !== query.profileId) return "profile";
 
   const selected = dataset.selectedWindow;
   if (query.window === undefined) {

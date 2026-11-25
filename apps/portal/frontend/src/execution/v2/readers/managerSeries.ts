@@ -174,6 +174,8 @@ export type ManagerSeriesComparison =
 
 export interface ManagerSeries {
   workspaceId: string;
+  /** G3: the exact opaque id of the registered profile the server selected; absent on a body that predates the field. Never inferred. */
+  profileId?: string;
   environment: ManagerEnvironment;
   metric: ManagerSeriesMetric;
   /** A window (7D/30D/90D or custom, with bounds) or the typed ALL gap. */
@@ -414,10 +416,15 @@ const ROOT_KEYS = [
   "schema_version", "workspace_id", "environment", "record_authority", "source_authority", "metric", "selected_window", "series_source", "as_of_ms",
   "recorded_through_ms", "quality", "series", "comparison", "lineage",
 ] as const;
+/** G3: keys a body MAY carry; they are allowed by `hasOnly` but never demanded by `hasAll`, so a body that predates them still reads. */
+const ROOT_OPTIONAL_KEYS = ["profile_id"] as const;
 
 function readSeriesBody(root: Record<string, unknown>): ManagerSeries | null {
-  if (!hasOnly(root, ROOT_KEYS) || !hasAll(root, ROOT_KEYS) || root.record_authority !== "PORTAL_PROJECTION" || root.source_authority !== "TRADING_SYSTEM") return null;
+  if (!hasOnly(root, [...ROOT_KEYS, ...ROOT_OPTIONAL_KEYS]) || !hasAll(root, ROOT_KEYS) || root.record_authority !== "PORTAL_PROJECTION" || root.source_authority !== "TRADING_SYSTEM") return null;
   const workspaceId = managerText(root.workspace_id);
+  const hasProfile = Object.prototype.hasOwnProperty.call(root, "profile_id");
+  const profileId = hasProfile ? managerText(root.profile_id, 256) : null;
+  if (hasProfile && profileId === null) return null;
   const environment = oneOf(root.environment, MANAGER_ENVIRONMENTS);
   const metric = oneOf(root.metric, MANAGER_SERIES_METRICS);
   const selected = readManagerSelectedWindow(root.selected_window);
@@ -455,7 +462,7 @@ function readSeriesBody(root: Record<string, unknown>): ManagerSeries | null {
   if (sourceSetRef === null || revision === null) return null;
 
   return {
-    workspaceId, environment, metric, selectedWindow: selected,
+    workspaceId, ...(profileId === null ? {} : { profileId }), environment, metric, selectedWindow: selected,
     seriesSource: sourceState === "PUBLISHED" ? { state: "PUBLISHED", reasonCode: null } : { state: "NOT_PUBLISHED", reasonCode: SERIES_SOURCE_NOT_PUBLISHED_REASON },
     asOfMs, recordedThroughMs, quality, series: entries, comparison, lineage: { reducerRevision: "manager-series.v1", sourceSetRef, revision },
   };
@@ -496,6 +503,8 @@ export interface ManagerSeriesQuery {
   /** Pins one economic partition (all five fields). Optional. */
   economicPartition?: { economicDomain: ManagerPartition["economicDomain"]; currency: string; basis: string; nativeProfileRef: string; domainProofRef: string };
   workspaceId?: string;
+  /** G3: the exact opaque registered profile id (never built from environment or venue). Omitted: the server's pinned default for the environment. */
+  profileId?: string;
 }
 
 /**
@@ -510,6 +519,9 @@ export function seriesAnswersQuery(series: ManagerSeries, query: ManagerSeriesQu
     if (window.requested !== query.window) return false;
   } else if (window.kind !== "window" || typeof window.requested === "string" || window.requested.fromMs !== query.window.fromMs || window.requested.toMs !== query.window.toMs) return false;
   if (query.workspaceId !== undefined && series.workspaceId !== query.workspaceId) return false;
+  // G3: an explicit profile is answered by that profile only. A body that names none cannot confirm it (an old server ignores the parameter and
+  // answers its default), so it is refused; an omitted profile accepts whichever profile the server pinned (and an old body without one).
+  if (query.profileId !== undefined && series.profileId !== query.profileId) return false;
   return query.subjects.every((asked, index) => {
     const got = series.series[index]!.subject;
     return asked.subjectType === got.subjectType && (asked.subjectType === "FUND" || asked.subjectId === got.subjectId);
@@ -544,6 +556,11 @@ export function encodeManagerSeriesQuery(query: ManagerSeriesQuery): Record<stri
   }
   const out: Record<string, string> = { environment: query.environment, metric: query.metric, subjects: JSON.stringify(wire), window: JSON.stringify(window) };
   if (query.workspaceId !== undefined) out.workspace_id = query.workspaceId;
+  if (query.profileId !== undefined) {
+    const profile = managerText(query.profileId, 256);
+    if (profile === null) return null;
+    out.profile_id = profile;
+  }
   if (query.economicPartition !== undefined) {
     const p = query.economicPartition;
     out.economic_partition = JSON.stringify({

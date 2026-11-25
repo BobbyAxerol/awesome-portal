@@ -99,6 +99,11 @@ export interface FleetScreenProps {
   api: ExecutionApi;
   /** Accepted for the mount contract; `GET /alphas` takes no workspace parameter and the server scopes it. */
   workspaceId?: string;
+  /**
+   * G3: the exact opaque registered profile id to read the Fleet for (the mount contract carries it; nothing here builds it from the
+   * environment or venue). Absent: the server's pinned default. With the All lens the dataset is not asked (ALL has no profile) and the fleet read stays.
+   */
+  profileId?: string;
   /** Tests only: override the build-time `fleet-stream` key. */
   streamFlag?: boolean;
   /** Tests only: the fetch, timers and clock the stream uses. Stable identity. */
@@ -136,7 +141,7 @@ function mergeSeen(current: readonly string[], next: readonly string[]): readonl
 /** Why a dataset-only note exists: the contract's own constants, in words (never re-derived). */
 const STAGE_RULE_SENTENCE = "Current stage is the single active stage of the alpha version in this environment; a row with several active stages has none, and the stage entry time is not published";
 
-export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREAM_FLAG, streamDeps }: FleetScreenProps) {
+export default function FleetScreen({ api, workspaceId, profileId, streamFlag = FLEET_STREAM_FLAG, streamDeps }: FleetScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const { selection, select, close } = useDockSelection();
@@ -166,7 +171,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   // `src=fleet` is the explicit way back from a failed dataset read; it is not offered anywhere else.
   const forceFleet = params.get("src") === "fleet";
   const scope = useMemo(() => datasetScopeOf(stage, archived), [stage, archived]);
-  const publication = useDatasetPublication(api, scope === null ? null : scope.environment);
+  const publication = useDatasetPublication(api, scope === null ? null : scope.environment, workspaceId, profileId);
   const published = publication.phase === "published" && scope !== null;
   // The legacy read is NOT started while the answer to "is it published?" is pending for a lens the dataset could serve: a
   // request for the fleet read that the dataset then replaces would be a wasted read and a flash of the other table.
@@ -215,8 +220,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
       then: group !== null && second !== null && second !== group && groupOptions.some((option) => option.field === second) ? second : null,
       sorts, ranges, basis, portfolios, venues, sources, version, lifecycle: lifecycleFilter, evidence,
       ...(workspaceId ? { workspaceId } : {}),
+      ...(profileId ? { profileId } : {}),
     };
-  }, [scope, q, owner, healths, sort, params, groupOptions, boardView, workspaceId, sorts, ranges, basis, portfolios, venues, sources, version, lifecycleFilter, evidence]);
+  }, [scope, q, owner, healths, sort, params, groupOptions, boardView, workspaceId, profileId, sorts, ranges, basis, portfolios, venues, sources, version, lifecycleFilter, evidence]);
   const offeredSorts = offered === null ? null : offered.sortFields;
   const [datasetNonce, setDatasetNonce] = useState(0);
   const dataset = useFleetDataset(
@@ -300,13 +306,13 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   }, [dataset.rows]);
   const offeredFields = offered === null ? null : offered.sortFields;
   const askable = useMemo(() => askableSorts(sorts, offeredFields, basis !== null), [sorts, offeredFields, basis]);
-  const sparks = useFleetSparks(api, datasetMode && tableView, datasetRows, scope === null ? "ALL" : scope.environment, workspaceId, dataset.first === null ? null : dataset.first.lineage.revision);
+  const sparks = useFleetSparks(api, datasetMode && tableView, datasetRows, scope === null ? "ALL" : scope.environment, workspaceId, dataset.first === null ? null : dataset.first.lineage.revision, profileId);
   const selectionReasonId = useId();
   const mapReasonId = useId();
   const exportReasonId = useId();
   // RV-09: the whole authorized population when the dataset published it (a group list over the whole filtered query); otherwise only
   // the rows loaded so far, which is worded as such and never offered as complete.
-  const published_ = useDatasetOptions(api, datasetMode, scope, workspaceId, offered === null ? null : offered.groupFields);
+  const published_ = useDatasetOptions(api, datasetMode, scope, workspaceId, offered === null ? null : offered.groupFields, profileId);
   const ownerPublished = datasetMode && published_.owners.basis === "published";
   const healthPublished = datasetMode && published_.healths.basis === "published";
   const ownerComplete = ownerPublished && published_.owners.complete;
