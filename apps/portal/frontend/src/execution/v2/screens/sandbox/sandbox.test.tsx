@@ -211,8 +211,8 @@ describe("the V2 following-parent body", () => {
     mount(fakeApi());
     await ready();
     const gapOf = (heading: string) => screen.getByRole("heading", { name: heading }).closest("section")!.querySelector(".exec-blk-gaps")!;
-    expect(gapOf("Findings").textContent).toBe("Not available: Reconciliation findings");
-    expect(whyText(gapOf("Findings"))).toContain("Not published: typed stage rows, series and reconciliation figures");
+    expect(gapOf("Governance findings").textContent).toBe("Not available: Reconciliation findings");
+    expect(whyText(gapOf("Governance findings"))).toContain("Not published: typed stage rows, series and reconciliation figures");
     expect(screen.queryByRole("table")).toBeNull();
     fireEvent.click(tabs().getByRole("tab", { name: "Promotion plans" }));
     expect(whyText(gapOf("Promotion plans"))).toContain("Not published: typed stage rows, series and reconciliation figures");
@@ -352,7 +352,7 @@ describe("the V1 certification body", () => {
     expect(within(rows[0]!).queryByText("Not available")).toBeNull();
     expect(kpi("Open findings").textContent).toContain("2");
     expect(kpi("Critical open").textContent).toBe("Critical open0");
-    expect(screen.getByRole("heading", { name: "Findings" }).closest("section")!.textContent).toContain("2 recorded");
+    expect(screen.getByRole("heading", { name: "Governance findings" }).closest("section")!.textContent).toContain("2 recorded");
   });
 
   it("findings: resolved and open rows, a blocking flag, and the counts that follow from them (open = resolved_at null)", async () => {
@@ -402,7 +402,7 @@ describe("the V1 certification body", () => {
     await ready();
     const table = screen.getByRole("table", { name: "Reconciliation findings" });
     expect(within(table).getAllByRole("row")).toHaveLength(251);
-    expect(screen.getByRole("heading", { name: "Findings" }).closest("section")!.textContent).toContain("Showing 250 of 300");
+    expect(screen.getByRole("heading", { name: "Governance findings" }).closest("section")!.textContent).toContain("Showing 250 of 300");
     expect(kpi("Open findings").textContent).toContain("300");
     cleanup();
     mount(fakeApi({ read: okRead(body) }), `${ENTRY}?tab=timeline`);
@@ -731,7 +731,7 @@ describe("G2: a panel that says only 'Not available' also says what is missing a
   it("the findings panel with no findings list says the source did not publish one (and draws no empty table)", async () => {
     mount(fakeApi({ read: okRead(v2Body()) }));
     await ready();
-    const findings = screen.getByRole("heading", { level: 2, name: "Findings" }).closest("section") as HTMLElement;
+    const findings = screen.getByRole("heading", { level: 2, name: "Governance findings" }).closest("section") as HTMLElement;
     expect(findings.textContent).toContain(WHY_MISSING.findings);
     expect(findings.querySelector("table")).toBeNull();
   });

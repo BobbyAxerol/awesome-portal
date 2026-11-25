@@ -82,7 +82,7 @@ export function FindingsPanel({ view }: { view: SandboxView }) {
   const f = view.findings;
   if (f === null) {
     return (
-      <SectionPanel level={2} title="Findings">
+      <SectionPanel level={2} title="Governance findings">
         <GapLine items={[{ label: "Reconciliation findings", id: "FE-072" }]} />
         <p className="exec-sbx-note" data-role="why-missing">{WHY_MISSING.findings}</p>
       </SectionPanel>
@@ -90,7 +90,7 @@ export function FindingsPanel({ view }: { view: SandboxView }) {
   }
   const sourcesReported = view.panels.some((p) => p.state === "ok");
   return (
-    <SectionPanel level={2} title="Findings" aside={shown(f) ?? undefined} flush>
+    <SectionPanel level={2} title="Governance findings" aside={shown(f) ?? undefined} flush>
       {f.rows.length === 0 ? (
         <PanelState
           status="empty"
