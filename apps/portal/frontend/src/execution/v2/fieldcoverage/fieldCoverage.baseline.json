@@ -116,7 +116,7 @@
     "unknown": []
   },
   "manager-series": {
-    "offered": 79,
+    "offered": 80,
     "unread": [
       "as_of_ms",
       "comparison.axis_ms",
@@ -137,6 +137,7 @@
       "lineage.revision",
       "lineage.source_set_ref",
       "metric",
+      "profile_id",
       "quality.completeness",
       "quality.freshness",
       "quality.reasons",
