@@ -336,11 +336,11 @@ const TIME_SERIES_LADDER: Readonly<Record<string, ProfileProjectionBinding["ladd
 
 const STRATEGY = [
   "strategy_id", "alpha_id", "name", "label", "version", "strategy_version",
-  "trader_id", "state", "stage", "active", "created_at", "updated_at",
+  "trader_id", "state", "stage", "active", "description", "created_at", "updated_at",
 ] as const;
 const DEPLOYMENT = [
   "deployment_id", "strategy_id", "account_id", "mode", "venue", "currency",
-  "active", "portfolio_id", "state", "created_at", "updated_at",
+  "active", "portfolio_id", "state", "account_policy_id", "risk_profile_id", "created_at", "updated_at",
 ] as const;
 const ACCOUNT = [
   "account_id", "trader_id", "strategy_id", "mode", "venue", "account_type",
@@ -402,7 +402,7 @@ const ORDER = [
   "order_id", "client_order_id", "venue_order_id", "trader_id", "strategy_id", "account_id",
   "execution_session_id", "mode", "venue", "instrument_id", "symbol", "side", "position_side",
   "order_type", "time_in_force", "quantity", "price", "trigger_price", "status", "reduce_only",
-  "post_only", "submitted_at", "updated_at", "error_code", "error_message", "risk_grant_id",
+  "post_only", "submitted_at", "updated_at", "error_code", "error_message", "risk_grant_id", "intent",
 ] as const;
 const FILL = [
   "fill_id", "event_id", "trade_time", "trade_id", "client_order_id", "venue_order_id",

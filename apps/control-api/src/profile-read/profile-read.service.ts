@@ -56,7 +56,7 @@ interface RelationResult {
 
 const DEPLOYMENT_FIELDS = [
   "deployment_id", "strategy_id", "account_id", "mode", "venue", "currency",
-  "active", "portfolio_id", "state", "created_at", "updated_at",
+  "active", "portfolio_id", "state", "account_policy_id", "risk_profile_id", "created_at", "updated_at",
 ] as const;
 const POSITION_FIELDS = [
   "position_id", "strategy_id", "account_id", "mode", "venue", "instrument_id",
@@ -95,7 +95,7 @@ const ORDER_FIELDS = [
   "order_id", "client_order_id", "venue_order_id", "trader_id", "strategy_id", "account_id",
   "execution_session_id", "mode", "venue", "instrument_id", "symbol", "side", "position_side",
   "order_type", "time_in_force", "quantity", "price", "trigger_price", "status", "reduce_only",
-  "post_only", "submitted_at", "updated_at", "error_code", "error_message", "risk_grant_id",
+  "post_only", "submitted_at", "updated_at", "error_code", "error_message", "risk_grant_id", "intent",
 ] as const;
 const FILL_FIELDS = [
   "fill_id", "event_id", "trade_time", "trade_id", "client_order_id", "venue_order_id",

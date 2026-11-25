@@ -46,11 +46,11 @@ const PORTFOLIO_LIST_MAX_ITEMS = 100;
 
 const STRATEGY_FIELDS = [
   "strategy_id", "alpha_id", "name", "label", "version", "strategy_version",
-  "trader_id", "state", "stage", "active", "created_at", "updated_at",
+  "trader_id", "state", "stage", "active", "description", "created_at", "updated_at",
 ] as const;
 const DEPLOYMENT_FIELDS = [
   "deployment_id", "strategy_id", "account_id", "mode", "venue", "state",
-  "currency", "portfolio_id", "active", "created_at", "updated_at",
+  "currency", "portfolio_id", "active", "account_policy_id", "risk_profile_id", "created_at", "updated_at",
 ] as const;
 const FLEET_ACCOUNT_FIELDS = [
   "account_id", "trader_id", "strategy_id", "mode", "venue", "base_currency",
