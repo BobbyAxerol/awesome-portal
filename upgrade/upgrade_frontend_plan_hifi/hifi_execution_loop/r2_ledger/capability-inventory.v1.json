@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-10-20",
- "route_count": 295,
+ "route_count": 296,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -2346,7 +2346,8 @@
   {"route":"GET /api/v1/execution/observed/overview","controller":"execution-v2/observed-read.controller.ts","interaction_class":"INTERACTION_READ","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"G2 Observed lane (flag FEATURE_EXECUTION_OBSERVED_READ, OFF): fund-level observed overview, labelled not TS-qualified; typed 404 when the lane is off and 409 under SCOPED_V2. No frontend consumer yet (design CORE_OBSERVED_FE_CONSUMER_DESIGN_20261125)."},
   {"route":"POST /api/admin/ordinary-profile-access/v1/delegations","controller":"execution-v2/ordinary-profile-authority.controller.ts","interaction_class":"PORTAL_MUTATION","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"G3 ordinary-profile authority (migration 159): delegation of an ordinary profile to a user; admin route, not a product surface; no frontend consumer."},
   {"route":"POST /api/admin/ordinary-profile-access/v1/revocations","controller":"execution-v2/ordinary-profile-authority.controller.ts","interaction_class":"PORTAL_MUTATION","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"G3 ordinary-profile authority (migration 159): revocation of an ordinary-profile delegation; admin route, not a product surface; no frontend consumer."},
-  {"route":"POST /api/admin/ordinary-profile-access/v1/step-up","controller":"execution-v2/ordinary-profile-authority.controller.ts","interaction_class":"PORTAL_MUTATION","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"G3 ordinary-profile authority (migration 159): own step-up proof for the ordinary-profile delegation routes; admin route, not a product surface; no frontend consumer."}
+  {"route":"POST /api/admin/ordinary-profile-access/v1/step-up","controller":"execution-v2/ordinary-profile-authority.controller.ts","interaction_class":"PORTAL_MUTATION","consumer":"NONE_YET","unused_capability":true,"owner":"codex","test_owner":"codex","evidence":"G3 ordinary-profile authority (migration 159): own step-up proof for the ordinary-profile delegation routes; admin route, not a product surface; no frontend consumer."},
+  {"route":"GET /api/control/healthz/projection-lag","controller":"health/health.controller.ts","interaction_class":"AUTO_READ","consumer":"NONE_YET","unused_capability":true,"owner":"claude","test_owner":"claude","evidence":"Per-profile execution projection lag signal (OK/LAGGING/STALE by snapshot age; thresholds EXECUTION_PROJECTION_LAG_*); always 200, readyz unchanged; polled by scripts/projection-lag-check.sh; no frontend consumer."}
  ],
  "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",
  "code_inventory_updated_at": "2026-10-03"
