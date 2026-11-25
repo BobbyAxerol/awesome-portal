@@ -1,6 +1,7 @@
 /** Real projection worker with an in-memory repository and a synthetic Edge facade
  * (ascending-PK pages of <=200, limit+cursor only). Checks commit inputs, not PostgreSQL. */
 import { describe, expect, it, vi } from "vitest";
+import { Logger } from "@nestjs/common";
 import { ExecutionProfileProjectionWorker, COMMAND_JOURNAL_PAGE_CAP_REASON, sortJournalNewestFirst } from "../src/execution/profile-projection.worker";
 import { documentInvalidReason } from "../src/execution/profile-projection.repository";
 import { testConfig } from "./harness";
@@ -17,7 +18,7 @@ function journalRows(total: number) {
   }));
 }
 
-async function run(total: number) {
+async function run(total: number, declared: "COMPLETE" | "PARTIAL" = "COMPLETE") {
   const config = testConfig({
     FEATURE_EXECUTION_EDGE: "true",
     EXECUTION_EDGE_PRIVATE_KEY_FILE: "/run/secrets/test/delegation.pem",
@@ -53,7 +54,7 @@ async function run(total: number) {
     }
     return { profile_id: "PAPER_BINANCE_USDM", source_environment: environment,
       source: { profile_id: "PAPER_BINANCE_USDM", catalogue_sha256: edgeSealFor("PAPER_BINANCE_USDM"), authority: "EXECUTION_CELL",
-        availability: "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE", as_of: stamp,
+        availability: "AVAILABLE", freshness: "FRESH", completeness: relation === "command_journal" ? declared : "COMPLETE", as_of: stamp,
         data: { relation: { schema: "public", relation }, items: fieldsList.map((fields) => ({ relation: { schema: "public", relation }, fields })),
           next_cursor: next } } };
   }) };
@@ -97,6 +98,19 @@ describe("command_journal page cap", () => {
     expect(commits[0].document.relations[JOURNAL_KEY].items[0].fields.accepted_at >=
       relation.items.at(-1).fields.accepted_at).toBe(true);
     expect(documentInvalidReason(commits[0].document)).toBeNull();
+  });
+
+  it("keeps a fully walked journal PARTIAL when Edge declares it so, and logs the walk facts", async () => {
+    const log = vi.spyOn(Logger.prototype, "log");
+    const { commits } = await run(5_226, "PARTIAL");
+    const relation = commits[0].document.relations[JOURNAL_KEY];
+    expect(relation.items).toHaveLength(5_226);
+    expect(relation.completeness).toBe("PARTIAL");
+    expect(relation.reason_code).toBe("SOURCE_PARTIAL");
+    const walk = log.mock.calls.map(([line]) => String(line)).find((line) => line.includes("journal_walk"))!;
+    expect(JSON.parse(walk)).toMatchObject({ outcome: "DRAINED", pages: 27, rows: 5_226,
+      declared_completeness: { PARTIAL: 27 }, source_projected_total: null });
+    log.mockRestore();
   });
 
   it("sorts unparseable timestamps last and breaks ties by command_id", () => {

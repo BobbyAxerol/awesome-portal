@@ -471,6 +471,21 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       : journal ? COMMAND_JOURNAL_MAXIMUM_SOURCE_PAGES : MAXIMUM_SOURCE_PAGES;
     // Journal rows arrive in random-UUID order: newest-first is Core's job.
     const finish = (rows: ManagerPage["items"]) => journal ? sortJournalNewestFirst(rows) : rows;
+    // Journal-only walk facts. Dev 2026-11-25: a fully drained 28-page walk was
+    // still SOURCE_PARTIAL because Edge DECLARES completeness per page; the
+    // snapshot keeps only the merged value, so this names pages, rows, the
+    // per-page declarations and the source's own total (counts only, no rows).
+    const declaredCounts: Record<string, number> = {};
+    let pagesRead = 0;
+    let sourceTotal: number | null = null;
+    const logWalk = (outcome: "DRAINED" | "PAGE_CAP") => {
+      if (!journal) return;
+      this.logger.log(JSON.stringify({
+        event: "execution_profile_projection_journal_walk", environment: context.mode,
+        profile_id: context.profileId, outcome, pages: pagesRead, rows: items.length,
+        declared_completeness: declaredCounts, source_projected_total: sourceTotal,
+      }));
+    };
     for (let pageNumber = 0; pageNumber < pageBudget; pageNumber += 1) {
       const response = await this.source.relationForProjection(
         workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
@@ -481,6 +496,10 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       const page = managerPage(response, binding.relation, binding.fields, context);
       catalogueSeal = admitCatalogueSeal(context.profileId, page, catalogueSeal);
       items.push(...page.items);
+      pagesRead += 1;
+      declaredCounts[page.provenance?.declaredCompleteness ?? page.completeness] =
+        (declaredCounts[page.provenance?.declaredCompleteness ?? page.completeness] ?? 0) + 1;
+      sourceTotal = page.exactTotal ?? sourceTotal;
       // Paired with `worseFreshness` below: the oldest page, not the newest.
       asOf = [asOf, page.asOf].filter((value): value is string => value !== null).sort().at(0) ?? null;
       freshness = worseFreshness(freshness, page.freshness);
@@ -507,6 +526,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
             // The dwell keeps the older cursor; recovery handles expiry.
           }
         }
+        logWalk("DRAINED");
         return {
           page: { items: finish(items), asOf, freshness, completeness, nextCursor: null, provenance: provenanceOf(null) },
           resumePoint: tailCursor,
@@ -524,6 +544,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     // exact historical population. The next reconciliation starts again from
     // the authoritative head; cold/full-history reads remain a later, explicit
     // query-plane concern.
+    logWalk("PAGE_CAP");
     return {
       page: { items: finish(items), asOf, freshness, completeness: "PARTIAL", nextCursor: cursor ?? null, provenance: provenanceOf(cursor ?? null) },
       resumePoint: lastHeldCursor,
