@@ -54,13 +54,15 @@ describe("reserved keys", () => {
 
   it("names the two permanent keys and no pending key (`command`, the UXM-09 fixture story, is mounted by PortalRoutes); the five S3 keys are wired", () => {
     expect([...EXEC_V2_PERMANENT_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
-    expect([...EXEC_V2_PENDING_KEYS]).toEqual(["observed"]);
-    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "observed", "replay"]);
+    expect([...EXEC_V2_PENDING_KEYS]).toEqual([]);
+    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
   });
 
-  it("`observed` (Core Observed consumer, slice 1) is known but pending: naming it enables nothing, and the publication manifest does not name it", () => {
+  it("`observed` (Core Observed fallback, read by the Overview) is a known key, off unless named, never on without the umbrella, and not in the publication manifest", () => {
     expect(parseV2Manifest("observed").has("observed")).toBe(true);
-    expect(isV2Screen("observed", parseV2Manifest("observed,overview"), true)).toBe(false);
+    expect(isV2Screen("observed", parseV2Manifest("overview"), true)).toBe(false);
+    expect(isV2Screen("observed", parseV2Manifest("observed,overview"), true)).toBe(true);
+    expect(isV2Screen("observed", parseV2Manifest("observed,overview"), false)).toBe(false);
     const publish = readFileSync(resolve(__dirname, "../../../../../../.github/workflows/publish-images.yml"), "utf8");
     expect(publish).not.toMatch(/EXECUTION_V2_SCREENS=[^\n]*\bobserved\b/);
   });

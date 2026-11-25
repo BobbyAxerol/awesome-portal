@@ -74,6 +74,10 @@ import { BudgetBar } from "../portfolios/CapitalBlocks";
 import "../../css/blocks.css";
 import "../../css/overview.css";
 import { formatInstant } from "../../boundary";
+import { isV2Screen } from "../../flags";
+import { OBSERVED_LABEL, OBSERVED_TITLE, observedCell, type ObservedCellView } from "./observedModel";
+import { useObservedOverview } from "./useObservedOverview";
+import { OBSERVED_ENVIRONMENTS, type ObservedOverviewEnvironment } from "../../readers/observedOverview";
 
 export const OVERVIEW_SCREEN_KEY = "overview" as const;
 
@@ -86,6 +90,43 @@ export interface OverviewScreenProps {
   sseFactory?: SseFactory | null;
   /** Where "My access" lives. A denied read links there; without it a denied panel offers nothing to follow. */
   accessHref?: string;
+  /** Core Observed fallback (build-time key `observed`, OFF by default). Injected so a test can switch it without a rebuild; unset reads the key. */
+  observed?: boolean;
+}
+
+/**
+ * The Observed fallback of one cell: shown ONLY where the qualified read has nothing (the caller decides), one line per currency, never summed.
+ * It always carries `Observed, not TS-qualified`; a null is `Not available` with its code (never 0); NET_PNL is cumulative and never under a window.
+ */
+function ObservedCell({ label, view, cumulative = false }: { label: string; view: ObservedCellView; cumulative?: boolean }) {
+  return (
+    <Cell
+      label={label}
+      note={<>
+        <span title={OBSERVED_TITLE} data-observed="label"><Flag kind="neutral" label={OBSERVED_LABEL} size="sm" /></span>
+        {view.asOfMs !== null ? <span> As of {formatInstant(view.asOfMs)}</span> : null}
+        {cumulative ? <span> Cumulative, source-reported</span> : null}
+      </>}
+    >
+      <ObservedLines view={view} />
+    </Cell>
+  );
+}
+
+function ObservedLines({ view }: { view: ObservedCellView }) {
+  return (
+    <>
+      {view.lines.map((line) => line.kind === "absent" ? (
+        <span key={line.key} style={{ display: "block" }}><span className="exec-ov-na">Not available</span><GapWhy name="Why the Observed figure is not available" rows={[line.code]} next={null} /></span>
+      ) : (
+        <span key={line.key} style={{ display: "block" }}>
+          <span className="exec-ov-num" title={line.exact}><FigureUnit text={`${line.exact} ${line.currency}`} /></span>
+          {line.partial || line.stale ? <Flag kind={line.stale ? "stale" : "partial"} label={line.stale ? "Stale" : "Partial"} size="sm" /> : null}
+          {line.partial || line.stale ? <GapWhy name="Why the Observed figure is not complete" rows={[...line.reasons, ...(line.accounts === null ? [] : [line.accounts])]} next={null} /> : null}
+        </span>
+      ))}
+    </>
+  );
 }
 
 /** `Not published`, the request ids in the tooltip only (never in the text). Blocks' table does not carry these composites yet. */
@@ -122,10 +163,12 @@ const CAPITAL_ROWS: readonly { label: string; ids: string; key?: string }[] = [
  * methodology. No point is `No points in this window`; a series that is not published (or a read that has not answered) keeps
  * the request ids; any other typed reason is printed with its code. Never a derived or defaulted number.
  */
-function SeriesCell({ label, read, window, gapIds }: { label: string; read: SeriesReadState; window: string; gapIds: string }) {
+function SeriesCell({ label, read, window, gapIds, observed = null, cumulative = false }: { label: string; read: SeriesReadState; window: string; gapIds: string; observed?: ObservedCellView | null; cumulative?: boolean }) {
   const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   const entry = series?.series[0];
   if (series === null || entry === undefined || (entry.state === "UNAVAILABLE" && entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED")) {
+    // Not published by the qualified source: the Observed read (when the build offers it and it answered) fills the cell, labelled. Else today's wording.
+    if (observed !== null) return <ObservedCell label={label} view={observed} cumulative={cumulative} />;
     return <Cell label={label}><Gap ids={gapIds} /></Cell>;
   }
   if (entry.state === "UNAVAILABLE") {
@@ -150,10 +193,15 @@ function FigureUnit({ text }: { text: string }) {
 }
 
 /** The Capital panel's NAV row: the same latest published NAV point as the NAV tile, or the same gap. Nothing is computed. */
-function CapitalNav({ read }: { read: SeriesReadState }) {
+function CapitalNav({ read, observed = null }: { read: SeriesReadState; observed?: ObservedCellView | null }) {
   const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   const entry = series?.series[0];
-  if (entry === undefined || entry.state === "UNAVAILABLE" || !isDescribed(entry)) return <Gap ids="FE-013" />;
+  if (entry === undefined || entry.state === "UNAVAILABLE" || !isDescribed(entry)) {
+    if (observed !== null && (entry === undefined || (entry.state === "UNAVAILABLE" && entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED"))) {
+      return <><ObservedLines view={observed} /><span title={OBSERVED_TITLE} data-observed="label"><Flag kind="neutral" label={OBSERVED_LABEL} size="sm" /></span></>;
+    }
+    return <Gap ids="FE-013" />;
+  }
   const last = latestPoint(entry);
   if (last === null) return <span className="exec-ov-na">No points in this window</span>;
   return <span className="exec-ov-num" title={last.exact}>{seriesValueText(entry, last.exact)}</span>;
@@ -227,7 +275,7 @@ function deniedActions(status: string, accessHref: string | undefined, to: (href
   return status === "denied" && accessHref ? <Link className="exec-ov-link" to={to(accessHref)}>See what you can access</Link> : undefined;
 }
 
-export default function OverviewScreen({ api, workspaceId, sseFactory, accessHref }: OverviewScreenProps) {
+export default function OverviewScreen({ api, workspaceId, sseFactory, accessHref, observed }: OverviewScreenProps) {
   const [params] = useSearchParams();
 
   // Every read is asked and scoped by the server; a refusal is shown with its own typed reason (no pre-narrowing from the session's capabilities, RK-1).
@@ -241,6 +289,11 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
     [url.value.env, url.value.window, workspaceId],
   );
   const nav = useManagerSeries(api, true, navQuery, seriesNonce);
+  // Core Observed (build-time key `observed`, OFF by default): one fund-level read, a labelled FALLBACK for the cells the qualified read does not publish.
+  const observedOn = observed ?? isV2Screen("observed");
+  const observedEnv = (OBSERVED_ENVIRONMENTS as readonly string[]).includes(url.value.env) ? (url.value.env as ObservedOverviewEnvironment) : null;
+  const observedRead = useObservedOverview(api, observedOn, observedEnv, seriesNonce);
+  const observedBody = observedRead.phase === "ready" ? observedRead.value : null;
   // Net PnL and Return are enabled only when the series port SERVES the fund (its source is published, from the last good NAV
   // read, so a refresh does not blink the switch); otherwise the measure stays NAV and the switch says why it is off.
   const navBody = nav.phase === "ready" ? nav.value : nav.phase === "loading" || nav.phase === "error" ? nav.last : null;
@@ -439,19 +492,21 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
       ) : null}
 
       <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 6 } as CSSProperties}>
-        <SeriesCell label="NAV" read={nav} window={url.value.window} gapIds={FE_MONEY} />
+        <SeriesCell label="NAV" read={nav} window={url.value.window} gapIds={FE_MONEY} observed={observedCell(observedBody, "NAV")} />
         {netPnlList !== null ? (
           <Cell label="Net PnL" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={netPnlList} metricKey="net_pnl" signed unit="caption" /></Cell>
         ) : (
-          <SeriesCell label="Net PnL" read={pnlRead} window={url.value.window} gapIds="FE-005, FE-025" />
+          <SeriesCell label="Net PnL" read={pnlRead} window={url.value.window} gapIds="FE-005, FE-025" observed={observedCell(observedBody, "NET_PNL")} cumulative />
         )}
         {returnList !== null ? (
           <Cell label="Return" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={returnList} metricKey="return_30d_pct" signed unit="caption" /></Cell>
         ) : (
-          <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" />
+          <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" observed={observedCell(observedBody, "RETURN")} />
         )}
         {drawdownList !== null ? (
           <Cell label="Drawdown" note={<span title={`Fund dataset, window ${url.value.window}`}>Dataset max, window {url.value.window} (the chart draws its own series)</span>}><PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed unit="caption" /></Cell>
+        ) : observedCell(observedBody, "DRAWDOWN") !== null ? (
+          <ObservedCell label="Drawdown" view={observedCell(observedBody, "DRAWDOWN") as ObservedCellView} />
         ) : (
           <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
         )}
@@ -483,7 +538,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
               {CAPITAL_ROWS.map((row) => (
                 <tr key={row.label}>
                   <th scope="row">{row.label}</th>
-                  <td>{row.label === "NAV" ? <CapitalNav read={nav} /> : row.key !== undefined && publishes(statements, row.key) ? <PartitionFigures list={statements} metricKey={row.key} /> : <Gap ids={row.ids} />}</td>
+                  <td>{row.label === "NAV" ? <CapitalNav read={nav} observed={observedCell(observedBody, "NAV")} /> : row.key !== undefined && publishes(statements, row.key) ? <PartitionFigures list={statements} metricKey={row.key} /> : <Gap ids={row.ids} />}</td>
                 </tr>
               ))}
               {STATEMENT_ROWS.filter((row) => publishes(statements, row.key)).map((row) => (
