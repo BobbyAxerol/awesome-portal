@@ -44,6 +44,20 @@ export type ProfileProjectionBindingAdmission =
  */
 export const WARM_WINDOW_DAYS = 30;
 export const WARM_WINDOW_MAX_ROWS = 2_000;
+/**
+ * command_journal is the one relation whose per-relation row bound exceeds the
+ * 2,000-row snapshot invariant. Edge facts (2026-11-25): primary key command_id
+ * is a random UUIDv4, so the facade's ascending-PK pages are NOT time ordered
+ * (2,762 of 5,497 adjacent pairs go backwards in accepted_at); the table holds
+ * 5,497 rows (accepted_at 2026-11-07..2026-11-25) and grows by a few hundred a
+ * day; the facade offers limit + cursor only (no sort, filter or reverse).
+ * The only complete read is therefore a full walk, sorted by Core afterwards.
+ */
+export const COMMAND_JOURNAL_RELATION_KEY = "manager.command-journal:command_journal";
+export const COMMAND_JOURNAL_MAX_ROWS = 8_000;
+export function relationMaxRows(relationKey: string): number {
+  return relationKey === COMMAND_JOURNAL_RELATION_KEY ? COMMAND_JOURNAL_MAX_ROWS : 2_000;
+}
 
 /**
  * Browser-safe name for the one local revision operation.  The durable mirror

@@ -5,7 +5,7 @@ import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/mana
 import { CONTROL_API_CONFIG } from "../tokens";
 import { CurrentSourceProxyError, ExecutionCurrentSourceProxy } from "./current-source.proxy";
 import { enforceProfileLineage } from "./profile-lineage";
-import { profileProjectionCatalog, ProfileProjectionBinding, WARM_WINDOW_DAYS, WARM_WINDOW_MAX_ROWS } from "./profile-projection.catalog";
+import { profileProjectionCatalog, ProfileProjectionBinding, WARM_WINDOW_DAYS, WARM_WINDOW_MAX_ROWS, COMMAND_JOURNAL_MAX_ROWS, COMMAND_JOURNAL_RELATION_KEY } from "./profile-projection.catalog";
 import { MAXIMUM_DATA_INTAKE_V1 } from "./maximum-data-intake";
 import { acceptCatalogueDigest } from "./catalogue-digest-allowlist";
 import {
@@ -41,6 +41,17 @@ const MAXIMUM_SOURCE_PAGES = 10;
 // paced source admission — the budget is spent, never widened.
 const LADDER_MAXIMUM_SOURCE_PAGES = 50;
 const SOURCE_PAGE_LIMIT = 200;
+// command_journal only. Edge's primary key is a random UUIDv4 (not time
+// ordered: 2,762 of 5,497 adjacent pairs go backwards in accepted_at), the
+// facade serves limit+cursor only, ascending PK, no sort/filter/reverse, and
+// the table holds 5,497 rows today (+ a few hundred per day). A time-series
+// ladder by PK cursor would therefore be wrong; the only complete read is a
+// full walk, sorted newest-first by Core. 40 pages x 200 = 8,000 rows
+// (COMMAND_JOURNAL_MAX_ROWS). If the source still has a next page after that,
+// the relation stays PARTIAL with COMMAND_JOURNAL_PAGE_CAP_REASON, never a
+// silent truncation. Every other relation keeps MAXIMUM_SOURCE_PAGES.
+const COMMAND_JOURNAL_MAXIMUM_SOURCE_PAGES = COMMAND_JOURNAL_MAX_ROWS / SOURCE_PAGE_LIMIT;
+export const COMMAND_JOURNAL_PAGE_CAP_REASON = "N31_COMMAND_JOURNAL_PAGE_CAP_REACHED";
 
 @Injectable()
 export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -141,6 +152,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       const previousRelationCursors = new Map<string, string | null>();
       for (const binding of profileProjectionCatalog(environment)) {
         let page: ManagerPage;
+        let capped = false;
         let resumePoint: string | null = null;
         const resumeCursor = binding.ladder
           ? await this.repository.relationCursor(workspaceId, environment, profileId, `${binding.sourceId}:${binding.relation}`)
@@ -149,6 +161,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
         try {
           const drained = await this.drain(workspaceId, environment, binding, context, resumeCursor);
           page = drained.page;
+          capped = drained.capped;
           resumePoint = drained.resumePoint;
           const answered = drained.page.provenance?.catalogueSha256 ?? null;
           if (answered !== null && observedSeal !== null && answered !== observedSeal) {
@@ -233,7 +246,8 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           spec: { key: binding.key, binding }, page,
           state: page.items.length === 0 ? "EMPTY" as const
             : page.completeness === "PARTIAL" ? "PARTIAL" as const : "AVAILABLE" as const,
-          reasonCode: page.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
+          reasonCode: capped ? COMMAND_JOURNAL_PAGE_CAP_REASON
+            : page.completeness === "PARTIAL" ? "SOURCE_PARTIAL" : null,
         });
       }
       // No relation produced a page, so nothing physical was proven for this
@@ -426,7 +440,7 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     binding: ReturnType<typeof profileProjectionCatalog>[number],
     context: ManagerReadContext,
     resumeCursor: string | null = null,
-  ): Promise<{ page: ManagerPage; resumePoint: string | null }> {
+  ): Promise<{ page: ManagerPage; resumePoint: string | null; capped: boolean }> {
     // A projection binding is itself checked in, but older N13B source-screen
     // bindings predate the complete EDS-11R Manager registry.  Prefer the
     // generated named operation whenever it covers this relation; retain the
@@ -452,7 +466,11 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
       declaredCompleteness: completeness, hasMore: nextCursor !== null,
       partial: nextCursor !== null || completeness !== "COMPLETE",
     });
-    const pageBudget = binding.ladder ? LADDER_MAXIMUM_SOURCE_PAGES : MAXIMUM_SOURCE_PAGES;
+    const journal = `${binding.sourceId}:${binding.relation}` === COMMAND_JOURNAL_RELATION_KEY;
+    const pageBudget = binding.ladder ? LADDER_MAXIMUM_SOURCE_PAGES
+      : journal ? COMMAND_JOURNAL_MAXIMUM_SOURCE_PAGES : MAXIMUM_SOURCE_PAGES;
+    // Journal rows arrive in random-UUID order: newest-first is Core's job.
+    const finish = (rows: ManagerPage["items"]) => journal ? sortJournalNewestFirst(rows) : rows;
     for (let pageNumber = 0; pageNumber < pageBudget; pageNumber += 1) {
       const response = await this.source.relationForProjection(
         workspaceId, environment, binding.screenId, binding.sourceId, binding.relation,
@@ -490,8 +508,9 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
           }
         }
         return {
-          page: { items, asOf, freshness, completeness, nextCursor: null, provenance: provenanceOf(null) },
+          page: { items: finish(items), asOf, freshness, completeness, nextCursor: null, provenance: provenanceOf(null) },
           resumePoint: tailCursor,
+          capped: false,
         };
       }
       if (cursors.has(page.nextCursor)) throw new Error("N31_SOURCE_CURSOR_CYCLE");
@@ -506,8 +525,9 @@ export class ExecutionProfileProjectionWorker implements OnApplicationBootstrap,
     // the authoritative head; cold/full-history reads remain a later, explicit
     // query-plane concern.
     return {
-      page: { items, asOf, freshness, completeness: "PARTIAL", nextCursor: cursor ?? null, provenance: provenanceOf(cursor ?? null) },
+      page: { items: finish(items), asOf, freshness, completeness: "PARTIAL", nextCursor: cursor ?? null, provenance: provenanceOf(cursor ?? null) },
       resumePoint: lastHeldCursor,
+      capped: journal,
     };
   }
 
@@ -605,6 +625,16 @@ export function mergeTimeSeriesWindow(
   const ordered = [...byKey.values()].sort((left, right) => left.at - right.at);
   const truncated = ordered.length > WARM_WINDOW_MAX_ROWS;
   return { items: ordered.slice(-WARM_WINDOW_MAX_ROWS).map((entry) => entry.row), truncated };
+}
+
+/** accepted_at descending (unparseable last), command_id ascending as the tie-break; stable and total. */
+export function sortJournalNewestFirst(rows: ManagerPage["items"]): ManagerPage["items"] {
+  const keyed = rows.map((row) => {
+    const parsed = typeof row.accepted_at === "string" ? Date.parse(row.accepted_at) : Number.NaN;
+    return { row, at: Number.isNaN(parsed) ? Number.NEGATIVE_INFINITY : parsed, id: String(row.command_id ?? "") };
+  });
+  keyed.sort((left, right) => (right.at === left.at ? 0 : right.at > left.at ? 1 : -1) || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+  return keyed.map((entry) => entry.row);
 }
 
 export function enabledProfiles(config: ControlApiConfig): Array<{ environment: ProjectionEnvironment; profileId: string }> {

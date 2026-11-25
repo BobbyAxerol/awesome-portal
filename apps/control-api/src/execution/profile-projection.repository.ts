@@ -15,6 +15,7 @@ import {
   profileObservationAffectedScreens,
   profileObservationRevalidation,
 } from "./profile-projection.catalog";
+import { relationMaxRows } from "./profile-projection.catalog";
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
 import { retainedReview, RETAINED_DATA_VIEW_CACHE_MAXIMUM_SERIALIZED_BYTES } from "./retained-read-profile";
 import { retainedSnapshot, retainedRevision } from "./retained-snapshot";
@@ -1385,7 +1386,7 @@ export function documentInvalidReason(document: ProfileProjectionDocument): stri
     if (!hasCatalogue && relation.source_catalogue_sha256 !== undefined) return `${at}: relation catalogue present under an uncatalogued document`;
     if (relation.reason_code !== null && !/^[A-Z][A-Z0-9_]{1,95}$/.test(relation.reason_code)) return `${at}: reason_code format`;
     if (relation.availability === "UNAVAILABLE" && (relation.items.length !== 0 || typeof relation.reason_code !== "string" || relation.reason_code.length === 0)) return `${at}: UNAVAILABLE with rows or without a reason`;
-    if (relation.items.length > 2_000) return `${at}: ${relation.items.length} rows over the 2000 cap`;
+    if (relation.items.length > relationMaxRows(key)) return `${at}: ${relation.items.length} rows over the ${relationMaxRows(key)} cap`;
     let foreign = 0;
     let provenance = 0;
     for (const row of relation.items) {
