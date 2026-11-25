@@ -60,7 +60,7 @@ describe("observed OFF (the default build)", () => {
     const htmlUnset = tilesHtml();
     first.unmount();
     const off = withObserved({ ok: true, value: body("paper") });
-    const second = mount(off.api, false);
+    mount(off.api, false);
     await loaded();
     expect(unset.getObservedOverview).not.toHaveBeenCalled();
     expect(off.getObservedOverview).not.toHaveBeenCalled();

@@ -41,7 +41,7 @@ describe("observedCell", () => {
     expect(lines.some((l) => l.kind === "value" && (l.partial || l.stale))).toBe(true);
   });
   it("keeps one line per currency and returns null for no body or a figure the body lacks", () => {
-    const paper = structuredClone(body("paper")) as { figures: { figure_id: string; currency: string }[] };
+    const paper = structuredClone(body("paper")) as unknown as { figures: { figure_id: string; currency: string }[] };
     paper.figures.push({ ...structuredClone(paper.figures[0]), currency: "EUR" });
     expect(observedCell(paper as unknown as ObservedOverview, "NAV")?.lines.map((l) => l.currency)).toEqual(["USD", "EUR"]);
     expect(observedCell(null, "NAV")).toBeNull();
