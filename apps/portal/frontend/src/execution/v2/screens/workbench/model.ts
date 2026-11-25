@@ -156,6 +156,9 @@ export interface DeploymentFacts {
   strategyId: string | null;
   portfolioId: string | null;
   accountId: string | null;
+  /** The deployment's own policy and risk-profile ids, when the source states them; null = stated null or not stated. */
+  accountPolicyId?: string | null;
+  riskProfileId?: string | null;
   venue: string | null;
   mode: string | null;
   updatedAtMs: UtcEpochMs | null;
@@ -172,6 +175,8 @@ export function readDeployment(envelope: ProfileEnvelope): DeploymentFacts | nul
     strategyId: text(raw.strategy_id),
     portfolioId: text(raw.portfolio_id),
     accountId: text(raw.account_id),
+    accountPolicyId: text(raw.account_policy_id),
+    riskProfileId: text(raw.risk_profile_id),
     venue: text(raw.venue),
     mode: text(raw.mode),
     updatedAtMs: timeOf(raw, "updated_at_ms", "updated_at"),
@@ -555,6 +560,8 @@ export interface OrderRow {
   state: OrderState;
   /** The source's order type word, when the row states one. */
   orderType: string | null;
+  /** The order's `intent` word as the source states it; null when stated null or not stated. */
+  intent: string | null;
   atMs: UtcEpochMs | null;
 }
 
@@ -573,6 +580,7 @@ export function readOrders(envelope: ProfileEnvelope, population: number | null)
       price: figure(row.price ?? row.trigger_price, "money"),
       state: orderState(row.status),
       orderType: text(row.order_type),
+      intent: typeof row.intent === "string" ? text(row.intent) : null,
       atMs: timeOf(row, "submitted_at_ms", "submitted_at", "updated_at_ms", "updated_at"),
     };
   });

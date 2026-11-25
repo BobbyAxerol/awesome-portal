@@ -119,6 +119,7 @@ export function OrderDetail({
   const refused = status.bucket === "REJECTED";
   return (
     <div className="exec-blt2-kidbox">
+      {order.intent ? <section aria-label="Order intent"><h4 className="exec-blt2-h4">Intent</h4><p>{humanize(order.intent)}</p></section> : null}
       <section aria-label="Bracket legs">
         <h4 className="exec-blt2-h4">Bracket legs</h4>
         {legs.length === 0 ? (

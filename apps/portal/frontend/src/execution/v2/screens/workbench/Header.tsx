@@ -116,6 +116,8 @@ export function Header({ deploymentId, deployment, variant, chips, identity, cal
           )}
           {links.account && deployment?.accountId ? <Link className="exec-blk-link" to={links.account}>{deployment.accountId}</Link> : <span>Account not published</span>}
           <span><AlphaNameLine identity={identity} /></span>
+          {deployment?.accountPolicyId ? <span>Account policy <span className="exec-blk-id">{deployment.accountPolicyId}</span></span> : null}
+          {deployment?.riskProfileId ? <span>Risk profile <span className="exec-blk-id">{deployment.riskProfileId}</span></span> : null}
           {variant === "vnm" ? <span>VN market calendar: <VenueCalendarLine calendar={calendar} /></span> : null}
         </p>
       </div>

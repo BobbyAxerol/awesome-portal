@@ -130,6 +130,8 @@ export interface BlotterOrder {
   errorCode: string | null;
   errorMessage: string | null;
   riskGrantId: string | null;
+  /** The order's own `intent` word; null when stated null or not stated. */
+  intent: string | null;
 }
 
 export interface BlotterFill {
@@ -212,6 +214,7 @@ function orderOf(row: Record<string, unknown>): BlotterOrder | null {
     errorCode: text(row.error_code),
     errorMessage: text(row.error_message),
     riskGrantId: text(row.risk_grant_id),
+    intent: typeof row.intent === "string" ? text(row.intent) : null,
   };
 }
 
@@ -591,7 +594,7 @@ export function filtersKey(filters: ServerFilters, scope: Scope = NO_SCOPE): str
 
 export type ColumnId =
   | "time" | "order" | "alpha" | "account" | "deployment" | "venue" | "symbol" | "side" | "tif" | "price" | "trigger" | "fillqty" | "qty" | "filled"
-  | "avg" | "fee" | "client" | "venueOrder" | "session" | "risk" | "updated" | "status";
+  | "avg" | "fee" | "client" | "venueOrder" | "session" | "risk" | "intent" | "updated" | "status";
 
 export interface ColumnSpec {
   id: ColumnId;
@@ -626,6 +629,7 @@ export const COLUMNS: readonly ColumnSpec[] = [
   { id: "venueOrder", label: "Venue order", dflt: false },
   { id: "session", label: "Session", dflt: false },
   { id: "risk", label: "Risk grant", dflt: false },
+  { id: "intent", label: "Intent", dflt: false },
   { id: "updated", label: "Updated (UTC)", dflt: false },
   { id: "status", label: "Status", dflt: true, fixed: true },
 ];
@@ -690,6 +694,7 @@ export function csvCell(order: BlotterOrder, id: ColumnId): string {
     case "venueOrder": return order.venueOrderId ?? "";
     case "session": return order.sessionId ?? "";
     case "risk": return order.riskGrantId ?? "";
+    case "intent": return order.intent ? humanize(order.intent) : "";
     case "updated": return order.updatedAt ? shortUtc(order.updatedAt) : "";
     case "status": return statusView(order.status).label;
   }

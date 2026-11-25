@@ -42,6 +42,14 @@ describe("L0 canonical", () => {
     expect(page.countScope).toBe("COMMITTED_HOT_PROJECTION");
   });
 
+  it.each([["OPEN", "OPEN"], [null, null], [ABSENT, null]])("order intent %j reads as %j and the column is optional, off by default", (raw, expected) => {
+    const wire = structuredClone(canonical) as Draft;
+    const rows = (wire as { data: { orders: Record<string, unknown>[] } }).data.orders;
+    if (raw === ABSENT) delete rows[0]!.intent; else rows[0]!.intent = raw;
+    expect(read(wire)!.orders[0]!.intent).toBe(expected);
+    expect(COLUMNS.find((c) => c.id === "intent")?.dflt).toBe(false);
+  });
+
   it("leaves the file on disk as it found it", () => {
     expect(canonicalDigest(NAME)).toBe(digestBefore);
   });

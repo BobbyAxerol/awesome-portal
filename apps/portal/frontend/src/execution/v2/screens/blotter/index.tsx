@@ -381,6 +381,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "venueOrder": return order.venueOrderId ? <span className="exec-blt2-id">{order.venueOrderId}</span> : <span className="exec-blt2-na">Not sent</span>;
       case "session": return order.sessionId ? <span className="exec-blt2-id">{order.sessionId}</span> : <span className="exec-blt2-na">Not available</span>;
       case "risk": return order.riskGrantId ? <span className="exec-blt2-id">{order.riskGrantId}</span> : <span className="exec-blt2-na">Not available</span>;
+      case "intent": return order.intent ? humanize(order.intent) : <span className="exec-blt2-na">Not available</span>;
       case "updated": return order.updatedAt ? <span className="exec-blt2-num" title={order.updatedAt}>{shortUtc(order.updatedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
       case "status": {
         const view = statusView(order.status);

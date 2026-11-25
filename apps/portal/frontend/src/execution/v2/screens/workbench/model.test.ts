@@ -73,6 +73,25 @@ describe("primitives", () => {
   });
 });
 
+describe("P1 display fields (intent, account_policy_id, risk_profile_id)", () => {
+  it.each([["POLICY_A", "POLICY_A"], [null, null], [ABSENT, null], ["", null]])("deployment policy and risk profile %j read as %j, never a stand-in", (raw, expected) => {
+    const wire = paperWire();
+    setPath(wire, ["data", "deployment", "account_policy_id"], raw);
+    setPath(wire, ["data", "deployment", "risk_profile_id"], raw);
+    const d = readDeployment(envelopeOf(wire));
+    expect(d?.accountPolicyId ?? null).toBe(expected);
+    expect(d?.riskProfileId ?? null).toBe(expected);
+  });
+
+  it.each([["OPEN", "OPEN"], [null, null], [ABSENT, null], [0, null]])("order intent %j reads as %j", (raw, expected) => {
+    const wire = paperWire();
+    for (const i of [0, 1]) setPath(wire, ["data", "orders", i, "intent"], raw);
+    const rows = readOrders(envelopeOf(wire), null).rows;
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.map((r) => r.intent)).toEqual(rows.map(() => expected));
+  });
+});
+
 describe("deployment", () => {
   it("reads the identity the profile publishes, ids only (FE-066)", () => {
     const d = readDeployment(envelopeOf(paperWire()));
