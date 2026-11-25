@@ -1,5 +1,14 @@
 # Frontend Contract Handoff — Portal Registry & Command Center Summary
 
+## 2026-11-25 — Claude nhận cả backend và consumer còn lại
+
+[Full takeover: exact pins, consumer fields, backend next và open source gates](../../../upgrade/execution_loop/evidence/ELP2-10/CODEX_FULL_BACKEND_TAKEOVER_FOR_CLAUDE_20261125.md).
+Source78f3d01b6, G3 profile_id trong BOTH readers/query/cursor và Fleet publication
+probe là ưu tiên; Observed có port riêng, không legacy fallback SCOPED_V2.
+Giữ accepted components/design và fixture phong phú; không thêm banner vàng.
+Core metadata/provenance/producer không giao hết thành debt Edge. Không cài
+API trước parser compatibility ACK. Bàn giao local chưa là Claude ACK/browser.
+
 ## 2026-11-24 — consolidated G3 consumer and backend return
 
 Sourcebe26f15bb (v1.3 integration), R1 follow-through; actual Claude ACK pending.

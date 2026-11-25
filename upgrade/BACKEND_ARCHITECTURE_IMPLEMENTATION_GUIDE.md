@@ -1,5 +1,11 @@
 # Portal Backend Architecture Implementation Guide
 
+**2026-11-25 — owner-directed Codex → Claude backend takeover.**
+[One entry: delivered source, unfinished G0–G7, worktrees, consumer/Edge and gates](execution_loop/evidence/ELP2-10/CODEX_FULL_BACKEND_TAKEOVER_FOR_CLAUDE_20261125.md).
+Continuation source78f3d01b6 is distinct from the historical Research mailbox.
+Claude replans remaining implementation; no source/runtime/authority activation
+is implied by this R0 handoff. Preserve all original WIP and valid receipts.
+
 > **Version:** 0.1<br>
 > **Status:** Architecture runway for staged implementation<br>
 > **Updated:** 2026-08-15<br>

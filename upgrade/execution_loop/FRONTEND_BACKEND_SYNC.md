@@ -1,5 +1,19 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 25 Nov — Codex bàn giao toàn bộ phần đang làm/dở cho Claude
+
+[Takeover: pins, source/consumer/runtime riêng, remaining queue và WIP map](evidence/ELP2-10/CODEX_FULL_BACKEND_TAKEOVER_FOR_CLAUDE_20261125.md).
+Round-start/round-end: source78f3d01b6 sạch trước docs; Research9d6a52b76 có
+1tracked/595untracked giữ nguyên. Đã đọc Access10WIP và Observed6+1:
+không có delta backend mới cần nhập, source đã chứa bản tích hợp/sửa test.
+G1/G2/G3 source receipts được giữ, không reopen source bugs từ note cũ.
+Claude tiếp quản replan/backend/consumer; profile parsers/publication probe và
+Core physical metadata/provenance là ACT_NOW, real-source/browser/G2 là NEXT_GATE
+theo dependency. Hai làn và tất cả historical WIP không bị sửa hoặc dọn.
+Không có goal active;0agent mới, không có job/runtime/SSH mới. Public local
+publication không là consumer hoặc Edge ACK; handoff AWAITING_ACK. R0 only.
+R0 checks thực tế: whitespace/link mirror/tracking PASS; không full hook/build.
+
 ## 24 Nov — G3 complete handoff / ordinary restore follow-through
 
 R1 sourcebe26f15bb,18files/+1,165/-4; no installed source or consumer ACK implied.

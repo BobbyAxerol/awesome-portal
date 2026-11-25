@@ -1,5 +1,11 @@
 # Backend Architecture Deep Dives
 
+**25Nov — toàn bộ Codex continuation giao Claude replan:**
+[Source checkpoint, đã giao G1/G2/G3, phần dở G0–G7 và WIP/worktree inventory](../execution_loop/evidence/ELP2-10/CODEX_FULL_BACKEND_TAKEOVER_FOR_CLAUDE_20261125.md).
+Bắt đầu source78f3d01b6; không merge lại historical Research/Access/Observed.
+Producer metadata là Core-owned, real-source/STATUS ACK/full DR/G2/browser vẫn
+tách gate. Consumer compatibility trước API install. AWAITING_ACK, R0 docs only.
+
 **24Nov — G3 ordinary restore and full Claude return:**
 Sourcebe26f15bb, R1 focused checkpoint; pin/index mirror is R0, no new R2 landing.
 [Implementation/qualification, compatibility checklist and remaining source inputs](../execution_loop/evidence/ELP2-10/CODEX_G3_FINAL_CLAUDE_HANDOFF_20261124.md).

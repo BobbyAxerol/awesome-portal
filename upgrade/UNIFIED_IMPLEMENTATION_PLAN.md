@@ -9424,6 +9424,15 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**25 Nov — Bobby bàn giao toàn bộ công việc Codex còn lại cho Claude replan.**
+[Handoff duy nhất: source/WIP, G0–G7, consumer/Edge, tests và toàn bộ worktree](execution_loop/evidence/ELP2-10/CODEX_FULL_BACKEND_TAKEOVER_FOR_CLAUDE_20261125.md).
+Source bắt đầu `integrate/v13-candidate-20261122@78f3d01b6`; Research chỉ là
+historical mailbox, không có whole-history merge. G1/G2/G3 source đã có; G3
+restore follow-through R1 chưa R2 combined landing. Ưu tiên consumer profile_id
+và Core metadata/provenance, rồi producer/G4/STATUS/DR/G7. Full G3/ELP2-10/11
+và connected/browser vẫn OPEN. Claude nhận cả backend, không chờ Codex sửa
+từng request; ACK tiếp quản chưa có. Docs-only R0, không code/runtime/push.
+
 **24 Nov — G3 ordinary restore follow-through and consolidated Claude handoff.**
 R1 source `be26f15bb6ca2ba091981c563b7832530dae0707`,18files/+1,165/-4;
 R0 pin/index publication only, no new landing/runtime/consumer ACK.
