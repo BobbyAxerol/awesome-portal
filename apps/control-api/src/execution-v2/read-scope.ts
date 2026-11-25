@@ -898,6 +898,8 @@ export class ExecutionReadScopes {
       defaultWorkspaceGrantsEnabled(this.config),this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID??null]);
     const row=result.rows[0];
     if(!row||!row.workspace_exists)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    // Fail closed: a row without the DR-30 column (older adapters, test doubles) carries no default-workspace scope.
+    row.default_envs=Array.isArray(row.default_envs)?row.default_envs:[];
     return row as {role:string;session_version:number;policy:unknown|null;policy_revision:string|null;policy_seen:boolean;
       workspace_exists:boolean;member:boolean;owner:boolean;retained:unknown[];default_envs:string[]};
   }
