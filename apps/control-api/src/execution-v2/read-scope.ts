@@ -18,6 +18,7 @@ import { selectedNativeBusinessReadSelection,selectedNativeBusinessReadInstallat
 import { scopedReplayBinding,scopedRealtimeFrame } from "./realtime.contract";
 import { ScopedReplayCursorCodec,decodeScopedReplayContinuation } from "./scoped-replay-cursor";
 import { retainedReview } from "../execution/retained-read-profile";
+import { defaultWorkspaceGrantsEnabled, grantCovers, requiredEnvironments } from "../execution/default-execution-workspace";
 import { currentAccessRelations } from "./access-current-relations";
 import type { OrdinaryProfileAuthority } from "./ordinary-profile-authority";
 import type { OrdinaryProfileReadDecision } from "./ordinary-profile-authority.contract";
@@ -537,8 +538,9 @@ export class ExecutionReadScopes {
     if(identity.role!==principal.user.role)fail("EXECUTION_READ_ACCESS_CHANGED",409);
     if(identity.policy!==null||identity.policy_seen)return "SCOPED_V2";
     const retained=retainedReview(this.config);
-    if(retained?(principal.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID||
-      !(identity.owner||identity.member||identity.retained.length>0)):!identity.member)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    // DR-30: a scoped default-workspace grant is read-only membership-equivalent here; environments are enforced at mint.
+    if(!(identity.default_envs.length>0)&&(retained?(principal.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID||
+      !(identity.owner||identity.member||identity.retained.length>0)):!identity.member))fail("EXECUTION_READ_NOT_AVAILABLE",404);
     return "LEGACY_COMPATIBILITY";
   }
 
@@ -882,17 +884,22 @@ export class ExecutionReadScopes {
       EXISTS(SELECT 1 FROM portal_owner_anchor a WHERE a.anchor_id='PORTAL_OWNER' AND a.user_id=u.user_id) AS owner,
       COALESCE((SELECT jsonb_agg(jsonb_build_array(g.user_id,g.expires_at) ORDER BY g.expires_at)
         FROM execution_retained_review_access g WHERE g.workspace_id=$4 AND g.user_id=u.user_id
-          AND g.revoked_at IS NULL AND g.expires_at>clock_timestamp()),'[]'::jsonb) AS retained
+          AND cardinality(g.execution_environments)=0 AND g.revoked_at IS NULL AND g.expires_at>clock_timestamp()),'[]'::jsonb) AS retained,
+      CASE WHEN $5::boolean AND $4=$6::text THEN COALESCE((SELECT array_agg(DISTINCT e ORDER BY e)
+        FROM execution_retained_review_access g CROSS JOIN LATERAL unnest(g.execution_environments) e
+        WHERE g.workspace_id=$4 AND g.user_id=u.user_id AND g.revoked_at IS NULL AND g.expires_at>clock_timestamp()),'{}'::text[])
+        ELSE '{}'::text[] END AS default_envs
       FROM portal_users u JOIN auth_sessions s ON s.user_id=u.user_id
       LEFT JOIN portal_access_policy_state p ON p.workspace_id=$4
       WHERE u.user_id=$1 AND u.status='ACTIVE' AND NOT u.must_change_password AND u.archived_at IS NULL
         AND u.session_version=$2 AND s.session_id=$3 AND s.session_version=u.session_version
         AND s.state='ACTIVE' AND s.idle_expires_at>clock_timestamp() AND s.absolute_expires_at>clock_timestamp()`,
-      [principal.user.userId,principal.session.sessionVersion,principal.session.sessionId,principal.workspaceId]);
+      [principal.user.userId,principal.session.sessionVersion,principal.session.sessionId,principal.workspaceId,
+      defaultWorkspaceGrantsEnabled(this.config),this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID??null]);
     const row=result.rows[0];
     if(!row||!row.workspace_exists)fail("EXECUTION_READ_NOT_AVAILABLE",404);
     return row as {role:string;session_version:number;policy:unknown|null;policy_revision:string|null;policy_seen:boolean;
-      workspace_exists:boolean;member:boolean;owner:boolean;retained:unknown[]};
+      workspace_exists:boolean;member:boolean;owner:boolean;retained:unknown[];default_envs:string[]};
   }
 
   private async mint(p:ReadScopePrincipal,b:ReadScopeBinding,r:ReadScopeRequirement):Promise<AuthorizedExecutionReadScope>;
@@ -1141,8 +1148,9 @@ export class ExecutionReadScopes {
       // It is never a new export/stream/technical entitlement.
       if(!businessReads.has(r.action))fail("EXECUTION_READ_NOT_AVAILABLE",404);
       const retained=retainedReview(this.config);
-      if(retained?(p.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID||
-        !(identity.owner||identity.member||identity.retained.length>0)):!identity.member)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+      const defaultGrant=grantCovers(identity.default_envs,requiredEnvironments(b.environment));
+      if(!defaultGrant&&(retained?(p.workspaceId!==this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID||
+        !(identity.owner||identity.member||identity.retained.length>0)):!identity.member))fail("EXECUTION_READ_NOT_AVAILABLE",404);
     }
     const authority=context?contextProof(context,b.environment,[...resources,...(r.resource?[r.resource]:[])]):identity;
     const fingerprint=accessDigest({mode,actor:p.user.userId,session:p.session.sessionId,generation:p.session.sessionVersion,

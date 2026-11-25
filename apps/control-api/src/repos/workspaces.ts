@@ -3,6 +3,8 @@ import { Pool, PoolClient } from "pg";
 import { CONTROL_API_POOL, CONTROL_API_CONFIG } from "../tokens";
 import type { ControlApiConfig } from "../config";
 import { retainedReview } from "../execution/retained-read-profile";
+import { defaultWorkspaceGrantsEnabled, grantCovers, requiredEnvironments, EXECUTION_ENVIRONMENTS,
+  type DefaultExecutionGrant, type ExecutionEnvironment } from "../execution/default-execution-workspace";
 
 export interface Workspace {
   workspaceId: string;
@@ -94,8 +96,38 @@ export class WorkspacesRepository {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
+  /** DR-30 resolver. Only the configured projection workspace can ever be the default, only for an ACTIVE user,
+   * only from an unrevoked, unexpired scoped grant. More than one candidate workspace is AMBIGUOUS and no
+   * workspace is chosen (fail closed). Disabled feature/config is UNAVAILABLE. Database errors propagate. */
+  async defaultExecutionGrant(userId: string): Promise<DefaultExecutionGrant> {
+    const configured = this.config?.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    if (!defaultWorkspaceGrantsEnabled(this.config) || !configured) return { state: "UNAVAILABLE" };
+    const result = await this.pool.query<{ workspace_id: string; execution_environments: string[] }>(
+      `SELECT g.workspace_id, g.execution_environments FROM execution_retained_review_access g
+        JOIN portal_users u ON u.user_id=g.user_id AND u.status='ACTIVE' AND NOT u.must_change_password AND u.archived_at IS NULL
+        WHERE g.user_id=$1 AND g.revoked_at IS NULL AND g.expires_at>clock_timestamp()
+          AND cardinality(g.execution_environments)>0 ORDER BY g.workspace_id LIMIT 3`, [userId]);
+    const workspaces = new Set(result.rows.map(row => row.workspace_id));
+    if (workspaces.size === 0) return { state: "NONE" };
+    if (workspaces.size > 1) return { state: "AMBIGUOUS" };
+    const row = result.rows[0];
+    if (row.workspace_id !== configured) return { state: "NONE" };
+    const environments = row.execution_environments.filter((item): item is ExecutionEnvironment =>
+      (EXECUTION_ENVIRONMENTS as readonly string[]).includes(item));
+    return environments.length === 0 ? { state: "NONE" } : { state: "GRANTED", workspaceId: configured, environments };
+  }
+
+  /** The configured workspace id when this user's scoped grant covers every required environment, else null. */
+  async defaultExecutionWorkspaceFor(userId: string, required: readonly ExecutionEnvironment[] | null): Promise<string | null> {
+    const grant = await this.defaultExecutionGrant(userId);
+    return grant.state === "GRANTED" && grantCovers(grant.environments, required) ? grant.workspaceId : null;
+  }
+
   /** GET authority only. Never use this for Research, Governance decide or writes. */
   async canReadExecution(workspaceId: string, userId: string, environment?: string): Promise<boolean> {
+    const configured = this.config?.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
+    if (configured && workspaceId === configured && defaultWorkspaceGrantsEnabled(this.config) &&
+      await this.defaultExecutionWorkspaceFor(userId, requiredEnvironments(environment)) === configured) return true;
     if (!retainedReview(this.config)) return this.isMember(workspaceId, userId);
     if (workspaceId !== this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
       (environment !== undefined && !["paper", "sandbox", "live", "all", "canary"].includes(environment))) return false;
@@ -104,7 +136,7 @@ export class WorkspacesRepository {
         EXISTS(SELECT 1 FROM portal_owner_anchor a WHERE a.anchor_id='PORTAL_OWNER' AND a.user_id=u.user_id)
         OR EXISTS(SELECT 1 FROM workspace_members m WHERE m.workspace_id=$1 AND m.user_id=u.user_id)
         OR EXISTS(SELECT 1 FROM execution_retained_review_access g WHERE g.workspace_id=$1 AND g.user_id=u.user_id
-          AND g.revoked_at IS NULL AND g.expires_at>now()))`,[workspaceId,userId]);
+          AND cardinality(g.execution_environments)=0 AND g.revoked_at IS NULL AND g.expires_at>now()))`,[workspaceId,userId]);
     return Boolean(result.rowCount);
   }
 }

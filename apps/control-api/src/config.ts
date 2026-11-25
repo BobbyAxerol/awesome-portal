@@ -287,6 +287,8 @@ const EnvSchema = z.object({
   // is the second, deployment-review gate after that intake is accepted.
   FEATURE_EXECUTION_MARKET_CONTEXT: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_LOCAL_PROJECTION: z.enum(["true", "false"]).default("false"),
+  /** DR-30: read-only default execution workspace for users holding a scoped review grant. Off = today's behaviour. */
+  FEATURE_EXECUTION_DEFAULT_WORKSPACE_GRANTS: z.enum(["true", "false"]).default("false"),
   EXECUTION_READ_PROFILE: z.enum(["source_current_v1", "retained_review_v1", "native_manager_review_v1"]).default("source_current_v1"),
   // EDS-06 stays storage/change-window gated even when the source projection
   // itself is active. Browser reads are a later, per-screen cutover.
@@ -864,6 +866,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
     if (!currentSourceProfiles.some((profile) => profile.feature === "true")) {
       throw new Error("FEATURE_EXECUTION_MARKET_CONTEXT=true requires at least one current-source profile");
     }
+  }
+  if (config.FEATURE_EXECUTION_DEFAULT_WORKSPACE_GRANTS === "true" && !config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID) {
+    throw new Error("FEATURE_EXECUTION_DEFAULT_WORKSPACE_GRANTS=true requires EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID");
   }
   if (config.EXECUTION_PROJECTION_LAG_STALE_SECONDS <= config.EXECUTION_PROJECTION_LAG_LAGGING_SECONDS) {
     throw new Error("EXECUTION_PROJECTION_LAG_STALE_SECONDS must exceed EXECUTION_PROJECTION_LAG_LAGGING_SECONDS");

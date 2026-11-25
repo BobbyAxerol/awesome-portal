@@ -21,6 +21,8 @@ import { nativeResearchReview, nativeResearchReadAllowed } from "../execution/na
 import { NativeCurrentAccountScopes } from "../execution-v2/native-current-runtime";
 import { CommandStatusComposition } from "../execution-v2/command-status-composition";
 import { ManagerCurrentAccounts } from "../execution-v2/manager-current-accounts";
+import { defaultWorkspacePath, defaultWorkspaceGrantsEnabled, readMethod, requestRequiredEnvironments,
+} from "../execution/default-execution-workspace";
 
 /**
  * Authenticated-session guard for façade routes. Attaches the portal user
@@ -105,6 +107,15 @@ export class SessionGuard implements CanActivate {
         throw new NotFoundException("Workspace not found.");
       }
       if (!coreExecutionRead(request.url.split("?")[0])) workspaceId = configured;
+    }
+    // DR-30: GET-only default execution workspace for a user holding a scoped review grant. Everything else (writes,
+    // other route families, users without a covering grant) keeps the personal workspace and its own checks. The
+    // personal id stays in portalViewerWorkspaceId; the actor stays the real user.
+    if (executionRead && !nativeReview && !retainedReview(this.config) && readMethod(request.method) &&
+      defaultWorkspaceGrantsEnabled(this.config) && defaultWorkspacePath((request.url ?? "").split("?")[0])) {
+      const granted = await this.workspaces.defaultExecutionWorkspaceFor(user.userId,
+        requestRequiredEnvironments((request.url ?? "").split("?")[0], (request.query ?? {}) as Record<string, unknown>));
+      if (granted) workspaceId = granted;
     }
     const state = request as unknown as {
       portalUser: PortalUser;
