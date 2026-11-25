@@ -47,6 +47,20 @@ describe("N30 profile lineage", () => {
       .toEqual({ account: 1 });
   });
 
+  it("keeps venue_accounts rows when no account carries a broker reference (OKX paper)", () => {
+    const result = enforceProfileLineage([
+      relation("accounts", [{ account_id: "acc_okx", external_account_ref: null }]),
+      relation("venue_accounts", [
+        { venue_account_id: "va_1", account_id: "acc_okx", external_account_ref: "okx_ref_1" },
+        { venue_account_id: "va_2", account_id: "acc_other", external_account_ref: "okx_ref_2" },
+      ]),
+    ], "N22");
+    const venue = result.find((item) => item.spec.key === "venue_accounts");
+    // ownership is still proved by account_id: the foreign account's row goes, ours stays
+    expect(venue?.page?.items.map((row) => row.venue_account_id)).toEqual(["va_1"]);
+    expect(venue?.lineageScopedOut).toEqual({ account: 1 });
+  });
+
   it("calls it incompleteness when the parent page itself was cut short", () => {
     // The accounts page is PARTIAL, so an account we have not seen may exist
     // and the orphan is genuinely unaccounted for — not proven foreign.

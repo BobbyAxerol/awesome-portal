@@ -66,7 +66,11 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
   const groupIds = values(rows("conditional_groups"), "group_id");
   const rootsPresent = {
     account: hasAny(relations, "accounts", "deployments"),
-    externalAccount: hasAny(relations, "accounts"),
+    // No accepted account carries a broker reference (OKX paper: external_account_ref is NULL
+    // at the source for every account), so there is nothing to test a row's reference against.
+    // Ownership is still proved by the account_id class; a membership test against an empty
+    // set would scope out every venue_accounts row of the profile.
+    externalAccount: hasAny(relations, "accounts") && externalAccountRefs.size > 0,
     deployment: hasAny(relations, "deployments"),
     strategy: hasAny(relations, "strategies", "deployments", "accounts"),
     portfolio: hasAny(relations, "portfolios", "deployments"),
