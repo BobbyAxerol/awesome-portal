@@ -78,11 +78,12 @@ import type { ManagerDataset } from "../v2/readers/managerDataset";
 import type { ManagerSeries, ManagerSeriesQuery } from "../v2/readers/managerSeries";
 import type { ManagerDatasetQuery } from "./managerDatasetQuery";
 import type { ObservedTimeline, ObservedTimelineQuery } from "./observedTimeline";
+import type { ObservedOverview, ObservedOverviewQuery } from "../v2/readers/observedOverview";
 import type { SubjectActivityPage, SubjectActivityQuery } from "./subjectActivity";
 
 export type Result<T> =
   | { ok: true; value: T; warnings?: readonly string[] }
-  | { ok: false; status: Exclude<PanelStatus, "ok">; reason: string };
+  | { ok: false; status: Exclude<PanelStatus, "ok">; reason: string; /** set only by ports that keep the typed refusal apart (Observed lane) */ httpStatus?: number; code?: string };
 
 /**
  * `CapitalPreviewRequest`, in the frontend's casing.
@@ -444,6 +445,8 @@ export interface ExecutionApi {
   getMarketContextCandles(query: MarketContextQuery): Promise<Result<MarketContextCandles>>;
   /** EDS-09b / EDS-10b observed timeline BFF (`/views/observed-timeline`) — a Portal observation, never a replay. */
   getObservedTimeline(query: ObservedTimelineQuery): Promise<Result<ObservedTimeline>>;
+  /** Core Observed lane (`/observed/overview`): fund-level, never TS-qualified. A refusal carries `httpStatus` and `code` (see `classifyObservedFailure`). */
+  getObservedOverview(query: ObservedOverviewQuery): Promise<Result<ObservedOverview>>;
   /** EDS-11R1 named relation BFF (G9): one bounded page of a screen-bound Manager relation; the Portal continuation goes back unchanged. */
   getManagerRelationPage(query: RelationPageQuery): Promise<Result<RelationPage>>;
   /**

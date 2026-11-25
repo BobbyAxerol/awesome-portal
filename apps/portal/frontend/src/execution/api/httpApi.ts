@@ -89,6 +89,7 @@ import { readRelationPage, relationPagePath, type RelationPage, type RelationPag
 import { encodeManagerSeriesQuery, readManagerSeries, seriesAnswersQuery, type ManagerSeries, type ManagerSeriesQuery } from "../v2/readers/managerSeries";
 import { readManagerDataset, type ManagerDataset } from "../v2/readers/managerDataset";
 import { datasetQueryMismatch, encodeManagerDatasetQuery, managerDatasetPath, type ManagerDatasetQuery } from "./managerDatasetQuery";
+import { observedOverviewPath, readObservedOverview, type ObservedOverview, type ObservedOverviewQuery } from "../v2/readers/observedOverview";
 import { observedTimelinePath, readObservedTimeline, type ObservedTimeline, type ObservedTimelineQuery } from "./observedTimeline";
 import { readSubjectActivity, subjectActivityPath, type SubjectActivityPage, type SubjectActivityQuery } from "./subjectActivity";
 import {
@@ -606,6 +607,23 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     readGet(marketContextCandlesPath(query), readMarketContextCandles, "The Trading System market candles");
   const getObservedTimeline = (query: ObservedTimelineQuery): Promise<Result<ObservedTimeline>> =>
     readGet(observedTimelinePath(query), readObservedTimeline, "The venue market candles");
+  /** Like `readGet`, but a refusal keeps its HTTP status and typed code: 404 lane off and 409 SCOPED_V2 must stay apart. Other ports are unchanged. */
+  const getObservedOverview = async (query: ObservedOverviewQuery): Promise<Result<ObservedOverview>> => {
+    let response: Response;
+    try {
+      response = await get(observedOverviewPath(query), signal);
+    } catch {
+      return unavailable("The Core Observed overview never reached the Portal: network failure.");
+    }
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* a refusal without JSON keeps its status; a success fails closed below */ }
+    if (!response.ok) {
+      const p = readProblem(body, response.status);
+      return { ok: false, status: panelStatusForHttp(response.status), reason: `${p.code}: ${p.message}`, httpStatus: response.status, code: p.code };
+    }
+    const value = readObservedOverview(body);
+    return value !== null ? { ok: true as const, value } : unavailable("The Core Observed overview response could not be read.");
+  };
   /** Every alpha's 30-day equity sparkline in one read (Fleet inline column). */
   const getEquitySparklines = (environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<Record<string, readonly number[]>>> =>
     readGet(`/alphas/equity-sparklines?environment=${environment}`, (raw) => {
@@ -893,6 +911,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     getMarketCandles,
     getMarketContextCandles,
     getObservedTimeline,
+    getObservedOverview,
     getManagerRelationPage,
     getManagerSeries,
     getManagerDataset,

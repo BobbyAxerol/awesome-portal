@@ -38,6 +38,9 @@ export const EXEC_V2_SCREEN_KEYS = [
   // DEBT-048 item 9: the pending-control PREVIEW form in the Operations dock (v2/screens/operations). FIXTURE_LAB only: OFF unless the
   // manifest names it, and then only for a TEST_ONLY workspace. It is not the `command` key; neither enables a send.
   "pending-preview",
+  // Core Observed consumer (design 2026-11-25, slice 1): the build-time gate of the fund-level Observed read on the Overview. NOT in the
+  // publication manifest (publish-images.yml), so it ships OFF. Pending: no screen reads it yet, so naming it enables nothing.
+  "observed",
 ] as const;
 export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
 
@@ -48,7 +51,7 @@ export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
  * - `archived`: the Archived lens is part of the Fleet (`tab=archived`, key `fleet`); there is no separate screen.
  * - `replay`: Trade Replay rides the Alpha 360 Replay tab (key `alpha`); nothing reads `replay` itself.
  *
- * Pending: none. `command` (UXM-09 fixture story) left this list in the commit that made `PortalRoutes` read `isV2Screen("command")`.
+ * Pending: `observed` (Core Observed consumer, slice 1: port and reader only; it leaves this list in the commit that makes the Overview read it). `command` (UXM-09 fixture story) left this list in the commit that made `PortalRoutes` read `isV2Screen("command")`.
  * Earlier: the S3 stage screens (2026-10-19, D2: one key per screen) left
  * this list in the commit that made `ExecutionPreviewRoute` read
  * `isV2Screen("<key>")` for each: `workbench` (Paper, deployment routes),
@@ -62,7 +65,7 @@ export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
  * read by `isV2Screen("<key>")` in source, and the reserved ones are read nowhere.
  */
 export const EXEC_V2_PERMANENT_RESERVED_KEYS = ["archived", "replay"] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
-export const EXEC_V2_PENDING_KEYS = [] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
+export const EXEC_V2_PENDING_KEYS = ["observed"] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
 export const EXEC_V2_RESERVED_KEYS = [...EXEC_V2_PERMANENT_RESERVED_KEYS, ...EXEC_V2_PENDING_KEYS] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
 const RESERVED: ReadonlySet<string> = new Set(EXEC_V2_RESERVED_KEYS);
 

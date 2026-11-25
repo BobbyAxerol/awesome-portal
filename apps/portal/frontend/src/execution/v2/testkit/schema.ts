@@ -21,7 +21,7 @@ type Json = Record<string, unknown>;
  * the branches the published documents carry already pin the tag with a `const`, so ignoring the hint
  * accepts and refuses exactly what the branches do.
  */
-const IGNORED = new Set(["$schema", "$id", "$defs", "$comment", "title", "description", "default", "examples", "format", "discriminator", "writeOnly"]);
+const IGNORED = new Set(["$schema", "$id", "$defs", "$comment", "title", "description", "default", "examples", "format", "discriminator", "writeOnly", "x-server-invariants"]);
 const KNOWN = new Set([
   "type", "enum", "const", "required", "properties", "additionalProperties", "items", "minItems", "maxItems", "minimum",
   "maximum", "maxLength", "minLength", "pattern", "oneOf", "anyOf", "uniqueItems", "$ref", "prefixItems", "not", "allOf", "if", "then", "else", "contains", "minContains", "maxContains",

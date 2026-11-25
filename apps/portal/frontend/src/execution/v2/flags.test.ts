@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -26,7 +26,7 @@ describe("parseV2Manifest", () => {
 
   it("knows every screen of review2/07 s5 plus the shell", () => {
     expect([...parseV2Manifest(EXEC_V2_SCREEN_KEYS.join(","))].sort()).toEqual(
-      ["account", "admin", "alpha", "archived", "blotter", "canary", "cockpit", "command", "compare", "fleet", "fleet-stream", "live", "ops", "overview", "pending-preview", "portfolios", "profile", "replay", "request", "sandbox", "scoped", "shell", "users", "workbench"],
+      ["account", "admin", "alpha", "archived", "blotter", "canary", "cockpit", "command", "compare", "fleet", "fleet-stream", "live", "observed", "ops", "overview", "pending-preview", "portfolios", "profile", "replay", "request", "sandbox", "scoped", "shell", "users", "workbench"],
     );
   });
 
@@ -54,8 +54,15 @@ describe("reserved keys", () => {
 
   it("names the two permanent keys and no pending key (`command`, the UXM-09 fixture story, is mounted by PortalRoutes); the five S3 keys are wired", () => {
     expect([...EXEC_V2_PERMANENT_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
-    expect([...EXEC_V2_PENDING_KEYS]).toEqual([]);
-    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
+    expect([...EXEC_V2_PENDING_KEYS]).toEqual(["observed"]);
+    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "observed", "replay"]);
+  });
+
+  it("`observed` (Core Observed consumer, slice 1) is known but pending: naming it enables nothing, and the publication manifest does not name it", () => {
+    expect(parseV2Manifest("observed").has("observed")).toBe(true);
+    expect(isV2Screen("observed", parseV2Manifest("observed,overview"), true)).toBe(false);
+    const publish = readFileSync(resolve(__dirname, "../../../../../../.github/workflows/publish-images.yml"), "utf8");
+    expect(publish).not.toMatch(/EXECUTION_V2_SCREENS=[^\n]*\bobserved\b/);
   });
 
   it("`command` mounts: it is read by isV2Screen, answers true from the manifest under the umbrella, and not without it", () => {
