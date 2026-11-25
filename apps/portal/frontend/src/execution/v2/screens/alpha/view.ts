@@ -99,6 +99,8 @@ export interface AlphaView {
   nameReason: string;
   versionReason: string;
   owner: OwnerCell;
+  /** SCOPED_V2 only: the strategy's own description when its row states one; null or absent otherwise. */
+  description?: string | null;
   portfolioNames: readonly string[];
   /** The stated name of each portfolio id the body names; an id with no stated name is absent (the caller prints the id). */
   portfolioNameById: ReadonlyMap<string, string>;
@@ -250,6 +252,8 @@ function scopedDeploymentRows(scoped: AlphaResourceScoped): { rows: DeploymentRo
       href: deploymentHref(stage, id),
       rank: RANK[row.book],
       env: row.book,
+      accountPolicyId: cellText(row, "account_policy_id"),
+      riskProfileId: cellText(row, "risk_profile_id"),
       ...(financials.has(`${row.book}:${id}`) ? { financial: financials.get(`${row.book}:${id}`)! } : {}),
     });
   }
@@ -341,6 +345,7 @@ function scopedView(scoped: AlphaResourceScoped, alphaId: string): AlphaView {
     nameReason: absent("name", "execution.alpha-resource.v2 states no alpha name"),
     versionReason: absent("version", "execution.alpha-resource.v2 states no alpha version"),
     owner: { kind: "not-published", id: "FE-030", reason: absent("owner", "execution.alpha-resource.v2 states no owner") },
+    description: rowsOf(scoped, "strategies").map((row) => (cellText(row, "strategy_id") === id ? cellText(row, "description") : null)).find((d) => d !== null) ?? null,
     portfolioNames: names,
     portfolioNameById: portfolioNames(scoped),
     current: null,

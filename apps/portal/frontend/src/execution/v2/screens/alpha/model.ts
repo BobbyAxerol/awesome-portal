@@ -136,6 +136,9 @@ export interface DeploymentRow {
   env?: ExecEnv;
   /** SCOPED_V2 only: the one published snapshot row of this deployment, or its typed absence. Absent when the body carries no entry for it. */
   financial?: DeploymentFinancial;
+  /** SCOPED_V2 only: the deployment's own policy and risk-profile ids when the body states them; absent or null otherwise. */
+  accountPolicyId?: string | null;
+  riskProfileId?: string | null;
 }
 
 /** One published snapshot row of one deployment (BE-P15): never a sum, never zero. `reason` is the words for the server's code, when known. */

@@ -87,6 +87,16 @@ export function DeploymentsTab({ rows, linkTo, scopedNoTotals = null, unplaced =
     { key: "equity", label: "Equity", numeric: true, render: (r) => (r.financial !== undefined ? <FinancialCell f={r.financial} member="equity" fallbackCurrency={r.currency} /> : <NaWhy />) },
   ];
   // The equity column exists only when the body publishes a snapshot entry for some deployment.
+  // Quiet column: drawn only when the body states a policy or risk profile for some deployment.
+  if (rows.some((r) => r.accountPolicyId || r.riskProfileId)) {
+    columns.splice(columns.findIndex((c) => c.key === "runtime"), 0, {
+      key: "policy",
+      label: "Policy · risk profile",
+      render: (r) => (r.accountPolicyId || r.riskProfileId
+        ? <>{r.accountPolicyId ? <span className="exec-blk-id">{r.accountPolicyId}</span> : <Na />}<span className="exec-alp2-dim"> · </span>{r.riskProfileId ? <span className="exec-blk-id">{r.riskProfileId}</span> : <Na />}</>
+        : <Na />),
+    });
+  }
   const withEquity = rows.some((r) => r.financial !== undefined);
   if (!withEquity) columns.splice(columns.findIndex((c) => c.key === "equity"), 1);
   // Dates, deployer and receipts have no source: ONE line under the table, not a "Not published" cell per row and column (UX audit A).

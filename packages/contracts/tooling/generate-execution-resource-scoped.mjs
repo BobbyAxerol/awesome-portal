@@ -22,8 +22,8 @@ const clocks = new Set(['ts', 'created_at', 'updated_at', 'submitted_at', 'trade
 // intersects these raw names with reviewed BUSINESS_READ_FIELDS first.
 // Physical custody, external account IDs, errors and source cursors are absent.
 const fields = {
-  strategies: 'strategy_id alpha_id name version state stage created_at updated_at',
-  deployments: 'deployment_id strategy_id account_id mode venue currency portfolio_id state created_at updated_at',
+  strategies: 'strategy_id alpha_id name version state stage created_at updated_at description',
+  deployments: 'deployment_id strategy_id account_id mode venue currency portfolio_id state created_at updated_at account_policy_id risk_profile_id',
   accounts: 'account_id strategy_id mode venue base_currency state created_at updated_at account_type',
   account_balances: 'account_id currency total locked free updated_at',
   margin_balances: 'account_id instrument_id currency initial maintenance updated_at',
@@ -34,7 +34,7 @@ const fields = {
   portfolio_allocations: 'portfolio_id strategy_id deployment_id account_id mode venue currency allocated_capital state created_at updated_at',
   positions: 'position_id strategy_id account_id mode venue instrument_id side signed_qty quantity avg_px_open avg_px_close realized_pnl unrealized_pnl mark_price notional updated_at',
   sessions: 'strategy_id account_id mode venue state submitted_count risk_rejected_count filled_count broker_rejected_count updated_at execution_session_id started_at completed_at',
-  orders: 'order_id strategy_id account_id execution_session_id mode venue instrument_id symbol side quantity price status submitted_at updated_at risk_grant_id client_order_id order_type position_side time_in_force reduce_only post_only trigger_price filled_quantity average_fill_price',
+  orders: 'order_id strategy_id account_id execution_session_id mode venue instrument_id symbol side quantity price status submitted_at updated_at risk_grant_id client_order_id order_type position_side time_in_force reduce_only post_only trigger_price filled_quantity average_fill_price intent',
   fills: 'fill_id trade_time strategy_id account_id execution_session_id mode venue instrument_id side price quantity realized_pnl client_order_id commission commission_currency liquidity_side',
   performance: 'ts deployment_id strategy_id account_id mode venue instrument_id symbol currency position_qty signed_qty avg_px_open mark_price notional exposure_long exposure_short realized_pnl unrealized_pnl fee_total funding_pnl gross_pnl net_pnl equity created_at',
   account_equity: 'ts deployment_id strategy_id account_id mode venue currency margin_initial margin_maintenance realized_pnl unrealized_pnl fee_total funding_pnl gross_pnl net_pnl equity drawdown created_at',
@@ -249,7 +249,17 @@ for (const alias of ['deployments','portfolio_allocations']) {
   unnamed.data[alias][0].portfolio_name_reason_code='PORTFOLIO_NAME_NOT_PUBLISHED';
   unnamed.panels[alias].data={rows:unnamed.data[alias]};
 }
+// P1 display fields (additive, optional, nullable): strategies.description, deployments.account_policy_id / risk_profile_id, orders.intent.
+const p1 = structuredClone(rich);
+p1.data.strategies = [{ profile_environment: 'paper', strategy_id: 'alpha_RICH_TEST_ONLY', description: 'TEST_ONLY strategy description' }, { profile_environment: 'paper', strategy_id: 'strategy_TEST_ONLY_2', description: null }];
+p1.data.deployments = [{ ...p1.data.deployments[0], account_policy_id: 'policy_TEST_ONLY', risk_profile_id: null }];
+p1.data.orders = [{ profile_environment: 'paper', order_id: 'order_TEST_ONLY', intent: 'OPEN' }, { profile_environment: 'paper', order_id: 'order_TEST_ONLY_2', intent: null }];
+for (const alias of ['strategies', 'deployments', 'orders']) {
+  p1.panels[alias].data = { rows: p1.data[alias] };
+  p1.panels[alias].coverage = { ...p1.panels[alias].coverage, source_total: String(p1.data[alias].length), filtered_total: String(p1.data[alias].length), returned_count: p1.data[alias].length };
+}
 for (const [file, value] of Object.entries({ 'schemas/execution-resource-scoped.v2.schema.json': schema,
+  'fixtures/execution-resource-scoped-p1-fields.synthetic.valid.json': { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', cases: [p1] },
   'fixtures/execution-resource-portfolio-names.synthetic.valid.json':{lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',cases:[named,unnamed]},
   'openapi/execution-resource-scoped.openapi.json': openapi, 'fixtures/execution-resource-scoped.synthetic.valid.json': fixtures })) {
   const bytes = JSON.stringify(value, null, 2) + '\n', path = resolve(root, file);

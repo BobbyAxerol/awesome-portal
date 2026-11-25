@@ -308,6 +308,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
           </div>
           {view !== null && view.present ? (
             <>
+              {view.description ? <p className="exec-alp2-meta" data-testid="alpha-description">{view.description}</p> : null}
               <p className="exec-alp2-meta">
                 {view.owner.kind === "not-published" ? null : <span>Owner <b>{view.owner.kind === "value" ? view.owner.value : "Not available"}</b></span>}
                 {run.runMs !== null ? <span>Run <b>{dayMonth(run.runMs)}</b></span> : null}

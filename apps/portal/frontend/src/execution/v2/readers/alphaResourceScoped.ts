@@ -49,8 +49,8 @@ const stamps = (prefix: string, withMs = true): Record<string, Kind> => ({ [pref
 
 /** The members each relation's row may carry (all optional, all nullable except `I`). `profile_environment` is required on every row. */
 export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<string, Kind>>>> = {
-  strategies: { strategy_id: "T", alpha_id: "T", name: "T", version: "T", state: "T", stage: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
-  deployments: { deployment_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", currency: "T", portfolio_id: "T", portfolio_name: "T", portfolio_name_reason_code: "N", state: "T", ...stamps("created_at"), ...stamps("updated_at") },
+  strategies: { strategy_id: "T", alpha_id: "T", name: "T", description: "T", version: "T", state: "T", stage: "T", ...stamps("created_at"), ...stamps("updated_at"), deployment_id: "T" },
+  deployments: { deployment_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", currency: "T", account_policy_id: "T", risk_profile_id: "T", portfolio_id: "T", portfolio_name: "T", portfolio_name_reason_code: "N", state: "T", ...stamps("created_at"), ...stamps("updated_at") },
   accounts: { account_id: "T", strategy_id: "T", mode: "M", venue: "T", base_currency: "T", state: "T", ...stamps("created_at"), ...stamps("updated_at"), account_type: "T", deployment_id: "T" },
   account_balances: { account_id: "T", currency: "T", total: "D", locked: "D", free: "D", ...stamps("updated_at"), deployment_id: "T" },
   margin_balances: { account_id: "T", instrument_id: "T", currency: "T", initial: "D", maintenance: "D", ...stamps("updated_at"), deployment_id: "T" },
@@ -69,7 +69,7 @@ export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<
   },
   orders: {
     order_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", instrument_id: "T", symbol: "T", side: "T", quantity: "D", price: "D", status: "T",
-    ...stamps("submitted_at"), ...stamps("updated_at"), risk_grant_id: "T", client_order_id: "T", order_type: "T", execution_session_id: "T",
+    ...stamps("submitted_at"), ...stamps("updated_at"), risk_grant_id: "T", intent: "T", client_order_id: "T", order_type: "T", execution_session_id: "T",
     position_side: "T", time_in_force: "T", reduce_only: "B", post_only: "B", trigger_price: "D", filled_quantity: "D", average_fill_price: "D", deployment_id: "T",
   },
   fills: {

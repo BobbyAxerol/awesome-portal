@@ -107,6 +107,8 @@ export interface components {
             created_at_ms?: number;
             updated_at?: (string | number) | null;
             updated_at_ms?: number;
+            account_policy_id?: string | null;
+            risk_profile_id?: string | null;
             /** @description Display-only portfolio name joined from the same authorized profile snapshot; never an access grant. */
             portfolio_name?: string | null;
             portfolio_name_reason_code?: ("PORTFOLIO_NAME_NOT_READ" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "PORTFOLIO_NAME_AMBIGUOUS") | null;
@@ -662,6 +664,7 @@ export interface components {
             trigger_price?: string | null;
             filled_quantity?: string | null;
             average_fill_price?: string | null;
+            intent?: string | null;
             deployment_id?: string | null;
         };
         OrdersScopedRowPanel: {
@@ -940,6 +943,7 @@ export interface components {
             created_at_ms?: number;
             updated_at?: (string | number) | null;
             updated_at_ms?: number;
+            description?: string | null;
             deployment_id?: string | null;
         };
         StrategiesScopedRowPanel: {
