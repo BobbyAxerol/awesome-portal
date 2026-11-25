@@ -49,8 +49,8 @@ describe("fixture to model", () => {
   it("carries the register's own money per currency, as Source-reported figures, never summed or windowed", () => {
     const row = toFleetRow(item);
     expect(row.allocation).toEqual({ state: "reported", lines: [{ currency: "USDT", value: "20000", detail: null }] });
-    expect(row.netPnl).toEqual({ state: "reported", lines: [{ currency: "USDT", value: "123.19605", detail: "realized 123.19605, unrealized 0" }] });
-    expect(row.balance).toEqual({ state: "reported", lines: [{ currency: "USDT", value: "20123.19605", detail: "free 20123.19605, locked 0" }] });
+    expect(row.netPnl).toEqual({ state: "reported", lines: [{ currency: "USDT", value: "123.19605", detail: [{ label: "realized", value: "123.19605" }, { label: "unrealized", value: "0" }] }] });
+    expect(row.balance).toEqual({ state: "reported", lines: [{ currency: "USDT", value: "20123.19605", detail: [{ label: "free", value: "20123.19605" }, { label: "locked", value: "0" }] }] });
     expect(MONEY_FIGURE_BASIS.pnl).toContain("not a 7D or 30D");
     for (const basis of Object.values(MONEY_FIGURE_BASIS)) expect(basis).toContain("not TS-qualified");
   });

@@ -120,8 +120,9 @@ export interface FleetDeploymentView {
  * reason there are none. Never summed across currencies, never a 0 for a missing figure. These are Source-reported
  * values, not Manager-dataset (TS-qualified) ones: the dataset table, when it is published, wins over them.
  */
+/** The model keeps every figure as the exact published string; `FleetTable` formats it at render (showDecimal, exact value on the title). */
 export type FleetMoney =
-  | { state: "reported"; lines: readonly { currency: string; value: string; detail: string | null }[] }
+  | { state: "reported"; lines: readonly { currency: string; value: string; detail: readonly { label: string; value: string }[] | null }[] }
   | { state: "absent"; reason: string | null };
 
 export interface FleetRow {
@@ -157,7 +158,7 @@ export const alphaHref = (alphaId: string): string => `/deployments/alphas/${enc
 
 function moneyOf<T>(
   rows: readonly T[], availability: { state: string; reasonCode: string | null } | undefined,
-  line: (row: T) => { currency: string; value: string; detail: string | null },
+  line: (row: T) => { currency: string; value: string; detail: readonly { label: string; value: string }[] | null },
 ): FleetMoney {
   // The register's own word wins: a metric it says is unavailable is a typed absence even if a list is present.
   if (availability !== undefined && availability.state !== "AVAILABLE") return { state: "absent", reason: availability.reasonCode ?? availability.state };
@@ -187,9 +188,9 @@ export function toFleetRow(item: AlphaFleetItem): FleetRow {
     // The allocation has no availability key of its own in the register: an empty list is "no figure", not 0.
     allocation: moneyOf(item.allocations, undefined, (a) => ({ currency: a.currency, value: a.value, detail: null })),
     netPnl: moneyOf(item.positionPnl, item.metricsAvailability.current_position_pnl,
-      (p) => ({ currency: p.currency, value: p.net, detail: `realized ${p.realized}, unrealized ${p.unrealized}` })),
+      (p) => ({ currency: p.currency, value: p.net, detail: [{ label: "realized", value: p.realized }, { label: "unrealized", value: p.unrealized }] })),
     balance: moneyOf(item.balances, item.metricsAvailability.account_balance,
-      (b) => ({ currency: b.currency, value: b.total, detail: `free ${b.free}, locked ${b.locked}` })),
+      (b) => ({ currency: b.currency, value: b.total, detail: [{ label: "free", value: b.free }, { label: "locked", value: b.locked }] })),
     attention: item.attentionReasons.map((code) => ({ code, label: humanize(code) })),
     deployments: {
       count: item.deployments.length,

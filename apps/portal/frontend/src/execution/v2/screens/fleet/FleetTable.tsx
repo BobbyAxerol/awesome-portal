@@ -10,6 +10,7 @@
 import type { ReactNode } from "react";
 
 import { JourneySpine, NaWhy, SPINE_STAGE_IDS, type SpineStageId } from "../../blocks";
+import { showDecimal } from "../../charts/decimal";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { MONEY_COLUMN_WHY, MONEY_FIGURE_BASIS, humanize, notPublished, type FleetColumnKey, type FleetMoney, type FleetRow } from "./fleetModel";
@@ -31,12 +32,23 @@ function MoneyGap({ why }: { why: string }) {
  * A money cell from the fleet read: one line per currency (never summed across currencies), the figure verbatim, and the
  * honest basis under it. A figure the register does not give is the typed "Not available" with its reason, never a 0.
  */
-function MoneyCell({ money, basis, gap }: { money: FleetMoney; basis: string; gap: string }) {
+/** One fleet-read figure as the rest of the Fleet money cells print it: the boundary formatter (grouping, fixed precision), the currency after a space; the exact published string stays on the title. */
+export function moneyText(value: string, currency: string, signed: boolean): string {
+  return showDecimal(value, { unit: "money", currency, signed });
+}
+
+function MoneyCell({ money, basis, gap, signed = false }: { money: FleetMoney; basis: string; gap: string; signed?: boolean }) {
   if (money.state === "absent") return <MoneyGap why={money.reason ? `${gap} The register says: ${humanize(money.reason)}.` : gap} />;
   return (
     <span className="exec-fleet-alpha" data-money="source-reported">
       {money.lines.map((line) => (
-        <span key={line.currency} className="exec-fleet-name" title={line.detail ?? undefined}>{line.value} {line.currency}</span>
+        <span
+          key={line.currency}
+          className="exec-fleet-name exec-mgr-num"
+          title={[`${line.value} ${line.currency}`, ...(line.detail ?? []).map((d) => `${d.label} ${moneyText(d.value, line.currency, false)}`)].join(" · ")}
+        >
+          {moneyText(line.value, line.currency, signed)}
+        </span>
       ))}
       <span className="exec-fleet-version">{basis}</span>
     </span>
@@ -121,7 +133,7 @@ export function FleetTable({ rows, selectedKey, onOpen, empty, hidden }: FleetTa
     },
     { key: "stage", label: "Stage", render: (row) => <StageCell row={row} /> },
     { key: "allocation", label: "Allocation", numeric: true, render: (row) => <MoneyCell money={row.allocation} basis={MONEY_FIGURE_BASIS.allocation} gap={MONEY_COLUMN_WHY.allocation} /> },
-    { key: "pnl", label: "Net PnL", numeric: true, render: (row) => <MoneyCell money={row.netPnl} basis={MONEY_FIGURE_BASIS.pnl} gap={MONEY_COLUMN_WHY.pnl} /> },
+    { key: "pnl", label: "Net PnL", numeric: true, render: (row) => <MoneyCell money={row.netPnl} basis={MONEY_FIGURE_BASIS.pnl} gap={MONEY_COLUMN_WHY.pnl} signed /> },
     {
       key: "equity",
       label: "Equity",
