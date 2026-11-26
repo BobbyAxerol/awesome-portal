@@ -27,6 +27,7 @@ import { PhysicalBinding } from "./PhysicalBinding";
 import { ActivityPanel, DrawdownBlock, EquityBlock } from "./readPanels";
 import { AllocationsPanel, AuthorityKpis, FeesPanel, MarginPanel, PositionsPanel, ReconciliationPanel, SleevesPanel, type PanelContext } from "./panels";
 import { EnvironmentWord, Fact, Na, PhysicalProvenance, PortfolioName, ProductWord, StateFlag, WITHHELD } from "./parts";
+import { PaperProfileBar, usePaperProfile } from "../../../paperProfile";
 import { useAccountResource, useBindingDetail, useBindingExposure } from "./reads";
 import {
   RELATION_LABEL, capitalRows, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
@@ -58,9 +59,12 @@ function boundaryReason(status: string, asOf: UtcEpochMs | null): string | undef
 /** The lists that link into Account 360 and whose state Back restores. */
 const ACCOUNT_BACK_SOURCES = ["accounts", "portfolio", "cockpit", "blotter"] as const;
 
+const ACCOUNT_PAPER_PROFILES = ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] as const;
+
 export function Account360({ api, accountId }: Account360Props) {
   const [params] = useSearchParams();
-  const resource = useAccountResource(api, accountId);
+  const paperSelection = usePaperProfile();
+  const resource = useAccountResource(api, accountId, paperSelection.selected);
   // Back by source: the Accounts list as the reader left it, a Portfolio, or the Approvals cockpit (audit #8).
   const origin = backLinkFor(params, { kind: "accounts" }, ACCOUNT_BACK_SOURCES);
   const back = (
@@ -270,6 +274,9 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
     </>
   );
 
+  // The Paper profile the paper book was read from (`profile_coverage.paper.profile_id`), never the one merely asked for.
+  const coverage = profile.objects.profile_coverage as { paper?: { profile_id?: unknown } } | undefined;
+  const paperDelivered = typeof coverage?.paper?.profile_id === "string" ? coverage.paper.profile_id : null;
   const reason = resourceReason(profile);
   const chipStatesStale = status === "stale" && fresh.kind === "stale";
   return (
@@ -280,6 +287,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
           <h1 className="exec-acct-title">{title}</h1>
           {subtitle ? <p className="exec-acct-subtitle">{subtitle}</p> : null}
         </div>
+        {paperDelivered === null ? null : <PaperProfileBar delivered={paperDelivered} allowed={ACCOUNT_PAPER_PROFILES} />}
         <div className="exec-acct-controls">
           <span className="exec-acct-seg" role="group" aria-label="View">
             <button type="button" className="exec-acct-segbtn" aria-pressed={sleeve} onClick={() => setMode("sleeve")}>Sleeve</button>

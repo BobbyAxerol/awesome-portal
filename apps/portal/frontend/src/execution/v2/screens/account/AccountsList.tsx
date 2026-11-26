@@ -111,7 +111,23 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     next.delete("sel");
     setParams(next, { replace: true });
   };
-  const pickEnv = (next: ExecEnv) => url.set({ env: next, sel: null });
+  // No environment in the address: the default book (live) may hold nothing while another does. An empty authorized read there
+  // is stated by the tab counts, but opening on "0 bindings" hides the rows the owner may read, so the page walks the other
+  // books once, in tab order, and stops on the first that has rows. A tab the reader picks, or an address that names one, is final.
+  const seeking = useRef<{ active: boolean; tried: ExecEnv[] }>({ active: params.get("env") === null, tried: [] });
+  useEffect(() => {
+    const walk = seeking.current;
+    if (!walk.active || pages.state.phase !== "ready" || envelope === null) return;
+    // The envelope on screen must be this environment's own (a switch re-reads before it re-answers).
+    if (envelopeEnvironment(envelope.environment) !== env) return;
+    if (q !== null || venue !== null) { walk.active = false; return; }
+    if (envelope.page.totalCount > 0 || pages.items.length > 0 || pages.nextCursor !== null) { walk.active = false; return; }
+    if (!walk.tried.includes(env)) walk.tried.push(env);
+    const next = ENV_TABS.find((id) => !walk.tried.includes(id));
+    if (next === undefined) { walk.active = false; return; }
+    url.set({ env: next, sel: null }, { replace: true });
+  }, [pages.state.phase, pages.items.length, pages.nextCursor, envelope, env, q, venue, url]);
+  const pickEnv = (next: ExecEnv) => { seeking.current.active = false; url.set({ env: next, sel: null }); };
   // Same roving tabindex and arrow keys as Account 360 and My access: the arrows cycle the three environments.
   const envKeys = (event: KeyboardEvent<HTMLDivElement>) => {
     const at = ENV_TABS.findIndex((id) => id === env);

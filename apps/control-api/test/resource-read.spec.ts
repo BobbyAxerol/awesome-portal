@@ -1250,3 +1250,15 @@ describe("resource controller profile_id allow-list", () => {
     expect(read).not.toHaveBeenCalled();
   });
 });
+
+describe("resource controller profile_id for an Account 360", () => {
+  it("takes profile_id on the account route: off the allow-list it is a typed 400 (not the generic query refusal), and the reader is never reached", async () => {
+    const read = vi.fn(async () => ({ ok: true }));
+    const controller = new ResourceReadController({ read } as unknown as ResourceReadService,
+      { canReadExecution: vi.fn(async () => true) } as never, config());
+    const request = { portalUser: user, portalWorkspaceId: workspaceId, portalSession: session } as never;
+    await expect(controller.account(request, "acct_1", { profile_id: "PAPER_OKX_SWAP" }))
+      .rejects.toMatchObject({ code: "PAPER_PROFILE_NOT_ALLOWED", status: 400 });
+    expect(read).not.toHaveBeenCalled();
+  });
+});

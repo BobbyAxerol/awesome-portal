@@ -182,6 +182,34 @@ describe("Accounts list", () => {
     expect(screen.getByText(/As of 22 Aug 09:56Z/)).toBeTruthy();
   });
 
+  it("opens on the first book that has bindings when the address names none and the default (live) book is empty", async () => {
+    const stub = stubFetch({
+      answer: (url) => {
+        if (url.pathname !== "/api/v1/execution/broker-bindings" || url.searchParams.get("environment") !== "live") return null;
+        const real = answerAccount("GET", url.pathname, url.searchParams) as { status: number; body: Record<string, any> };
+        return { status: real.status, body: { ...real.body, page: { ...real.body.page, rows: [], total_count: 0, filtered_count: 0, next_cursor: null, has_more: false } } };
+      },
+    });
+    mount("/deployments/accounts");
+    await waitFor(() => expect(search().get("env")).toBe("paper"), SLOW);
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1), SLOW);
+    expect(stub.paths("/api/v1/execution/broker-bindings")[0]).toContain("environment=live");
+  });
+
+  it("does not walk away from an environment the address names, even when it is empty", async () => {
+    const stub = stubFetch({
+      answer: (url) => {
+        if (url.pathname !== "/api/v1/execution/broker-bindings" || url.searchParams.get("environment") !== "live") return null;
+        const real = answerAccount("GET", url.pathname, url.searchParams) as { status: number; body: Record<string, any> };
+        return { status: real.status, body: { ...real.body, page: { ...real.body.page, rows: [], total_count: 0, filtered_count: 0, next_cursor: null, has_more: false } } };
+      },
+    });
+    mount("/deployments/accounts?env=live");
+    await waitFor(() => expect(stub.paths("/api/v1/execution/broker-bindings").length).toBeGreaterThan(0), SLOW);
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 200)); });
+    expect(stub.paths("/api/v1/execution/broker-bindings").every((c) => c.includes("environment=live"))).toBe(true);
+  });
+
   it("reads one environment per tab and writes it to the URL; All environments is not offered", async () => {
     const stub = stubFetch();
     mount("/deployments/accounts");

@@ -59,6 +59,8 @@ import { PaperProfileBar, readProfilesOf } from "../../../paperProfile";
 import "../../css/blotter.css";
 import "../../css/cards.css";
 
+const JOURNAL_CAP = 50;
+
 export const BLOTTER_SCREEN_KEY = "blotter" as const;
 
 export interface BlotterScreenProps {
@@ -220,7 +222,10 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   const mid = useMediaQuery(MID_QUERY);
   // The reader's own choice wins; until there is one, the default set for this width.
   const [chosen, setColumns0] = useState<ReadonlySet<ColumnId> | null>(null);
-  const columns: ReadonlySet<ColumnId> = chosen ?? (mid ? new Set([...DEFAULT_COLUMNS].filter((id) => !MID_HIDDEN.includes(id))) : DEFAULT_COLUMNS);
+  // Intent is a default column once the orders read delivers it for any row; a row without it says "Not available" in its own cell.
+  const intentDelivered = state.phase === "ready" && state.read.orders.some((o) => o.intent !== null);
+  const baseColumns = mid ? new Set([...DEFAULT_COLUMNS].filter((id) => !MID_HIDDEN.includes(id))) : DEFAULT_COLUMNS;
+  const columns: ReadonlySet<ColumnId> = chosen ?? (intentDelivered && !mid ? new Set([...baseColumns, "intent" as ColumnId]) : baseColumns);
   const setColumns = (update: (prev: ReadonlySet<ColumnId>) => ReadonlySet<ColumnId>) => setColumns0(update(columns));
   const [chooserOpen, setChooserOpen] = useState(false);
   const visibleColumns = COLUMNS.filter((c) => columns.has(c.id));
@@ -775,6 +780,33 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         ) : null}
         {page.groups.length > GROUP_CAP ? <p className="exec-blt2-note">Showing {GROUP_CAP} of {page.groups.length}</p> : null}
       </FoldPanel>
+
+      {page.journalPanel === null ? (
+        <FoldPanel title="Command journal" aside="Not in this response">
+          <p className="exec-blt2-na">This Blotter response carries no command journal branch, so none is drawn; the commands of the platform are listed on Operations.</p>
+        </FoldPanel>
+      ) : (
+        <FoldPanel title="Command journal" defaultOpen={false} aside={page.journalPanel.state === "UNAVAILABLE" || page.journalPanel.state === "DENIED" || page.journalPanel.state === "ERROR" ? `Not read (${page.journalPanel.reason ?? page.journalPanel.state})` : page.journal.length === 0 ? "None in this read" : `${Math.min(JOURNAL_CAP, page.journal.length)} of ${page.journal.length} read${page.journalPanel.truncated ? " (more exist)" : ""}`}>
+          {page.journal.length === 0 ? (
+            <p className="exec-blt2-na">{page.journalPanel.state === "UNAVAILABLE" || page.journalPanel.state === "DENIED" || page.journalPanel.state === "ERROR" ? `The command journal was not read: ${page.journalPanel.reason ?? page.journalPanel.state}.` : "No commands in this read."}</p>
+          ) : (
+            <CardsTable
+              label="Command journal"
+              rows={page.journal.slice(0, JOURNAL_CAP)}
+              rowKey={(row) => row.commandId}
+              columns={[
+                { key: "command", label: "Command", render: (row) => <span className="exec-blt2-id">{row.commandId}</span> },
+                { key: "kind", label: "Kind", render: (row) => (row.commandKind ? humanize(row.commandKind) : <span className="exec-blt2-na">Not stated</span>) },
+                { key: "state", label: "State", render: (row) => (row.state ? humanize(row.state) : <span className="exec-blt2-na">Not stated</span>) },
+                { key: "alpha", label: "Alpha", render: (row) => row.alphaId ?? <span className="exec-blt2-na">Not available</span> },
+                { key: "accepted", label: "Accepted (UTC)", render: (row) => (row.acceptedAt ? <span title={row.acceptedAt}>{shortUtc(row.acceptedAt)}</span> : <span className="exec-blt2-na">Not available</span>) },
+                { key: "terminal", label: "Terminal (UTC)", render: (row) => (row.terminalAt ? <span title={row.terminalAt}>{shortUtc(row.terminalAt)}</span> : <span className="exec-blt2-na">Not terminal</span>) },
+              ]}
+            />
+          )}
+          {page.journal.length > JOURNAL_CAP ? <p className="exec-blt2-note">Showing {JOURNAL_CAP} of {page.journal.length}</p> : null}
+        </FoldPanel>
+      )}
 
       <details className="exec-blt2-prov">
         <summary>Provenance</summary>

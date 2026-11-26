@@ -87,7 +87,7 @@ export class ResourceReadController {
     // Absent = today's behaviour. Present and off the allow-list = typed 400, never the default.
     let paperProfileId: string | undefined;
     if (query.data.profile_id !== undefined) {
-      if (kind !== "PORTFOLIO") throw new ResourceReadError("EDS04_RESOURCE_QUERY_INVALID", 400);
+      if (kind !== "PORTFOLIO" && kind !== "ACCOUNT") throw new ResourceReadError("EDS04_RESOURCE_QUERY_INVALID", 400);
       const resolved = resolvePaperReadProfile(this.config, query.data.profile_id);
       if (!resolved) throw new ResourceReadError("PAPER_PROFILE_NOT_ALLOWED", 400);
       paperProfileId = resolved;

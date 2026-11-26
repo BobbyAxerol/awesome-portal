@@ -131,6 +131,20 @@ export interface FillsBasis {
   note: string;
 }
 
+/** One command of the command journal the Blotter response carries (read-only; the console owns the command plane). */
+export interface BlotterJournalRow {
+  commandId: string;
+  commandKind: string | null;
+  state: string | null;
+  outcomeClass: string | null;
+  alphaId: string | null;
+  accountId: string | null;
+  clientOrderId: string | null;
+  acceptedAt: string | null;
+  terminalAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface BlotterFill {
   fillId: string;
   tradeId: string | null;
@@ -215,6 +229,16 @@ function orderOf(row: Record<string, unknown>): BlotterOrder | null {
   };
 }
 
+function journalOf(row: Record<string, unknown>): BlotterJournalRow | null {
+  const commandId = text(row.command_id);
+  if (commandId === null) return null;
+  return {
+    commandId, commandKind: text(row.command_kind), state: text(row.state), outcomeClass: text(row.outcome_class), alphaId: text(row.alpha_id),
+    accountId: text(row.account_id), clientOrderId: text(row.client_order_id), acceptedAt: text(row.accepted_at), terminalAt: text(row.terminal_at),
+    updatedAt: text(row.updated_at),
+  };
+}
+
 function fillOf(row: Record<string, unknown>): BlotterFill | null {
   const fillId = text(row.fill_id) ?? text(row.trade_id) ?? text(row.event_id);
   if (fillId === null) return null;
@@ -289,6 +313,9 @@ export interface BlotterRead {
   fills: readonly BlotterFill[];
   legs: readonly BlotterLeg[];
   groups: readonly BlotterGroup[];
+  /** The command journal the response carries (`command_journal`), and the verdict of its own panel: `null` when the response has no such branch. */
+  journal: readonly BlotterJournalRow[];
+  journalPanel: { state: string; reason: string | null; returned: number | null; truncated: boolean } | null;
   nextCursor: string | null;
   prevCursor: string | null;
   exactTotal: number | null;
@@ -368,6 +395,12 @@ export function readBlotter(profile: ProfileEnvelope): BlotterRead {
     fills: parsedFills,
     legs: take(profile.data.conditional_legs, legOf),
     groups: take(profile.data.conditional_groups, groupOf),
+    journal: take(profile.data.command_journal, journalOf),
+    journalPanel: (() => {
+      const panel = profile.panels.command_journal as unknown as { state?: string; reason_code?: string | null; coverage?: Record<string, unknown> } | undefined;
+      if (!panel) return null;
+      return { state: String(panel.state), reason: panel.reason_code ?? null, returned: count(panel.coverage?.returned_count), truncated: panel.coverage?.truncated === true || panel.coverage?.has_more === true };
+    })(),
     nextCursor: text(page.next_cursor),
     prevCursor: text(page.previous_cursor),
     exactTotal: count(profile.scalars.exact_total),

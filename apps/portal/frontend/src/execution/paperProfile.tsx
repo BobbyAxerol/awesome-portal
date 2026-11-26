@@ -27,7 +27,7 @@ export function parsePaperProfile(value: string | null | undefined): PaperProfil
 
 /** The routes that are Paper screens: the only places the selection applies and travels to. */
 export function isPaperScreenPath(path: string): boolean {
-  return /^\/deployments\/(paper|blotter)(\/|$)/.test(path) || /^\/deployments\/portfolios\/[^/]+/.test(path);
+  return /^\/deployments\/(paper|blotter)(\/|$)/.test(path) || /^\/deployments\/(portfolios|accounts)\/[^/]+/.test(path);
 }
 
 /** The selection in the live URL, for the API layer (which has no router context). Never throws. */

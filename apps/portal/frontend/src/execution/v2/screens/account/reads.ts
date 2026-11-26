@@ -85,8 +85,8 @@ export function useRead<T>(
 
 /* ── the account ─────────────────────────────────────────────────────────── */
 
-export const useAccountResource = (api: ExecutionApi, accountId: string) =>
-  useRead<ProfileEnvelope>(api, `account:${accountId}`, true, (scopedApi) => scopedApi.getAccount360Resource(accountId));
+export const useAccountResource = (api: ExecutionApi, accountId: string, paperProfile: string | null = null) =>
+  useRead<ProfileEnvelope>(api, `account:${accountId}:${paperProfile ?? ""}`, true, (scopedApi) => scopedApi.getAccount360Resource(accountId));
 
 export const useBindingExposure = (api: ExecutionApi, bindingId: string | null) =>
   useRead<BindingExposure>(api, `exposure:${bindingId ?? ""}`, bindingId !== null, async (scopedApi) => {

@@ -583,7 +583,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   const getPortfolio360Resource = (portfolioId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(withPaperProfile(`/resources/portfolios/${encodeURIComponent(portfolioId)}`), readProfileEnvelope, "The portfolio resource");
   const getAccount360Resource = (accountId: string): Promise<Result<ProfileEnvelope>> =>
-    readGet(`/resources/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account resource");
+    readGet(withPaperProfile(`/resources/accounts/${encodeURIComponent(accountId)}`), readProfileEnvelope, "The account resource");
   const getBindingResource = (bindingId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/resources/bindings/${encodeURIComponent(bindingId)}`, readProfileEnvelope, "The binding resource");
   const getFinancialChart = (query: FinancialChartQuery): Promise<Result<FinancialChartPayload>> =>

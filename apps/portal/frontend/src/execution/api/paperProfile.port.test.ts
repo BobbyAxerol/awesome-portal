@@ -91,3 +91,14 @@ describe("Paper profile selection on a Portfolio 360 page", () => {
     ]);
   });
 });
+
+describe("Paper profile selection on an Account 360 page", () => {
+  it("routes the account resource by the selected profile and leaves the default byte-identical", async () => {
+    let calls = at("/deployments/accounts/acct_1?paper_profile=PAPER_OKX_SWAP");
+    await api().getAccount360Resource("acct_1");
+    expect(calls.map((c) => c.replace(/^.*\/resources/, "/resources"))).toEqual(["/resources/accounts/acct_1?profile_id=PAPER_OKX_SWAP"]);
+    calls = at("/deployments/accounts/acct_1");
+    await api().getAccount360Resource("acct_1");
+    expect(calls.map((c) => c.replace(/^.*\/resources/, "/resources"))).toEqual(["/resources/accounts/acct_1"]);
+  });
+});
