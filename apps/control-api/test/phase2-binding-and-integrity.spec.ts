@@ -87,6 +87,10 @@ describe("2A · a binding id parses on its own grammar", () => {
     for (const id of PUBLISHED) expect(parseBindingId(id), id).toBe(id);
   });
 
+  it("accepts what the old single-@ rule refused: several @ segments and a venue in any case (virtual-account ids)", () => {
+    for (const id of ["two@at@signs", "a@binance"]) expect(parseBindingId(id), id).toBe(id);
+  });
+
   it("refuses everything that could change what a path or a resource means", () => {
     const refused = [
       "",                                     // nothing
