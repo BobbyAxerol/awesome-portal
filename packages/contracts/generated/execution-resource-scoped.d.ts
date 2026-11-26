@@ -2085,6 +2085,8 @@ export interface operations {
             query?: {
                 workspace_id?: string;
                 environment?: "paper" | "sandbox" | "live";
+                /** @description Optional Paper profile to read. Absent = the stack default. Must be on the server allow-list; otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default. */
+                profile_id?: string;
             };
             header?: never;
             path: {

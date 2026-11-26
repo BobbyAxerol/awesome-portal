@@ -154,7 +154,9 @@ for (const kind of Object.keys(relations)) {
     description: 'SCOPED_V2 representation of the existing operation, selected only by durable server policy; no browser flag can select or downgrade authority. Legacy v1 remains unchanged and is not represented by this dedicated V2 document. private, no-store.',
     parameters: [{ name: 'resource_id', in: 'path', required: true, schema: { type: 'string', pattern: '^[A-Za-z0-9._:@-]{1,160}$' } },
       { name: 'workspace_id', in: 'query', schema: { type: 'string', minLength: 1, maxLength: 96 } },
-      { name: 'environment', in: 'query', schema: environment }],
+      { name: 'environment', in: 'query', schema: environment },
+      // Portfolio only: the Paper profile selector (absent = the stack default; off the server allow-list = 400 PAPER_PROFILE_NOT_ALLOWED).
+      ...(kind === 'Portfolio' ? [{ name: 'profile_id', in: 'query', description: 'Optional Paper profile to read. Absent = the stack default. Must be on the server allow-list; otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default.', schema: { type: 'string', pattern: '^PAPER_[A-Z0-9_]{2,120}$' } }] : [])],
     responses: { '200': { description: 'Authorized Resource360 V2 response or explicit byte-bound shell; no total-NAV claim.',
       content: { 'application/json': { schema: { $ref: `../schemas/execution-resource-scoped.v2.schema.json#/$defs/${kind}ScopedResourceWireResponse` } } } },
       ...Object.fromEntries([400, 401, 403, 404, 409, 503].map(status => [status, { description: 'Typed refusal: malformed query, current authority, unknown-or-hidden resource, stale publication/policy or unqualified source. No hidden fact disclosed.' }])),

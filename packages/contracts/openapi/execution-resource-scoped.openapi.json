@@ -105,6 +105,15 @@
                 "live"
               ]
             }
+          },
+          {
+            "name": "profile_id",
+            "in": "query",
+            "description": "Optional Paper profile to read. Absent = the stack default. Must be on the server allow-list; otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default.",
+            "schema": {
+              "type": "string",
+              "pattern": "^PAPER_[A-Z0-9_]{2,120}$"
+            }
           }
         ],
         "responses": {
