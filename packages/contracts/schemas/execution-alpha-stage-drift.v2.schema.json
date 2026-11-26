@@ -21,7 +21,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 192,
-      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+      "pattern": "^[A-Za-z0-9._:@-]+$(?![\\s\\S])"
     },
     "qualification": {
       "const": "RETAINED_OBSERVATIONS_NOT_FINANCIAL_CERTIFICATION"

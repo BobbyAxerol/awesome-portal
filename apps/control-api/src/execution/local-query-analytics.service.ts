@@ -119,7 +119,7 @@ export class LocalQueryAnalyticsService {
     // Composite deployment ids are colon-joined by the source
     // (strategy:mode:venue:account — finding F13); the id never leaves this
     // process, so the colon is admitted here and nowhere in a resource string.
-    if (!/^[A-Za-z0-9._:-]{1,192}$/.test(subjectId)) {
+    if (!(subjectKind === "alpha" ? ALPHA_ID : SUBJECT_ID).test(subjectId)) {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
@@ -165,7 +165,7 @@ export class LocalQueryAnalyticsService {
     principal: AnalyticsPrincipal,
     request: ObservedTimelineRequest,
   ): Promise<Record<string, unknown>> {
-    if (!/^[A-Za-z0-9._:-]{1,192}$/.test(request.subjectId)) {
+    if (!(request.subjectKind === "alpha" ? ALPHA_ID : SUBJECT_ID).test(request.subjectId)) {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
@@ -582,7 +582,7 @@ export class LocalQueryAnalyticsService {
     /** Omitted means everything the history mirror holds — the charts' default. */
     days?: number,
   ): Promise<Record<string, unknown>> {
-    if (!/^[A-Za-z0-9._:-]{1,192}$/.test(alphaId)) {
+    if (!ALPHA_ID.test(alphaId)) {
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     }
     if (!this.enabled()) throw new AnalyticsProxyError("ANALYTICS_DISABLED", 404);
@@ -672,7 +672,7 @@ export class LocalQueryAnalyticsService {
 
   /** Opt-in exact successor; legacy V1 wire is deliberately unchanged. */
   async stageDriftExact(principal: AnalyticsCaller, alphaId: string, days?: number): Promise<ExactStageDrift> {
-    if (!/^[A-Za-z0-9._:-]{1,192}$(?![\s\S])/.test(alphaId))
+    if (!ALPHA_ID_EXACT.test(alphaId))
       throw new AnalyticsProxyError("ANALYTICS_IDENTIFIER_INVALID", 400);
     if (days !== undefined && (!Number.isInteger(days) || days < 2 || days > 365))
       throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
@@ -806,6 +806,11 @@ export class LocalQueryAnalyticsService {
     }
   }
 }
+
+/** A published alpha id is `alpha@v1@<name>`: the `@` is part of the id, and only an alpha id may carry it. */
+const SUBJECT_ID = /^[A-Za-z0-9._:-]{1,192}$/;
+const ALPHA_ID = /^[A-Za-z0-9._:@-]{1,192}$/;
+const ALPHA_ID_EXACT = /^[A-Za-z0-9._:@-]{1,192}$(?![\s\S])/;
 
 function analyticsRequirement(kind: QueryAnalyticsSubjectKind | "account", id: string): ReadScopeRequirement {
   if (kind === "portfolio") return { action: "portfolio.read", resource: { kind: "PORTFOLIO", id } };

@@ -320,10 +320,10 @@ const ShadowPanelSchema = z.enum(["orders", "positions"]);
 const ObservedTimelineQuerySchema = z.object({
   environment: z.enum(["paper", "sandbox", "live"]),
   subject_kind: z.enum(["deployment", "alpha", "portfolio", "account"]),
-  subject_id: z.string().regex(/^[A-Za-z0-9._:-]{1,192}$/),
+  subject_id: z.string().regex(/^[A-Za-z0-9._:@-]{1,192}$/),
   limit: z.coerce.number().int().min(1).max(200).optional(),
   after: z.string().min(1).max(4096).optional(),
-}).strict();
+}).strict().refine((q) => q.subject_kind === "alpha" || !q.subject_id.includes("@"));
 const ShadowPanelQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(250).default(100),
   status: z.string().trim().min(1).max(512).optional(),

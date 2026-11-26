@@ -22,7 +22,7 @@ export const exactStageSeries = z.object({
 }).strict();
 export const exactStageDrift = z.object({
   schema_version: z.literal("portal.execution.alpha-stage-drift.v2"),
-  alpha_id: z.string().min(1).max(192).regex(/^[A-Za-z0-9._:-]+$(?![\s\S])/),
+  alpha_id: z.string().min(1).max(192).regex(/^[A-Za-z0-9._:@-]+$(?![\s\S])/),
   qualification: z.literal("RETAINED_OBSERVATIONS_NOT_FINANCIAL_CERTIFICATION"),
   window: z.object({ days: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
     requested_days: z.number().int().min(2).max(365).nullable(),

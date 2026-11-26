@@ -118,7 +118,10 @@ function ActualFacet({ env, equity, inputs, drift, rb, drawdown, readAsOf }: Pic
   const loading = equity.phase === "loading" || equity.phase === "idle" || (inputs.length === 0 && drift.phase === "loading");
   if (loading) return <PanelState status="loading" />;
   if (inputs.length === 0) {
-    const reason = equity.phase === "error" ? equity.reason : "No equity series is published for this book.";
+    // Both typed causes are said: the equity read's own, and the stage-drift read's when that is the one that failed.
+    const reason = equity.phase === "error" ? (drift.phase === "error" ? `${equity.reason} Stage drift: ${drift.reason}` : equity.reason)
+      : drift.phase === "error" ? `No equity series is published for this book. Stage drift: ${drift.reason}`
+      : "No equity series is published for this book.";
     return (
       <EquityPanel
         label={`Equity, ${ENV_LABEL[env]}`}
