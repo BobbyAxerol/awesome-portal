@@ -16,6 +16,7 @@ import {
 } from "../../../../features/admin/executionGrantsApi";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { SectionPanel } from "../../blocks";
+import { CardsTable } from "../../cardsTable";
 import { formatInstant } from "../../boundary";
 import { Flag } from "../../Flag";
 
@@ -124,29 +125,25 @@ export function ExecutionGrantsPanel({ client = executionGrants }: { client?: Gr
       {data.grants.length === 0 ? (
         <PanelState status="empty" reason="No account holds an execution grant." />
       ) : (
-        <table className="exec-usr-table" aria-label="Execution grants">
-          <thead><tr><th scope="col">Account</th><th scope="col">Environments</th><th scope="col">Granted</th><th scope="col">Expires</th><th scope="col">Revoked</th><th scope="col">State</th><th scope="col">Actions</th></tr></thead>
-          <tbody>
-            {data.grants.map((g) => (
-              <tr key={g.userId}>
-                <th scope="row">{g.displayName && g.displayName !== g.username ? `${g.displayName} (${g.username})` : g.username}</th>
-                <td>{g.environments.map((e) => ENV_LABEL[e]).join(", ")}</td>
-                <td>{formatInstant(g.termStartedAt)}</td>
-                <td>{formatInstant(g.expiresAt)}</td>
-                <td>{g.revokedAt ? formatInstant(g.revokedAt) : "Not revoked"}</td>
-                <td><Flag kind={STATUS_VIEW[g.status].kind} label={STATUS_VIEW[g.status].label} size="sm" /></td>
-                <td>
-                  {g.status === "REVOKED" ? <span className="exec-usr-meta">Issue a new grant to restore access</span> : (
-                    <>
-                      <button type="button" className="exec-usr-btn" onClick={() => startRenew(g)} aria-label={`Renew ${g.username}`}>Renew</button>{" "}
-                      <button type="button" className="exec-usr-btn" onClick={() => { setDraft(null); setNotice(null); setFailed(null); setConfirmRevoke(g.username); }} aria-label={`Revoke ${g.username}`}>Revoke</button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <CardsTable
+          label="Execution grants"
+          rows={data.grants}
+          rowKey={(g) => g.userId}
+          columns={[
+            { key: "account", label: "Account", render: (g) => (g.displayName && g.displayName !== g.username ? `${g.displayName} (${g.username})` : g.username) },
+            { key: "environments", label: "Environments", render: (g) => g.environments.map((e) => ENV_LABEL[e]).join(", ") },
+            { key: "granted", label: "Granted", render: (g) => formatInstant(g.termStartedAt) },
+            { key: "expires", label: "Expires", render: (g) => formatInstant(g.expiresAt) },
+            { key: "revoked", label: "Revoked", render: (g) => (g.revokedAt ? formatInstant(g.revokedAt) : "Not revoked") },
+            { key: "state", label: "State", render: (g) => <Flag kind={STATUS_VIEW[g.status].kind} label={STATUS_VIEW[g.status].label} size="sm" /> },
+            { key: "actions", label: "Actions", render: (g) => (g.status === "REVOKED" ? <span className="exec-usr-meta">Issue a new grant to restore access</span> : (
+              <>
+                <button type="button" className="exec-usr-btn" onClick={() => startRenew(g)} aria-label={`Renew ${g.username}`}>Renew</button>{" "}
+                <button type="button" className="exec-usr-btn" onClick={() => { setDraft(null); setNotice(null); setFailed(null); setConfirmRevoke(g.username); }} aria-label={`Revoke ${g.username}`}>Revoke</button>
+              </>
+            )) },
+          ]}
+        />
       )}
 
       {confirmRevoke ? (
