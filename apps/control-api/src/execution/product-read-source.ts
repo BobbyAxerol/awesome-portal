@@ -3,7 +3,7 @@ import { freshnessPolicies } from "./environment-parity";
 import { retainedReview, projectionExpired } from "./retained-read-profile";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { ControlApiConfig, paperReadProfileId, querySigningKeys } from "../config";
+import { ControlApiConfig, paperReadProfileId, querySigningKeys, resolvePaperReadProfile } from "../config";
 import { ExecutionReadScopes, ExecutionReadScopeError, scopeReadPopulation,
   type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, retainedRelationAction, fenceRetainedSnapshot } from "./retained-operation-page";
@@ -267,7 +267,7 @@ export class ExecutionProductReadSource {
           availability: "UNAVAILABLE", retryable: false,
         });
       }
-      this.assertWarmUpMatchesReadProfile(environment);
+      this.assertWarmUpMatchesReadProfile(environment, principal);
       this.retainProfileRead(composition, principal, environment, screenId);
       return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
     }
@@ -286,7 +286,7 @@ export class ExecutionProductReadSource {
         // the read side serves another Paper profile their page would be a
         // different profile's data under this profile's name, so "not ready"
         // stays "not ready".
-        this.warmUpMatchesReadProfile(environment)
+        this.warmUpMatchesReadProfile(environment, principal)
       ) {
         this.retainProfileRead(composition, principal, environment, screenId);
         return this.namedCurrentRelation(principal, environment, screenId, sourceId, relation, query);
@@ -375,8 +375,8 @@ export class ExecutionProductReadSource {
    * layouts.  It does not expose a generic relation route or a raw source
    * record/cursor to any browser response.
    */
-  private assertWarmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment): void {
-    if (this.warmUpMatchesReadProfile(requestedEnvironment)) return;
+  private assertWarmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment, principal?: CurrentSourcePrincipal): void {
+    if (this.warmUpMatchesReadProfile(requestedEnvironment, principal)) return;
     throw new CurrentSourceProxyError("EDS11R_PANEL_REQUIRES_PROJECTION", 503, {
       availability: "UNAVAILABLE",
       reason_code: "WARM_UP_NOT_BOUND_TO_PAPER_READ_PROFILE",
@@ -384,10 +384,10 @@ export class ExecutionProductReadSource {
     });
   }
 
-  private warmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment): boolean {
+  private warmUpMatchesReadProfile(requestedEnvironment: CurrentSourceEnvironment, principal?: CurrentSourcePrincipal): boolean {
     const environment = maximumDataEnvironment(requestedEnvironment);
     if (environment !== "paper") return true;
-    const readProfile = paperReadProfileId(this.config);
+    const readProfile = principal?.paperProfileId ?? paperReadProfileId(this.config);
     // An unconfigured profile keeps the existing typed failure of the path
     // below; only a configured, different profile is refused here.
     return readProfile === undefined || managerRelationProfileBinding(environment).profileId === readProfile;
@@ -453,7 +453,7 @@ export class ExecutionProductReadSource {
     }
     try {
       validateBinding(requestedEnvironment, screenId, "manager.deployments", "strategy_deployments", { limit: 1 });
-      const environment = maximumDataEnvironment(requestedEnvironment), profileId = profile(this.config, environment);
+      const environment = maximumDataEnvironment(requestedEnvironment), profileId = profile(this.config, environment, principal);
       if (this.readScopes && principal.workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID)
         throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       const metadata = this.readScopes ? await this.repository.snapshotMetadata(principal.workspaceId, environment, profileId) : null;
@@ -461,7 +461,7 @@ export class ExecutionProductReadSource {
         "manager.deployments", "strategy_deployments", metadata ?? undefined, { kind: "DEPLOYMENT", id: deploymentId });
       this.retainProfileRead(composition, principal, requestedEnvironment, screenId, profileId, readScope, metadata);
       const read = async (): Promise<DeploymentScopeResolution> => {
-      const { snapshot } = await this.localSnapshot(requestedEnvironment, readScope?.mode === "SCOPED_V2");
+      const { snapshot } = await this.localSnapshot(requestedEnvironment, readScope?.mode === "SCOPED_V2", principal);
       if (readScope?.mode === "SCOPED_V2" && (snapshot.payloadDigest !== metadata?.payloadDigest || snapshot.projectionEpoch !== metadata?.projectionEpoch ||
           snapshot.sourceCatalogueSha256 !== metadata?.sourceCatalogueSha256)) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
       try {
@@ -576,7 +576,7 @@ export class ExecutionProductReadSource {
       limit: query.limit,
       ...(query.cursor ? { cursor: query.cursor } : {}),
     });
-    const environment = maximumDataEnvironment(requestedEnvironment), profileId = profile(this.config, environment),
+    const environment = maximumDataEnvironment(requestedEnvironment), profileId = profile(this.config, environment, principal),
       projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     if (!projectionWorkspaceId) throw new CurrentSourceProxyError("N31_PROJECTION_WORKSPACE_NOT_CONFIGURED", 503);
     if (this.readScopes && principal.workspaceId !== projectionWorkspaceId)
@@ -601,7 +601,7 @@ export class ExecutionProductReadSource {
     const read = async (accountScope?: AuthorizedExecutionReadScope) => {
     const isScoped = readScope?.mode === "SCOPED_V2";
     const accountTarget = isScoped ? query.accountTarget : undefined;
-    const { snapshot, ageMs } = await this.localSnapshot(requestedEnvironment, isScoped);
+    const { snapshot, ageMs } = await this.localSnapshot(requestedEnvironment, isScoped, principal);
     if (isScoped && (snapshot.payloadDigest !== metadata?.payloadDigest || snapshot.projectionEpoch !== metadata?.projectionEpoch ||
       snapshot.sourceCatalogueSha256 !== metadata?.sourceCatalogueSha256)) throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
     try {
@@ -823,7 +823,7 @@ export class ExecutionProductReadSource {
     return readScope && this.readScopes ? this.readScopes.deliver(readScope, () => read()) : read();
   }
 
-  private async localSnapshot(requestedEnvironment: CurrentSourceEnvironment, raw = false): Promise<{
+  private async localSnapshot(requestedEnvironment: CurrentSourceEnvironment, raw = false, principal?: CurrentSourcePrincipal): Promise<{
     snapshot: ProfileProjectionSnapshot;
     environment: ProjectionEnvironment;
     profileId: string;
@@ -831,7 +831,7 @@ export class ExecutionProductReadSource {
     ageMs: number | null;
   }> {
     const environment: ProjectionEnvironment = requestedEnvironment === "canary" ? "live" : requestedEnvironment;
-    const profileId = profile(this.config, environment);
+    const profileId = profile(this.config, environment, principal);
     const projectionWorkspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
     if (!projectionWorkspaceId) {
       throw new CurrentSourceProxyError("N31_PROJECTION_WORKSPACE_NOT_CONFIGURED", 503);
@@ -1265,7 +1265,13 @@ function validateBinding(
   }
 }
 
-function profile(config: ControlApiConfig, environment: ProjectionEnvironment): string {
+function profile(config: ControlApiConfig, environment: ProjectionEnvironment, principal?: CurrentSourcePrincipal): string {
+  if (environment === "paper" && principal?.paperProfileId !== undefined) {
+    // A selected profile must be on the allow-list; there is no fall-through to the default.
+    const chosen = resolvePaperReadProfile(config, principal.paperProfileId);
+    if (!chosen) throw new CurrentSourceProxyError("PAPER_PROFILE_NOT_ALLOWED", 400);
+    return chosen;
+  }
   const value = environment === "paper" ? paperReadProfileId(config)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;

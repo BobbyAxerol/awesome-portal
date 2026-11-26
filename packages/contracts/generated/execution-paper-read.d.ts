@@ -535,6 +535,7 @@ export interface components {
             source_authority: "TRADING_SYSTEM";
             /** @enum {string} */
             delivery_profile: "PAPER_BINANCE_USDM" | "PAPER_OKX_SWAP";
+            read_profiles?: ("PAPER_BINANCE_USDM" | "PAPER_OKX_SWAP")[];
             workspace_id: components["schemas"]["Identifier"];
             /** Format: date-time */
             read_at: string;
@@ -581,6 +582,8 @@ export interface components {
     };
     parameters: {
         WorkspaceId: components["schemas"]["Identifier"];
+        /** @description Optional Paper profile to read. Absent = the stack's configured default. Must be on the server allow-list (see read_profiles); otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default. */
+        PaperProfileId: string;
         DeploymentId: components["schemas"]["Identifier"];
     };
     requestBodies: never;
@@ -593,6 +596,8 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
+                /** @description Optional Paper profile to read. Absent = the stack's configured default. Must be on the server allow-list (see read_profiles); otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default. */
+                profile_id?: components["parameters"]["PaperProfileId"];
             };
             header?: never;
             path?: never;
@@ -618,6 +623,8 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
+                /** @description Optional Paper profile to read. Absent = the stack's configured default. Must be on the server allow-list (see read_profiles); otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default. */
+                profile_id?: components["parameters"]["PaperProfileId"];
             };
             header?: never;
             path: {
@@ -654,6 +661,8 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
+                /** @description Optional Paper profile to read. Absent = the stack's configured default. Must be on the server allow-list (see read_profiles); otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default. */
+                profile_id?: components["parameters"]["PaperProfileId"];
             };
             header?: never;
             path: {
@@ -690,6 +699,8 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: components["parameters"]["WorkspaceId"];
+                /** @description Optional Paper profile to read. Absent = the stack's configured default. Must be on the server allow-list (see read_profiles); otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default. */
+                profile_id?: components["parameters"]["PaperProfileId"];
                 limit?: number;
                 after?: string;
                 before?: string;

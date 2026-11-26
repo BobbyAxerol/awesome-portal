@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadConfig, paperReadProfileId } from "../src/config";
+import { loadConfig, paperReadProfileId, paperReadAllowedProfileIds, resolvePaperReadProfile } from "../src/config";
 
 const folders: string[] = [];
 
@@ -413,5 +413,39 @@ describe("Paper read profile (owner decision 2026-11-18: OKX is the Paper defaul
 
   it("rejects a profile id that is not a known Paper family", () => {
     expect(() => loadConfig({ ...baseEnv(), EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_DNSE_VNM" })).toThrow();
+  });
+});
+
+describe("Paper read allow-list (option B: per-request profile selection)", () => {
+  const both = {
+    FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+    EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+    EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+    EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_BINANCE_USDM",
+  } as const;
+
+  it("defaults to only the current read profile, so nothing changes until an env change", () => {
+    expect(paperReadAllowedProfileIds(both)).toEqual(["PAPER_BINANCE_USDM"]);
+    expect(resolvePaperReadProfile(both, undefined)).toBe("PAPER_BINANCE_USDM");
+    expect(resolvePaperReadProfile(both, "PAPER_OKX_SWAP")).toBeNull();
+  });
+
+  it("serves both profiles once the allow-list names them, default first", () => {
+    const config = { ...both, EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS: ["PAPER_OKX_SWAP" as const, "PAPER_BINANCE_USDM" as const] };
+    expect(paperReadAllowedProfileIds(config)).toEqual(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"]);
+    expect(resolvePaperReadProfile(config, "PAPER_OKX_SWAP")).toBe("PAPER_OKX_SWAP");
+    expect(resolvePaperReadProfile(config, "PAPER_DNSE_VNM")).toBeNull();
+    expect(resolvePaperReadProfile(config, undefined)).toBe("PAPER_BINANCE_USDM");
+  });
+
+  it("ignores an unwired profile at resolve time and refuses it at load time", () => {
+    const off = { ...both, FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "false" as const, EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS: ["PAPER_OKX_SWAP" as const] };
+    expect(paperReadAllowedProfileIds(off)).toEqual(["PAPER_BINANCE_USDM"]);
+    expect(() => loadConfig({ ...baseEnv(), EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS: "PAPER_OKX_SWAP" }))
+      .toThrow(/EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS names PAPER_OKX_SWAP/);
+  });
+
+  it("parses a comma list and rejects unknown families", () => {
+    expect(() => loadConfig({ ...baseEnv(), EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS: "PAPER_DNSE_VNM" })).toThrow();
   });
 });

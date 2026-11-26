@@ -48,13 +48,13 @@ describe("ELP2-04 trusted controller context and HTTP cache isolation", () => {
   });
   it("Paper's shared principal preserves the trusted viewer workspace", async () => {
     const f = fixture();
-    await new PaperReadController({ overview: f.read } as any, f.workspaces).overview(f.request, {});
+    await new PaperReadController({ overview: f.read } as any, f.workspaces, f.config).overview(f.request, {});
     expect(f.read.mock.calls[0][0]).toMatchObject(principal);
   });
   it.each(["overview", "workbench", "workbenchVnm", "blotter"])("Paper %s withholds the result when workspace access is revoked during the read", async route => {
     const f = fixture();
     f.workspaces.canReadExecution.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-    const controller = new PaperReadController({ overview: f.read, workbench: f.read, blotter: f.read } as any, f.workspaces);
+    const controller = new PaperReadController({ overview: f.read, workbench: f.read, blotter: f.read } as any, f.workspaces, f.config);
     const query = { workspace_id: "source" };
     const read = route === "overview" ? controller.overview(f.request, query) : route === "blotter"
       ? controller.blotter(f.request, query) : route === "workbench"

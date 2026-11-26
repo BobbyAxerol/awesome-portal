@@ -315,6 +315,9 @@ export interface BlotterRead {
   exactQueryState: string | null;
   relationCompleteness: string | null;
   state: string;
+  /** The Paper profile this page describes (`delivery_profile`) and the allow-list Core serves (`read_profiles`). */
+  deliveryProfile: string | null;
+  readProfiles: readonly string[];
   freshness: string | null;
   completeness: string | null;
   asOf: string | null;
@@ -387,6 +390,8 @@ export function readBlotter(profile: ProfileEnvelope): BlotterRead {
     exactQueryState: text(exactQuery.state),
     relationCompleteness: text(coverage.relation_completeness),
     state: profile.state,
+    deliveryProfile: profile.deliveryProfile ?? null,
+    readProfiles: profile.readProfiles ?? [],
     freshness: profile.freshness,
     completeness: profile.completeness,
     asOf: profile.asOf,

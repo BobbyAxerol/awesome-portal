@@ -4,6 +4,8 @@ import { FastifyRequest } from "fastify";
 import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
+import { CONTROL_API_CONFIG } from "../tokens";
+import { ControlApiConfig, resolvePaperReadProfile } from "../config";
 import {
   PaperBlotterQuerySchema,
   PaperDeploymentIdSchema,
@@ -27,6 +29,7 @@ export class PaperReadController {
   constructor(
     @Inject(PaperReadService) private readonly paper: PaperReadService,
     @Inject(WorkspacesRepository) private readonly workspaces: WorkspacesRepository,
+    @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
   ) {}
 
   @Get("/paper")
@@ -34,7 +37,7 @@ export class PaperReadController {
     const query = PaperOverviewQuerySchema.safeParse(raw);
     if (!query.success) throw invalidQuery();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    const body = await this.paper.overview(this.principal(request, workspaceId));
+    const body = await this.paper.overview(this.principal(request, workspaceId, query.data.profile_id));
     await this.workspace(request, workspaceId);
     return this.negotiate(request, body);
   }
@@ -62,7 +65,7 @@ export class PaperReadController {
     const query = PaperBlotterQuerySchema.safeParse(raw);
     if (!query.success) throw invalidQuery();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    const body = await this.paper.blotter(this.principal(request, workspaceId), query.data);
+    const body = await this.paper.blotter(this.principal(request, workspaceId, query.data.profile_id), query.data);
     await this.workspace(request, workspaceId);
     return this.negotiate(request, body);
   }
@@ -101,9 +104,16 @@ export class PaperReadController {
     // one-row snapshot panel, so the reader sees 1 point while `history_windows` claims thousands) and lifts `deployment`,
     // `history_windows`, `stage_facts`... out of `data`, which the strict published reader rejects ("... not allowed").
     // Proved in test/paper-history-http.spec.ts. The V1 body adds only the bounded snapshot panel rows, never history rows.
-    const body = await this.paper.workbench(this.principal(request, workspaceId), deploymentId.data, vnm);
+    const body = await this.paper.workbench(this.principal(request, workspaceId, query.data.profile_id), deploymentId.data, vnm);
     await this.workspace(request, workspaceId);
     return this.negotiate(request, body, false);
+  }
+
+  private profile(requested?: string): string | undefined {
+    if (requested === undefined) return undefined;
+    const resolved = resolvePaperReadProfile(this.config, requested);
+    if (!resolved) throw new PaperReadError("PAPER_PROFILE_NOT_ALLOWED", "That Paper profile is not available on this stack.", 400);
+    return resolved;
   }
 
   private async workspace(request: PaperReadRequest, requested?: string): Promise<string> {
@@ -114,8 +124,10 @@ export class PaperReadController {
     return workspaceId;
   }
 
-  private principal(request: PaperReadRequest, workspaceId: string) {
-    return { user: request.portalUser, session: request.portalSession, workspaceId,
+  private principal(request: PaperReadRequest, workspaceId: string, requestedProfile?: string) {
+    // Absent = today's behaviour. Present and off the allow-list = typed 4xx, never the default.
+    const paperProfileId = this.profile(requestedProfile);
+    return { ...(paperProfileId ? { paperProfileId } : {}), user: request.portalUser, session: request.portalSession, workspaceId,
       viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
   }
 }

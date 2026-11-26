@@ -9,21 +9,21 @@
     "/api/v1/execution/screens/paper": {
       "get": {
         "operationId": "executionPaperOverviewV1",
-        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }],
+        "parameters": [{ "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/PaperProfileId" }],
         "responses": { "200": { "description": "Current Paper overview or honest typed state", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" } }
       }
     },
     "/api/v1/execution/screens/paper/{deployment_id}": {
       "get": {
         "operationId": "executionPaperWorkbenchV1",
-        "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
+        "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/PaperProfileId" }],
         "responses": { "200": { "description": "Current deployment-scoped Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "413": { "description": "N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } }
       }
     },
     "/api/v1/execution/screens/paper/{deployment_id}/vn-market": {
       "get": {
         "operationId": "executionPaperWorkbenchVnmV1",
-        "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }],
+        "parameters": [{ "$ref": "#/components/parameters/DeploymentId" }, { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/PaperProfileId" }],
         "responses": { "200": { "description": "Current deployment-scoped VNM Paper workbench", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaperReadResponse" } } } }, "400": { "$ref": "#/components/responses/Problem" }, "401": { "$ref": "#/components/responses/Problem" }, "404": { "$ref": "#/components/responses/Problem" }, "413": { "description": "N33_HISTORY_ROW_TOO_LARGE or N33_HISTORY_RESPONSE_TOO_LARGE. No silent truncation; use /api/v1/execution/history/paper/{relationKey} with its advertised byte bound and continuation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } } }
       }
     },
@@ -32,7 +32,7 @@
         "operationId": "executionFullBlotterV1",
         "description": "Paper-only read. Scope filters run over authorized retained tuples before pagination/counts; alpha-to-strategy mapping requires qualified lineage. Missing attribution is typed PARTIAL, not exact empty. Other stages are refused, not silently routed. Scoped views omit legacy global mirror proof/totals and retain SOURCE_PARTIAL; per-order fills/costs are not synthesized from a bounded fill page.",
         "parameters": [
-          { "$ref": "#/components/parameters/WorkspaceId" },
+          { "$ref": "#/components/parameters/WorkspaceId" }, { "$ref": "#/components/parameters/PaperProfileId" },
           { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 } },
           { "name": "after", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
           { "name": "before", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
@@ -54,6 +54,7 @@
   "components": {
     "parameters": {
       "WorkspaceId": { "name": "workspace_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+      "PaperProfileId": { "name": "profile_id", "in": "query", "required": false, "description": "Optional Paper profile to read. Absent = the stack's configured default. Must be on the server allow-list (see read_profiles); otherwise 400 PAPER_PROFILE_NOT_ALLOWED, never the default.", "schema": { "type": "string", "pattern": "^PAPER_[A-Z0-9_]{2,120}$" } },
       "DeploymentId": { "name": "deployment_id", "in": "path", "required": true, "schema": { "$ref": "#/components/schemas/Identifier" } }
     },
     "responses": {
@@ -1433,6 +1434,7 @@
         "properties": {
           "schema_version": { "type": "string", "enum": ["execution.paper-overview.v1", "execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1", "execution.full-blotter.v1"] },
           "record_authority": { "type": "string", "const": "PORTAL_CONTROL" }, "source_authority": { "type": "string", "const": "TRADING_SYSTEM" }, "delivery_profile": { "type": "string", "enum": ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] },
+          "read_profiles": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "type": "string", "enum": ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] } },
           "workspace_id": { "$ref": "#/components/schemas/Identifier" }, "read_at": { "type": "string", "format": "date-time" }, "as_of": { "type": ["string", "null"], "format": "date-time" },
           "read_at_ms": { "$ref": "#/components/schemas/UtcEpochMs" },
           "as_of_ms": { "oneOf": [{ "$ref": "#/components/schemas/UtcEpochMs" }, { "type": "null" }] },

@@ -280,6 +280,15 @@ const EnvSchema = z.object({
     (value) => (value === "" ? undefined : value),
     z.enum(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"]).optional(),
   ),
+  // Paper profiles a client may SELECT per request (`profile_id` query on the Paper
+  // screens), comma separated. Unset = only the profile above, so behaviour is
+  // identical until an owner-approved env change. Never widens write paths.
+  EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS: z.preprocess(
+    (value) => (typeof value === "string"
+      ? value.split(",").map((item) => item.trim()).filter(Boolean)
+      : value),
+    z.array(z.enum(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"])).max(2).optional(),
+  ),
   FEATURE_EXECUTION_CURRENT_SOURCE_SANDBOX: z.enum(["true", "false"]).default("false"),
   FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: z.enum(["true", "false"]).default("false"),
   // EDS-11R4 remains separately dark even when a current-source profile is
@@ -444,6 +453,7 @@ export const PAPER_OKX_PROFILE_ID = "PAPER_OKX_SWAP";
 type PaperReadProfileConfig = Partial<Pick<ControlApiConfig,
   | "EXECUTION_EDGE_PAPER_PROFILE_ID"
   | "EXECUTION_PAPER_READ_PROFILE_ID"
+  | "EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS"
   | "FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX"
   | "EXECUTION_EDGE_PAPER_OKX_PROFILE_ID">>;
 
@@ -463,6 +473,40 @@ export function paperReadProfileId(config: PaperReadProfileConfig): string | und
   return choice === PAPER_OKX_PROFILE_ID && paperOkxReady(config)
     ? PAPER_OKX_PROFILE_ID
     : config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+}
+
+/** True when this Paper profile is wired well enough to be served. */
+function paperProfileServable(config: PaperReadProfileConfig, profileId: string): boolean {
+  return profileId === PAPER_OKX_PROFILE_ID
+    ? paperOkxReady(config)
+    : config.EXECUTION_EDGE_PAPER_PROFILE_ID === profileId;
+}
+
+/**
+ * The ALLOW-LIST of Paper profiles a request may select. The default read
+ * profile is always first and always present; further entries exist only when
+ * EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS names them and they are wired.
+ * Unset = just the default (nothing changes until an owner env change).
+ */
+export function paperReadAllowedProfileIds(config: PaperReadProfileConfig): readonly string[] {
+  const base = paperReadProfileId(config);
+  const out: string[] = base ? [base] : [];
+  for (const id of config.EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS ?? []) {
+    if (!out.includes(id) && paperProfileServable(config, id)) out.push(id);
+  }
+  return out;
+}
+
+/**
+ * Resolve the Paper profile for one request. Absent = the default read profile
+ * (today's behaviour). Present = must be on the allow-list, else `null`: the
+ * caller refuses with a typed 4xx and never falls through to the default.
+ */
+export function resolvePaperReadProfile(
+  config: PaperReadProfileConfig, requested: string | undefined,
+): string | undefined | null {
+  if (requested === undefined) return paperReadProfileId(config);
+  return paperReadAllowedProfileIds(config).includes(requested) ? requested : null;
 }
 
 function signingKeysFromFile(
@@ -533,6 +577,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ControlApiConf
       "EXECUTION_PAPER_READ_PROFILE_ID=PAPER_OKX_SWAP requires FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX=true " +
       "and EXECUTION_EDGE_PAPER_OKX_PROFILE_ID=PAPER_OKX_SWAP",
     );
+  }
+  for (const id of config.EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS ?? []) {
+    if (!paperProfileServable(config, id)) {
+      throw new Error(`EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS names ${id}, which is not enabled and wired on this stack`);
+    }
   }
   if (config.EXECUTION_DATABASE_URL) {
     const core = new URL(config.DATABASE_URL), domain = new URL(config.EXECUTION_DATABASE_URL);

@@ -30,6 +30,7 @@
  * |---|---|---|---|---|---|
  * | 1 deployment; orders and fills in the thousands, positions tens, equity snapshots up to 1.4k; profile 0.1 to 7.4 MB | over 200 rows in a table, 5,000 chart points, or a profile read over ~6 s | tables keep the 200 newest and say "Showing 200 of N"; the chart keeps min and max per bucket and prints its envelope; one read plus Refresh | `execution.paper-workbench.shadow-panel.v1` keyset (asked of Codex, D12); FE-067 runtime, sessions and reconciliation; FE-028/029/027 gate, band and lifecycle; FE-066 names | a cap or a downsample is always worded; absent is `Not published (FE-xxx)` or `Not available`; PARTIAL and STALE stay worded | one profile read and one quality read on open; at most 200 table rows, under 150 chart nodes |
  */
+import { PaperProfileBar, readProfilesOf } from "../../../paperProfile";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
@@ -184,6 +185,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
   return (
     <CompactGaps>
     <div className="exec-wb-v2" data-screen="workbench-v2" data-state={state} data-variant={variant} ref={rootRef}>
+      <PaperProfileBar delivered={envelope?.deliveryProfile ?? null} allowed={readProfilesOf(envelope?.readProfiles)} />
       <Header
         deploymentId={deploymentId}
         deployment={deployment}

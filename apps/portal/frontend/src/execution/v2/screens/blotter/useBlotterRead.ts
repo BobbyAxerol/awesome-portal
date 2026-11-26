@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { BlotterQuery, ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
+import { usePaperProfile } from "../../../paperProfile";
 import { readBlotter, type BlotterRead } from "./blotterModel";
 
 export type BlotterState =
@@ -21,7 +22,10 @@ export type BlotterState =
   | { phase: "error"; status: Exclude<PanelStatus, "ok" | "loading">; reason: string }
   | { phase: "ready"; read: BlotterRead; stale: string | null };
 
-export function useBlotterRead(api: ExecutionApi, query: BlotterQuery, key: string, refreshKey: number, reloadTick: number): BlotterState {
+export function useBlotterRead(api: ExecutionApi, query: BlotterQuery, queryKey: string, refreshKey: number, reloadTick: number): BlotterState {
+  // Another Paper profile is another query: its rows replace this page under the loading state, and a cursor never crosses.
+  const { selected: paperProfile } = usePaperProfile();
+  const key = `${queryKey}|${paperProfile ?? ""}`;
   const [state, setState] = useState<BlotterState>({ phase: "loading" });
   const build = useRef(query);
   build.current = query;
