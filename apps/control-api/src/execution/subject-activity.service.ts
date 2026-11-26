@@ -1,5 +1,5 @@
 import { Inject, Injectable, Optional } from "@nestjs/common";
-import { ControlApiConfig, querySigningKeys } from "../config";
+import { ControlApiConfig, PAPER_OKX_PROFILE_ID, paperOkxReady, paperReadProfileId, querySigningKeys } from "../config";
 import { localProfileReadable, projectionExpired, retainedReview } from "./retained-read-profile";
 import { KeysetCursorCodec, QueryContractError, queryFingerprint } from "../query";
 import { CONTROL_API_CONFIG } from "../tokens";
@@ -273,7 +273,7 @@ export class ExecutionSubjectActivityService {
       (!durableMirrorReadEnabled(this.config) && !retainedReview(this.config)) ||
       !profileEnabled(this.config, environment)
     ) {
-      throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED", 404);
+      throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED", 503);
     }
   }
 
@@ -339,12 +339,15 @@ function validateRequest(request: SubjectActivityRequest): void {
 }
 
 function profileIdFor(config: ControlApiConfig, environment: ProjectionEnvironment): string | undefined {
-  return environment === "paper" ? config.EXECUTION_EDGE_PAPER_PROFILE_ID
+  // Paper resolves through the one Paper read profile (OKX when it is the stack's read profile), like every other product read.
+  return environment === "paper" ? (paperReadProfileId(config) ?? config.EXECUTION_EDGE_PAPER_PROFILE_ID)
     : environment === "sandbox" ? config.EXECUTION_EDGE_SANDBOX_PROFILE_ID
       : config.EXECUTION_EDGE_LIVE_PROFILE_ID;
 }
 
 function profileEnabled(config: ControlApiConfig, environment: ProjectionEnvironment): boolean {
+  // An OKX-only stack has the Binance Paper flag off: its Paper read profile is enabled through the OKX flag.
+  if (environment === "paper" && !retainedReview(config) && paperReadProfileId(config) === PAPER_OKX_PROFILE_ID && paperOkxReady(config)) return true;
   return localProfileReadable(config, environment);
 }
 

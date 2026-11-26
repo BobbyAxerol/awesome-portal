@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { ControlApiConfig } from "../src/config";
 import {
   ExecutionSubjectActivityService,
+  SubjectActivityError,
   strategyTimeframe,
 } from "../src/execution/subject-activity.service";
+import { ExecutionSubjectActivityController } from "../src/execution/subject-activity.controller";
 import type {
   ExecutionProfileProjectionRepository,
   ProfileProjectionDocument,
@@ -81,7 +83,7 @@ function snapshot(): ProfileProjectionSnapshot {
   };
 }
 
-function service() {
+function service(over: Partial<ControlApiConfig> = {}) {
   const snap = snapshot();
   // The rows live in the durable mirror. The retained-history doubles stay on
   // the repository so a regression that reaches for them again is visible as a
@@ -107,7 +109,7 @@ function service() {
   const mirror = { subjectRows, subjectCoverage };
   return {
     service: new ExecutionSubjectActivityService(
-      config(),
+      { ...config(), ...over } as ControlApiConfig,
       repository as unknown as ExecutionProfileProjectionRepository,
       mirror as unknown as ExecutionDurableMirrorRepository,
     ),
@@ -235,5 +237,52 @@ describe("durable mirror history read cutover", () => {
     await repository.timeSeriesHistoryCoverage("ws", "paper", "PAPER_P", "manager.performance:account_equity_snapshots");
     expect(queries[0]).toContain("execution_timeseries_history");
     expect(queries[0]).not.toContain("execution_durable_mirror_range_rows");
+  });
+});
+
+describe("v1.6 Replay gaps: orders/fills read on an OKX-only Paper stack", () => {
+  const okxOnly = {
+    FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "false", FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true",
+    EXECUTION_EDGE_PAPER_PROFILE_ID: undefined, EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP", EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_OKX_SWAP",
+  } as Partial<ControlApiConfig>;
+
+  it("serves Paper through the OKX read profile when the Binance Paper flag is off", async () => {
+    const { service: read, repository } = service(okxOnly);
+    await read.read({ workspaceId, userId: "usr_bobby" }, { environment: "paper", subjectKind: "alpha", subjectId: "adaptive_hma_cpp_00115m", relation: "orders", limit: 1 });
+    expect(repository.snapshot).toHaveBeenCalledWith(workspaceId, "paper", "PAPER_OKX_SWAP");
+  });
+
+  it("an environment whose profile is not enabled is a typed 503 NOT_ACTIVATED (not a 404 route-missing)", async () => {
+    const { service: read } = service({ ...okxOnly, FEATURE_EXECUTION_CURRENT_SOURCE_LIVE: "false" });
+    await expect(read.read({ workspaceId, userId: "usr_bobby" }, { environment: "live", subjectKind: "alpha", subjectId: "a1", relation: "fills", limit: 1 }))
+      .rejects.toMatchObject({ code: "EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED", status: 503 });
+  });
+});
+
+describe("v1.6 Replay gaps: the controller keeps typed codes and names the environment", () => {
+  const request = { portalUser: { userId: "usr_bobby" }, portalSession: {}, portalWorkspaceId: workspaceId } as never;
+  const make = (canRead: boolean, readAuthorized = vi.fn(async () => ({ ok: true }))) => {
+    const canReadExecution = vi.fn(async () => canRead);
+    const controller = new ExecutionSubjectActivityController({ readAuthorized } as never, { canReadExecution } as never, config());
+    return { controller, canReadExecution, readAuthorized };
+  };
+
+  it("asks canReadExecution per environment (a DR-30 scoped grant is judged for that environment)", async () => {
+    const { controller, canReadExecution } = make(true);
+    await controller.alpha(request, "a1", "orders", { environment: "paper" });
+    expect(canReadExecution).toHaveBeenCalledWith(workspaceId, "usr_bobby", "paper");
+  });
+
+  it("answers a typed 404 WORKSPACE_NOT_FOUND, not a flattened HttpException", async () => {
+    const { controller } = make(false);
+    await expect(controller.alpha(request, "a1", "orders", { environment: "paper" })).rejects.toMatchObject({ code: "WORKSPACE_NOT_FOUND", status: 404 });
+  });
+
+  it("maps a service refusal to its own typed code and plain message", async () => {
+    const refused = vi.fn(async () => { throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED", 503); });
+    const { controller } = make(true, refused as never);
+    await expect(controller.alpha(request, "a1", "fills", { environment: "live" })).rejects.toMatchObject({
+      code: "EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED", status: 503, message: expect.stringContaining("not published"),
+    });
   });
 });

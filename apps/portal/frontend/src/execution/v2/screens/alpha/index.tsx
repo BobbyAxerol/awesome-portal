@@ -168,13 +168,17 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
     ? view.rows.find((r) => r.stage === view.current && !/^(ended|completed|retired)$/i.test(r.runtime.label)) ?? null
     : null;
   const currentEnv: ExecEnv | null = currentLive === null ? null : currentLive.env ?? (currentLive.stage === "paper" ? "paper" : currentLive.stage === "sandbox" ? "sandbox" : currentLive.stage === "canary" || currentLive.stage === "live" ? "live" : null);
+  // v1.6 acceptance: an alpha whose deployments the body does not place in a book (SCOPED_V2 "unplaced") has no deployed env, and the URL's own
+  // default ("live") is a guess the Portal refuses. With no `env` in the address the page then reads the alpha's current-stage book, else the stack's
+  // Paper book (the product's default read profile), so every cell resolves to a value or a typed absence instead of waiting for an `?env=`.
+  const defaultedEnv: ExecEnv | null = params.get("env") === null && view !== null && view.present && deployed.length === 0 ? currentEnv ?? "paper" : null;
   const env: ExecEnv = params.get("env") === null && namedDeployment?.env != null && deployed.includes(namedDeployment.env)
     ? namedDeployment.env
-    : currentEnv !== null && deployed.includes(currentEnv) ? currentEnv : chooseEnv(url.value.env, deployed);
+    : currentEnv !== null && deployed.includes(currentEnv) ? currentEnv : defaultedEnv ?? chooseEnv(url.value.env, deployed);
   // D5: the book (environment) every env-scoped read names must come from the alpha's real deployments or from the address. With neither
   // (the resource read failed or is still loading, or the alpha has no deployment) `env` is only the URL default ("live"), a guess
   // that the Portal answers with a 400 for a paper alpha: those reads are not asked at all, and the page says what it could not read.
-  const envKnown = params.get("env") !== null || deployed.includes(env);
+  const envKnown = params.get("env") !== null || deployed.includes(env) || defaultedEnv !== null;
   const settled = (resource.phase === "ready" || resource.phase === "error") && envKnown;
   const wsId = explicitWs ?? view?.workspaceId ?? null;
 
@@ -186,10 +190,11 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
       ? `No book (environment) is known because the alpha could not be read (${resource.reason.replace(/[.\s]+$/, "")}). Name one with ?env=paper, sandbox or live.`
       : "No book (environment) is known: no deployment of this alpha is published. Name one with ?env=paper, sandbox or live." }
     : null;
-  const asked = <T,>(read: Read<T>): Read<T> => (read.phase === "idle" && noBook !== null ? { phase: "error", ...noBook } : read);
+  const asked = <T,>(read: Read<T>): Read<T> => (read != null && read.phase === "idle" && noBook !== null ? { phase: "error", ...noBook } : read);
   const equityRead = useEquityChart(api, alphaId, env, wsId, settled && (tab === "performance" || tab === "activity"));
   const equity = asked(equityRead);
-  const rollup = useActivityRollup(api, alphaId, env, settled && tab === "orders");
+  const rollupRead = useActivityRollup(api, alphaId, env, settled && tab === "orders");
+  const rollup = asked(rollupRead);
   const timelineRead = useObservedFeed(api, alphaId, env, settled && (tab === "activity" || tab === "performance"));
   const timeline = useMemo(() => ({ ...timelineRead, read: asked(timelineRead.read) }), [timelineRead, noBook]); // eslint-disable-line react-hooks/exhaustive-deps
   const bookRead = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"), explicitWs);
@@ -199,7 +204,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
     () => ({ environment: env, metric: "DRAWDOWN", window: url.value.window, subjects: [{ subjectType: "ALPHA", subjectId: alphaId }], ...(explicitWs ? { workspaceId: explicitWs } : {}) }),
     [env, alphaId, explicitWs, url.value.window],
   );
-  const drawdown = useManagerSeries(api, settled && tab === "performance", drawdownQuery);
+  const drawdown = asked(useManagerSeries(api, settled && tab === "performance", drawdownQuery));
   // R2-04: when the pane has a series, the tile is that series' lowest point, so the tile and the strip cannot state two figures.
   const ddLow = drawdownLowOf(drawdown);
 
@@ -249,7 +254,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   // in view; with several it is not asked (no deployment is picked for the reader, and nothing is summed across them).
   const bookRows = view?.rows.filter((r) => (r.env ?? (r.stage === "paper" ? "paper" : r.stage === "sandbox" ? "sandbox" : r.stage === "canary" || r.stage === "live" ? "live" : null)) === env) ?? [];
   const projectionTarget = namedDeployment?.id ?? (bookRows.length === 1 ? bookRows[0]!.id : null);
-  const projection = useEquityProjection(api, projectionTarget, wsId, settled && tab === "performance" && perfView === "act");
+  const projection = asked(useEquityProjection(api, projectionTarget, wsId, settled && tab === "performance" && perfView === "act"));
   const focus = params.get("focus");
   const focusOrder = (() => {
     const target = focusTarget(focus);
@@ -274,11 +279,11 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const present = view !== null && view.present;
   // The Manager dataset for this alpha in the chosen Book: the Return tile and the windowed figures. Asked once the alpha is known; only a workspace the caller named is sent (never the body's own).
   // A window the address names is asked on the dataset too, so every tab states the same window as the Performance tab (QA7 N2-02); with no window in the address nothing is asked, as before.
-  const dataset = useAlphaDataset(api, present && envKnown, alphaId, env, explicitWs, params.get("window") === null ? undefined : url.value.window);
+  const dataset = asked(useAlphaDataset(api, present && envKnown, alphaId, env, explicitWs, params.get("window") === null ? undefined : url.value.window));
   const datasetValue = dataset.phase === "ready" ? dataset.value : null;
   // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
   // WP-K: the published lifecycle read (stages with criteria, decider and receipt; the unified feed; regime fit; Net PnL per venue) wins over the open keys.
-  const lifecycle = useAlphaLifecycle(api, present && envKnown, alphaId, env, explicitWs);
+  const lifecycle = asked(useAlphaLifecycle(api, present && envKnown, alphaId, env, explicitWs));
   const life = useMemo(() => {
     const read = lifeEventsOfRead(lifecycle);
     const spans = stageSpansOfRead(lifecycle);
