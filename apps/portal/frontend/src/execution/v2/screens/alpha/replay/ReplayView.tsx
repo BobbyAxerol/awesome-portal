@@ -166,7 +166,7 @@ export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus
   const missing =
     target !== null && shown && !(target.kind === "order" ? book.orders.some((o) => o.orderId === target.id) : book.fills.some((f) => f.fillId === target.id));
   const wordsFor = (relation: "orders" | "fills", rel: RelationAudit, readState: typeof book.ordersState): string => {
-    if (readState.phase === "error") return `cannot be looked up: the ${relation} could not be read (${readState.reason}).`;
+    if (readState.phase === "error") return `cannot be looked up: the ${relation} could not be read (${readState.reason.replace(/[.\s]+$/, "")}).`;
     const loaded = `is not among the ${rel.read.toLocaleString("en-US")} loaded ${relation}`;
     if (rel.capped) return `${loaded}; the Portal holds more, and loading stops at ${MAX_LOADED_RECORDS.toLocaleString("en-US")} ${relation}. Narrow the replay window to look further.`;
     if (rel.moreError !== null) return `${loaded}; the next page of ${relation} could not be read (${rel.moreError}). Try again below.`;

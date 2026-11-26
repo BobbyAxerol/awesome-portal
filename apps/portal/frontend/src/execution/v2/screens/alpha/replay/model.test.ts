@@ -120,6 +120,18 @@ describe("replayState", () => {
   });
 });
 
+describe("replayState: a server message that ends in a full stop", () => {
+  const rejected: Read<never> = { phase: "error", status: "unavailable", reason: "REQUEST_REJECTED: Invalid request." };
+  const page = { phase: "ready", value: [] } as Read<never>;
+  it("is closed once, never twice, and keeps the server words", () => {
+    const both = replayState({ ordersState: rejected, fillsState: rejected, orders: [], fills: [] } as never);
+    expect(both.reason).toBe("Orders: REQUEST_REJECTED: Invalid request. Fills: REQUEST_REJECTED: Invalid request.");
+    expect(both.reason).not.toContain("..");
+    const one = replayState({ ordersState: rejected, fillsState: page, orders: [], fills: [{}] } as never);
+    expect(one.reason).toBe("Orders could not be read (REQUEST_REJECTED: Invalid request). The fills below are all that was published.");
+  });
+});
+
 describe("replayState: a PARTIAL page is partial, never ok", () => {
   const pageOf = (state: string, count = 1): Read<never> => ({ phase: "ready", value: [{ state, records: Array.from({ length: count }, () => ({})), page: { returnedCount: count } }] } as never);
   const done = pageOf("AVAILABLE");

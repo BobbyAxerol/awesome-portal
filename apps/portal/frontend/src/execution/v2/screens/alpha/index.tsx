@@ -87,6 +87,8 @@ import { useAlphaLifecycle,
   useObservedFeed,
   useStageDrift,
   useSubjectBook,
+  type Read,
+  type ReadFailure,
 } from "./useAlphaReads";
 import type { SpineStageId } from "../../blocks";
 
@@ -177,10 +179,21 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const wsId = explicitWs ?? view?.workspaceId ?? null;
 
   const drift = useStageDrift(api, alphaId, true);
-  const equity = useEquityChart(api, alphaId, env, wsId, settled && (tab === "performance" || tab === "activity"));
+  // An env-scoped read that is not asked because no book is known would stay `idle`, and every panel words `idle` as "Loading": for ever.
+  // Once the resource has answered, it is a typed unavailable instead, and the page says why it asked nothing.
+  const noBook: ReadFailure | null = (resource.phase === "ready" || resource.phase === "error") && !envKnown
+    ? { status: "unavailable", reason: resource.phase === "error"
+      ? `No book (environment) is known because the alpha could not be read (${resource.reason.replace(/[.\s]+$/, "")}). Name one with ?env=paper, sandbox or live.`
+      : "No book (environment) is known: no deployment of this alpha is published. Name one with ?env=paper, sandbox or live." }
+    : null;
+  const asked = <T,>(read: Read<T>): Read<T> => (read.phase === "idle" && noBook !== null ? { phase: "error", ...noBook } : read);
+  const equityRead = useEquityChart(api, alphaId, env, wsId, settled && (tab === "performance" || tab === "activity"));
+  const equity = asked(equityRead);
   const rollup = useActivityRollup(api, alphaId, env, settled && tab === "orders");
-  const timeline = useObservedFeed(api, alphaId, env, settled && (tab === "activity" || tab === "performance"));
-  const book = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"), explicitWs);
+  const timelineRead = useObservedFeed(api, alphaId, env, settled && (tab === "activity" || tab === "performance"));
+  const timeline = useMemo(() => ({ ...timelineRead, read: asked(timelineRead.read) }), [timelineRead, noBook]); // eslint-disable-line react-hooks/exhaustive-deps
+  const bookRead = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"), explicitWs);
+  const book = useMemo(() => ({ ...bookRead, ordersState: asked(bookRead.ordersState), fillsState: asked(bookRead.fillsState) }), [bookRead, noBook]); // eslint-disable-line react-hooks/exhaustive-deps
   // WP-K: the alpha's published DRAWDOWN series (FE-025) for the pane under the equity chart. Asked only on the Performance tab, over the page's window: the Max drawdown tile reads the same window, so the tile and the pane state one figure (QA2 R2-04).
   const drawdownQuery = useMemo<ManagerSeriesQuery>(
     () => ({ environment: env, metric: "DRAWDOWN", window: url.value.window, subjects: [{ subjectType: "ALPHA", subjectId: alphaId }], ...(explicitWs ? { workspaceId: explicitWs } : {}) }),

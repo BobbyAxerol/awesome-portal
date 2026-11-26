@@ -87,13 +87,16 @@ export interface ReplayState {
 }
 
 /** The panel's state from the two relation reads. A half-read book is partial, never complete. */
+/** A server message ends in its own full stop; a sentence built around it adds its own, so the message is closed once, never twice. */
+const unstopped = (text: string | undefined): string => (text ?? "").replace(/[.\s]+$/, "");
+
 export function replayState(book: Pick<SubjectBook, "ordersState" | "fillsState" | "orders" | "fills">): ReplayState {
   const { ordersState, fillsState } = book;
   const settled = (state: Read<unknown>) => state.phase === "ready" || state.phase === "error";
   if (!settled(ordersState) || !settled(fillsState)) return { status: "loading" };
-  if (ordersState.phase === "error" && fillsState.phase === "error") return { status: ordersState.status, reason: `Orders: ${ordersState.reason}. Fills: ${fillsState.reason}` };
-  if (ordersState.phase === "error") return { status: "partial", reason: `Orders could not be read (${ordersState.reason}). The fills below are all that was published.` };
-  if (fillsState.phase === "error") return { status: "partial", reason: `Fills could not be read (${fillsState.reason}). Orders below carry no fill.` };
+  if (ordersState.phase === "error" && fillsState.phase === "error") return { status: ordersState.status, reason: `Orders: ${unstopped(ordersState.reason)}. Fills: ${unstopped(fillsState.reason)}.` };
+  if (ordersState.phase === "error") return { status: "partial", reason: `Orders could not be read (${unstopped(ordersState.reason)}). The fills below are all that was published.` };
+  if (fillsState.phase === "error") return { status: "partial", reason: `Fills could not be read (${unstopped(fillsState.reason)}). Orders below carry no fill.` };
   const partial = partialRelations(book);
   if (book.orders.length === 0 && book.fills.length === 0) {
     return {
