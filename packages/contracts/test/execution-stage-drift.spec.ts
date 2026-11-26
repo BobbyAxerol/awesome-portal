@@ -13,6 +13,13 @@ addFormats(ajv);
 const validate = ajv.compile(read("schemas/execution-alpha-stage-drift.v2.schema.json"));
 
 describe("FE-054 exact opt-in daily stage read", () => {
+  it("accepts a published alpha id that carries `@`, and still refuses whitespace", () => {
+    for (const [id, ok] of [["alpha@v1@crossec-ema-pfl-v1", true], ["alpha v1", false], ["alpha/../x", false]] as const) {
+      const value = { ...structuredClone(fixture.cases[0].value), alpha_id: id };
+      expect(validate(value)).toBe(ok);
+      expect(exactStageDrift.safeParse(value).success).toBe(ok);
+    }
+  });
   it.each(fixture.cases)("publishes $name without pretending to be product proof", ({ value }: { value: ExactWire }) => {
     expect(fixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
     expect(validate(value), JSON.stringify(validate.errors)).toBe(true);

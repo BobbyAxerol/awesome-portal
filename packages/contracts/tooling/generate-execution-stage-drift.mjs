@@ -24,7 +24,7 @@ const schema = {
   $id: 'https://schemas.primusspark.com/portal/execution-alpha-stage-drift.v2.schema.json',
   title: 'Opt-in exact retained alpha daily closes, not certified stage drift',
   ...obj({ schema_version: { const: 'portal.execution.alpha-stage-drift.v2' },
-    alpha_id: { type: 'string', minLength: 1, maxLength: 192, pattern: '^[A-Za-z0-9._:-]+$(?![\\s\\S])' },
+    alpha_id: { type: 'string', minLength: 1, maxLength: 192, pattern: '^[A-Za-z0-9._:@-]+$(?![\\s\\S])' },
     qualification: { const: 'RETAINED_OBSERVATIONS_NOT_FINANCIAL_CERTIFICATION' },
     window: obj({ days: { type: 'integer', minimum: 0, maximum: Number.MAX_SAFE_INTEGER },
       requested_days: nullable({ type: 'integer', minimum: 2, maximum: 365 }),

@@ -141,3 +141,28 @@ describe("FE-054 opt-in exact stage equity", () => {
     expect(f.context).not.toHaveBeenCalled();
   });
 });
+
+describe("published alpha ids carry `@` (alpha@v1@name)", () => {
+  const ID = "alpha@v1@crossec-ema-pfl-v1";
+  const principal = { workspaceId: "TEST_ONLY-workspace" } as never;
+  it("stage-drift reads the id, exact and legacy, instead of answering ANALYTICS_IDENTIFIER_INVALID", async () => {
+    const f = fixture();
+    const exact = await f.service.stageDriftExact(principal, ID).catch((e: unknown) => e);
+    expect(exact).not.toMatchObject({ code: "ANALYTICS_IDENTIFIER_INVALID" });
+    const legacy = await f.service.stageDrift(principal, ID).catch((e: unknown) => e);
+    expect(legacy).not.toMatchObject({ code: "ANALYTICS_IDENTIFIER_INVALID" });
+  });
+  it("still refuses a path-like or whitespace id", async () => {
+    const f = fixture();
+    for (const bad of ["alpha/../x", "alpha v1", "alpha%40v1", "a".repeat(193)]) {
+      await expect(f.service.stageDriftExact(principal, bad)).rejects.toMatchObject({ code: "ANALYTICS_IDENTIFIER_INVALID" });
+    }
+  });
+  it("only an alpha may carry `@` on the observed timeline read", async () => {
+    const svc = fixture().service as any;
+    await expect(svc.observedTimeline(principal, { environment: "paper", subjectKind: "deployment", subjectId: "dep@x" }))
+      .rejects.toMatchObject({ code: "ANALYTICS_IDENTIFIER_INVALID" });
+    const alpha = await svc.observedTimeline(principal, { environment: "paper", subjectKind: "alpha", subjectId: ID }).catch((e: unknown) => e);
+    expect(alpha).not.toMatchObject({ code: "ANALYTICS_IDENTIFIER_INVALID" });
+  });
+});
