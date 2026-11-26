@@ -146,3 +146,34 @@ describe("BE-P23 owner roster keyset page", () => {
     ]) expect(counts(bad), JSON.stringify(bad)).toBe(false);
   });
 });
+
+describe("DR-30 owner execution grants contract", () => {
+  const grantOps = [
+    ["/api/admin/execution-grants", "get", "listExecutionDefaultGrants"],
+    ["/api/admin/execution-grants", "post", "grantExecutionDefault"],
+    ["/api/admin/execution-grants/{username}/renew", "post", "renewExecutionDefaultGrant"],
+    ["/api/admin/execution-grants/{username}", "delete", "revokeExecutionDefaultGrant"],
+  ] as const;
+  it("publishes exactly the four operations; every mutation needs an idempotency key and fails with the shared Error", () => {
+    for (const [path, method, id] of grantOps) {
+      const op = spec.paths[path][method];
+      expect(op.operationId).toBe(id);
+      if (method !== "get") expect(op.parameters.some((p: { name: string; required: boolean }) => p.name === "x-portal-idempotency-key" && p.required)).toBe(true);
+      expect(op.responses["404"].content["application/json"].schema.$ref).toBe("#/components/schemas/Error");
+    }
+    expect(Object.keys(spec.paths).filter((p) => p.startsWith("/api/admin/execution-grants")).length).toBe(3);
+  });
+  it("environments are explicit and closed, the term is at most 365 days, unknown fields are refused, a grant is read-only", () => {
+    const schemas = spec.components.schemas;
+    const req = ajv.compile(schemas.ExecutionDefaultGrantRequest);
+    expect(req({ username: "stan", environments: ["paper", "live"], term_days: 365 })).toBe(true);
+    for (const bad of [{ username: "stan" }, { username: "stan", environments: [] }, { username: "stan", environments: ["prod"] },
+      { username: "stan", environments: ["paper"], term_days: 366 }, { username: "stan", environments: ["paper"], term_days: 0 },
+      { username: "stan", environments: ["paper"], extra: true }, { username: "bad name", environments: ["paper"] }]) expect(req(bad), JSON.stringify(bad)).toBe(false);
+    const change = ajv.compile(schemas.ExecutionDefaultGrantChange);
+    const ok = { schema_version: "portal.execution-default-grant-change.v1", record_authority: "PORTAL_CONTROL", outcome: "REVOKED", workspace_id: "ws", user_id: "u", environments: ["paper"], scope: "DEFAULT_EXECUTION_READ_ONLY", writes: false, membership_changes: 0 };
+    expect(change(ok)).toBe(true);
+    expect(change({ ...ok, writes: true })).toBe(false);
+    expect(change({ ...ok, membership_changes: 1 })).toBe(false);
+  });
+});
