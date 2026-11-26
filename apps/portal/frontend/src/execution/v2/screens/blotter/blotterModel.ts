@@ -373,6 +373,11 @@ function countMap(raw: unknown): Record<string, number> | null {
   return out;
 }
 
+function panelTotal(profile: ProfileEnvelope, key: "source_total" | "filtered_total"): number | null {
+  const panel = profile.panels.orders as unknown as { coverage?: Record<string, unknown> } | undefined;
+  return count(panel?.coverage?.[key]);
+}
+
 export function readBlotter(profile: ProfileEnvelope): BlotterRead {
   const take = <T>(rows: readonly Record<string, unknown>[] | undefined, read: (row: Record<string, unknown>) => T | null) =>
     (rows ?? []).flatMap((row) => {
@@ -403,8 +408,10 @@ export function readBlotter(profile: ProfileEnvelope): BlotterRead {
     })(),
     nextCursor: text(page.next_cursor),
     prevCursor: text(page.previous_cursor),
-    exactTotal: count(profile.scalars.exact_total),
-    filteredTotal: count(profile.scalars.filtered_total),
+    // The server's own totals: the exact-query scalars first, else the orders panel's coverage (`source_total` / `filtered_total`, the same
+    // authorized population). Never computed here and never the page's length.
+    exactTotal: count(profile.scalars.exact_total) ?? panelTotal(profile, "source_total"),
+    filteredTotal: count(profile.scalars.filtered_total) ?? panelTotal(profile, "filtered_total"),
     statusCounts: countMap(aggregates.status),
     venueCounts: countMap(aggregates.venue),
     countScope: text(query.count_scope),

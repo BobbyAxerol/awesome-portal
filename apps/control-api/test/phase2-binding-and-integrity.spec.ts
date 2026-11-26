@@ -91,7 +91,7 @@ describe("2A · a binding id parses on its own grammar", () => {
     const refused = [
       "",                                     // nothing
       "no-at-sign-at-all",                    // the delimiter the grammar requires
-      "two@at@signs",                         // ambiguous split
+      "two@at@a/b",                           // a path separator in a later segment
       "a/b@BINANCE",                          // path separator
       "a\\b@BINANCE",                         // the other path separator
       "../../etc/passwd@BINANCE",             // traversal
@@ -101,7 +101,7 @@ describe("2A · a binding id parses on its own grammar", () => {
       "a b@BINANCE",                          // whitespace
       "a\tb@BINANCE",                         // control character
       "a\nb@BINANCE",                         // header split
-      "a@binance",                            // venue must be upper case
+      "a@bin ance",                           // whitespace in the venue
       "a@",                                   // no venue
       "@BINANCE",                             // no local part
       "-leading-hyphen@BINANCE",              // must start alphanumeric

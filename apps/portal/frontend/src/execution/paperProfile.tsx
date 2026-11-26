@@ -25,6 +25,15 @@ export function parsePaperProfile(value: string | null | undefined): PaperProfil
   return (PAPER_PROFILES as readonly string[]).includes(value ?? "") ? (value as PaperProfileId) : null;
 }
 
+/**
+ * The Paper profile an Account's own id names. A paper account id carries its venue (`acct@v1@paper@okx@...`), and an OKX account lives
+ * in PAPER_OKX_SWAP, not in the stack default, so a link to it must land there or the page says "not found" for a reason of the
+ * link, not of the account. Only the non-default (OKX) profile is named; the stack default needs no parameter.
+ */
+export function paperProfileOfAccountId(accountId: string): PaperProfileId | null {
+  return /^acct@v1@paper@okx@/i.test(accountId) ? "PAPER_OKX_SWAP" : null;
+}
+
 /** The routes that are Paper screens: the only places the selection applies and travels to. */
 export function isPaperScreenPath(path: string): boolean {
   return /^\/deployments\/(paper|blotter)(\/|$)/.test(path) || /^\/deployments\/(portfolios|accounts)\/[^/]+/.test(path);

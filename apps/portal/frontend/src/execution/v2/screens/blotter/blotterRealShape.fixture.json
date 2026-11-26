@@ -1,0 +1,540 @@
+{
+"schema_version": "execution.full-blotter.v1",
+"record_authority": "PORTAL_CONTROL",
+"source_authority": "TRADING_SYSTEM",
+"delivery_profile": "PAPER_OKX_SWAP",
+"read_profiles": [
+"PAPER_OKX_SWAP",
+"PAPER_BINANCE_USDM"
+],
+"workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+"read_at_ms": 1795720676462,
+"as_of_ms": 1795719939990,
+"read_at": "2026-11-26T19:17:56.462Z",
+"as_of": "2026-11-26T19:05:39.990665Z",
+"state": "stale",
+"freshness": "STALE",
+"completeness": "COMPLETE",
+"actor": {
+"user_id": "usr_3e5917c6d92545c69465fe5ab812eddb",
+"username": "bobby",
+"roles": [
+"ADMIN"
+]
+},
+"capabilities": [
+{
+"capability_id": "source.orders",
+"state": "AVAILABLE",
+"relations": [
+"orders"
+],
+"reason_code": null,
+"retryable": false
+},
+{
+"capability_id": "source.fills",
+"state": "AVAILABLE",
+"relations": [
+"fills"
+],
+"reason_code": null,
+"retryable": false
+},
+{
+"capability_id": "source.conditional_groups",
+"state": "AVAILABLE",
+"relations": [
+"conditional_order_groups"
+],
+"reason_code": null,
+"retryable": false
+},
+{
+"capability_id": "source.conditional_legs",
+"state": "AVAILABLE",
+"relations": [
+"conditional_order_group_legs"
+],
+"reason_code": null,
+"retryable": false
+},
+{
+"capability_id": "source.sessions",
+"state": "EMPTY",
+"relations": [
+"execution_sessions"
+],
+"reason_code": null,
+"retryable": false
+},
+{
+"capability_id": "source.reconciliation",
+"state": "EMPTY",
+"relations": [
+"reconciliation_findings"
+],
+"reason_code": null,
+"retryable": false
+},
+{
+"capability_id": "source.command_journal",
+"state": "AVAILABLE",
+"relations": [
+"command_journal"
+],
+"reason_code": null,
+"retryable": false
+},
+{
+"capability_id": "blotter.exact-query",
+"state": "AVAILABLE",
+"relations": [
+"exact_total",
+"filters",
+"sort",
+"aggregates"
+],
+"reason_code": null,
+"retryable": false,
+"authority": "DERIVED",
+"formula_version": "portal.current-projection.orders-exact-query.v1"
+},
+{
+"capability_id": "blotter.deployment-join",
+"state": "AVAILABLE",
+"relations": [
+"strategy_deployments"
+],
+"reason_code": null,
+"retryable": false
+}
+],
+"panels": {
+"orders": {
+"state": "STALE",
+"data": {
+"rows": [
+{
+"mode": "paper",
+"side": "BUY",
+"price": "1626.480000000000000000",
+"venue": "OKX",
+"intent": "OPEN",
+"status": "CANCELED",
+"symbol": "ETHUSDTSWAP",
+"order_id": 21698,
+"quantity": "148.240000000000000000",
+"post_only": false,
+"trader_id": null,
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"error_code": null,
+"order_type": "LIMIT",
+"updated_at": "2026-11-26T15:15:59.160559Z",
+"updated_at_ms": 1795706159160,
+"reduce_only": false,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"submitted_at": "2026-11-26T15:15:50.402020Z",
+"submitted_at_ms": 1795706150402,
+"error_message": null,
+"instrument_id": "ETHUSDTSWAP.OKX",
+"position_side": "BOTH",
+"risk_grant_id": null,
+"time_in_force": "GTC",
+"trigger_price": null,
+"venue_order_id": null,
+"client_order_id": "fadcff2fee5e4c0992873d7b25b27e36",
+"execution_session_id": null,
+"deployment_id": "dep@v1@ad3a3813ff434e92b5f433cd63b64f49"
+},
+{
+"mode": "paper",
+"side": "SELL",
+"price": null,
+"venue": "OKX",
+"intent": "CLOSE",
+"status": "CANCELED",
+"symbol": "ETHUSDTSWAP",
+"order_id": 21693,
+"quantity": "296.560000000000000000",
+"post_only": false,
+"trader_id": null,
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"error_code": null,
+"order_type": "STOP_MARKET",
+"updated_at": "2026-11-26T15:15:32.953549Z",
+"updated_at_ms": 1795706132953,
+"reduce_only": true,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"submitted_at": "2026-11-26T15:15:29.788342Z",
+"submitted_at_ms": 1795706129788,
+"error_message": null,
+"instrument_id": "ETHUSDTSWAP.OKX",
+"position_side": "BOTH",
+"risk_grant_id": null,
+"time_in_force": "GTC",
+"trigger_price": "1644.300000000000000000",
+"venue_order_id": null,
+"client_order_id": "9ae0f469663f497284598068fefc8e75",
+"execution_session_id": null,
+"deployment_id": "dep@v1@ad3a3813ff434e92b5f433cd63b64f49"
+},
+{
+"mode": "paper",
+"side": "SELL",
+"price": "1677.990000000000000000",
+"venue": "OKX",
+"intent": "CLOSE",
+"status": "FILLED",
+"symbol": "ETHUSDTSWAP",
+"order_id": 21692,
+"quantity": "296.560000000000000000",
+"post_only": false,
+"trader_id": null,
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"error_code": null,
+"order_type": "LIMIT",
+"updated_at": "2026-11-26T15:15:32.612934Z",
+"updated_at_ms": 1795706132612,
+"reduce_only": true,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"submitted_at": "2026-11-26T15:15:29.563357Z",
+"submitted_at_ms": 1795706129563,
+"error_message": null,
+"instrument_id": "ETHUSDTSWAP.OKX",
+"position_side": "BOTH",
+"risk_grant_id": null,
+"time_in_force": "GTC",
+"trigger_price": null,
+"venue_order_id": null,
+"client_order_id": "2938653a512b481197776a2ce29f3250",
+"execution_session_id": null,
+"deployment_id": "dep@v1@ad3a3813ff434e92b5f433cd63b64f49"
+}
+]
+},
+"clocks": {
+"event_time_ms": 1795719942380,
+"source_published_at_ms": 1795719942380,
+"received_at_ms": 1795719942380,
+"ingested_at_ms": 1795719942380,
+"processed_at_ms": 1795719942380,
+"as_of_ms": 1795719942380,
+"read_at_ms": 1795720676462
+},
+"coverage": {
+"from_ms": null,
+"to_ms": 1795719942380,
+"source_total": "2000",
+"filtered_total": "2000",
+"returned_count": 3,
+"truncated": true,
+"downsampled": false,
+"has_more": true,
+"next_cursor": "lps2.query-k1.50.1795721575.IUYjeri8Da7sopbMzIYx2vOHpAGzkP9qHUNvJyjG2XQ",
+"gaps": []
+},
+"source_history_semantics": "CURRENT_STATE_ONLY",
+"formula": null,
+"reason_code": null,
+"retryable": false
+},
+"fills": {
+"state": "STALE",
+"data": {
+"rows": [
+{
+"mode": "paper",
+"side": "SELL",
+"price": "1678.090000000000000000",
+"venue": "OKX",
+"fill_id": 5588,
+"event_id": null,
+"quantity": "296.560000000000000000",
+"trade_id": "8beb018372e483f30eb8a6534379e1618e58d07c5efcf9151e1c3a50b4d09389",
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"commission": "24.882718520000000000",
+"trade_time": "2026-11-26T15:15:32.070Z",
+"trade_time_ms": 1795706132070,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"realized_pnl": "21.648520000000000007",
+"instrument_id": "ETHUSDTSWAP.OKX",
+"liquidity_side": "TAKER",
+"venue_order_id": "paper-2938653a512b481197776a2ce29f3250",
+"client_order_id": "2938653a512b481197776a2ce29f3250",
+"commission_currency": "USDT",
+"execution_session_id": null
+},
+{
+"mode": "paper",
+"side": "BUY",
+"price": "1677.540000000000000000",
+"venue": "OKX",
+"fill_id": 5587,
+"event_id": null,
+"quantity": "148.290000000000000000",
+"trade_id": "7b4aacb18acd50a4f8e492b4997096e39d141f67667f47d1c039712e57bcffdc",
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"commission": "12.438120330000000000",
+"trade_time": "2026-11-26T15:15:25.220Z",
+"trade_time_ms": 1795706125220,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"realized_pnl": "0.000000000000000000",
+"instrument_id": "ETHUSDTSWAP.OKX",
+"liquidity_side": "TAKER",
+"venue_order_id": "paper-c7f8460ee92c491bb582da855e8c2997",
+"client_order_id": "c7f8460ee92c491bb582da855e8c2997",
+"commission_currency": "USDT",
+"execution_session_id": null
+},
+{
+"mode": "paper",
+"side": "BUY",
+"price": "1677.180000000000000000",
+"venue": "OKX",
+"fill_id": 5586,
+"event_id": null,
+"quantity": "148.270000000000000000",
+"trade_id": "7ced7beddf6c15c8c36e6bb3cd7bd98a39a11285f3cad1837521b34daaba286a",
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"commission": "12.433773930000000000",
+"trade_time": "2026-11-26T15:15:18.200Z",
+"trade_time_ms": 1795706118200,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"realized_pnl": "0.000000000000000000",
+"instrument_id": "ETHUSDTSWAP.OKX",
+"liquidity_side": "TAKER",
+"venue_order_id": "paper-f078318765694188acad1e7747e2043e",
+"client_order_id": "f078318765694188acad1e7747e2043e",
+"commission_currency": "USDT",
+"execution_session_id": null
+}
+]
+},
+"clocks": {
+"event_time_ms": 1795719942494,
+"source_published_at_ms": 1795719942494,
+"received_at_ms": 1795719942494,
+"ingested_at_ms": 1795719942494,
+"processed_at_ms": 1795719942494,
+"as_of_ms": 1795719942494,
+"read_at_ms": 1795720676462
+},
+"coverage": {
+"from_ms": null,
+"to_ms": 1795719942494,
+"source_total": "2000",
+"filtered_total": "12",
+"returned_count": 1,
+"truncated": false,
+"downsampled": false,
+"has_more": false,
+"next_cursor": null,
+"gaps": []
+},
+"source_history_semantics": "CURRENT_STATE_ONLY",
+"formula": null,
+"reason_code": null,
+"retryable": false
+}
+},
+"data": {
+"orders": [
+{
+"mode": "paper",
+"side": "BUY",
+"price": "1626.480000000000000000",
+"venue": "OKX",
+"intent": "OPEN",
+"status": "CANCELED",
+"symbol": "ETHUSDTSWAP",
+"order_id": 21698,
+"quantity": "148.240000000000000000",
+"post_only": false,
+"trader_id": null,
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"error_code": null,
+"order_type": "LIMIT",
+"updated_at": "2026-11-26T15:15:59.160559Z",
+"updated_at_ms": 1795706159160,
+"reduce_only": false,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"submitted_at": "2026-11-26T15:15:50.402020Z",
+"submitted_at_ms": 1795706150402,
+"error_message": null,
+"instrument_id": "ETHUSDTSWAP.OKX",
+"position_side": "BOTH",
+"risk_grant_id": null,
+"time_in_force": "GTC",
+"trigger_price": null,
+"venue_order_id": null,
+"client_order_id": "fadcff2fee5e4c0992873d7b25b27e36",
+"execution_session_id": null,
+"deployment_id": "dep@v1@ad3a3813ff434e92b5f433cd63b64f49"
+},
+{
+"mode": "paper",
+"side": "SELL",
+"price": null,
+"venue": "OKX",
+"intent": "CLOSE",
+"status": "CANCELED",
+"symbol": "ETHUSDTSWAP",
+"order_id": 21693,
+"quantity": "296.560000000000000000",
+"post_only": false,
+"trader_id": null,
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"error_code": null,
+"order_type": "STOP_MARKET",
+"updated_at": "2026-11-26T15:15:32.953549Z",
+"updated_at_ms": 1795706132953,
+"reduce_only": true,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"submitted_at": "2026-11-26T15:15:29.788342Z",
+"submitted_at_ms": 1795706129788,
+"error_message": null,
+"instrument_id": "ETHUSDTSWAP.OKX",
+"position_side": "BOTH",
+"risk_grant_id": null,
+"time_in_force": "GTC",
+"trigger_price": "1644.300000000000000000",
+"venue_order_id": null,
+"client_order_id": "9ae0f469663f497284598068fefc8e75",
+"execution_session_id": null,
+"deployment_id": "dep@v1@ad3a3813ff434e92b5f433cd63b64f49"
+},
+{
+"mode": "paper",
+"side": "SELL",
+"price": "1677.990000000000000000",
+"venue": "OKX",
+"intent": "CLOSE",
+"status": "FILLED",
+"symbol": "ETHUSDTSWAP",
+"order_id": 21692,
+"quantity": "296.560000000000000000",
+"post_only": false,
+"trader_id": null,
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"error_code": null,
+"order_type": "LIMIT",
+"updated_at": "2026-11-26T15:15:32.612934Z",
+"updated_at_ms": 1795706132612,
+"reduce_only": true,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"submitted_at": "2026-11-26T15:15:29.563357Z",
+"submitted_at_ms": 1795706129563,
+"error_message": null,
+"instrument_id": "ETHUSDTSWAP.OKX",
+"position_side": "BOTH",
+"risk_grant_id": null,
+"time_in_force": "GTC",
+"trigger_price": null,
+"venue_order_id": null,
+"client_order_id": "2938653a512b481197776a2ce29f3250",
+"execution_session_id": null,
+"deployment_id": "dep@v1@ad3a3813ff434e92b5f433cd63b64f49"
+}
+],
+"fills": [
+{
+"mode": "paper",
+"side": "SELL",
+"price": "1678.090000000000000000",
+"venue": "OKX",
+"fill_id": 5588,
+"event_id": null,
+"quantity": "296.560000000000000000",
+"trade_id": "8beb018372e483f30eb8a6534379e1618e58d07c5efcf9151e1c3a50b4d09389",
+"account_id": "acct@v1@paper@okx@v220-w60-m5@ad3a3813ff434e92b5f433cd63b64f49",
+"commission": "24.882718520000000000",
+"trade_time": "2026-11-26T15:15:32.070Z",
+"trade_time_ms": 1795706132070,
+"strategy_id": "alpha@v1@v220-w60-m5",
+"realized_pnl": "21.648520000000000007",
+"instrument_id": "ETHUSDTSWAP.OKX",
+"liquidity_side": "TAKER",
+"venue_order_id": "paper-2938653a512b481197776a2ce29f3250",
+"client_order_id": "2938653a512b481197776a2ce29f3250",
+"commission_currency": "USDT",
+"execution_session_id": null
+}
+],
+"page": {
+"limit": 50,
+"next_cursor": "kc1.query-k1.eyJib3VuZGFyeSI6WyJscHMyLnF1ZXJ5LWsxLjUwLjE3OTU3MjE1NzUuSVVZamVyaThEYTdzb3BiTXpJWXgydk9IcEFHemtQOXFIVU52SnlqRzJYUSJdLCJkaXJlY3Rpb24iOiJhZnRlciIsImV4cGlyZXNfYXQiOjE3OTU3MjE1NzYsImlzc3VlZF9hdCI6MTc5NTcyMDY3Niwia2V5X2lkIjoicXVlcnktazEiLCJxdWVyeV9maW5nZXJwcmludCI6ImJXSHQxRHJRaVIxbzlkbnRUNU1LcmdNNHRzOUpkT1ViNXEyNktwNlpyRlUiLCJyZXNvdXJjZV9pZCI6ImV4ZWN1dGlvbi5mdWxsLWJsb3R0ZXIucGFwZXIudjEiLCJ2ZXJzaW9uIjoxLCJ3b3Jrc3BhY2VfaWQiOiJ3c18wNkcxOUY2MVlCOENGUjdURVdNUzdIUTY2MCJ9.eXqVGbS_0hwt_xpW5g2bxG2oX9muJR0zKbZy_GhAvDE",
+"previous_cursor": null
+},
+"query": {
+"filters": {
+"status": null,
+"status_bucket": null,
+"stage": "PAPER",
+"deployment_id": null,
+"account_id": null,
+"alpha_id": null,
+"venue": null,
+"symbol": null,
+"side": null
+},
+"sort": "submitted_at_desc",
+"filter_allowlist": [
+"status",
+"venue",
+"symbol",
+"side",
+"stage",
+"deployment_id",
+"account_id",
+"alpha_id"
+],
+"sort_allowlist": [
+"submitted_at_desc",
+"submitted_at_asc",
+"updated_at_desc"
+],
+"count_scope": "COMMITTED_HOT_PROJECTION"
+},
+"exact_total": 2000,
+"filtered_total": 2000,
+"aggregates": {
+"status": {
+"CANCELED": 116,
+"FILLED": 1786,
+"RISK_REJECTED": 92,
+"EXPIRED": 3,
+"REJECTED": 3
+},
+"venue": {
+"OKX": 2000
+},
+"side": {
+"BUY": 1009,
+"SELL": 991
+}
+},
+"exact_query": {
+"schema_version": "execution.blotter-exact-query.v1",
+"relation": "orders",
+"history_semantics": "CURRENT_PROJECTION_POPULATION_NOT_FULL_HISTORY",
+"state": "AVAILABLE",
+"authority": "DERIVED",
+"formula_version": "portal.current-projection.orders-exact-query.v1",
+"reason_code": null,
+"mirror_revision": {
+"projection_epoch": "b651cc48-98cf-42ad-bd23-6a58c262f3ad",
+"projection_sequence": 1472,
+"payload_digest": "sha256:1722dbfa6d2d0b29a382387d7d801fe5659fa98838f198c876c18c05199c1fe0",
+"last_successful_refresh_at": "2026-11-26T19:10:25.252Z"
+},
+"coverage": {
+"relation_completeness": "COMPLETE",
+"scope_state": "EXACT",
+"returned_page_rows": 50,
+"current_population_rows": 2000,
+"filtered_population_rows": 2000
+}
+}
+}
+}

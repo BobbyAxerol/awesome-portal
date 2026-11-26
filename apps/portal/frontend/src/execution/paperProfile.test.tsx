@@ -82,4 +82,16 @@ describe("PaperProfileBar", () => {
     mount("/deployments/paper?paper_profile=PAPER_OKX_SWAP", { delivered: null, allowed: [] });
     expect(screen.getAllByRole("combobox", { name: "Paper profile" }).length).toBe(2);
   });
+
+  it("a link to an OKX account names that account's own profile; other accounts and other screens are left alone", () => {
+    const okx = "/deployments/accounts/" + encodeURIComponent("acct@v1@paper@okx@crossec-ema-pfl-v1@4f867c3e8d854e389d9568d65f2f9fda");
+    expect(withContext(okx, "?env=paper")).toContain("paper_profile=PAPER_OKX_SWAP");
+    // The row's own profile wins over a carried selection of another one.
+    expect(withContext(okx, "?paper_profile=PAPER_BINANCE_USDM")).toContain("paper_profile=PAPER_OKX_SWAP");
+    expect(withContext("/deployments/accounts/" + encodeURIComponent("acct@v1@paper@binance@x@y"), "?env=paper")).not.toContain("paper_profile");
+    expect(withContext("/deployments/accounts/live_acct_1", "?env=live")).not.toContain("paper_profile");
+    expect(withContext("/deployments/sandbox/" + encodeURIComponent("acct@v1@paper@okx@x@y"), "?env=paper")).not.toContain("paper_profile");
+    // A link that already names a profile keeps it.
+    expect(withContext(okx + "?paper_profile=PAPER_BINANCE_USDM", "")).toContain("paper_profile=PAPER_BINANCE_USDM");
+  });
 });

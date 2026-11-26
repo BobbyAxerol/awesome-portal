@@ -66,13 +66,13 @@ export function analyticsResource(screen: Screen, id: string): string {
  * and which nobody would notice going wrong (A38.6 item 2).
  */
 
-/** Left of the `@`: what the published ids actually use, anchored and bounded. */
-const BINDING_LOCAL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,126}$/;
-/** Right of the `@`: the venue, upper case — BINANCE, OKX, PAPER_DNSE_VNM. */
-const BINDING_VENUE = /^[A-Z][A-Z0-9_]{1,31}$/;
+/** One `@`-separated segment: what the published ids actually use, anchored and bounded. */
+const BINDING_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,126}$/;
+/** `<local>@<VENUE>` (older) up to `va@v1@paper@okx@<name>@<hash>` (virtual-account ids): 2 to 8 segments. */
+const BINDING_MAX_SEGMENTS = 8;
 
 /**
- * Accept the one delimiter the grammar has, and refuse everything that could
+ * Accept the one delimiter the grammar has (`@`, now repeated for virtual-account ids), and refuse everything that could
  * change the meaning of a path or a resource string. Order matters: the
  * explicit refusals run before the shape test, so a rejection reason is always
  * the specific one, and `..` is refused even though `.` is a legal character.
@@ -88,12 +88,9 @@ export function parseBindingId(raw: string): string {
   if (raw.includes("%")) throw invalid();
   if (raw.includes("/") || raw.includes("\\")) throw invalid();
   if (raw.includes("..")) throw invalid();
-  const at = raw.indexOf("@");
-  if (at < 0 || at !== raw.lastIndexOf("@")) throw invalid();
-  const local = raw.slice(0, at);
-  const venue = raw.slice(at + 1);
-  if (!BINDING_LOCAL.test(local) || !BINDING_VENUE.test(venue)) throw invalid();
-  return `${local}@${venue}`;
+  const parts = raw.split("@");
+  if (parts.length < 2 || parts.length > BINDING_MAX_SEGMENTS || !parts.every((part) => BINDING_SEGMENT.test(part))) throw invalid();
+  return raw;
 }
 
 /**

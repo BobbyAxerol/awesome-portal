@@ -7,7 +7,7 @@
  * invalid value reads as the default and is listed in `invalid` so the caller
  * can say so. `routeState.ts` is untouched; V1 screens keep using it.
  */
-import { PAPER_PROFILE_PARAM, isPaperScreenPath, parsePaperProfile } from "../paperProfile";
+import { PAPER_PROFILE_PARAM, isPaperScreenPath, paperProfileOfAccountId, parsePaperProfile } from "../paperProfile";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -211,7 +211,11 @@ export function withContext(href: string, current: URLSearchParams | string, key
   for (const key of CONTEXT_KEYS) if (own.getAll(key).length > 1) own.set(key, own.get(key) ?? "");
   // The Paper profile selection follows a link between Paper screens only (never to an unrelated screen, never in the rail).
   if (keys === CONTEXT_KEYS && isPaperScreenPath(path) && !own.has(PAPER_PROFILE_PARAM)) {
-    const chosen = parsePaperProfile(asParams(current).get(PAPER_PROFILE_PARAM));
+    // An Account 360 link names the profile of the account's own id (its row's profile) before any carried selection.
+    const accountId = /^\/deployments\/accounts\/([^/]+)$/.exec(path)?.[1];
+    let ownProfile = null as ReturnType<typeof parsePaperProfile>;
+    if (accountId !== undefined) { try { ownProfile = paperProfileOfAccountId(decodeURIComponent(accountId)); } catch { ownProfile = null; } }
+    const chosen = ownProfile ?? parsePaperProfile(asParams(current).get(PAPER_PROFILE_PARAM));
     if (chosen !== null) own.set(PAPER_PROFILE_PARAM, chosen);
   }
 

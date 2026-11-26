@@ -14,7 +14,7 @@ import type { Role } from "../domain";
  * The binding half mirrors `parseBindingId` in analytics.proxy.ts exactly, and
  * a test asserts the two stay in step.
  */
-const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:(?:command-center|manager-v2:read|manager-realtime)|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|paper-workbench):[A-Za-z0-9._-]{1,128}|execution:screen:account-broker-360:[A-Za-z0-9][A-Za-z0-9._-]{0,126}@[A-Z][A-Z0-9_]{1,31})$/;
+const RESOURCE_PATTERN = /^(?:(?:alpha|deployment|account):[A-Za-z0-9._-]{1,128}|execution:(?:command-center|manager-v2:read|manager-realtime)|execution:screen:(?:gate-r2|blotter|alpha-360|portfolio-360|paper-workbench):[A-Za-z0-9._-]{1,128}|execution:screen:account-broker-360:[A-Za-z0-9][A-Za-z0-9._-]{0,126}(?:@[A-Za-z0-9][A-Za-z0-9._-]{0,126}){1,7})$/;
 export const MANAGER_V2_READ_RESOURCE = "execution:manager-v2:read";
 export const MANAGER_REALTIME_RESOURCE = "execution:manager-realtime";
 const PROFILE_ID_PATTERN = /^(?:PAPER|SANDBOX|LIVE)_[A-Z0-9_]{2,120}$/;
