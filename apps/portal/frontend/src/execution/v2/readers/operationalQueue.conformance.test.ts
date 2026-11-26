@@ -491,7 +491,7 @@ describe("L1 · matrix E · read truth x rows x continuation flags", () => {
 
 describe("L1 · schema_version routing", () => {
   it("only the queue's own version is a queue; every other published version is the typed unsupported_shape", () => {
-    for (const other of [INCIDENT_ROOT_V2_SCHEMA, "portal.execution.operational-workflow.v2", "execution.operations-queue.v1", "portal.execution.operational-queue.v1", "portal.execution.operational-queue.v3"]) {
+    for (const other of [INCIDENT_ROOT_V2_SCHEMA, "portal.execution.operational-workflow.v2", "portal.execution.operational-queue.v1", "portal.execution.operational-queue.v3"]) {
       const body = { ...clone(BASE), schema_version: other };
       expect(readOperationalQueueV2(body), other).toEqual({ kind: "unsupported_shape", schemaVersion: other });
     }
@@ -663,7 +663,7 @@ const REQUIRED: Case[] = REQUIRED_PATHS.flatMap((p) => {
   const cases = requiredCases(BODY, [p]);
   return nullable.has(String(p[p.length - 1])) ? cases.filter((c) => c.category === "missing-required") : cases.filter((c) => c.category !== "null-vs-absent" || !(p.join(".") === "read_truth.reason_code"));
 });
-const SCHEMA_SWAP = schemaVersionCases(BODY, ["schema_version"], OPERATIONAL_QUEUE_V2_SCHEMA, [INCIDENT_ROOT_V2_SCHEMA, "portal.execution.operational-workflow.v2", "execution.operations-queue.v1"]);
+const SCHEMA_SWAP = schemaVersionCases(BODY, ["schema_version"], OPERATIONAL_QUEUE_V2_SCHEMA, [INCIDENT_ROOT_V2_SCHEMA, "portal.execution.operational-workflow.v2"]);
 const POLLUTION = pollutionCases(BODY, [[], ["page"], [...ROW], [...ROW, "target"], [...ROW, "incident_links"], [...LINK0], [...LINK0, "incident"], ["page", "status_counts"], [...DIM], [...DIM, "severity", "counts"]]);
 const ALL_NEG: Case[] = [...ENUMS, ...INTEGERS, ...STRINGS, ...INSTANT_CASES, ...ARRAYS, ...REQUIRED, ...SCHEMA_SWAP, ...POLLUTION];
 

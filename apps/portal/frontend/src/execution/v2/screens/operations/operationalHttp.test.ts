@@ -114,10 +114,24 @@ describe("listOperationalQueueV2", () => {
     expect(JSON.stringify(answer?.body)).toContain("OPERATIONAL_READ_FILTER_NOT_SUPPORTED");
   });
 
-  it("answers unsupported_shape for the legacy queue instead of mis-reading it", async () => {
+  it("reads the legacy queue the server answers in LEGACY_COMPATIBILITY mode, as a queue with no invented fields", async () => {
+    serveBody({
+      schema_version: "execution.operations-queue.v1", record_authority: "PORTAL", delivery_profile: "fixture",
+      source_integration_state: "UNAVAILABLE", read_at: "2026-11-26T06:50:08.670Z",
+      actor: { user_id: "u", username: "bobby", roles: ["ADMIN"] },
+      read_truth: { state: "EMPTY", reason_code: "NO_MATCHING_PORTAL_OPERATION_RECORDS", scope: "REQUEST" },
+      page: { rows: [], total_count: 0, filtered_count: 0, next_cursor: null, prev_cursor: null, has_more: false, has_previous: false,
+        applied_filters: [], applied_sort: [{ field: "created_at", direction: "desc" }, { field: "operation_id", direction: "desc" }] },
+    });
+    const result = await api().listOperationalQueueV2({});
+    expect(result.ok && result.value.kind === "queue" && result.value.queue.legacyV1).toBe(true);
+    expect(result.ok && result.value.kind === "queue" && result.value.queue.page.rows.length).toBe(0);
+  });
+
+  it("is unavailable, not a queue, for a legacy body that names no page fields", async () => {
     serveBody({ schema_version: "execution.operations-queue.v1", page: { rows: [], total_count: 0 } });
     const result = await api().listOperationalQueueV2({});
-    expect(result).toEqual({ ok: true, value: { kind: "unsupported_shape", schemaVersion: "execution.operations-queue.v1" } });
+    expect(result.ok).toBe(false);
   });
 
   it("is unavailable, not a guess, for a malformed V2 body", async () => {

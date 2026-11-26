@@ -100,9 +100,52 @@ describe("queue reader", () => {
     ]);
   });
 
-  it("answers unsupported_shape for the legacy queue instead of reading it as V2", () => {
-    const legacy = { schema_version: "execution.operations-queue.v1", page: { rows: [] } };
-    expect(readOperationalQueueV2(legacy)).toEqual({ kind: "unsupported_shape", schemaVersion: "execution.operations-queue.v1" });
+  describe("the legacy execution.operations-queue.v1 body (the server answers it while Core's reader mode is LEGACY_COMPATIBILITY)", () => {
+    const legacyFixture = () => JSON.parse(readFileSync(
+      join(__dirname, "../../../../../../../packages/contracts/fixtures/execution-operations-queue.valid.json"), "utf8",
+    )) as Record<string, any>;
+
+    it("reads the canonical fixture as a queue, from stated fields only", () => {
+      const read = readOperationalQueueV2(legacyFixture());
+      expect(read?.kind).toBe("queue");
+      if (read?.kind !== "queue") return;
+      expect(read.queue.legacyV1).toBe(true);
+      expect(read.queue.workspaceId).toBeNull();
+      expect(read.queue.sourceAsOfMs).toBeNull();
+      expect(read.queue.observedAtMs).toBe(Date.parse("2026-08-23T09:00:00.000Z"));
+      expect(read.queue.page.rows).toHaveLength(1);
+      expect(read.queue.page.rows[0]).toMatchObject({ operationId: "op_fixture_queue_1", targetType: "ACCOUNT", environment: "paper" });
+      // Nothing the body does not state: counts, health and links stay "Not published", never zero.
+      expect(read.queue.page.statusCounts).toBeUndefined();
+      expect(read.queue.page.health).toBeUndefined();
+      expect(read.queue.page.rows[0]!.incidentLinks).toBeUndefined();
+    });
+
+    it("reads an empty legacy page (EMPTY truth)", () => {
+      const body = legacyFixture();
+      body.read_truth = { state: "EMPTY", reason_code: "NO_MATCHING_PORTAL_OPERATION_RECORDS", scope: "REQUEST" };
+      body.page = { ...body.page, rows: [], total_count: 0, filtered_count: 0 };
+      const read = readOperationalQueueV2(body);
+      expect(read?.kind === "queue" && read.queue.page.rows.length).toBe(0);
+    });
+
+    it("a row on a target the V2 queue does not model is unsupported_shape, not a page with a row left out", () => {
+      const body = legacyFixture();
+      body.page.rows[0].target = { type: "BROKER_BINDING", id: "b1" };
+      expect(readOperationalQueueV2(body)).toEqual({ kind: "unsupported_shape", schemaVersion: "execution.operations-queue.v1" });
+    });
+
+    it("a malformed legacy body is null, never a queue", () => {
+      const noTime = legacyFixture();
+      delete noTime.read_at;
+      expect(readOperationalQueueV2(noTime)).toBeNull();
+      const contradiction = legacyFixture();
+      contradiction.read_truth.state = "EMPTY";
+      expect(readOperationalQueueV2(contradiction)).toBeNull();
+      const wrongAuthority = legacyFixture();
+      wrongAuthority.record_authority = "TRADING_SYSTEM";
+      expect(readOperationalQueueV2(wrongAuthority)).toBeNull();
+    });
   });
 
   it("answers unsupported_shape with no version for a body that names none, and null for a non-object", () => {
