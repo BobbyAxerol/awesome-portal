@@ -100,6 +100,15 @@ export async function stubAdminRoutes(page: Page): Promise<void> {
     if (url.pathname === "/api/admin/access/self") {
       return route.fulfill({ status: 200, contentType: "application/json", body: ACCESS_SELF_BODY });
     }
+    // DR-30 default execution grants (owner-only list): one fixed, published-shape body (fixed dates; the panel computes nothing from the clock).
+    if (url.pathname === "/api/admin/execution-grants" && request.method() === "GET") {
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+        workspace_id: "ws_TEST_ONLY_core", max_term_days: 365,
+        grants: [{ user_id: "usr_TEST_ONLY_reviewer", username: "reviewer", display_name: "Test Reviewer", environments: ["paper"], term_started_at: "2026-11-01T00:00:00.000Z",
+          expires_at: "2027-02-01T00:00:00.000Z", revoked_at: null, status: "ACTIVE" }],
+        candidates: [{ username: "analyst", display_name: "Test Analyst" }],
+      }) });
+    }
     // The four advisory self reads (self-navigation, eligibility, the batch, self-context) answer from the canonical fixture,
     // stamped from the real clock with a ten-minute ceiling (specs that fix the page clock still see an answer that has not expired).
     const answer =
