@@ -47,6 +47,35 @@ rollback_control="$({
 } 2>/dev/null)"
 grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_PAPER: "false"' <<<"${rollback_control}"
 
+# OKX Paper is behind its own explicit switch: default render keeps it off with no origin; the switch carries the three values.
+okx_default="$({
+  CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY="${TMP_DIR}/sgp-secrets" \
+  PORTAL_RUNTIME_GID=991 \
+  docker compose \
+    --env-file "${ROOT_DIR}/deploy/.env.production.example" \
+    -f "${ROOT_DIR}/deploy/compose.production.yaml" \
+    -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" \
+    config
+} 2>/dev/null)"
+grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "false"' <<<"${okx_default}"
+grep -Fq 'EXECUTION_EDGE_PAPER_OKX_ORIGIN: ""' <<<"${okx_default}"
+okx_on="$({
+  CONTROL_API_EXECUTION_EDGE_SECRET_DIRECTORY="${TMP_DIR}/sgp-secrets" \
+  PORTAL_RUNTIME_GID=991 \
+  CONTROL_API_FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX=true \
+  EXECUTION_EDGE_PAPER_OKX_ORIGIN=https://10.70.0.2:8446 \
+  EXECUTION_EDGE_PAPER_OKX_PROFILE_ID=PAPER_OKX_SWAP \
+  EXECUTION_EDGE_PAPER_OKX_AUDIENCE=portal-execution-edge-paper-okx \
+  docker compose \
+    --env-file "${ROOT_DIR}/deploy/.env.production.example" \
+    -f "${ROOT_DIR}/deploy/compose.production.yaml" \
+    -f "${ROOT_DIR}/deploy/compose.execution-current-source.yaml" \
+    config
+} 2>/dev/null)"
+grep -Fq 'FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true"' <<<"${okx_on}"
+grep -Fq 'EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: PAPER_OKX_SWAP' <<<"${okx_on}"
+grep -Fq 'EXECUTION_EDGE_PAPER_OKX_AUDIENCE: portal-execution-edge-paper-okx' <<<"${okx_on}"
+
 paper_edge="$({
   PORTAL_EXECUTION_EDGE_IMAGE=ghcr.io/primus/portal-execution-edge@sha256:1111111111111111111111111111111111111111111111111111111111111111 \
   PORTAL_RUNTIME_GID=991 \

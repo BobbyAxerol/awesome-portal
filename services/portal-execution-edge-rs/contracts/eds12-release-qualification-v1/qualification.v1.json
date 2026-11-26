@@ -125,7 +125,7 @@
     {
       "id": "current_source_compose",
       "file": "deploy/compose.execution-current-source.yaml",
-      "sha256": "sha256:92fa3face5300acee6a8648b8beacd98159463057ff59152292f646616b2829d"
+      "sha256": "sha256:1e9dbaff4fd12ec923616d0c34659f6f69e53260b2c6b3253c089f6a9d38b800"
     },
     {
       "id": "profile_runtime_prepare",
