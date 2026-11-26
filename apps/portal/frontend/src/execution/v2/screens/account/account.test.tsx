@@ -14,6 +14,7 @@ import { SLOW, SLOW_TEST } from "../../waitsTestUtil";
 
 import { answerAccount } from "../../../../../e2e/bffDoubleAccount";
 import { simulate } from "../../../../../e2e/bffSimulated";
+import { ShellCapabilitiesContext } from "../../../../app/selfNavView";
 import { createHttpApi } from "../../../api/httpApi";
 import type { ExecutionApi } from "../../../api/ports";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
@@ -68,10 +69,13 @@ function Where() {
   return <output data-testid="where">{pathname + search}</output>;
 }
 
-function mount(entry: string, props: { accountId?: string; binding?: string | null; capabilities?: ReadonlySet<string> } = {}) {
+function mount(entry: string, props: { accountId?: string; binding?: string | null; capabilities?: ReadonlySet<string>; shell?: ReadonlySet<string> } = {}) {
+  const { shell = null, ...screenProps } = props;
   return render(
     <MemoryRouter initialEntries={[entry]}>
-      <AccountScreen api={makeApi()} {...props} />
+      <ShellCapabilitiesContext.Provider value={shell}>
+        <AccountScreen api={makeApi()} {...screenProps} />
+      </ShellCapabilitiesContext.Provider>
       <Where />
     </MemoryRouter>,
   );
@@ -524,6 +528,37 @@ describe("roles through holds()", () => {
     mount("/deployments/accounts");
     expect(screen.getByText(/This is not a denial/)).toBeTruthy();
     expect(screen.queryByText("You can't open this page")).toBeNull();
+  });
+
+  it("the owner anchor opens Accounts although the session list holds no menu token (the projection says HIDDEN for an owner)", async () => {
+    stubFetch();
+    session.current = {
+      principal: null,
+      access: { kind: "ready", access: { userId: "u1", isOwner: true, ownerState: "OWNER", capabilities: ["governance.r1.read"] } },
+    };
+    mount("/deployments/accounts");
+    await loadedList();
+    expect(screen.queryByText("You can't open this page")).toBeNull();
+  });
+
+  it("a non-owner with no menu token is still denied, owner-looking capability names notwithstanding", async () => {
+    stubFetch();
+    session.current = {
+      principal: null,
+      access: { kind: "ready", access: { userId: "u1", isOwner: false, ownerState: "NOT_OWNER", capabilities: ["governance.r1.read", "administration.profile_access.manage"] } },
+    };
+    mount("/deployments/accounts");
+    await screen.findByText("You can't open this page");
+  });
+
+  it("a non-owner whose live self-navigation row is ENTERABLE opens Accounts through the shell's set", async () => {
+    stubFetch();
+    session.current = {
+      principal: null,
+      access: { kind: "ready", access: { userId: "u1", isOwner: false, ownerState: "NOT_OWNER", capabilities: [] } },
+    };
+    mount("/deployments/accounts", { shell: new Set(["nav:EXECUTION_ACCOUNTS_BINDINGS"]) });
+    await loadedList();
   });
 
   it("a caller may hand the capabilities in (tests, embedding pages)", async () => {
