@@ -1642,7 +1642,18 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         `/broker-bindings/${encodeURIComponent(bindingId)}/exposure`,
         signal,
       );
-      if (!response.ok) return analyticsProblem(response);
+      if (!response.ok) {
+        // The Edge answers 400 (an id it does not accept, such as a virtual-account id with `@`) or 404 (no route/rows): Core maps them to these two
+        // codes. That is "not published" for this binding, not a computation that failed for an unknown reason. Only this route is relabelled.
+        if (response.status === 400 || response.status === 404) {
+          let code: unknown = null;
+          try { code = ((await response.clone().json()) as { error?: { code?: unknown } } | null)?.error?.code; } catch { /* not JSON: the generic path below */ }
+          if (code === "ANALYTICS_UPSTREAM_REJECTED" || code === "ANALYTICS_UPSTREAM_ROUTE_ABSENT") {
+            return unavailable("Not published: Edge does not accept this binding id / no exposure rows.");
+          }
+        }
+        return analyticsProblem(response);
+      }
       const body = await response.json();
       const exposure = readBindingExposure(body);
       const envelope = readAnalyticsEnvelope(body);

@@ -100,6 +100,22 @@ describe("each read issues the route its OpenAPI operation declares", () => {
     expect(calls[0].url).toBe("/api/v1/execution/broker-bindings/binding-1/exposure");
   });
 
+  it("an Edge 400/404 on the binding exposure is a plain 'Not published', not an unrecognised failure; other codes and other routes are untouched", async () => {
+    const api = createHttpApi({ policy: OPEN });
+    for (const [status, code] of [[400, "ANALYTICS_UPSTREAM_REJECTED"], [404, "ANALYTICS_UPSTREAM_ROUTE_ABSENT"]] as const) {
+      serving({ error: { code, message: "x" } }, status);
+      const result = await api.getBindingExposure("va@v1@paper@okx@x@1");
+      expect(result).toEqual({ ok: false, status: "unavailable", reason: "Not published: Edge does not accept this binding id / no exposure rows." });
+    }
+    serving({ error: { code: "ANALYTICS_UPSTREAM_UNAVAILABLE", message: "x" } }, 503);
+    const other = await api.getBindingExposure("b");
+    expect(other.ok).toBe(false);
+    expect(other.ok === false && other.reason).not.toMatch(/^Not published: Edge does not accept/);
+    serving({ error: { code: "ANALYTICS_UPSTREAM_REJECTED", message: "x" } }, 400);
+    const capital = await api.getCapitalLedger("PF-1");
+    expect(capital.ok === false && capital.reason).not.toMatch(/^Not published: Edge does not accept/);
+  });
+
   it("POSTs the insight batch, because 64 items do not belong in a URL", async () => {
     const calls = serving(await fixtureDoc("insight-batch"));
     const result = await createHttpApi({ policy: OPEN }).getInsightBatch("alpha-1", {
