@@ -33,7 +33,7 @@ describe("DR-30 pure rules", () => {
     expect(grantCovers(["live"], null)).toBe(false);
   });
   it("unions query and screen-path environments and fails closed on malformed values", () => {
-    expect(requestRequiredEnvironments("/api/v1/execution/alphas", {})).toEqual(["paper"]);
+    expect(requestRequiredEnvironments("/api/v1/execution/alphas", {})).toEqual(["paper", "sandbox", "live"]); // unnamed = may be `all`
     expect(requestRequiredEnvironments("/api/v1/execution/screens/live", {})).toEqual(["live"]);
     expect(requestRequiredEnvironments("/api/v1/execution/screens/live", { environment: "paper" })?.slice().sort()).toEqual(["live", "paper"]);
     expect(requestRequiredEnvironments("/api/v1/execution/alphas", { environments: "paper,live" })?.slice().sort()).toEqual(["live", "paper"]);
@@ -90,10 +90,10 @@ describe("DR-30 canReadExecution: granted vs not granted, per environment, isola
     expect(await repository.canReadExecution(BOUND, "u", "canary")).toBe(false);
     expect(await repository.canReadExecution(BOUND, "u", "all")).toBe(false);
     expect(await repository.canReadExecution(BOUND, "u", "bogus")).toBe(false);
-    expect(await repository.canReadExecution(BOUND, "u", undefined)).toBe(true); // route default is paper
+    expect(await repository.canReadExecution(BOUND, "u", undefined)).toBe(true); // unnamed: any grant here, guard + scopes enforce
   });
-  it("a live-only grant cannot read the paper default and a full grant covers all/canary", async () => {
-    expect(await repo(granted("live")).repository.canReadExecution(BOUND, "u", undefined)).toBe(false);
+  it("a live-only grant cannot read paper and a full grant covers all/canary", async () => {
+    expect(await repo(granted("live")).repository.canReadExecution(BOUND, "u", "paper")).toBe(false);
     const full = repo(granted("paper", "sandbox", "live")).repository;
     for (const env of ["paper", "sandbox", "live", "all", "canary"]) expect(await full.canReadExecution(BOUND, "u", env), env).toBe(true);
   });
@@ -136,6 +136,15 @@ describe("DR-30 SessionGuard", () => {
     const f = guardFixture(granted("paper"), { url: "/api/v1/execution/screens/live" });
     await f.guard.canActivate(f.context);
     expect(f.req).toMatchObject({ portalWorkspaceId: PERSONAL, portalViewerWorkspaceId: PERSONAL });
+  });
+  it("unnamed environment needs the full grant (Fleet defaults to all); sandbox,live without paper still reads a named sandbox", async () => {
+    const partial = guardFixture(granted("paper"), { url: "/api/v1/execution/alphas" }); await partial.guard.canActivate(partial.context);
+    expect(partial.req).toMatchObject({ portalWorkspaceId: PERSONAL });
+    const full = guardFixture(granted("paper", "sandbox", "live"), { url: "/api/v1/execution/alphas" }); await full.guard.canActivate(full.context);
+    expect(full.req).toMatchObject({ portalWorkspaceId: BOUND });
+    const named = guardFixture(granted("sandbox", "live"), { url: "/api/v1/execution/alphas?environment=sandbox", query: { environment: "sandbox" } });
+    await named.guard.canActivate(named.context);
+    expect(named.req).toMatchObject({ portalWorkspaceId: BOUND });
   });
   it("not granted: unchanged personal workspace", async () => {
     const f = guardFixture([], { url: "/api/v1/execution/alphas" });

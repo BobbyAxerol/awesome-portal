@@ -126,8 +126,13 @@ export class WorkspacesRepository {
   /** GET authority only. Never use this for Research, Governance decide or writes. */
   async canReadExecution(workspaceId: string, userId: string, environment?: string): Promise<boolean> {
     const configured = this.config?.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
-    if (configured && workspaceId === configured && defaultWorkspaceGrantsEnabled(this.config) &&
-      await this.defaultExecutionWorkspaceFor(userId, requiredEnvironments(environment)) === configured) return true;
+    if (configured && workspaceId === configured && defaultWorkspaceGrantsEnabled(this.config)) {
+      // Several callers (manager lists/model) pass no environment: the environment is then enforced by the guard
+      // (an unnamed environment needs the full grant) and by the per-environment read scopes. A named one is checked here.
+      const grant = await this.defaultExecutionGrant(userId);
+      if (grant.state === "GRANTED" && (environment === undefined ? grant.environments.length > 0
+        : grantCovers(grant.environments, requiredEnvironments(environment)))) return true;
+    }
     if (!retainedReview(this.config)) return this.isMember(workspaceId, userId);
     if (workspaceId !== this.config!.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
       (environment !== undefined && !["paper", "sandbox", "live", "all", "canary"].includes(environment))) return false;

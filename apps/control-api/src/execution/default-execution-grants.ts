@@ -43,8 +43,9 @@ export async function provisionDefaultExecutionGrant(core: Pool, cfg: ControlApi
       if (!done.rowCount) { await client.query("ROLLBACK"); return { workspace_id: workspace, viewer_id: viewerId, changed: false, scope: "DEFAULT_EXECUTION_READ_ONLY" }; }
       kind = "REVOKED"; environments = done.rows[0].execution_environments;
     } else {
-      const before = await client.query(`SELECT revoked_at, expires_at FROM execution_retained_review_access
-        WHERE workspace_id=$1 AND user_id=$2 AND cardinality(execution_environments)>0`, [workspace, viewerId]);
+      const before = await client.query(`SELECT 1 FROM execution_retained_review_access
+        WHERE workspace_id=$1 AND user_id=$2 AND cardinality(execution_environments)>0
+          AND revoked_at IS NULL AND expires_at>now()`, [workspace, viewerId]);
       await client.query(`INSERT INTO execution_retained_review_access(workspace_id,user_id,issued_by,created_at,term_started_at,expires_at,
           execution_environments) VALUES($1,$2,$3,now(),now(),now()+make_interval(days=>$4),$5::text[])
         ON CONFLICT (workspace_id,user_id) DO UPDATE SET issued_by=EXCLUDED.issued_by, term_started_at=now(),

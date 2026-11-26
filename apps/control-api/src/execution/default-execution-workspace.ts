@@ -19,7 +19,7 @@ export function defaultWorkspaceGrantsEnabled(config?: {
   return config?.FEATURE_EXECUTION_DEFAULT_WORKSPACE_GRANTS === "true" && Boolean(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID);
 }
 
-/** Environments a request needs. undefined means the route default, which is paper, never live.
+/** Environments a single named value needs. undefined = paper (the narrow default of canReadExecution callers that pass one).
  * `all` needs every environment, `canary` is a live read. null = unknown value: deny. */
 export function requiredEnvironments(environment: unknown): readonly ExecutionEnvironment[] | null {
   if (environment === undefined) return ["paper"];
@@ -47,7 +47,8 @@ export function requestRequiredEnvironments(path: string, query: Record<string, 
   }
   const screen = /^\/api\/v1\/execution\/screens\/(paper|sandbox|live)(?:\/|$)/.exec(path);
   if (screen) named.push(screen[1]);
-  if (named.length === 0) return requiredEnvironments(undefined);
+  // No environment named: the route may default to `all` (Fleet does), so every environment is required here.
+  if (named.length === 0) return EXECUTION_ENVIRONMENTS;
   const out = new Set<ExecutionEnvironment>();
   for (const item of named) {
     const required = requiredEnvironments(item);
