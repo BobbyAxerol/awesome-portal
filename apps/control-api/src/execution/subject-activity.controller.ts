@@ -1,7 +1,8 @@
-import { Controller, Get, HttpException, Inject, Param, Query, Req, UseGuards, Header } from "@nestjs/common";
+import { Controller, Get, Inject, Param, Query, Req, UseGuards, Header } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
 import { ControlApiConfig } from "../config";
+import { AuthError } from "../auth/auth.service";
 import type { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -71,12 +72,14 @@ export class ExecutionSubjectActivityController {
     const relation = rawRelation === "orders" || rawRelation === "fills" ? rawRelation as SubjectActivityRelation : null;
     const query = PageQuery.safeParse(rawQuery);
     if (!subjectId.success || !relation || !query.success) {
-      throw new HttpException({ error: { code: "EDS12_SUBJECT_ACTIVITY_QUERY_INVALID" } }, 400);
+      throw new AuthError("EDS12_SUBJECT_ACTIVITY_QUERY_INVALID", "The subject activity request is not valid.", 400);
     }
     const workspaceId = query.data.workspace_id ?? this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? request.portalWorkspaceId;
+    // Every other execution reader names the environment so a DR-30 scoped grant is judged per environment; an unnamed one needs the full grant.
     if (workspaceId !== this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ||
-      !(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId))) {
-      throw new HttpException({ error: { code: "WORKSPACE_NOT_FOUND" } }, 404);
+      !(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
+      // A typed code (the generic HttpException filter flattens every code to REQUEST_REJECTED).
+      throw new AuthError("WORKSPACE_NOT_FOUND", "The execution workspace is not available to this account.", 404);
     }
     try {
       return await this.activity.readAuthorized(
@@ -92,9 +95,20 @@ export class ExecutionSubjectActivityController {
       );
     } catch (error) {
       if (error instanceof SubjectActivityError) {
-        throw new HttpException({ error: { code: error.code } }, error.status);
+        throw new AuthError(error.code, error.message === error.code ? subjectActivityMessage(error.code) : error.message, error.status);
       }
       throw error;
     }
+  }
+}
+
+/** Plain, public wording for the typed refusals (the code stays the contract; the sentence is for the screen). */
+function subjectActivityMessage(code: string): string {
+  switch (code) {
+    case "EDS12_SUBJECT_ACTIVITY_NOT_ACTIVATED": return "Orders and fills are not published for this environment: its read profile is not enabled on this stack.";
+    case "EDS12_SUBJECT_ACTIVITY_PROFILE_NOT_CONFIGURED": return "Orders and fills are not published for this environment: no read profile is configured.";
+    case "EDS12_SUBJECT_ACTIVITY_PROJECTION_NOT_READY": return "Orders and fills are not published yet: the retained projection has no snapshot.";
+    case "EDS12_SUBJECT_ACTIVITY_PROJECTION_STALE": return "Orders and fills are not published: the retained projection is stale.";
+    default: return "The subject activity read is not available.";
   }
 }

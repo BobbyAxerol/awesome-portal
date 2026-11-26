@@ -223,6 +223,36 @@ describe("the default Book (QA9 N9b-03)", () => {
   });
 });
 
+describe("v1.6: no ?env and no deployed book", () => {
+  /** An alpha the body does not place in any book: no deployment names an environment. */
+  const unplaced = (path: string) => {
+    if (path !== `/resources/alphas/${ALPHA_DOUBLE_ID}`) return undefined;
+    const answer = answerAlpha("GET", path, new URLSearchParams())!;
+    const body = structuredClone(answer.body) as { data: { alpha: { deployments: unknown[] } } };
+    body.data.alpha.deployments = [];
+    return { status: 200, body };
+  };
+
+  const envCalls = (calls: readonly string[]) => calls.filter((url) => /[?&]environment=/.test(url));
+  const books = (calls: readonly string[]) => new Set(envCalls(calls).map((url) => new URL(url, "http://portal.test").searchParams.get("environment")));
+
+  it("reads the stack's Paper book by default and leaves no cell waiting: each is a value or a typed absence", async () => {
+    const { calls } = mount(undefined, unplaced);
+    await ready();
+    await waitFor(() => expect(envCalls(calls).length).toBeGreaterThan(0));
+    expect([...books(calls)]).toEqual(["paper"]);
+    await waitFor(() => expect(screen.queryAllByText(/^Loading/).length).toBe(0), { timeout: 4000 });
+    expect(screen.queryAllByLabelText("Loading")).toHaveLength(0);
+  });
+
+  it("an explicit ?env=sandbox still wins over the default", async () => {
+    const { calls } = mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?env=sandbox`, unplaced);
+    await ready();
+    await waitFor(() => expect(envCalls(calls).length).toBeGreaterThan(0));
+    expect([...books(calls)]).toEqual(["sandbox"]);
+  });
+});
+
 describe("current facts", () => {
   it("prints the published current figures with their basis, and the windowed ones as Not published", async () => {
     mount();
