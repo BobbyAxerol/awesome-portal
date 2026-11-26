@@ -40,7 +40,7 @@ const WORKBENCH_SCHEMAS: ReadonlySet<string> = new Set(["execution.paper-workben
 export const BLOTTER_ONLY_MEMBERS = ["page", "query", "exact_total", "filtered_total", "aggregates", "exact_query", "derived_insights"] as const;
 
 const ROOT_KEYS = [
-  "schema_version", "record_authority", "source_authority", "delivery_profile", "workspace_id", "read_at", "read_at_ms", "as_of", "as_of_ms",
+  "schema_version", "record_authority", "source_authority", "delivery_profile", "read_profiles", "workspace_id", "read_at", "read_at_ms", "as_of", "as_of_ms",
   "panels", "state", "freshness", "completeness", "actor", "resource", "capabilities", "data",
 ];
 const ROOT_REQUIRED = [
@@ -321,6 +321,8 @@ export function paperReadViolations(raw: unknown): readonly string[] {
   if (Object.hasOwn(raw, "record_authority") && raw.record_authority !== "PORTAL_CONTROL") out.push("record_authority: not PORTAL_CONTROL");
   if (Object.hasOwn(raw, "source_authority") && raw.source_authority !== "TRADING_SYSTEM") out.push("source_authority: not TRADING_SYSTEM");
   if (Object.hasOwn(raw, "delivery_profile") && !(PAPER_READ_PROFILES as readonly unknown[]).includes(raw.delivery_profile)) out.push(`delivery_profile: not one of ${PAPER_READ_PROFILES.join(", ")}`);
+  if (Object.hasOwn(raw, "read_profiles") && !(Array.isArray(raw.read_profiles) && raw.read_profiles.length >= 1 && raw.read_profiles.length <= 2
+    && new Set(raw.read_profiles).size === raw.read_profiles.length && raw.read_profiles.every((v) => (PAPER_READ_PROFILES as readonly unknown[]).includes(v)))) out.push(`read_profiles: not a unique list of ${PAPER_READ_PROFILES.join(", ")}`);
   if (Object.hasOwn(raw, "workspace_id") && (typeof raw.workspace_id !== "string" || !IDENTIFIER.test(raw.workspace_id))) out.push("workspace_id: not an identifier");
   if (Object.hasOwn(raw, "read_at") && typeof raw.read_at !== "string") out.push("read_at: not a string");
   if (Object.hasOwn(raw, "as_of") && raw.as_of !== null && typeof raw.as_of !== "string") out.push("as_of: not a string or null");

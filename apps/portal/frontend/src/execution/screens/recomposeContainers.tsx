@@ -87,6 +87,7 @@ import { BindingDetail } from "./BindingDetail";
 import type { OrderFunnel } from "../analytics";
 import { useProfileRealtime, useProfilesRealtime } from "../profileRealtime";
 import { useNow } from "../listMotion";
+import { PaperProfileBar, readProfilesOf, usePaperProfile } from "../paperProfile";
 import { useExecutionRuntime } from "../useExecutionRuntime";
 import { marketContextVerdict } from "../runtimeManifest";
 
@@ -284,7 +285,8 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
   // The realtime channel bumps `refreshKey`; without `keepValue` every bump
   // tore the painted screen back down to a skeleton, which is the exact
   // "live data feels broken" failure `useApiRead` documents.
-  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getScreenProfile("paper"), [api, realtime.refreshKey], { keepValue: true, identity: [api] });
+  const { selected: paperProfile } = usePaperProfile();
+  const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getScreenProfile("paper"), [api, realtime.refreshKey, paperProfile], { keepValue: true, identity: [api, paperProfile] });
   /*
    * Phase 4: `/derivations/source-health` answered 200 for weeks with no
    * caller. Command Center gets the same facts inside its composition, so a
@@ -296,6 +298,8 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
   const health = useApiRead((signal) => scopedReadApi(api, signal).getSourceHealthRead(), [api, realtime.source.state, realtime.source.reasonCode]);
   const paper = health.value?.profiles.find((row) => row.environment === "paper") ?? null;
   return (
+    <>
+    <PaperProfileBar delivered={state.value?.deliveryProfile ?? null} allowed={readProfilesOf(state.value?.readProfiles)} />
     <PaperOverview
       envelope={state.value}
       status={state.status}
@@ -308,6 +312,7 @@ export function PaperOverviewRichContainer({ api }: { api: ExecutionApi }) {
           ? `source ${paper.state}${paper.reasonCode ? ` · ${paper.reasonCode}` : ""} · freshness ${paper.freshness ?? "not published"} · completeness ${paper.completeness ?? "not published"} · profile ${paper.profileId ?? "not published"}`
           : "the source-health envelope published no paper profile"}
     />
+    </>
   );
 }
 
@@ -357,17 +362,20 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
   // bumps `refreshKey` shortly after it connects. Without it the second read
   // tore the whole workbench back down to a skeleton, so the screen showed
   // "Loading" for ~20s — two full fetches — before it ever painted.
+  const { selected: paperProfile } = usePaperProfile();
   const state = useApiRead<ProfileEnvelope>(
     (signal) => scopedReadApi(api, signal).getPaperWorkbenchProfile(deploymentId, variant),
-    [api, deploymentId, variant, realtime.refreshKey],
-    { keepValue: true, identity: [api, deploymentId, variant] },
+    [api, deploymentId, variant, realtime.refreshKey, paperProfile],
+    { keepValue: true, identity: [api, deploymentId, variant, paperProfile] },
   );
-  const qualityState = useApiRead<DeploymentQuality>((signal) => scopedReadApi(api, signal).getDeploymentQuality(deploymentId, "paper"), [api, deploymentId, realtime.refreshKey], { keepValue: true, identity: [api, deploymentId] });
+  const qualityState = useApiRead<DeploymentQuality>((signal) => scopedReadApi(api, signal).getDeploymentQuality(deploymentId, "paper"), [api, deploymentId, realtime.refreshKey, paperProfile], { keepValue: true, identity: [api, deploymentId, paperProfile] });
   const [tab, setTab] = useParamState<WorkbenchTab>("tab", WORKBENCH_TABS, "Orders");
   const navigate = useNavigate();
   const profile = state.value;
   if (!profile) {
     return (
+      <>
+      <PaperProfileBar delivered={null} allowed={[]} />
       <PaperWorkbench
         alphaLabel={deploymentId}
         deploymentId={deploymentId}
@@ -395,6 +403,7 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
         status={state.status}
         reason={state.reason}
       />
+      </>
     );
   }
   /*
@@ -430,6 +439,8 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
    */
   const props = workbenchProps(profile, analytics);
   return (
+    <>
+    <PaperProfileBar delivered={profile?.deliveryProfile ?? null} allowed={readProfilesOf(profile?.readProfiles)} />
     <PaperWorkbench
       {...props}
       tab={tab}
@@ -447,6 +458,7 @@ export function PaperWorkbenchRichContainer({ api, deploymentId, variant = "pape
       reason={state.reason}
       candlesReason={candlesReason}
     />
+    </>
   );
 }
 
@@ -485,15 +497,18 @@ function blotterRowOf(row: Record<string, unknown>): BlotterRow {
 export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
   const [filter, setFilter] = useParamState<BlotterFilter>("filter", BLOTTER_FILTERS, "ALL");
   const [cursor, setCursor] = useState<string | null>(null);
+  const { selected: paperProfile } = usePaperProfile();
+  // A page cursor belongs to one Paper profile; a switch starts again at the newest page.
+  useEffect(() => { setCursor(null); }, [paperProfile]);
   const realtime = useProfileRealtime("paper", "EXECUTION_FULL_BLOTTER_SCREEN");
   const state = useApiRead<ProfileEnvelope>((signal) => scopedReadApi(api, signal).getBlotterProfile({
     limit: 50,
     ...(cursor ? { after: cursor } : {}),
     ...(filter === "ALL" ? {} : { status_bucket: filter }),
-  }), [api, cursor, filter, realtime.refreshKey],
+  }), [api, cursor, filter, realtime.refreshKey, paperProfile],
     // The paper stream ticks this key; without keepValue the blotter emptied
     // itself on every delta and re-drew, which reads as the table failing.
-    { keepValue: true, identity: [api, cursor, filter] });
+    { keepValue: true, identity: [api, cursor, filter, paperProfile] });
   const blotterGroups = useBlotterGroups(api, "paper");
   /*
    * Phase 5 · the conditional-group drill.
@@ -531,6 +546,8 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
   );
   if (!state.value) {
     return (
+      <>
+      <PaperProfileBar delivered={null} allowed={[]} />
       <FullBlotter
         realtimePhase={realtime.phase}
         envelope={{ authority: "PORTAL", asOf: null, freshness: "UNKNOWN" }}
@@ -543,6 +560,7 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
         status={state.status}
         reason={state.reason}
       />
+      </>
     );
   }
   const profile = state.value;
@@ -555,6 +573,8 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
   const nextCursor = text(page.next_cursor);
   const previousCursor = text(page.previous_cursor);
   return (
+    <>
+    <PaperProfileBar delivered={profile.deliveryProfile ?? null} allowed={readProfilesOf(profile.readProfiles)} />
     <FullBlotter
       realtimePhase={realtime.phase}
       envelope={screenEnvelope(profile)}
@@ -595,6 +615,7 @@ export function FullBlotterRichContainer({ api }: { api: ExecutionApi }) {
       status={state.status}
       reason={state.reason}
     />
+    </>
   );
 }
 

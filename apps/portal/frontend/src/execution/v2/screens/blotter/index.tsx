@@ -55,6 +55,7 @@ import {
 import { useBlotterRead } from "./useBlotterRead";
 
 import "../../css/blocks.css";
+import { PaperProfileBar, readProfilesOf } from "../../../paperProfile";
 import "../../css/blotter.css";
 import "../../css/cards.css";
 
@@ -396,6 +397,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
     return (
       <div className="exec-blt2-v2" data-screen="blotter-v2">
         <h1 className="exec-blt2-title">{heading}</h1>
+        <PaperProfileBar delivered={null} allowed={[]} />
         <PanelSkeleton label="Loading orders" />
       </div>
     );
@@ -404,6 +406,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
     return (
       <div className="exec-blt2-v2" data-screen="blotter-v2">
         <h1 className="exec-blt2-title">{heading}</h1>
+        <PaperProfileBar delivered={null} allowed={[]} />
         {state.status === "denied" ? (
           <PanelState
             status="denied"
@@ -456,6 +459,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
           {page.asOf ? <span className="exec-blt2-meta">As of {shortUtc(page.asOf)}</span> : <span className="exec-blt2-meta">Source time not published</span>}
         </div>
       </header>
+      <PaperProfileBar delivered={page.deliveryProfile} allowed={readProfilesOf(page.readProfiles)} />
 
       {urlNotices.map((text) => <div key={text} className="exec-blt2-banner" role="status" data-kind="info"><Flag kind="na" label="Not applied" size="sm" /><span>{text}</span></div>)}
       {staleReason ? <div className="exec-blt2-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span>Showing the last good read</span><GapWhy name="Why the read is stale" rows={[`The last refresh failed (${staleReason}).`]} next={null} /></div> : null}

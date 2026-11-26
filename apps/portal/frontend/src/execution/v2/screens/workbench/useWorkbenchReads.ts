@@ -14,6 +14,7 @@
  * `ready` (a value, perhaps refreshing, perhaps with a failed refresh) and
  * `error` (no value, with the typed status and the Portal's reason).
  */
+import { usePaperProfile } from "../../../paperProfile";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { DeploymentQuality } from "../../../api/derivations";
@@ -121,8 +122,10 @@ export interface WorkbenchReads {
 }
 
 export function useWorkbenchReads(api: ExecutionApi, deploymentId: string, variant: "paper" | "vnm"): WorkbenchReads {
-  const profile = useRefreshableRead<ProfileEnvelope>(api, `profile:${deploymentId}:${variant}`, (scoped) => scoped.getPaperWorkbenchProfile(deploymentId, variant));
-  const quality = useRefreshableRead<DeploymentQuality>(api, `quality:${deploymentId}`, (scoped) => scoped.getDeploymentQuality(deploymentId, "paper"));
+  // The selected Paper profile is part of the read's identity: another profile is another subject, never a refresh of this one.
+  const { selected: paperProfile } = usePaperProfile();
+  const profile = useRefreshableRead<ProfileEnvelope>(api, `profile:${deploymentId}:${variant}:${paperProfile ?? ""}`, (scoped) => scoped.getPaperWorkbenchProfile(deploymentId, variant));
+  const quality = useRefreshableRead<DeploymentQuality>(api, `quality:${deploymentId}:${paperProfile ?? ""}`, (scoped) => scoped.getDeploymentQuality(deploymentId, "paper"));
   const refreshProfile = profile.refresh;
   const refreshQuality = quality.refresh;
   const refresh = useCallback(() => {

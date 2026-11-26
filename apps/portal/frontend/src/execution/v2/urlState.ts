@@ -7,6 +7,7 @@
  * invalid value reads as the default and is listed in `invalid` so the caller
  * can say so. `routeState.ts` is untouched; V1 screens keep using it.
  */
+import { PAPER_PROFILE_PARAM, isPaperScreenPath, parsePaperProfile } from "../paperProfile";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -208,6 +209,11 @@ export function withContext(href: string, current: URLSearchParams | string, key
   const carried = serializeUrlParams(Object.fromEntries(keys.map((key) => [key, value[key]])));
   for (const [key, text] of carried) if (!own.has(key)) own.set(key, text);
   for (const key of CONTEXT_KEYS) if (own.getAll(key).length > 1) own.set(key, own.get(key) ?? "");
+  // The Paper profile selection follows a link between Paper screens only (never to an unrelated screen, never in the rail).
+  if (keys === CONTEXT_KEYS && isPaperScreenPath(path) && !own.has(PAPER_PROFILE_PARAM)) {
+    const chosen = parsePaperProfile(asParams(current).get(PAPER_PROFILE_PARAM));
+    if (chosen !== null) own.set(PAPER_PROFILE_PARAM, chosen);
+  }
 
   const query = own.toString();
   return `${path}${query === "" ? "" : `?${query}`}${hash}`;

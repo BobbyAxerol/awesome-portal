@@ -2,7 +2,7 @@ import { CONDITIONAL_LEG_FIELDS } from "../execution/profile-projection.catalog"
 import { createHash } from "node:crypto";
 import { PAPER_OBSERVATION_POLICY } from "./observation-policy";
 import { Inject, Injectable, Optional } from "@nestjs/common";
-import { ControlApiConfig, paperReadProfileId, querySigningKeys } from "../config";
+import { ControlApiConfig, paperReadAllowedProfileIds, paperReadProfileId, querySigningKeys } from "../config";
 import { PortalUser, AuthSession } from "../domain";
 import {
   CurrentSourcePrincipal,
@@ -87,6 +87,8 @@ interface PaperPrincipal {
   user: PortalUser;
   session: AuthSession;
   workspaceId: string;
+  /** Allow-list-validated Paper profile for this request; absent = the configured default. */
+  paperProfileId?: string;
 }
 
 interface PaperHistoryDepth {
@@ -226,7 +228,7 @@ export class PaperReadService {
 
   private readonly projectionWorkspaceId: string | undefined;
   private readonly paperProfileId: string | undefined;
-  private readonly readContext: ManagerReadContext;
+  private readonly allowedProfiles: readonly string[];
   private readonly historyBytePolicy: Readonly<PaperHistoryBytePolicy>;
 
   constructor(
@@ -258,9 +260,24 @@ export class PaperReadService {
     });
     this.projectionWorkspaceId = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID ?? undefined;
     this.paperProfileId = paperReadProfileId(config) ?? undefined;
-    this.readContext = paperReadContext(this.paperProfileId);
+    this.allowedProfiles = paperReadAllowedProfileIds(config);
     this.historyBytePolicy = Object.freeze({ ...(historyBytePolicy ?? PAPER_HISTORY_BYTE_POLICY) });
     validatePaperHistoryBytePolicy(this.historyBytePolicy);
+  }
+
+  /** The Paper profile THIS request describes: the validated selection, else the configured default. */
+  private profileOf(principal: PaperPrincipal): string | undefined {
+    return principal.paperProfileId ?? this.paperProfileId;
+  }
+
+  /** Cursor binding: a cursor minted under one selected Paper profile never decodes under another. */
+  private cursorProfile(principal: PaperPrincipal): string | undefined {
+    const profile = this.profileOf(principal);
+    return profile !== this.paperProfileId ? profile : undefined;
+  }
+
+  private contextOf(principal: PaperPrincipal): ManagerReadContext {
+    return paperReadContext(this.profileOf(principal));
   }
 
   /**
@@ -272,11 +289,11 @@ export class PaperReadService {
    */
   private async timeSeriesDepth(principal: PaperPrincipal, deploymentId: string): Promise<PaperHistoryDepth> {
     const absent = (reason: string | null): PaperHistoryDepth => ({ rows: {}, windows: {}, reason });
-    if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId) return absent(null);
+    if (!this.projection || !this.projectionWorkspaceId || !this.profileOf(principal)) return absent(null);
     if (principal.workspaceId !== this.projectionWorkspaceId) return absent("EXECUTION_READ_NOT_AVAILABLE");
     if (!this.historyScopes) return absent("EXECUTION_READ_AUTHORITY_UNAVAILABLE");
     const projection = this.projection, scopes = this.historyScopes;
-    const workspace = this.projectionWorkspaceId, profile = this.paperProfileId;
+    const workspace = this.projectionWorkspaceId, profile = this.profileOf(principal)!;
     try {
       // A CURRENT deployment/page capability is not HISTORY authority. The
       // legacy raw-field depth representation has no scoped HISTORY egress
@@ -428,7 +445,7 @@ export class PaperReadService {
     if (vnm && resolution.state === "FOUND" && this.venueCalendarSource) {
       try {
         return await this.venueCalendarSource.withCalendar(principal,
-          { environment: "paper", profile_id: this.paperProfileId ?? null,
+          { environment: "paper", profile_id: this.profileOf(principal) ?? null,
             deployment_id: resolution.scope.deploymentId, venue: resolution.scope.venue },
           calendar => this.workbenchFromScope(principal, deploymentId, vnm, screenId, resolution, calendar));
       } catch (error) {
@@ -455,7 +472,11 @@ export class PaperReadService {
     const observationGate = paperObservationGate(relations, scoped, deployment ?? undefined);
     let queryAnalytics: unknown = null;
     let analyticsReason = "N25_DERIVED_ANALYTICS_NOT_ACTIVE";
-    if (this.localAnalytics?.enabled()) {
+    if (this.profileOf(principal) !== this.paperProfileId) {
+      // Query analytics resolve their own configured Paper profile; for a
+      // selected, non-default profile they would describe the wrong one.
+      analyticsReason = "ANALYTICS_NOT_BOUND_TO_PAPER_PROFILE";
+    } else if (this.localAnalytics?.enabled()) {
       try {
         /*
          * No source facts here. They exist for the Trade Replay on the 360
@@ -471,7 +492,7 @@ export class PaperReadService {
           ? error.code
           : "ANALYTICS_LOCAL_PROJECTION_UNAVAILABLE";
       }
-    } else if (this.analytics && this.readContext.profileId !== "PAPER_BINANCE_USDM") {
+    } else if (this.analytics && this.contextOf(principal).profileId !== "PAPER_BINANCE_USDM") {
       // The Manager-v2 analytics query is bound to the BINANCE Paper profile;
       // for any other Paper profile it would answer about the wrong one.
       analyticsReason = "ANALYTICS_NOT_BOUND_TO_PAPER_PROFILE";
@@ -584,7 +605,7 @@ export class PaperReadService {
     const opaqueCursor = query.before ?? query.after ?? query.cursor;
     const direction = query.before ? "before" as const : "after" as const;
     const sourceCursor = opaqueCursor
-      ? this.decodeCursor(opaqueCursor, principal.workspaceId, query, direction) : undefined;
+      ? this.decodeCursor(opaqueCursor, principal.workspaceId, query, direction, this.cursorProfile(principal)) : undefined;
     const specs: readonly RelationSpec[] = [
       {
         ...spec("orders", "manager.orders", "orders", ORDER_FIELDS, query.limit, sourceCursor),
@@ -638,10 +659,10 @@ export class PaperReadService {
     const deploymentJoin = await this.joinOrderDeployments(principal, orders);
     if (orders?.page && deploymentJoin.rows) orders.page = { ...orders.page, items: deploymentJoin.rows };
     const nextCursor = orders?.page?.nextCursor
-      ? this.encodeCursor(orders.page.nextCursor, principal.workspaceId, query, "after")
+      ? this.encodeCursor(orders.page.nextCursor, principal.workspaceId, query, "after", this.cursorProfile(principal))
       : null;
     const previousCursor = orders?.page?.previousCursor
-      ? this.encodeCursor(orders.page.previousCursor, principal.workspaceId, query, "before")
+      ? this.encodeCursor(orders.page.previousCursor, principal.workspaceId, query, "before", this.cursorProfile(principal))
       : null;
     const exactQuery = blotterExactQuery(orders);
     return this.envelope(
@@ -793,7 +814,7 @@ export class PaperReadService {
           ...(deploymentScope ? { deploymentScope } : {}),
         },
       );
-      const page = managerPage(response, item.relation, item.fields, this.readContext);
+      const page = managerPage(response, item.relation, item.fields, this.contextOf(principal));
       const normalized = this.normalizePaperRows(page.items);
       return { page: { ...page, items: normalized.items }, quarantinedOrderRows: normalized.quarantinedOrderRows };
     }));
@@ -861,7 +882,9 @@ export class PaperReadService {
       schema_version: schemaVersion,
       record_authority: "PORTAL_CONTROL",
       source_authority: "TRADING_SYSTEM",
-      delivery_profile: this.readContext.profileId,
+      delivery_profile: this.contextOf(principal).profileId,
+      // The allow-list this stack serves, so a client can offer a selector without a new route.
+      read_profiles: this.allowedProfiles.length ? this.allowedProfiles : [this.contextOf(principal).profileId],
       workspace_id: principal.workspaceId,
       // `*_ms` is the canonical EDS-02 wire.  The ISO aliases preserve the
       // pre-existing v1 response contract for specialised consumers until
@@ -928,12 +951,13 @@ export class PaperReadService {
     workspaceId: string,
     query: PaperBlotterQuery,
     direction: "after" | "before",
+    profile?: string,
   ): string {
     return this.cursors.encode({
       resource_id: "execution.full-blotter.paper.v1",
       workspace_id: workspaceId,
       direction,
-      query_fingerprint: blotterFingerprint(query),
+      query_fingerprint: blotterFingerprint(query, profile),
       boundary: [sourceCursor],
     });
   }
@@ -943,12 +967,13 @@ export class PaperReadService {
     workspaceId: string,
     query: PaperBlotterQuery,
     direction: "after" | "before",
+    profile?: string,
   ): string {
     const boundary = this.cursors.decode(cursor, {
       resourceId: "execution.full-blotter.paper.v1",
       workspaceId,
       direction,
-      queryFingerprint: blotterFingerprint(query),
+      queryFingerprint: blotterFingerprint(query, profile),
       boundarySize: 1,
     });
     if (typeof boundary[0] !== "string") throw new QueryContractError("INVALID_CURSOR", "Invalid query cursor.");
@@ -1375,9 +1400,11 @@ function latestAsOf(relations: readonly RelationResult[]): string | null {
     .sort().at(-1) ?? null;
 }
 
-function blotterFingerprint(query: PaperBlotterQuery): string {
+function blotterFingerprint(query: PaperBlotterQuery, profile?: string): string {
   return createHash("sha256").update(JSON.stringify({
     resource: "execution.full-blotter.paper.v1",
+    // Only a non-default selection binds the cursor, so default cursors are byte-identical to before.
+    ...(profile ? { paper_profile: profile } : {}),
     limit: query.limit,
     status: query.status ?? null,
     status_bucket: query.status_bucket ?? null,

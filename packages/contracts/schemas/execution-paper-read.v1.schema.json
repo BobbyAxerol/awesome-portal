@@ -10,6 +10,7 @@
     "record_authority": { "const": "PORTAL_CONTROL" },
     "source_authority": { "const": "TRADING_SYSTEM" },
     "delivery_profile": { "enum": ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] },
+    "read_profiles": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "enum": ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] } },
     "workspace_id": { "$ref": "#/$defs/Identifier" },
     "read_at": { "$ref": "#/$defs/DateTime" },
     "as_of": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },

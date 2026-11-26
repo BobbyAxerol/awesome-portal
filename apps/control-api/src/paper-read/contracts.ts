@@ -3,6 +3,8 @@ import { z } from "zod";
 const WorkspaceId = z.string().trim().min(1).max(96);
 const DeploymentId = z.string().trim().min(1).max(191);
 const ScopeId = DeploymentId.regex(/^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$/);
+/** Optional per-request Paper profile; the allow-list is enforced in the controller, never by this grammar. */
+const PaperProfileId = z.string().trim().regex(/^PAPER_[A-Z0-9_]{2,120}$/);
 const Cursor = z.string().min(1).max(4096);
 const OrderStatus = z.enum([
   "INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE",
@@ -11,14 +13,17 @@ const OrderStatus = z.enum([
 
 export const PaperOverviewQuerySchema = z.object({
   workspace_id: WorkspaceId.optional(),
+  profile_id: PaperProfileId.optional(),
 }).strict();
 
 export const PaperWorkbenchQuerySchema = z.object({
   workspace_id: WorkspaceId.optional(),
+  profile_id: PaperProfileId.optional(),
 }).strict();
 
 export const PaperBlotterQuerySchema = z.object({
   workspace_id: WorkspaceId.optional(),
+  profile_id: PaperProfileId.optional(),
   cursor: Cursor.optional(),
   after: Cursor.optional(),
   before: Cursor.optional(),

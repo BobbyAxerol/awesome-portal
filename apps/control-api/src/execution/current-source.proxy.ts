@@ -454,6 +454,8 @@ export interface CurrentSourcePrincipal {
   workspaceId: string;
   /** Trusted session workspace, distinct from a retained source workspace. */
   viewerWorkspaceId?: string;
+  /** Server-validated Paper read profile for THIS request (allow-list checked by the Paper controller). Never raw browser input. */
+  readonly paperProfileId?: string;
 }
 
 export interface CurrentSourcePageQuery {

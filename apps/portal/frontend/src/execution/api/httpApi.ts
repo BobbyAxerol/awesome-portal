@@ -57,6 +57,7 @@ import {
 } from "../v2/readers/dispatch";
 import { refusalReason } from "./schemaGuard";
 import { readPaperWorkbenchProfile } from "../v2/readers/paperRead";
+import { selectedPaperProfile, withPaperProfile } from "../paperProfile";
 import { DUPLICATE_OPEN_APPROVAL, approvalCreateViolations, duplicateApprovalId, problemViolations } from "../v2/readers/approvalCreate";
 import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
 import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
@@ -437,10 +438,10 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   const getCommandCenterSnapshot = () =>
     readGet("/command-center", (raw) => raw as unknown, "The command-center snapshot");
   const getScreenProfile = (screenName: "paper" | "sandbox" | "live" | "blotter"): Promise<Result<ProfileEnvelope>> =>
-    readGet(`/screens/${screenName}`, readProfileEnvelope, `The ${screenName} overview`);
+    readGet(screenName === "paper" ? withPaperProfile(`/screens/${screenName}`) : `/screens/${screenName}`, readProfileEnvelope, `The ${screenName} overview`);
   const getPaperWorkbenchProfile = (deploymentId: string, variant: "paper" | "vnm" = "paper"): Promise<Result<ProfileEnvelope>> =>
     readGet(
-      `/screens/paper/${encodeURIComponent(deploymentId)}${variant === "vnm" ? "/vn-market" : ""}`,
+      withPaperProfile(`/screens/paper/${encodeURIComponent(deploymentId)}${variant === "vnm" ? "/vn-market" : ""}`),
       readPaperWorkbenchProfile,
       "The paper workbench",
     );
@@ -588,8 +589,14 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   const getFinancialChart = (query: FinancialChartQuery): Promise<Result<FinancialChartPayload>> =>
     readGet(financialChartPath(query), readFinancialChart, "The financial chart");
   // EDS-05: every derivation is environment-scoped; the server rejects a read without one.
+  // Paper-bound reads that Core does not route by profile: while a non-default Paper profile is selected they would describe the
+  // default profile under another profile's name, so they answer unavailable instead (see paperProfile.tsx).
+  const notPerProfile = <T>(environment: string, what: string): Promise<Result<T>> | null =>
+    environment === "paper" && selectedPaperProfile() !== null
+      ? Promise.resolve(unavailable(`${what} is not available for the selected Paper profile; it is read for the stack default only.`))
+      : null;
   const derivation = <T>(path: string, environment: FinancialEnvironment, reader: (raw: unknown) => T | null, what: string): Promise<Result<T>> =>
-    readGet(`/derivations${path}?environment=${encodeURIComponent(environment)}`, reader, what);
+    notPerProfile<T>(environment, what) ?? readGet(`/derivations${path}?environment=${encodeURIComponent(environment)}`, reader, what);
   const getSourceHealth = (environment: FinancialEnvironment) =>
     derivation("/source-health", environment, readSourceHealth, "The source-health derivation");
   const getDeploymentQuality = (deploymentId: string, environment: FinancialEnvironment) =>
@@ -626,7 +633,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   };
   /** Every alpha's 30-day equity sparkline in one read (Fleet inline column). */
   const getEquitySparklines = (environment: "paper" | "sandbox" | "live" = "paper"): Promise<Result<Record<string, readonly number[]>>> =>
-    readGet(`/alphas/equity-sparklines?environment=${environment}`, (raw) => {
+    notPerProfile<Record<string, readonly number[]>>(environment, "The fleet equity sparklines") ?? readGet(`/alphas/equity-sparklines?environment=${environment}`, (raw) => {
       const root = typeof raw === "object" && raw !== null ? (raw as Record<string, unknown>) : null;
       const series = root && typeof root.series === "object" && root.series !== null ? root.series as Record<string, unknown> : null;
       if (!series) return null;
@@ -730,7 +737,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     const path = blotterPath(query);
     return path === null
       ? Promise.resolve(unavailable("The blotter query named a value the contract does not accept, so no read was sent."))
-      : readGet(path, readProfileEnvelope, "The exact Paper blotter page");
+      : readGet(withPaperProfile(path), readProfileEnvelope, "The exact Paper blotter page");
   };
   const runOperatorTask = async (
     taskId: string,
@@ -1620,7 +1627,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
      * clean one.
      */
     async getMirrorIntegrity(environment: "paper" | "sandbox" | "live") {
-      return readGet(
+      return notPerProfile<NonNullable<ReturnType<typeof readMirrorIntegrity>>>(environment, "The durable mirror integrity report") ?? readGet(
         `/durable-mirror/integrity?environment=${encodeURIComponent(environment)}`,
         readMirrorIntegrity,
         "The durable mirror integrity report",

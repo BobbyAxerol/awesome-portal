@@ -41,6 +41,9 @@ export interface ProfileEnvelope {
   recordAuthority: string | null;
   sourceAuthority: string | null;
   capabilities: readonly BranchCapability[];
+  /** Paper reads: the profile this body describes (`delivery_profile`) and the allow-list Core serves (`read_profiles`). */
+  deliveryProfile?: string | null;
+  readProfiles?: readonly string[];
   /** Canonical branch arrays, exactly as published; a missing key is absent. */
   data: Readonly<Record<string, readonly Record<string, unknown>[]>>;
   /** Non-array data members (e.g. paper-workbench `deployment`, blotter `page`). */
@@ -124,6 +127,8 @@ export function readProfileEnvelope(raw: unknown): ProfileEnvelope | null {
     actor: actor ? (str(actor.username) ?? str(actor.user_id)) : null,
     recordAuthority: str(root.record_authority),
     sourceAuthority: str(root.source_authority),
+    deliveryProfile: str(root.delivery_profile),
+    readProfiles: Array.isArray(root.read_profiles) ? root.read_profiles.filter((v): v is string => typeof v === "string") : [],
     capabilities: (Array.isArray(root.capabilities) ? root.capabilities : []).flatMap((c) => {
       const o = obj(c);
       const id = str(o?.capability_id);

@@ -321,6 +321,26 @@ describe("N22 full Paper read product BFF", () => {
     await expect(result).rejects.toMatchObject({ code, status });
     expect(source.calls.length).toBeGreaterThan(0);
   });
+  it("serves a selected Paper profile under its own context, never mixing the other profile's rows", async () => {
+    const config = {
+      ...loadConfig({ DATABASE_URL: "postgres://portal:portal@localhost/portal", PORTAL_ENV: "local", AUTH_MODE: "dev" }),
+      EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM",
+      FEATURE_EXECUTION_CURRENT_SOURCE_PAPER_OKX: "true" as const, EXECUTION_EDGE_PAPER_OKX_PROFILE_ID: "PAPER_OKX_SWAP",
+      EXECUTION_PAPER_READ_PROFILE_ID: "PAPER_BINANCE_USDM" as const,
+      EXECUTION_PAPER_READ_ALLOWED_PROFILE_IDS: ["PAPER_OKX_SWAP" as const],
+    };
+    const reader = new PaperReadService(new FakeCurrentSource() as unknown as ExecutionProductReadSource, config);
+    const binance = await reader.overview(principal()) as Record<string, any>;
+    expect(binance.delivery_profile).toBe("PAPER_BINANCE_USDM");
+    expect(binance.read_profiles).toEqual(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"]);
+    assertPaperContract(binance);
+    // The fake source answers with BINANCE rows; under the OKX selection they must be refused, not drawn.
+    const okx = await reader.overview({ ...principal(), paperProfileId: "PAPER_OKX_SWAP" }) as Record<string, any>;
+    expect(okx.delivery_profile).toBe("PAPER_OKX_SWAP");
+    expect(okx.read_profiles).toEqual(["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"]);
+    expect(okx.data.deployments ?? []).toEqual([]);
+    expect(JSON.stringify(okx)).not.toContain("dep_default");
+  });
   it("composes the Paper overview with bounded fan-out and strips source internals", async () => {
     const source = new FakeCurrentSource();
     source.rows.set("strategy_deployments", [{ deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", portfolio_id: "pf_default", mode: "paper", venue: "BINANCE" }]);
