@@ -600,5 +600,15 @@ export function correlationView(correlation: Correlation, limit: number = CORREL
 export function branchSummary(branches: readonly string[]): string {
   const counts = new Map<string, number>();
   for (const code of branches) counts.set(code, (counts.get(code) ?? 0) + 1);
-  return [...counts].map(([code, n]) => (n > 1 ? `${humanize(code)} (${n} reads)` : humanize(code))).join(", ");
+  return [...counts].map(([code, n]) => {
+    const words = BRANCH_SENTENCE[code] ?? humanize(code);
+    return n > 1 ? `${words} (${n} reads)` : words;
+  }).join(", ");
 }
+
+/** Codes whose real meaning is not what `humanize` makes of them. */
+export const NO_DEPLOYMENT_IN_PROFILE = "EDS04_PORTFOLIO_NO_DEPLOYMENT_IN_PROFILE";
+const BRANCH_SENTENCE: Readonly<Record<string, string>> = {
+  [NO_DEPLOYMENT_IN_PROFILE]: "The Paper profile this page reads links no deployment to this portfolio (the portfolio exists there; its deployments may be in another profile)",
+  EDS04_PORTFOLIO_ALLOCATIONS_EMPTY_DIRECT_DEPLOYMENT_FALLBACK: "Allocations are empty at the source, so deployments are linked by their own portfolio id",
+};

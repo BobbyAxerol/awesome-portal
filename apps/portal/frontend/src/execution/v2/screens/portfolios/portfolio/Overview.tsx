@@ -32,7 +32,7 @@ import { BudgetBar, ShareBar } from "../CapitalBlocks";
 import { PerformanceCard } from "./Performance";
 import type { TabCtx } from "./ctx";
 import { FlowRibbonChips, FlowRibbonLanes, FlowRibbonNotes, useRibbonLanes } from "./FlowRibbon";
-import { chartState, equitySeries, serverEnvelope } from "./model";
+import { NO_DEPLOYMENT_IN_PROFILE, chartState, equitySeries, serverEnvelope } from "./model";
 import { InternalLink, PfKpi, PfKpiStrip, ReadGate } from "./parts";
 
 import "../../../css/portfolios.css";
@@ -290,7 +290,9 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
             <MoneyList entries={identity.allocationByCurrency} empty={<Absent reason="no allocation published" />} />
           </PfKpi>
         )}
-        <PfKpi label="Deployments" note={`${alphaCount} ${alphaCount === 1 ? "alpha" : "alphas"} · ${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}${identity.holdingsCount !== null ? ` · ${identity.holdingsCount} holdings` : ""}`}>{deployments.length}</PfKpi>
+        <PfKpi label="Deployments" note={`${alphaCount} ${alphaCount === 1 ? "alpha" : "alphas"} · ${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}${identity.holdingsCount !== null ? ` · ${identity.holdingsCount} holdings` : ""}`}>{deployments.length === 0 && ctx.resource.unavailableBranches.includes(NO_DEPLOYMENT_IN_PROFILE)
+          ? <Absent reason="none linked in the Paper profile this page reads" />
+          : deployments.length}</PfKpi>
       </PfKpiStrip>
       <PfNotAvailableLine facts={scoreList !== null ? OTHER_GAPS : UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
       <div className="exec-pf-grid2">

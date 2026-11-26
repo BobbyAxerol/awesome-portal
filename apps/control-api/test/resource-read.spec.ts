@@ -1165,3 +1165,49 @@ describe("Account360 native controller ownership (synthetic port, no actual cust
     expect(f.readNativeAccount).not.toHaveBeenCalled(); expect(f.reply.hijack).not.toHaveBeenCalled();
   });
 });
+
+describe("Portfolio 360 over a profile that holds the portfolio row but no deployment for it (stable v1.5 acceptance)", () => {
+  const pf = [{ portfolio_id: "pf_target", name: "Target", base_currency: "USDT", state: "ACTIVE" }];
+  const dep = { deployment_id: "dep_target", strategy_id: "str_target", account_id: "acc_target", mode: "paper", venue: "OKX", portfolio_id: "pf_target", active: true };
+
+  it("links the deployment by its own portfolio id when the allocations relation is available but empty", async () => {
+    const value = await service({
+      [RELATION.portfolios]: relation("portfolios", pf),
+      [RELATION.allocations]: relation("portfolio_allocations", []),
+      [RELATION.deployments]: relation("strategy_deployments", [dep]),
+    }).read(principal(), "PORTFOLIO", "pf_target", "paper") as Record<string, any>;
+    expect(value.data.deployments).toHaveLength(1);
+    expect(value.data.deployments[0].deployment_id).toBe("dep_target");
+    expect(JSON.stringify(value.unavailable_branches)).toContain("EDS04_PORTFOLIO_ALLOCATIONS_EMPTY_DIRECT_DEPLOYMENT_FALLBACK");
+  });
+
+  it("states 'no deployment in this profile' instead of 'portfolio not found' when the profile holds the portfolio but no deployment", async () => {
+    const value = await service({
+      [RELATION.portfolios]: relation("portfolios", pf),
+      [RELATION.allocations]: relation("portfolio_allocations", []),
+      [RELATION.deployments]: relation("strategy_deployments", []),
+    }).read(principal(), "PORTFOLIO", "pf_target", "paper") as Record<string, any>;
+    expect(value.data.deployments).toEqual([]);
+    const codes = value.unavailable_branches.map((branch: { reason_code?: string }) => branch.reason_code);
+    expect(codes).toContain("EDS04_PORTFOLIO_NO_DEPLOYMENT_IN_PROFILE");
+    expect(codes).not.toContain("EDS04_PORTFOLIO_NOT_FOUND");
+  });
+
+  it("does not print a sibling profile's NOT_FOUND over the profile that found the portfolio", async () => {
+    const paper = snapshot({
+      [RELATION.portfolios]: relation("portfolios", pf),
+      [RELATION.allocations]: relation("portfolio_allocations", []),
+      [RELATION.deployments]: relation("strategy_deployments", []),
+    });
+    const sandbox: ProfileProjectionSnapshot = { ...snapshot({ [RELATION.portfolios]: relation("portfolios", []) }),
+      document: { ...snapshot({ [RELATION.portfolios]: relation("portfolios", []) }).document, environment: "sandbox", profile_id: "SANDBOX_PROFILE" } };
+    const repository = new FakeProjectionRepository(new Map([["paper:PAPER_PROFILE", paper], ["sandbox:SANDBOX_PROFILE", sandbox]]));
+    const reader = new ResourceReadService(config(), repository as unknown as ExecutionProfileProjectionRepository);
+    const value = await reader.read(principal(), "PORTFOLIO", "pf_target") as Record<string, any>;
+    const relationReasons = value.capabilities
+      .filter((capability: { capability_id: string }) => capability.capability_id.startsWith("resource.portfolio."))
+      .map((capability: { reason_code: string | null }) => capability.reason_code);
+    expect(relationReasons).not.toContain("EDS04_PORTFOLIO_NOT_FOUND");
+    expect(relationReasons).toContain("EDS04_PORTFOLIO_NO_DEPLOYMENT_IN_PROFILE");
+  });
+});

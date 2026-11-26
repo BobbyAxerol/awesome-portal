@@ -352,12 +352,12 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         )
         : <NaWhy reason="The orders read carries no deployment id." className="exec-blt2-na" />;
       case "avg": return order.averageFillPrice.kind === "absent"
-        ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no average fill price." className="exec-blt2-na" />)
-        : <ExactText value={order.averageFillPrice} />;
+        ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason={order.fillsBasis?.note ?? "The orders read publishes no average fill price."} className="exec-blt2-na" />)
+        : <span title={order.fillsBasis?.kind === "derived" ? `Volume-weighted over the order's fills, cut (not rounded) at 18 places. ${order.fillsBasis.note}` : undefined}><ExactText value={order.averageFillPrice} /></span>;
       case "fee": return order.fee.kind === "absent"
-        ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no fee for this order." className="exec-blt2-na" />)
+        ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason={order.fillsBasis?.kind === "derived" ? "The fills of this order carry fees in more than one currency, or an unreadable fee; none is summed." : (order.fillsBasis?.note ?? "The orders read publishes no fee for this order.")} className="exec-blt2-na" />)
         : (
-          <span className="exec-blt2-two exec-blt2-fee">
+          <span className="exec-blt2-two exec-blt2-fee" title={order.fillsBasis?.kind === "derived" ? order.fillsBasis.note : undefined}>
             {/* Lossless like the prices: every significant digit, no trailing zeros; the exact published text is the title (and the CSV). */}
             <ExactText value={order.fee} />
             {order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}
@@ -371,10 +371,12 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "price": return <ExactText value={order.price} absent="At market" />;
       case "trigger": return <ExactText value={order.triggerPrice} absent="No trigger" />;
       case "fillqty": return (
-        <span className="exec-blt2-fq"><ExactText value={order.filledQuantity} absent="Not published" /> <span className="exec-blt2-na">/</span> <ExactText value={order.quantity} /></span>
+        <span className="exec-blt2-fq"><ExactText value={order.filledQuantity} absent={order.fillsBasis?.kind === "partial" ? "Partial read" : "Not published"} /> <span className="exec-blt2-na">/</span> <ExactText value={order.quantity} /></span>
       );
       case "qty": return <ExactText value={order.quantity} />;
-      case "filled": return <ExactText value={order.filledQuantity} absent="Not published for this order" />;
+      case "filled": return order.filledQuantity.kind === "absent" && order.fillsBasis !== undefined
+        ? <NaWhy reason={order.fillsBasis.note} className="exec-blt2-na" />
+        : <ExactText value={order.filledQuantity} absent="Not published for this order" />;
       case "client": return order.clientOrderId ? <span className="exec-blt2-id">{order.clientOrderId}</span> : <span className="exec-blt2-na">Not available</span>;
       case "venueOrder": return order.venueOrderId ? <span className="exec-blt2-id">{order.venueOrderId}</span> : <span className="exec-blt2-na">Not sent</span>;
       case "session": return order.sessionId ? <span className="exec-blt2-id">{order.sessionId}</span> : <span className="exec-blt2-na">Not available</span>;
@@ -708,7 +710,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
                 </div>
               ))}
             </div>
-            <p className="exec-blt2-note">Counted over the {page.orders.length} loaded orders. The server publishes no scope-level funnel yet; intent and signal steps happen before the order and are not carried here.</p>
+            <p className="exec-blt2-note">Counted over the {page.orders.length} loaded orders; Filled is the order's own status. The server publishes no scope-level funnel yet; intent and signal steps happen before the order and are not carried here.</p>
           </>
         )}
         {lastOpened === null ? (

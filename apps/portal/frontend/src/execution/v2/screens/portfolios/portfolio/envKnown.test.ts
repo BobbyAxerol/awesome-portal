@@ -50,3 +50,13 @@ describe("usePortfolioReads with a resource that names no environment", () => {
     expect(getCorrelation).not.toHaveBeenCalled();
   });
 });
+
+describe("branchSummary, portfolio found but no deployment in the read profile", () => {
+  it("says the real reason instead of 'not found'", async () => {
+    const { branchSummary: summary, NO_DEPLOYMENT_IN_PROFILE: code } = await import("./model");
+    const text = summary(Array<string>(15).fill(code));
+    expect(text).toContain("links no deployment to this portfolio");
+    expect(text).toContain("(15 reads)");
+    expect(text).not.toMatch(/not found/i);
+  });
+});

@@ -870,15 +870,22 @@ function resolveScope(
         }
         return [id];
       }));
-    if (allocationRelation?.availability === "AVAILABLE") {
+    if (allocationRelation?.availability === "AVAILABLE" && selectedAllocations.length > 0) {
       members = selectedDeployments.filter((row) => {
         const id = text(row, "deployment_id");
         return id !== null && allocationDeploymentIds.has(id);
       });
     } else {
-      warnings.push("EDS04_PORTFOLIO_ALLOCATION_NOT_PROJECTED_DIRECT_DEPLOYMENT_FALLBACK");
+      // Not projected, or projected with no row at all (the Edge delivers an empty allocations relation today): there is
+      // no membership proof to contradict, so the exact deployment FK is the only link and is used, with the reason stated.
+      warnings.push(allocationRelation?.availability === "AVAILABLE"
+        ? "EDS04_PORTFOLIO_ALLOCATIONS_EMPTY_DIRECT_DEPLOYMENT_FALLBACK"
+        : "EDS04_PORTFOLIO_ALLOCATION_NOT_PROJECTED_DIRECT_DEPLOYMENT_FALLBACK");
       members = selectedDeployments.filter((row) => scope.portfolioIds.has(text(row, "portfolio_id") ?? ""));
     }
+    // The portfolio row exists in THIS profile but nothing links a deployment to it here: a stated fact of this profile, not
+    // "not found". Another profile (e.g. the other Paper venue) may hold its deployments.
+    if (members.length === 0) warnings.push("EDS04_PORTFOLIO_NO_DEPLOYMENT_IN_PROFILE");
   } else {
     members = selectedDeployments.filter((row) => scope.accountIds.has(text(row, "account_id") ?? ""));
   }
@@ -1312,7 +1319,10 @@ function mergeRelations(selections: readonly RelationSelection[]): ReadonlyMap<R
     const truncated = members.some((member) => member.truncated) || allRows.length > RESOURCE_RELATION_ROW_LIMIT;
     const rows = allRows.slice(0, RESOURCE_RELATION_ROW_LIMIT);
     const state = truncated || financialConflict ? "PARTIAL" : mergedState(members.map((member) => member.state), rows.length);
-    const reasonCode = members.map((member) => member.reasonCode).find((value): value is string => value !== null)
+    // A profile that does not hold the parent says `*_NOT_FOUND`; that must not be printed over a profile that does.
+    const notFound = (member: RelationSelection) => member.state === "EMPTY" && member.page === null && /_NOT_FOUND$/.test(member.reasonCode ?? "");
+    const reasonMembers = members.some((member) => !notFound(member)) ? members.filter((member) => !notFound(member)) : members;
+    const reasonCode = reasonMembers.map((member) => member.reasonCode).find((value): value is string => value !== null)
       ?? (financialConflict ? "EDS04_RESOURCE_FINANCIAL_IDENTITY_CONFLICT" : truncated ? "EDS04_RESOURCE_RELATION_ROW_BOUND" : null);
     const pages = members.flatMap((member) => member.page ? [member.page] : []);
     const exactTotal = pages.some((candidate) => candidate.exactTotal === null || candidate.exactTotal === undefined)
@@ -1500,7 +1510,8 @@ function resourceIdentityState(selections: readonly { readonly resolution: Scope
 }
 
 function resourceIdentityReason(selections: readonly { readonly resolution: ScopeResolution }[]): string | null {
-  return selections.map((selection) => selection.resolution.reasonCode).find((value): value is string => value !== null) ?? null;
+  const found = selections.filter((selection) => selection.resolution.state === "FOUND");
+  return (found.length > 0 ? found : selections).map((selection) => selection.resolution.reasonCode).find((value): value is string => value !== null) ?? null;
 }
 
 function projectionMetadata(found: readonly { readonly profile: LoadedProfile }[]) {

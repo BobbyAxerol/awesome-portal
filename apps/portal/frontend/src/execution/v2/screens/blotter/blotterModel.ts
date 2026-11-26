@@ -117,6 +117,18 @@ export interface BlotterOrder {
   riskGrantId: string | null;
   /** The order's own `intent` word; null when stated null or not stated. */
   intent: string | null;
+  /**
+   * How this row's filled quantity, average price and fee were obtained when the ORDER row states none of them (the Edge orders
+   * carry no avg_price / fee columns): derived from this order's own fills, or why they could not be. Absent = the row's own values.
+   */
+  fillsBasis?: FillsBasis;
+}
+
+/** `derived`: summed from `fillCount` fills of a complete fills read. `partial`/`none`/`unread`: nothing is derived; `note` says why. */
+export interface FillsBasis {
+  kind: "derived" | "partial" | "none" | "unread";
+  fillCount: number;
+  note: string;
 }
 
 export interface BlotterFill {
@@ -342,7 +354,9 @@ export function readBlotter(profile: ProfileEnvelope): BlotterRead {
     });
   const rawOrders = profile.data.orders ?? [];
   const parsedOrders = take(rawOrders, orderOf);
-  const orders = parsedOrders.slice(0, ROW_CAP);
+  const parsedFills = take(profile.data.fills, fillOf);
+  const population = fillsPopulation(profile, parsedFills.length);
+  const orders = parsedOrders.slice(0, ROW_CAP).map((order) => withFillsBasis(order, parsedFills, population));
   const page = profile.objects.page ?? {};
   const exactQuery = profile.objects.exact_query ?? {};
   const coverage = typeof exactQuery.coverage === "object" && exactQuery.coverage !== null ? (exactQuery.coverage as Record<string, unknown>) : {};
@@ -351,7 +365,7 @@ export function readBlotter(profile: ProfileEnvelope): BlotterRead {
   return {
     orders,
     skippedOrders: rawOrders.length - parsedOrders.length,
-    fills: take(profile.data.fills, fillOf),
+    fills: parsedFills,
     legs: take(profile.data.conditional_legs, legOf),
     groups: take(profile.data.conditional_groups, groupOf),
     nextCursor: text(page.next_cursor),
@@ -457,6 +471,103 @@ export function unchippedStatusCounts(read: BlotterRead): { status: string; labe
     .filter(([status]) => statusView(status).bucket === null)
     .map(([status, count]) => ({ status, label: statusView(status).label, count }))
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/* ── fills → order figures (exact decimal arithmetic, nothing rounded to a display scale) ───────── */
+
+/** Scale of the Edge decimals (18 places); a quotient is cut here, never rounded up, and the cell says it is derived. */
+const AVG_SCALE = 18;
+
+function toScaled(decimal: string, scale: number): bigint {
+  const negative = decimal.startsWith("-");
+  const [whole, fraction = ""] = (negative ? decimal.slice(1) : decimal).split(".");
+  const value = BigInt(whole! + fraction.padEnd(scale, "0").slice(0, scale));
+  return negative ? -value : value;
+}
+
+function fromScaled(value: bigint, scale: number): string {
+  const negative = value < 0n;
+  const digits = (negative ? -value : value).toString().padStart(scale + 1, "0");
+  const whole = digits.slice(0, digits.length - scale);
+  const fraction = digits.slice(digits.length - scale).replace(/0+$/, "");
+  return `${negative ? "-" : ""}${whole}${fraction === "" ? "" : `.${fraction}`}`;
+}
+
+/** Longest fraction among the inputs: summing at a scale this long loses no digit. */
+function placesOf(texts: readonly string[]): number {
+  return texts.reduce((max, t) => Math.max(max, (t.split(".")[1] ?? "").length), 0);
+}
+
+interface Derived { filled: Exact; average: Exact; fee: Exact; feeCurrency: string | null }
+
+/** Quantity, volume-weighted price and fee of an order, from its OWN fills only. A fill that is not a readable decimal refuses that figure. */
+export function deriveFromFills(fills: readonly BlotterFill[]): Derived {
+  const absent: Exact = { kind: "absent" };
+  const qtys = fills.map((f) => f.quantity);
+  const prices = fills.map((f) => f.price);
+  const fees = fills.map((f) => f.commission);
+  const all = (list: readonly Exact[]): list is { kind: "value"; text: string }[] => list.every((e) => e.kind === "value");
+  let filled: Exact = absent;
+  let average: Exact = absent;
+  let fee: Exact = absent;
+  let feeCurrency: string | null = null;
+  if (all(qtys)) {
+    const scale = placesOf(qtys.map((q) => q.text));
+    const total = qtys.reduce((sum, q) => sum + toScaled(q.text, scale), 0n);
+    filled = { kind: "value", text: fromScaled(total, scale) };
+    if (all(prices) && total > 0n) {
+      const priceScale = placesOf(prices.map((p) => p.text));
+      let volume = 0n;
+      for (let i = 0; i < fills.length; i += 1) volume += toScaled(prices[i]!.text, priceScale) * toScaled(qtys[i]!.text, scale);
+      // volume carries priceScale + scale places; divide by the quantity (scale places) and keep AVG_SCALE places of the quotient.
+      const quotient = (volume * 10n ** BigInt(AVG_SCALE)) / total;
+      average = { kind: "value", text: fromScaled(quotient, priceScale + AVG_SCALE) };
+    }
+  }
+  const currencies = new Set(fills.map((f) => f.commissionCurrency));
+  if (all(fees) && currencies.size === 1) {
+    const scale = placesOf(fees.map((x) => x.text));
+    fee = { kind: "value", text: fromScaled(fees.reduce((sum, x) => sum + toScaled(x.text, scale), 0n), scale) };
+    feeCurrency = [...currencies][0] ?? null;
+  }
+  return { filled, average, fee, feeCurrency };
+}
+
+export interface FillsPopulation { read: boolean; complete: boolean; returned: number; total: number | null }
+
+/** What the fills relation says about itself. No panel = coverage unknown = nothing is derived (never a guess). */
+function fillsPopulation(profile: ProfileEnvelope, returned: number): FillsPopulation {
+  const panel = profile.panels.fills as unknown as { state?: string; coverage?: Record<string, unknown> } | undefined;
+  if (!panel) return { read: false, complete: false, returned, total: null };
+  if (!["READY", "EMPTY", "STALE", "PARTIAL"].includes(String(panel.state))) return { read: false, complete: false, returned, total: null };
+  const cov = panel.coverage ?? {};
+  const complete = panel.state !== "PARTIAL" && cov.truncated !== true && cov.has_more !== true;
+  return { read: true, complete, returned, total: count(cov.filtered_total) };
+}
+
+export function withFillsBasis(order: BlotterOrder, fills: readonly BlotterFill[], population: FillsPopulation): BlotterOrder {
+  const own = order.filledQuantity.kind !== "absent" || order.averageFillPrice.kind !== "absent" || order.fee.kind !== "absent";
+  if (own) return order;
+  if (!population.read) {
+    return { ...order, fillsBasis: { kind: "unread", fillCount: 0, note: "The fills read for this page is not available, so nothing is derived." } };
+  }
+  const mine = fillsFor(order, fills);
+  if (!population.complete) {
+    const of = population.total === null ? "" : ` of ${population.total}`;
+    return { ...order, fillsBasis: { kind: "partial", fillCount: mine.length, note: `Partial: ${population.returned}${of} fills read for this page (${mine.length} for this order); no figure is derived from a partial set.` } };
+  }
+  if (mine.length === 0) {
+    return { ...order, fillsBasis: { kind: "none", fillCount: 0, note: "The fills read is complete and holds no fill for this order." } };
+  }
+  const d = deriveFromFills(mine);
+  return {
+    ...order,
+    filledQuantity: d.filled,
+    averageFillPrice: d.average,
+    fee: d.fee,
+    feeCurrency: d.feeCurrency,
+    fillsBasis: { kind: "derived", fillCount: mine.length, note: `Derived from ${mine.length} fill${mine.length === 1 ? "" : "s"} of this order (fills read complete); the Edge orders carry no such column.` },
+  };
 }
 
 /* ── joins ─────────────────────────────────────────────────────────────── */
@@ -733,7 +844,8 @@ export function pageFunnel(orders: readonly BlotterOrder[]): readonly FunnelStep
     submitted: total,
     risk: orders.filter((o) => o.riskGrantId !== null).length,
     venue: orders.filter((o) => o.venueOrderId !== null).length,
-    filled: orders.filter((o) => o.filledQuantity.kind === "value" && !isZero(o.filledQuantity)).length,
+    // The row's status is the published fact: a FILLED / PARTIALLY_FILLED order is filled even where no quantity could be derived.
+    filled: orders.filter((o) => (o.filledQuantity.kind === "value" && !isZero(o.filledQuantity)) || statusView(o.status).bucket === "FILLED" || statusView(o.status).bucket === "PARTIAL").length,
   };
   const percent = (n: number): string | null => {
     if (total === 0) return null;
