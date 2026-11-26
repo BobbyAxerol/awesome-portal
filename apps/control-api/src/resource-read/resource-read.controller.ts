@@ -1,7 +1,7 @@
 import { Controller, Get, Inject, Param, Query, Req, Res, UseGuards } from "@nestjs/common";
 import { FastifyRequest, type FastifyReply } from "fastify";
 import { z } from "zod";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, resolvePaperReadProfile } from "../config";
 import { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -19,6 +19,8 @@ interface ResourceReadRequest extends FastifyRequest {
 const ResourceQuerySchema = z.object({
   workspace_id: z.string().trim().min(1).max(96).optional(),
   environment: z.enum(["paper", "sandbox", "live"]).optional(),
+  /** Optional Paper profile (the Paper screens' selector); the allow-list is enforced below, never by this grammar. */
+  profile_id: z.string().trim().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
 }).strict();
 
 const RESOURCE_ID = /^[A-Za-z0-9._:@-]{1,160}$/;
@@ -82,7 +84,15 @@ export class ResourceReadController {
     if (!(await this.workspaces.canReadExecution(workspaceId, request.portalUser.userId, query.data.environment))) {
       throw new ResourceReadError("WORKSPACE_NOT_FOUND", 404);
     }
-    const principal = { user: request.portalUser, session: request.portalSession, workspaceId,
+    // Absent = today's behaviour. Present and off the allow-list = typed 400, never the default.
+    let paperProfileId: string | undefined;
+    if (query.data.profile_id !== undefined) {
+      if (kind !== "PORTFOLIO") throw new ResourceReadError("EDS04_RESOURCE_QUERY_INVALID", 400);
+      const resolved = resolvePaperReadProfile(this.config, query.data.profile_id);
+      if (!resolved) throw new ResourceReadError("PAPER_PROFILE_NOT_ALLOWED", 400);
+      paperProfileId = resolved;
+    }
+    const principal = { ...(paperProfileId ? { paperProfileId } : {}), user: request.portalUser, session: request.portalSession, workspaceId,
       viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId };
     if (kind === "ACCOUNT" && (!query.data.environment || query.data.environment === "paper") &&
       this.resources.hasNativeCurrentAccount?.()) {

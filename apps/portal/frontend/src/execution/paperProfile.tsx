@@ -5,7 +5,8 @@
  * reader picks another profile).
  *
  * Two rules keep a screen from mixing profiles:
- *  - the three profile-routed reads (`/screens/paper`, `/screens/paper/{id}[/vn-market]`, `/screens/blotter`) carry `profile_id`;
+ *  - the profile-routed reads (`/screens/paper`, `/screens/paper/{id}[/vn-market]`, `/screens/blotter`, and on a Portfolio 360 page
+ *    `/resources/portfolios/{id}` and `/derivations/portfolios/{id}/capital`) carry `profile_id`;
  *  - every other Paper-bound read (source health, execution quality, capital, sparklines, mirror integrity) is NOT routed by
  *    profile, so while a non-default profile is selected the API layer answers "unavailable" for them instead of drawing the
  *    default profile's numbers under another profile's name.
@@ -26,7 +27,7 @@ export function parsePaperProfile(value: string | null | undefined): PaperProfil
 
 /** The routes that are Paper screens: the only places the selection applies and travels to. */
 export function isPaperScreenPath(path: string): boolean {
-  return /^\/deployments\/(paper|blotter)(\/|$)/.test(path);
+  return /^\/deployments\/(paper|blotter)(\/|$)/.test(path) || /^\/deployments\/portfolios\/[^/]+/.test(path);
 }
 
 /** The selection in the live URL, for the API layer (which has no router context). Never throws. */

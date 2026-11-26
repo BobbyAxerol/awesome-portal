@@ -36,8 +36,8 @@ import { useManagerSeries } from "../../series/useManagerSeries";
 const DAY_MS = 86_400_000;
 const WINDOW_DAYS: Readonly<Record<string, number | null>> = { "7D": 7, "30D": 30, "90D": 90, ALL: null };
 
-function useResource(api: ExecutionApi, portfolioId: string, enabled: boolean) {
-  return useRead(api, enabled, `resource|${portfolioId}`, (scoped) => scoped.getPortfolio360Resource(portfolioId));
+function useResource(api: ExecutionApi, portfolioId: string, enabled: boolean, paperProfile: string | null) {
+  return useRead(api, enabled, `resource|${portfolioId}|${paperProfile ?? ""}`, (scoped) => scoped.getPortfolio360Resource(portfolioId));
 }
 
 export interface Visited {
@@ -46,8 +46,9 @@ export interface Visited {
   people: boolean;
 }
 
-export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enabled: boolean, windowLabel: string, visited: Visited) {
-  const resource = useResource(api, portfolioId, enabled);
+export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enabled: boolean, windowLabel: string, visited: Visited, paperProfile: string | null = null) {
+  // The selected Paper profile (URL `paper_profile`, read by the page) is part of every Paper read's identity: another profile is another read.
+  const resource = useResource(api, portfolioId, enabled, paperProfile);
   const ready = resource.phase === "ready" ? resource.value : null;
   // D7: the book every env-scoped read names comes from the resource's own `selected_environment`. A resource that names none (the
   // portfolio was found in no environment) gets no equity / NAV / dataset / correlation read: "live" is never a guess for it.
@@ -60,7 +61,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
 
   const capital = {
     live: useRead(api, enabled, `capital|${portfolioId}|live`, (scoped) => scoped.getPortfolioCapital(portfolioId, "live")),
-    paper: useRead(api, enabled, `capital|${portfolioId}|paper`, (scoped) => scoped.getPortfolioCapital(portfolioId, "paper")),
+    paper: useRead(api, enabled, `capital|${portfolioId}|paper|${paperProfile ?? ""}`, (scoped) => scoped.getPortfolioCapital(portfolioId, "paper")),
     sandbox: useRead(api, enabled, `capital|${portfolioId}|sandbox`, (scoped) => scoped.getPortfolioCapital(portfolioId, "sandbox")),
   } satisfies Record<Environment, unknown>;
 

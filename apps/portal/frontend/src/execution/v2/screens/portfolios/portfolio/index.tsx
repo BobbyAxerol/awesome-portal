@@ -62,7 +62,10 @@ import { usePortfolioReads, type Visited } from "./use360";
 import "../../../css/portfolios.css";
 import { formatInstant } from "../../../boundary";
 import { GapWhy } from "../../../blocks";
+import { PaperProfileBar, usePaperProfile } from "../../../../paperProfile";
 import { NotFound } from "../../../blocks/NotFound";
+
+const PORTFOLIO_PAPER_PROFILES = ["PAPER_BINANCE_USDM", "PAPER_OKX_SWAP"] as const;
 
 export const PORTFOLIO_SCREEN_KEY = "portfolios" as const;
 
@@ -144,7 +147,8 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
   // The caller's own eligibility for the capital actions the Actions rail names: asked once, only while the rail is open and the
   // address names a workspace (DEBT-UXM07-011). It words the rail's reasons; it never enables a control.
   const railEligibility = useRailEligibility(api, { enabled: selection === RAIL_SELECTION && permitted, workspaceId: url.value.workspace_id, environment: url.value.env, portfolioId: id });
-  const reads = usePortfolioReads(api, id, permitted && id !== "", url.value.window, visited);
+  const paperSelection = usePaperProfile();
+  const reads = usePortfolioReads(api, id, permitted && id !== "", url.value.window, visited, paperSelection.selected);
 
   // G1: "Compare with" is offered only while some other portfolio shares this one's basis (currency and book). The list read tells which; if it
   // cannot be read, or does not hold this portfolio, nothing is known and the entry stays as it was (the Compare screen then restricts its own picks).
@@ -266,6 +270,10 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
     ? null
     : withContext(joinQuery(routes.compare, `${IN_PARAM}=${encodeURIComponent(id)}&from=${FROM_PORTFOLIO_PREFIX}${encodeURIComponent(id)}`), params);
 
+  // The Paper profile the resource's paper book was read from: `profile_coverage.paper.profile_id`, never the one merely asked for.
+  const coverage = resource?.objects.profile_coverage as { paper?: { profile_id?: unknown } } | undefined;
+  const paperDelivered = typeof coverage?.paper?.profile_id === "string" ? coverage.paper.profile_id : null;
+
   return (
     <div className="exec-pf-v2" data-screen="portfolio-360-v2">
       <header className="exec-pf-head">
@@ -279,6 +287,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
             {identity && identity.baseCurrency === null ? <span> · Base currency: Not available</span> : null}
           </p>
         </div>
+        {absent || paperDelivered === null ? null : <PaperProfileBar delivered={paperDelivered} allowed={PORTFOLIO_PAPER_PROFILES} />}
         {absent ? null : <div className="exec-pf-ctrls">
           {identity ? <Flag kind={identity.stateKind} label={identity.stateLabel} size="sm" /> : null}
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}

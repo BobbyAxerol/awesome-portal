@@ -71,3 +71,23 @@ describe("Paper profile selection at the HTTP port", () => {
     expect(calls).toHaveLength(1);
   });
 });
+
+describe("Paper profile selection on a Portfolio 360 page", () => {
+  it("routes the resource and the paper capital read by the selected profile, and leaves the default byte-identical", async () => {
+    let calls = at("/deployments/portfolios/pf_1?paper_profile=PAPER_OKX_SWAP");
+    await api().getPortfolio360Resource("pf_1");
+    await api().getPortfolioCapital("pf_1", "paper");
+    await api().getPortfolioCapital("pf_1", "live");
+    expect(calls.map((c) => c.replace(/^.*\/(resources|derivations)/, "/$1"))).toEqual([
+      "/resources/portfolios/pf_1?profile_id=PAPER_OKX_SWAP",
+      "/derivations/portfolios/pf_1/capital?environment=paper&profile_id=PAPER_OKX_SWAP",
+      "/derivations/portfolios/pf_1/capital?environment=live",
+    ]);
+    calls = at("/deployments/portfolios/pf_1");
+    await api().getPortfolio360Resource("pf_1");
+    await api().getPortfolioCapital("pf_1", "paper");
+    expect(calls.map((c) => c.replace(/^.*\/(resources|derivations)/, "/$1"))).toEqual([
+      "/resources/portfolios/pf_1", "/derivations/portfolios/pf_1/capital?environment=paper",
+    ]);
+  });
+});

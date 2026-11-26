@@ -1211,3 +1211,42 @@ describe("Portfolio 360 over a profile that holds the portfolio row but no deplo
     expect(relationReasons).toContain("EDS04_PORTFOLIO_NO_DEPLOYMENT_IN_PROFILE");
   });
 });
+
+describe("Portfolio 360 per-request Paper profile (profile_id)", () => {
+  const okx = { ...config(), EXECUTION_EDGE_PAPER_PROFILE_ID: "PAPER_BINANCE_USDM" } as ControlApiConfig;
+  const pf = [{ portfolio_id: "pf_target", name: "Target", base_currency: "USDT", state: "ACTIVE" }];
+  const dep = { deployment_id: "dep_okx", strategy_id: "str_okx", account_id: "acc_okx", mode: "paper", venue: "OKX", portfolio_id: "pf_target", active: true };
+  const doc = (profileId: string, rows: Record<string, ProjectionRelation>): ProfileProjectionSnapshot => {
+    const base = snapshot(rows);
+    return { ...base, document: { ...base.document, profile_id: profileId } };
+  };
+  const repo = () => new FakeProjectionRepository(new Map([
+    ["paper:PAPER_BINANCE_USDM", doc("PAPER_BINANCE_USDM", { [RELATION.portfolios]: relation("portfolios", pf), [RELATION.deployments]: relation("strategy_deployments", []) })],
+    ["paper:PAPER_OKX_SWAP", doc("PAPER_OKX_SWAP", { [RELATION.portfolios]: relation("portfolios", pf), [RELATION.deployments]: relation("strategy_deployments", [dep]) })],
+  ]));
+
+  it("reads the default profile without a selection and the selected profile's own deployments with one", async () => {
+    const reader = new ResourceReadService(okx, repo() as unknown as ExecutionProfileProjectionRepository);
+    const byDefault = await reader.read(principal(), "PORTFOLIO", "pf_target", "paper") as Record<string, any>;
+    expect(byDefault.data.deployments).toEqual([]);
+    expect(byDefault.data.profile_coverage.paper.profile_id).toBe("PAPER_BINANCE_USDM");
+    const selected = await reader.read({ ...principal(), paperProfileId: "PAPER_OKX_SWAP" }, "PORTFOLIO", "pf_target", "paper") as Record<string, any>;
+    expect(selected.data.deployments).toHaveLength(1);
+    expect(selected.data.deployments[0].deployment_id).toBe("dep_okx");
+    expect(selected.data.profile_coverage.paper.profile_id).toBe("PAPER_OKX_SWAP");
+  });
+});
+
+describe("resource controller profile_id allow-list", () => {
+  it("refuses a profile off the allow-list with a typed 400 and never reads the default", async () => {
+    const read = vi.fn();
+    const controller = new ResourceReadController({ read } as unknown as ResourceReadService,
+      { canReadExecution: vi.fn(async () => true) } as never, config());
+    const request = { portalUser: user, portalWorkspaceId: workspaceId, portalSession: session } as never;
+    await expect(controller.portfolio(request, "pf_target", { profile_id: "PAPER_OKX_SWAP" }))
+      .rejects.toMatchObject({ code: "PAPER_PROFILE_NOT_ALLOWED", status: 400 });
+    await expect(controller.alpha(request, "alpha_target", { profile_id: "PAPER_OKX_SWAP" }))
+      .rejects.toMatchObject({ code: "EDS04_RESOURCE_QUERY_INVALID", status: 400 });
+    expect(read).not.toHaveBeenCalled();
+  });
+});

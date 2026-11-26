@@ -581,7 +581,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       "The alpha resource",
     );
   const getPortfolio360Resource = (portfolioId: string): Promise<Result<ProfileEnvelope>> =>
-    readGet(`/resources/portfolios/${encodeURIComponent(portfolioId)}`, readProfileEnvelope, "The portfolio resource");
+    readGet(withPaperProfile(`/resources/portfolios/${encodeURIComponent(portfolioId)}`), readProfileEnvelope, "The portfolio resource");
   const getAccount360Resource = (accountId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/resources/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account resource");
   const getBindingResource = (bindingId: string): Promise<Result<ProfileEnvelope>> =>
@@ -602,7 +602,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   const getDeploymentQuality = (deploymentId: string, environment: FinancialEnvironment) =>
     derivation(`/deployments/${encodeURIComponent(deploymentId)}/execution-quality`, environment, readDeploymentQuality, "The execution-quality derivation");
   const getPortfolioCapital = (portfolioId: string, environment: FinancialEnvironment) =>
-    derivation(`/portfolios/${encodeURIComponent(portfolioId)}/capital`, environment, readPortfolioCapital, "The portfolio-capital derivation");
+    // Capital is routed by Paper profile (Core validates `profile_id` against the allow-list), so it does not go through `notPerProfile`.
+    readGet(`/derivations/portfolios/${encodeURIComponent(portfolioId)}/capital?environment=${encodeURIComponent(environment)}${environment === "paper" ? withPaperProfile("").replace("?", "&") : ""}`, readPortfolioCapital, "The portfolio-capital derivation");
   const getAlphaActivity = (alphaId: string, environment: FinancialEnvironment) =>
     derivation(`/alphas/${encodeURIComponent(alphaId)}/activity`, environment, readAlphaActivity, "The alpha-activity derivation");
   const getMarketCandles = (query: MarketCandlesQuery): Promise<Result<MarketCandlesPayload>> =>

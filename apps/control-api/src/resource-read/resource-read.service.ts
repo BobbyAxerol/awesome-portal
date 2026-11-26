@@ -38,6 +38,8 @@ export interface ResourceReadPrincipal {
   session: AuthSession;
   workspaceId: string;
   viewerWorkspaceId?: string;
+  /** The Paper profile this request selected (already validated against the allow-list); absent = the stack default. */
+  paperProfileId?: string;
 }
 
 type CapabilityState = "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -205,12 +207,31 @@ export class ResourceReadService {
     await this.managerCurrentAccounts.readNative(principal, resourceId, requestedEnvironment, response, beforeDispatch);
   }
 
+  private readonly profileReaders = new Map<string, ResourceReadService>();
+
+  /** One reader per selected Paper profile: the same service, its Paper profile id replaced. Memoized so no per-request state is rebuilt. */
+  private forPaperProfile(profileId: string): ResourceReadService {
+    let reader = this.profileReaders.get(profileId);
+    if (!reader) {
+      reader = new ResourceReadService({ ...this.config, EXECUTION_EDGE_PAPER_PROFILE_ID: profileId } as ControlApiConfig,
+        this.repository, this.readScopes, this.managerCurrentAccounts);
+      this.profileReaders.set(profileId, reader);
+    }
+    return reader;
+  }
+
   async read(
     principal: ResourceReadPrincipal,
     kind: ResourceKind,
     resourceId: string,
     requestedEnvironment?: ResourceEnvironment,
   ): Promise<Record<string, unknown>> {
+    if (principal.paperProfileId !== undefined) {
+      const { paperProfileId, ...rest } = principal;
+      return paperProfileId === this.config.EXECUTION_EDGE_PAPER_PROFILE_ID
+        ? this.read(rest, kind, resourceId, requestedEnvironment)
+        : this.forPaperProfile(paperProfileId).read(rest, kind, resourceId, requestedEnvironment);
+    }
     // Explicit commissioned Paper Account360 only. A refused CURRENT read
     // must never fall through to old retained rows or broker BINDING semantics.
     if (this.managerCurrentAccounts && kind === "ACCOUNT" && (!requestedEnvironment || requestedEnvironment === "paper"))
@@ -615,8 +636,10 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
     relations: ["derived.differences"], retryable: false }] : [])];
   const resourceResolution = resolutionSummary(selections);
   const unavailableBranches = [
-    ...resourceResolution.filter((entry) => entry.state !== "FOUND" ||
-      /^EDS04_PORTFOLIO_(NO_DEPLOYMENT_IN_PROFILE|ALLOCATIONS_EMPTY_DIRECT_DEPLOYMENT_FALLBACK)$/.test(entry.reason_code ?? "")),
+    ...resourceResolution.flatMap((entry) => entry.state !== "FOUND" ? [entry]
+      // A found parent that carries one of the two portfolio facts is stated as a PARTIAL identity branch (the contract has no FOUND branch).
+      : /^EDS04_PORTFOLIO_(NO_DEPLOYMENT_IN_PROFILE|ALLOCATIONS_EMPTY_DIRECT_DEPLOYMENT_FALLBACK)$/.test(entry.reason_code ?? "")
+        ? [{ ...entry, state: "PARTIAL" as const }] : []),
     ...capabilityRows.filter((entry) => entry.state !== "AVAILABLE").map((entry) => ({
       capability_id: entry.capability_id,
       state: entry.state,

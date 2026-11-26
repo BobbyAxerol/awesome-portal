@@ -1,7 +1,7 @@
 import { Controller, Get, Inject, Param, Query, Req, UseGuards } from "@nestjs/common";
 import type { FastifyRequest } from "fastify";
 import { z } from "zod";
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, resolvePaperReadProfile } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { WorkspacesRepository } from "../repos/workspaces";
@@ -18,6 +18,8 @@ interface DerivationRequest extends FastifyRequest {
 const QuerySchema = z.object({
   workspace_id: z.string().trim().min(1).max(96).optional(),
   environment: z.enum(["paper", "sandbox", "live"]).optional(),
+  /** Optional Paper profile (portfolio capital only); the allow-list is enforced in the controller. */
+  profile_id: z.string().trim().regex(/^PAPER_[A-Z0-9_]{2,120}$/).optional(),
 }).strict();
 const RESOURCE_ID = /^[A-Za-z0-9._:@-]{1,160}$/;
 
@@ -53,7 +55,7 @@ export class PortalDerivationsController {
   @Get("/portfolios/:portfolio_id/capital")
   async portfolioCapital(@Req() request: DerivationRequest, @Param("portfolio_id") portfolioId: string, @Query() raw: unknown) {
     if (!RESOURCE_ID.test(portfolioId)) throw new PortalDerivationError("EDS05_RESOURCE_ID_INVALID", 400, "Invalid portfolio id.");
-    const query = await this.principal(request, raw, true);
+    const query = await this.principal(request, raw, true, true);
     return this.derivations.portfolioCapital(query.principal, portfolioId, query.environment!);
   }
 
@@ -64,7 +66,7 @@ export class PortalDerivationsController {
     return this.derivations.alphaActivity(query.principal, alphaId, query.environment!);
   }
 
-  private async principal(request: DerivationRequest, raw: unknown, requireEnvironment = false) {
+  private async principal(request: DerivationRequest, raw: unknown, requireEnvironment = false, allowProfile = false) {
     const parsed = QuerySchema.safeParse(raw);
     if (!parsed.success) throw new PortalDerivationError("EDS05_QUERY_INVALID", 400, "Invalid derivation query.");
     const workspaceId = parsed.data.workspace_id
@@ -84,8 +86,15 @@ export class PortalDerivationsController {
     if (requireEnvironment && !parsed.data.environment) {
       throw new PortalDerivationError("EDS05_ENVIRONMENT_REQUIRED", 400, "Environment is required.");
     }
+    // Absent = today's behaviour. Present and off the allow-list (or on a route that takes none) = typed 400, never the default.
+    let paperProfileId: string | undefined;
+    if (parsed.data.profile_id !== undefined) {
+      const resolved = allowProfile ? resolvePaperReadProfile(this.config, parsed.data.profile_id) : null;
+      if (!resolved) throw new PortalDerivationError("PAPER_PROFILE_NOT_ALLOWED", 400, "That Paper profile is not available on this stack.");
+      paperProfileId = resolved;
+    }
     return {
-      principal: { user: request.portalUser, session: request.portalSession, workspaceId,
+      principal: { ...(paperProfileId ? { paperProfileId } : {}), user: request.portalUser, session: request.portalSession, workspaceId,
         viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId },
       environment: parsed.data.environment,
     };

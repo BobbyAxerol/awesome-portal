@@ -25,6 +25,8 @@ export interface PortalDerivationPrincipal {
   session: AuthSession;
   workspaceId: string;
   viewerWorkspaceId?: string;
+  /** Paper profile selected for this request (validated against the allow-list); absent = the stack default. */
+  paperProfileId?: string;
 }
 
 export class PortalDerivationError extends Error {
@@ -373,7 +375,8 @@ export class PortalDerivationsService {
       throw new PortalDerivationError("EDS05_LOCAL_PROJECTION_REQUIRED", 404, "Local execution projection is not enabled.");
     }
     const workspaceId = this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID;
-    const profileId = profileIdFor(environment, this.config);
+    const profileId = environment === "paper" && principal.paperProfileId !== undefined
+      ? principal.paperProfileId : profileIdFor(environment, this.config);
     if (!workspaceId || !profileId) {
       throw new PortalDerivationError("EDS05_PROFILE_NOT_CONFIGURED", 503, "Execution profile is not configured.");
     }
