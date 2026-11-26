@@ -150,10 +150,31 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
     // A partial parent census cannot establish that the apparent parent ID
     // is unique: another page may contain a conflicting parent. Hold those
     // legs, rather than attaching them to the first parent we happened to see.
-    const accepted = relation.page.items.filter(row => completeParent && typeof row.bracket_group_id === "string" &&
-      bracketCounts.get(row.bracket_group_id) === 1);
-    const dropped = relation.page.items.length - accepted.length;
-    if (completeParent && dropped === 0) return relation;
+    //
+    // With a COMPLETE same-cycle census the picture is different: a leg whose
+    // bracket_group_id names no accepted parent belongs to a parent outside
+    // this profile (the legs view has no venue column, so it returns the whole
+    // DB's legs; the parents view is venue-filtered). That is the filter
+    // working, so it is scoped out, not rejected. RUNTIME LIMIT: a true orphan
+    // leg (parent absent at source) cannot be told apart from an out-of-profile
+    // leg here; the rule relies on the source guaranteeing no orphans (Edge
+    // confirmed 26/26 legs have a parent, 2026-11-26). Ambiguous ids (duplicate
+    // parent) and legs without a usable id stay rejected, fail closed.
+    const accepted: typeof relation.page.items = [];
+    let scopedOutLegs = 0;
+    for (const row of relation.page.items) {
+      const id = row.bracket_group_id;
+      const count = completeParent && typeof id === "string" && id.length > 0 ? bracketCounts.get(id) ?? 0 : -1;
+      if (count === 1) accepted.push(row);
+      else if (count === 0) scopedOutLegs += 1;
+    }
+    const dropped = relation.page.items.length - accepted.length - scopedOutLegs;
+    if (completeParent && dropped === 0) {
+      if (scopedOutLegs === 0) return relation;
+      return { ...relation, page: { ...relation.page, items: accepted },
+        state: accepted.length === 0 && relation.state === "AVAILABLE" ? "EMPTY" as const : relation.state,
+        lineageScopedOut: { ...relation.lineageScopedOut, bracket: (relation.lineageScopedOut?.bracket ?? 0) + scopedOutLegs } };
+    }
     // Unknown/unavailable/capped parent is never an empty COMPLETE fact.
     // Preserve the upstream UNKNOWN distinction, and never promote a
     // partial page merely because some of its children's parents were found.
@@ -162,6 +183,7 @@ export function enforceProfileLineage<TSpec extends { key: string }>(
     return { ...relation, page: { ...relation.page, items: accepted, completeness },
       state: "PARTIAL" as const,
       reasonCode: relation.reasonCode ?? errorPrefix + "_BRACKET_PARENT_CENSUS_UNQUALIFIED",
+      ...(scopedOutLegs ? { lineageScopedOut: { ...relation.lineageScopedOut, bracket: (relation.lineageScopedOut?.bracket ?? 0) + scopedOutLegs } } : {}),
       ...(dropped ? { lineageRejects: { ...relation.lineageRejects, bracket: dropped } } : {}) };
   });
 }

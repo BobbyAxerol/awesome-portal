@@ -107,6 +107,39 @@ describe("N30 profile lineage", () => {
       page: { completeness: "COMPLETE", items: [{ bracket_group_id: "br_1", leg_id: "leg_1" }] } });
   });
 
+  it("scopes out legs of parents outside the profile when the parent census is COMPLETE (Sandbox: 4 parents, 26 legs)", () => {
+    const parents = ["a", "b", "c", "d"].map((id) => ({ bracket_group_id: `br_${id}` }));
+    const legs = Array.from({ length: 26 }, (_, index) => ({
+      leg_id: `leg_${index}`, bracket_group_id: index < 8 ? `br_${"abcd"[index % 4]}` : `br_okx_${index % 9}`,
+    }));
+    const result = enforceProfileLineage([relation("brackets", parents), relation("bracket_legs", legs)], "N30");
+    expect(result[1].page?.items).toHaveLength(8);
+    expect(result[1]).toMatchObject({ state: "AVAILABLE", reasonCode: null, page: { completeness: "COMPLETE" },
+      lineageScopedOut: { bracket: 18 } });
+    expect(result[1].lineageRejects).toBeUndefined();
+  });
+
+  it("treats a leg with no parent in a COMPLETE census as scoped out (a true orphan is indistinguishable at runtime; relies on Edge: no orphans at source)", () => {
+    const result = enforceProfileLineage([
+      relation("brackets", [{ bracket_group_id: "br_1" }]),
+      relation("bracket_legs", [{ bracket_group_id: "br_orphan", leg_id: "leg_1" }]),
+    ], "N30");
+    expect(result[1]).toMatchObject({ state: "EMPTY", reasonCode: null, lineageScopedOut: { bracket: 1 },
+      page: { completeness: "COMPLETE", items: [] } });
+    expect(result[1].lineageRejects).toBeUndefined();
+  });
+
+  it("still rejects (fail closed) ambiguous or unusable legs even with a COMPLETE census", () => {
+    const result = enforceProfileLineage([
+      relation("brackets", [{ bracket_group_id: "br_dup" }, { bracket_group_id: "br_dup" }, { bracket_group_id: "br_1" }]),
+      relation("bracket_legs", [{ bracket_group_id: "br_dup", leg_id: "l1" }, { leg_id: "l2" },
+        { bracket_group_id: "br_other", leg_id: "l3" }, { bracket_group_id: "br_1", leg_id: "l4" }]),
+    ], "N30");
+    expect(result[1]).toMatchObject({ state: "PARTIAL", reasonCode: "N30_BRACKET_PARENT_CENSUS_UNQUALIFIED",
+      lineageRejects: { bracket: 2 }, lineageScopedOut: { bracket: 1 }, page: { completeness: "PARTIAL" } });
+    expect(result[1].page?.items).toEqual([{ bracket_group_id: "br_1", leg_id: "l4" }]);
+  });
+
   it("does not promote a partial child to EMPTY after filtering a proven foreign row", () => {
     const child = relation("account_balances", [{ account_id: "foreign", total: "1" }], "PARTIAL");
     const result = enforceProfileLineage([
