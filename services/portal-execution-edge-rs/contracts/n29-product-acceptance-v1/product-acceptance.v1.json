@@ -91,7 +91,7 @@
     "br72_repository_sha256": "sha256:a4d31bea7763c3912014cb97bc4e453b79dc6cc9eec4cf38d730247cae881074",
     "br72_controller_sha256": "sha256:4e575f584b37c8e4204dd8f91e1c8256b8cceecfe95fe33f05f43506cae56c4c",
     "br72_test_sha256": "sha256:1d5cd202af5d17e24342bda6ba9bdc78efcc991dae2ae781ef968cc05e14d0a6",
-    "br72_source_boundary_sha256": "sha256:7aace721ed205c9027966262ff838ec7dab3948dc0808abe75b34f49c44371eb",
+    "br72_source_boundary_sha256": "sha256:591ac08a3be301a178daf2a847bac9a6c155e4727a41ce95a4dc50435c37535e",
     "br76_schema_sha256": "sha256:6df4471370e6454baf790b2592b781e28c956edb2d1ab0fbb842771c62389076",
     "br76_fixture_sha256": "sha256:23db8c70822e109af7ca54be9ee21a900adc1dec550191eea2f0a40125bc1961",
     "br72_source_boundary_test_sha256": "sha256:18c781e49cd2e41a2f1bf8505190a66332ef8a3a32734f755b2ae9fac88e90e5",
@@ -101,7 +101,7 @@
     "br72_frontend_test_sha256": "sha256:f8689528fd85e239578439de3817bea4e5c8176dd94fa31e4033025560b7c44b",
     "br72_frontend_containers_sha256": "sha256:a78b235bf75762ca2136be20e0ac457af774cc8eea020bbeaa9701a9384c12eb",
     "br72_frontend_alpha_fleet_sha256": "sha256:9155452a2d22d81867b699450c6b4218bad167081377a3427a98107da5e0fe29",
-    "br72_frontend_recompose_sha256": "sha256:fc7d78a7640539bd78be66a280ff1638ee9c9036ef3c26a17353065c5c161bb8",
+    "br72_frontend_recompose_sha256": "sha256:008f9595bd9958b22a5ac55dbf5b530252cf0f14e03c2f099e817a2d095a63c8",
     "br72_frontend_registry_sha256": "sha256:692b284dfa8800dd23d0d5d0a79cbbcfbfce3a0f55ee7619cef7261e7c11d92c"
   },
   "rehearsals": {
