@@ -204,7 +204,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
     () => ({ environment: env, metric: "DRAWDOWN", window: url.value.window, subjects: [{ subjectType: "ALPHA", subjectId: alphaId }], ...(explicitWs ? { workspaceId: explicitWs } : {}) }),
     [env, alphaId, explicitWs, url.value.window],
   );
-  const drawdown = asked(useManagerSeries(api, settled && tab === "performance", drawdownQuery));
+  const drawdown = useManagerSeries(api, settled && tab === "performance", drawdownQuery);
   // R2-04: when the pane has a series, the tile is that series' lowest point, so the tile and the strip cannot state two figures.
   const ddLow = drawdownLowOf(drawdown);
 
@@ -254,7 +254,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   // in view; with several it is not asked (no deployment is picked for the reader, and nothing is summed across them).
   const bookRows = view?.rows.filter((r) => (r.env ?? (r.stage === "paper" ? "paper" : r.stage === "sandbox" ? "sandbox" : r.stage === "canary" || r.stage === "live" ? "live" : null)) === env) ?? [];
   const projectionTarget = namedDeployment?.id ?? (bookRows.length === 1 ? bookRows[0]!.id : null);
-  const projection = asked(useEquityProjection(api, projectionTarget, wsId, settled && tab === "performance" && perfView === "act"));
+  const projection = useEquityProjection(api, projectionTarget, wsId, settled && tab === "performance" && perfView === "act");
   const focus = params.get("focus");
   const focusOrder = (() => {
     const target = focusTarget(focus);
@@ -279,11 +279,11 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   const present = view !== null && view.present;
   // The Manager dataset for this alpha in the chosen Book: the Return tile and the windowed figures. Asked once the alpha is known; only a workspace the caller named is sent (never the body's own).
   // A window the address names is asked on the dataset too, so every tab states the same window as the Performance tab (QA7 N2-02); with no window in the address nothing is asked, as before.
-  const dataset = asked(useAlphaDataset(api, present && envKnown, alphaId, env, explicitWs, params.get("window") === null ? undefined : url.value.window));
+  const dataset = useAlphaDataset(api, present && envKnown, alphaId, env, explicitWs, params.get("window") === null ? undefined : url.value.window);
   const datasetValue = dataset.phase === "ready" ? dataset.value : null;
   // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
   // WP-K: the published lifecycle read (stages with criteria, decider and receipt; the unified feed; regime fit; Net PnL per venue) wins over the open keys.
-  const lifecycle = asked(useAlphaLifecycle(api, present && envKnown, alphaId, env, explicitWs));
+  const lifecycle = useAlphaLifecycle(api, present && envKnown, alphaId, env, explicitWs);
   const life = useMemo(() => {
     const read = lifeEventsOfRead(lifecycle);
     const spans = stageSpansOfRead(lifecycle);
