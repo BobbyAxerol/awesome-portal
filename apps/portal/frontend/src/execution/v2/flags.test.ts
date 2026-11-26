@@ -58,13 +58,13 @@ describe("reserved keys", () => {
     expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
   });
 
-  it("`observed` (Core Observed fallback, read by the Overview) is a known key, off unless named, never on without the umbrella, and not in the publication manifest", () => {
+  it("`observed` (Core Observed fallback, read by the Overview) is a known key, off unless named, never on without the umbrella, and named by the publication manifest", () => {
     expect(parseV2Manifest("observed").has("observed")).toBe(true);
     expect(isV2Screen("observed", parseV2Manifest("overview"), true)).toBe(false);
     expect(isV2Screen("observed", parseV2Manifest("observed,overview"), true)).toBe(true);
     expect(isV2Screen("observed", parseV2Manifest("observed,overview"), false)).toBe(false);
     const publish = readFileSync(resolve(__dirname, "../../../../../../.github/workflows/publish-images.yml"), "utf8");
-    expect(publish).not.toMatch(/EXECUTION_V2_SCREENS=[^\n]*\bobserved\b/);
+    expect(publish).toMatch(/EXECUTION_V2_SCREENS=[^\n]*,users,observed\n/);
   });
 
   it("`command` mounts: it is read by isV2Screen, answers true from the manifest under the umbrella, and not without it", () => {

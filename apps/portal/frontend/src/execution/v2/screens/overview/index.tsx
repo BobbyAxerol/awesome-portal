@@ -75,7 +75,7 @@ import "../../css/blocks.css";
 import "../../css/overview.css";
 import { formatInstant } from "../../boundary";
 import { isV2Screen } from "../../flags";
-import { OBSERVED_LABEL, OBSERVED_TITLE, observedCell, type ObservedCellView } from "./observedModel";
+import { NAV_NOT_NETTED, OBSERVED_LABEL, OBSERVED_TITLE, PAPER_TEST_DATA, PNL_NOT_ADJUSTED, observedCell, type ObservedCellView } from "./observedModel";
 import { useObservedOverview } from "./useObservedOverview";
 import { OBSERVED_ENVIRONMENTS, type ObservedOverviewEnvironment } from "../../readers/observedOverview";
 
@@ -105,7 +105,9 @@ function ObservedCell({ label, view, cumulative = false }: { label: string; view
       note={<>
         <span title={OBSERVED_TITLE} data-observed="label"><Flag kind="neutral" label={OBSERVED_LABEL} size="sm" /></span>
         {view.asOfMs !== null ? <span> As of {formatInstant(view.asOfMs)}</span> : null}
-        {cumulative ? <span> Cumulative, source-reported</span> : null}
+        {cumulative ? <span> {PNL_NOT_ADJUSTED}</span> : null}
+        {view.environment === "paper" ? <span data-observed="paper-test"> {PAPER_TEST_DATA}</span> : null}
+        {view.environment === "paper" && label === "NAV" ? <span data-observed="nav-not-netted"> {NAV_NOT_NETTED}</span> : null}
       </>}
     >
       <ObservedLines view={view} />
@@ -205,7 +207,7 @@ function CapitalNav({ read, observed = null }: { read: SeriesReadState; observed
   const entry = series?.series[0];
   if (entry === undefined || entry.state === "UNAVAILABLE" || !isDescribed(entry)) {
     if (observed !== null && (entry === undefined || (entry.state === "UNAVAILABLE" && entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED"))) {
-      return <><ObservedLines view={observed} /><span title={OBSERVED_TITLE} data-observed="label"><Flag kind="neutral" label={OBSERVED_LABEL} size="sm" /></span></>;
+      return <><ObservedLines view={observed} /><span title={OBSERVED_TITLE} data-observed="label"><Flag kind="neutral" label={OBSERVED_LABEL} size="sm" /></span>{observed.environment === "paper" ? <span data-observed="paper-test"> {PAPER_TEST_DATA}. {NAV_NOT_NETTED}</span> : null}</>;
     }
     return <Gap ids="FE-013" />;
   }

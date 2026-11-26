@@ -9,6 +9,11 @@
 import type { ObservedFigure, ObservedOverview } from "../../readers/observedOverview";
 
 export const OBSERVED_LABEL = "Observed, not TS-qualified";
+/** Caveats from the Trading System (owner decision 2026-11-26), printed beside the Observed figures; none is derived from the payload. */
+export const PAPER_TEST_DATA = "Paper funds: test data";
+export const NAV_NOT_NETTED = "Sum of separate Paper accounts, not netted";
+export const PNL_NOT_ADJUSTED = "Cumulative, source-reported, not adjusted for capital flows";
+
 export const OBSERVED_TITLE = "Observed by Core from the Edge snapshot (record PORTAL_OBSERVATION, source EDGE_SNAPSHOT_VIA_CORE, source confidence UNKNOWN). Not TS-qualified.";
 
 export type ObservedFigureId = ObservedFigure["figure_id"];
@@ -21,6 +26,8 @@ export interface ObservedCellView {
   lines: readonly ObservedLine[];
   /** `snapshot_source_as_of_ms`, never the read time; null when the snapshot published none. */
   asOfMs: number | null;
+  /** The body's environment: caveats that hold for Paper only are keyed on it. */
+  environment: ObservedOverview["environment"];
 }
 
 /** The lines of one figure, in published order; `null` when the body holds no entry for it (the cell keeps today's wording). */
@@ -39,5 +46,5 @@ export function observedCell(body: ObservedOverview | null, id: ObservedFigureId
       accounts: f.accounts_reported !== f.accounts_total ? `${f.accounts_reported} of ${f.accounts_total} accounts` : null,
     };
   });
-  return { lines, asOfMs: body.as_of.snapshot_source_as_of_ms };
+  return { lines, asOfMs: body.as_of.snapshot_source_as_of_ms, environment: body.environment };
 }

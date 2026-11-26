@@ -164,3 +164,57 @@ describe("observed ON: money formatting is the qualified cells' formatter", () =
     expect(value("Return")).toContain("Not available");
   });
 });
+
+describe("observed ON: the four TS caveats, no margin, lane off", () => {
+  it("paper: test data, not netted and not adjusted for capital flows are printed beside the Observed tiles", async () => {
+    const { api } = withObserved({ ok: true, value: body("paper") });
+    mount(api, true);
+    await loaded();
+    await waitFor(() => expect(note("NAV")).toContain(LABEL));
+    expect(note("NAV")).toContain("Paper funds: test data");
+    expect(note("NAV")).toContain("Sum of separate Paper accounts, not netted");
+    expect(note("Net PnL")).toContain("Cumulative, source-reported, not adjusted for capital flows");
+    expect(note("Net PnL")).toContain("Paper funds: test data");
+    expect(note("Net PnL")).not.toContain("not netted");
+    expect(screen.getByRole("table", { name: "Capital" }).textContent).toContain("Paper funds: test data");
+  });
+  it("sandbox: the Paper-only lines are not printed", async () => {
+    const sandbox = structuredClone(cases.paper) as { environment: string };
+    sandbox.environment = "sandbox";
+    const { api } = withObserved({ ok: true, value: readObservedOverview(sandbox) as ObservedOverview });
+    mount(api, true);
+    await loaded();
+    await waitFor(() => expect(note("NAV")).toContain(LABEL));
+    expect(note("NAV")).not.toContain("Paper funds");
+    expect(note("NAV")).not.toContain("not netted");
+  });
+  it("no margin or buying power can render from an Observed payload: the reader refuses such a key or figure", async () => {
+    const withKey = structuredClone(cases.paper) as { figures: Record<string, unknown>[] };
+    withKey.figures[0].margin_initial = "0";
+    expect(readObservedOverview(withKey)).toBeNull();
+    const withFigure = structuredClone(cases.paper) as { figures: Record<string, unknown>[] };
+    withFigure.figures[0].figure_id = "MARGIN_INITIAL";
+    expect(readObservedOverview(withFigure)).toBeNull();
+    const top = structuredClone(cases.paper) as Record<string, unknown>;
+    top.buying_power = "1";
+    expect(readObservedOverview(top)).toBeNull();
+    const { api } = withObserved({ ok: true, value: body("paper") });
+    mount(api, true);
+    await loaded();
+    await waitFor(() => expect(note("NAV")).toContain(LABEL));
+    for (const label of ["NAV", "Net PnL", "Return", "Drawdown"]) expect(kpi(label).textContent).not.toMatch(/margin|buying power/i);
+    expect(screen.getByRole("table", { name: "Capital" }).textContent).not.toMatch(/margin|buying power/i);
+  });
+  it("key in the manifest but server lane OFF (404): the Overview renders exactly as with the key off", async () => {
+    const off = withObserved({ ok: true, value: body("paper") });
+    const first = mount(off.api, false);
+    await loaded();
+    const expected = tilesHtml() + document.body.textContent;
+    first.unmount();
+    const lane = withObserved(refused(404, OBSERVED_CODES.laneOff));
+    mount(lane.api, true);
+    await loaded();
+    await waitFor(() => expect(lane.getObservedOverview).toHaveBeenCalled());
+    expect(tilesHtml() + document.body.textContent).toBe(expected);
+  });
+});

@@ -38,8 +38,8 @@ export const EXEC_V2_SCREEN_KEYS = [
   // DEBT-048 item 9: the pending-control PREVIEW form in the Operations dock (v2/screens/operations). FIXTURE_LAB only: OFF unless the
   // manifest names it, and then only for a TEST_ONLY workspace. It is not the `command` key; neither enables a send.
   "pending-preview",
-  // Core Observed consumer (design 2026-11-25): the build-time gate of the fund-level Observed fallback on the Overview. NOT in the
-  // publication manifest (publish-images.yml), so it ships OFF; read by the Overview.
+  // Core Observed consumer (design 2026-11-25): the build-time gate of the fund-level Observed fallback on the Overview. Named by the
+  // publication manifest (publish-images.yml) since 2026-11-26; the server lane stays flag-gated (404 when off). Read by the Overview.
   "observed",
 ] as const;
 export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
@@ -51,7 +51,7 @@ export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
  * - `archived`: the Archived lens is part of the Fleet (`tab=archived`, key `fleet`); there is no separate screen.
  * - `replay`: Trade Replay rides the Alpha 360 Replay tab (key `alpha`); nothing reads `replay` itself.
  *
- * Pending: none. `observed` (Core Observed fallback, Overview fund tiles) left this list when `overview/index.tsx` began to read `isV2Screen("observed")`; it is NOT in the publication manifest, so it ships OFF. `command` (UXM-09 fixture story) left this list in the commit that made `PortalRoutes` read `isV2Screen("command")`.
+ * Pending: none. `observed` (Core Observed fallback, Overview fund tiles) left this list when `overview/index.tsx` began to read `isV2Screen("observed")`; since 2026-11-26 it IS in the publication manifest (publish-images.yml), while the server lane stays flag-gated. `command` (UXM-09 fixture story) left this list in the commit that made `PortalRoutes` read `isV2Screen("command")`.
  * Earlier: the S3 stage screens (2026-10-19, D2: one key per screen) left
  * this list in the commit that made `ExecutionPreviewRoute` read
  * `isV2Screen("<key>")` for each: `workbench` (Paper, deployment routes),
