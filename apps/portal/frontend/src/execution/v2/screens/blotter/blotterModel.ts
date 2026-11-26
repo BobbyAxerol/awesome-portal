@@ -24,7 +24,6 @@ import { BLOTTER_BUCKET, type BlotterFilter } from "../../../contracts";
 import type { BlotterQuery } from "../../../api/ports";
 import type { ProfileEnvelope } from "../../../api/profileRead";
 import type { FlagKind } from "../../flagKinds";
-import { formatExact } from "../../../formatExact";
 
 /** One page is 50 rows (hi-fi, BR-EX-17); the DOM never holds more than this. */
 export const PAGE_LIMIT = 50;
@@ -50,31 +49,6 @@ export function readExact(value: unknown): Exact {
   if (value === null || value === undefined || value === "") return { kind: "absent" };
   if (typeof value !== "string" || value.length > MAX_DECIMAL_CHARS || !DECIMAL.test(value) || /^-0+(\.0+)?$/.test(value)) return { kind: "unreadable" };
   return { kind: "value", text: value };
-}
-
-/**
- * The Fee column, one precision per currency. The app's money formatter (`formatExact`) trims each value on its own, so a column read
- * `0.0123` over `0.0127` over `0.01`. The precision of a currency is the finest scale any fee of that currency on the page needs under that
- * formatter (a fee that would round to zero keeps its own scale, so nothing real prints as 0.00); every fee of the currency is then
- * written to that many places. The exact published text stays in the cell's title and in the CSV.
- */
-export function feePrecisionByCurrency(orders: readonly BlotterOrder[]): ReadonlyMap<string, number> {
-  const out = new Map<string, number>();
-  for (const order of orders) {
-    if (order.fee.kind !== "value") continue;
-    const key = order.feeCurrency ?? "";
-    const places = (formatExact(order.fee.text, "money").display.split(".")[1] ?? "").length;
-    out.set(key, Math.max(out.get(key) ?? 0, places));
-  }
-  return out;
-}
-
-/** One fee at its currency's precision (see `feePrecisionByCurrency`); a text the formatter cannot read is returned as published. */
-export function formatFee(text: string, places: number): string {
-  const { display } = formatExact(text, "money", { dp: places });
-  if (!/^-?[\d,]+(\.\d+)?$/.test(display)) return display;
-  const [integer, fraction = ""] = display.split(".");
-  return places === 0 ? integer! : `${integer}.${fraction.padEnd(places, "0")}`;
 }
 
 /** Thousands grouped, every published digit kept: `60890.00` -> `60,890.00`, `0.0400` -> `0.0400`. */

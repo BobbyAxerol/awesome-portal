@@ -17,8 +17,7 @@ import { decimalCases, leaked, pollutionCases, prototypeIsClean, requiredCases, 
 import { cloneRows, pad, timed } from "../../testkit/scale";
 import {
   COLUMNS, DEFAULT_COLUMNS, NO_FILTERS, NO_SCOPE, ROW_CAP, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, unchippedStatusCounts, fillsFor, filtersKey, groupExact, humanize,
-  isBucket, legsFor, readBlotter, readExact, scopeActive, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder,
-  feePrecisionByCurrency, formatFee,
+  isBucket, legsFor, readBlotter, readExact, scopeActive, shortUtc, statusView, trimExact, type BlotterFill, type BlotterLeg, type BlotterOrder,
 } from "./blotterModel";
 
 const NAME = "execution-full-blotter.partial";
@@ -374,29 +373,9 @@ describe("an order path never shows a time that cannot belong to the order (QA4 
   });
 });
 
-describe("G2: Fee precision, one per currency", () => {
-  const order = (fee: string | null, feeCurrency: string | null) => ({ fee: fee === null ? { kind: "absent" } : { kind: "value", text: fee }, feeCurrency }) as never;
-
-  it("writes every fee of a currency to the same number of places (the finest the page needs), padding rather than rounding away digits", () => {
-    const orders = [order("0.0123", "USDT"), order("0.01272100", "USDT"), order("0.01", "USDT")];
-    const places = feePrecisionByCurrency(orders).get("USDT")!;
-    expect(places).toBe(4);
-    expect(["0.0123", "0.01272100", "0.01"].map((t) => formatFee(t, places))).toEqual(["0.0123", "0.0127", "0.0100"]);
-  });
-
-  it("keeps a currency of its own: another currency on the page does not set this one's precision", () => {
-    const orders = [order("0.00001234", "BTC"), order("1.5", "USDT"), order("0.25", "USDT")];
-    const places = feePrecisionByCurrency(orders);
-    expect(places.get("USDT")).toBe(2);
-    expect(places.get("BTC")).toBe(8);
-    expect(formatFee("1.5", places.get("USDT")!)).toBe("1.50");
-    // A real fee is never shown as zero: the page's finest scale keeps it.
-    expect(formatFee("0.00001234", places.get("BTC")!)).toBe("0.00001234");
-  });
-
-  it("groups thousands, ignores absent fees, and returns a text the formatter cannot read as published", () => {
-    expect(feePrecisionByCurrency([order(null, "USDT")]).size).toBe(0);
-    expect(formatFee("1234.5", 2)).toBe("1,234.50");
-    expect(formatFee("1e-5", 2)).toBe("1e-5");
+describe("G2: Fee is printed losslessly, like prices", () => {
+  it("keeps every significant digit of a fee, drops only insignificant trailing zeros, and never rounds to 4 places", () => {
+    expect(["0.0123", "0.01272100", "0.01", "0.00001234", "1234.500", "0.000000000000000001"].map(trimExact))
+      .toEqual(["0.0123", "0.012721", "0.01", "0.00001234", "1,234.5", "0.000000000000000001"]);
   });
 });

@@ -49,7 +49,7 @@ import { withContext } from "../../urlState";
 import { ClosedFlag } from "./ClosedFlag";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, MID_HIDDEN, MID_QUERY, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, feePrecisionByCurrency, filtersKey, formatFee, isStageRefusal, serverScopeActive, unchippedStatusCounts,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, MID_HIDDEN, MID_QUERY, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, isStageRefusal, serverScopeActive, unchippedStatusCounts,
   fillsFor, trimExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
@@ -338,7 +338,6 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
     setParams(next, { replace: true });
   };
 
-  const feePlaces = read === null ? new Map<string, number>() : feePrecisionByCurrency(read.orders);
   const cell = (order: BlotterOrder, id: ColumnId) => {
     switch (id) {
       case "time": return order.submittedAt ? <span className="exec-blt2-num" title={order.submittedAt}>{shortUtc(order.submittedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
@@ -359,10 +358,8 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no fee for this order." className="exec-blt2-na" />)
         : (
           <span className="exec-blt2-two exec-blt2-fee">
-            {/* One precision per currency down the column; the exact published text is the title (and the CSV). */}
-            {order.fee.kind === "value"
-              ? <span className="exec-blt2-num" title={order.fee.text}>{formatFee(order.fee.text, feePlaces.get(order.feeCurrency ?? "") ?? 0)}</span>
-              : <ExactText value={order.fee} />}
+            {/* Lossless like the prices: every significant digit, no trailing zeros; the exact published text is the title (and the CSV). */}
+            <ExactText value={order.fee} />
             {order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}
           </span>
         );
