@@ -162,8 +162,55 @@ export interface DeploymentFacts {
   venue: string | null;
   mode: string | null;
   updatedAtMs: UtcEpochMs | null;
+  /** Joined account-policy and risk-profile facts; `null` when the read did not carry the join at all (older source, authorized-scope read). */
+  policyRisk?: PolicyRiskFacts | null;
   /** The source's own `active` flag; "not a health check" (V1 note). null = not published or unreadable. */
   sourceActive: boolean | null;
+}
+
+/** An exact decimal as published (a string, or a finite number as its own text), else null: never 0, never a guess. */
+function decimalText(value: unknown): string | null {
+  const word = typeof value === "number" && Number.isFinite(value) ? String(value) : value;
+  return typeof word === "string" && /^-?\d+(\.\d+)?$/.test(word) ? word : null;
+}
+
+export interface PolicyRiskFacts {
+  marginMode: string | null;
+  positionAccounting: string | null;
+  defaultLeverage: string | null;
+  makerFeeBps: string | null;
+  takerFeeBps: string | null;
+  maxLeverage: string | null;
+  maxNotionalOrder: string | null;
+  maxNotionalPosition: string | null;
+  maxDailyLoss: string | null;
+  maxDrawdown: string | null;
+  tradingState: string | null;
+  isActive: boolean | null;
+}
+
+const POLICY_RISK_KEYS = [
+  "margin_mode", "position_accounting_mode", "default_leverage", "maker_fee_bps", "taker_fee_bps", "risk_max_leverage",
+  "risk_max_notional_order", "risk_max_notional_position", "risk_max_daily_loss", "risk_max_drawdown", "risk_trading_state", "risk_is_active",
+] as const;
+
+/** `null` when the deployment block carries none of the members (the server did not read the join); a stated null member reads as null. */
+export function readPolicyRisk(raw: Row): PolicyRiskFacts | null {
+  if (!POLICY_RISK_KEYS.some((key) => Object.hasOwn(raw, key))) return null;
+  return {
+    marginMode: typeof raw.margin_mode === "string" ? text(raw.margin_mode) : null,
+    positionAccounting: typeof raw.position_accounting_mode === "string" ? text(raw.position_accounting_mode) : null,
+    defaultLeverage: decimalText(raw.default_leverage),
+    makerFeeBps: decimalText(raw.maker_fee_bps),
+    takerFeeBps: decimalText(raw.taker_fee_bps),
+    maxLeverage: decimalText(raw.risk_max_leverage),
+    maxNotionalOrder: decimalText(raw.risk_max_notional_order),
+    maxNotionalPosition: decimalText(raw.risk_max_notional_position),
+    maxDailyLoss: decimalText(raw.risk_max_daily_loss),
+    maxDrawdown: decimalText(raw.risk_max_drawdown),
+    tradingState: typeof raw.risk_trading_state === "string" ? text(raw.risk_trading_state) : null,
+    isActive: typeof raw.risk_is_active === "boolean" ? raw.risk_is_active : null,
+  };
 }
 
 export function readDeployment(envelope: ProfileEnvelope): DeploymentFacts | null {
@@ -180,6 +227,7 @@ export function readDeployment(envelope: ProfileEnvelope): DeploymentFacts | nul
     venue: text(raw.venue),
     mode: text(raw.mode),
     updatedAtMs: timeOf(raw, "updated_at_ms", "updated_at"),
+    policyRisk: readPolicyRisk(raw),
     sourceActive: typeof active === "boolean" ? active : null,
   };
 }

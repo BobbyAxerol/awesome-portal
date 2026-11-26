@@ -361,13 +361,25 @@ export interface components {
         PortfolioNameReason: "PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
         /** @description FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id. */
         DeploymentIdentityRules: unknown & unknown;
-        /** @description FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys. */
+        /** @description FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys. Optional and nullable, absent when the join was not read: the joined account-policy facts (margin_mode, position_accounting_mode, default_leverage, maker_fee_bps, taker_fee_bps) and the deployment's risk-profile limits (risk_max_leverage, risk_max_notional_order, risk_max_notional_position, risk_max_daily_loss, risk_max_drawdown, risk_trading_state, risk_is_active), each the published value or null; a missing or ambiguous join is null, never 0. */
         DeploymentRecord: components["schemas"]["NarrowRecord"] & {
             alpha_id?: components["schemas"]["Identifier"] | null;
             alpha_name?: components["schemas"]["DeploymentDisplayName"];
             portfolio_name?: components["schemas"]["DeploymentDisplayName"];
             alpha_reason_code?: components["schemas"]["AlphaIdentityReason"];
             portfolio_name_reason_code?: components["schemas"]["PortfolioNameReason"];
+            margin_mode?: components["schemas"]["Scalar"];
+            position_accounting_mode?: components["schemas"]["Scalar"];
+            default_leverage?: components["schemas"]["Scalar"];
+            maker_fee_bps?: components["schemas"]["Scalar"];
+            taker_fee_bps?: components["schemas"]["Scalar"];
+            risk_max_leverage?: components["schemas"]["Scalar"];
+            risk_max_notional_order?: components["schemas"]["Scalar"];
+            risk_max_notional_position?: components["schemas"]["Scalar"];
+            risk_max_daily_loss?: components["schemas"]["Scalar"];
+            risk_max_drawdown?: components["schemas"]["Scalar"];
+            risk_trading_state?: components["schemas"]["Scalar"];
+            risk_is_active?: components["schemas"]["Scalar"];
         } & components["schemas"]["DeploymentIdentityRules"];
         PositionsBySideRow: {
             instrument_id: string;

@@ -5,6 +5,8 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { loadCanonical } from "../../testkit/loadCanonical";
+
 import { readUtcEpochMs } from "../../../screenDataContract";
 import { resolveTab } from "../../tabAliases";
 import { ABSENT, cartesian, coverage, describeCoverage, dimension, dimensionOf, pairwise, setPath, type Draft } from "../../testkit/matrix";
@@ -74,6 +76,33 @@ describe("primitives", () => {
 });
 
 describe("P1 display fields (intent, account_policy_id, risk_profile_id)", () => {
+  const canonicalPolicyRisk = () => loadCanonical<Draft>("execution-paper-workbench.policy-risk.valid.json");
+
+  it("reads the joined policy and risk facts from the canonical fixture, exact text kept", () => {
+    const d = readDeployment(envelopeOf(canonicalPolicyRisk()));
+    expect(d?.policyRisk).toEqual({
+      marginMode: "cross", positionAccounting: "NET", defaultLeverage: "3", makerFeeBps: "2.000000000000000000", takerFeeBps: "5",
+      maxLeverage: "5.000000000000000000", maxNotionalOrder: "1000", maxNotionalPosition: "5000.500000000000000000",
+      maxDailyLoss: "250", maxDrawdown: "0.1", tradingState: "ACTIVE", isActive: true,
+    });
+  });
+
+  it("a block without any joined member reads policyRisk null (the join was not read), not zeros", () => {
+    const wire = canonicalPolicyRisk();
+    for (const key of ["margin_mode", "position_accounting_mode", "default_leverage", "maker_fee_bps", "taker_fee_bps", "risk_max_leverage", "risk_max_notional_order",
+      "risk_max_notional_position", "risk_max_daily_loss", "risk_max_drawdown", "risk_trading_state", "risk_is_active"]) setPath(wire, ["data", "deployment", key], ABSENT);
+    expect(readDeployment(envelopeOf(wire))?.policyRisk).toBeNull();
+  });
+
+  it("stated nulls read as null members; a non-decimal text is refused", () => {
+    const wire = canonicalPolicyRisk();
+    setPath(wire, ["data", "deployment", "risk_max_leverage"], null);
+    setPath(wire, ["data", "deployment", "risk_max_daily_loss"], "12e3");
+    setPath(wire, ["data", "deployment", "risk_is_active"], null);
+    const p = readDeployment(envelopeOf(wire))?.policyRisk;
+    expect([p?.maxLeverage, p?.maxDailyLoss, p?.isActive]).toEqual([null, null, null]);
+  });
+
   it.each([["POLICY_A", "POLICY_A"], [null, null], [ABSENT, null], ["", null]])("deployment policy and risk profile %j read as %j, never a stand-in", (raw, expected) => {
     const wire = paperWire();
     setPath(wire, ["data", "deployment", "account_policy_id"], raw);
