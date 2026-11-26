@@ -387,6 +387,16 @@ export const VENUE_ACCOUNT_FIELDS = [
   "order_category", "active", "created_at", "updated_at",
 ] as const;
 const VENUE_ACCOUNT = VENUE_ACCOUNT_FIELDS;
+const ACCOUNT_POLICY = [
+  "account_policy_id", "account_id", "mode", "venue", "account_type", "margin_mode", "settlement_policy",
+  "allow_borrowing", "default_leverage", "maker_fee_bps", "taker_fee_bps", "maintenance_margin_rate",
+  "enforce_pretrade_balance", "require_broker_sync", "max_sync_age_seconds", "position_accounting_mode",
+  "loan_package_id", "created_at", "updated_at",
+] as const;
+const RISK_PROFILE = [
+  "strategy_id", "mode", "venue", "instrument_id", "max_notional_order", "max_notional_position", "max_leverage",
+  "max_order_per_second", "max_order_per_minute", "max_daily_loss", "max_drawdown", "trading_state", "is_active", "updated_at",
+] as const;
 const PORTFOLIO = [
   "portfolio_id", "name", "owner", "base_currency", "state", "created_at", "updated_at",
 ] as const;
@@ -506,10 +516,12 @@ const FLEET: readonly ProfileProjectionBinding[] = [
   bind("broker_sync", "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN", "manager.accounts", "broker_account_sync_effective", BROKER_SYNC),
   bind("account_sync_current_state", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-sync-current-state", "account_sync_current_state", ACCOUNT_SYNC_CURRENT_STATE),
   bind("account_sync_snapshots", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-sync-snapshots", "account_sync_snapshots", ACCOUNT_SYNC_SNAPSHOTS),
-  // Declared source PK plus finite metadata; no fee, leverage, margin or loan
-  // capture. Current account purpose and field grants are enforced at reads.
+  // Every column the generated registry marks returnable for public.account_policies (metadata jsonb is denied and never
+  // requested). Current account purpose and field grants are enforced at reads.
   bind("account_policies", "EXECUTION_ACCOUNT_BROKER_360_SCREEN", "manager.current.account-policies", "account_policies",
-    ["account_policy_id", "account_id", "mode", "venue", "created_at", "updated_at"]),
+    ACCOUNT_POLICY),
+  // public.risk_profiles: exactly the registry's returnable columns (no max_price_deviation, no allowed_order_types).
+  bind("risk_profiles", "EXECUTION_ALPHA_360_SCREEN", "manager.current.risk-profiles", "risk_profiles", RISK_PROFILE),
   bind("brackets", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-brackets", "order_brackets", BRACKET_PARENT),
   bind("bracket_legs", "EXECUTION_FULL_BLOTTER_SCREEN", "manager.current.order-bracket-legs", "order_bracket_legs", BRACKET_LEG),
   { ...bind("service_heartbeats", INTERNAL_PROJECTION_SCREEN, "manager.current.service-heartbeats", "service_heartbeats", SERVICE_HEARTBEAT),

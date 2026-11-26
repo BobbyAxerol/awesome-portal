@@ -23,6 +23,7 @@ import { ManagerPage, ManagerReadContext, managerPage, paperReadContext } from "
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import { IDENTITY_NOT_READ, identityFields } from "../execution/deployment-identity";
 import { positionsBySide } from "./positions-by-side";
+import { joinPolicyRisk } from "./policy-risk-facts";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
 import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
 import { unpublishedVenueCalendar, type VenueCalendar } from "../execution/venue-calendar";
@@ -396,6 +397,27 @@ export class PaperReadService {
     );
   }
 
+  /**
+   * The deployment's joined account-policy and risk-profile facts from the profile's OWN stored snapshot (no source call).
+   * Fails closed: `{}` (members absent, never zero) unless the read runs in the legacy-compatibility mode, in the projection's
+   * workspace, with the snapshot's two relations AVAILABLE. An authorized-scope read does not get these members until the
+   * access-policy wave grants their vocabulary.
+   */
+  private async policyRiskFacts(principal: PaperPrincipal, deployment: Record<string, unknown>): Promise<Record<string, unknown>> {
+    if (!this.projection || !this.projectionWorkspaceId || !this.paperProfileId || !this.historyScopes) return {};
+    if (principal.workspaceId !== this.projectionWorkspaceId) return {};
+    try {
+      if (await this.historyScopes.selectionMode(principal) !== "LEGACY_COMPATIBILITY") return {};
+      const snapshot = await this.projection.snapshot(this.projectionWorkspaceId, "paper", this.paperProfileId);
+      const relations = snapshot?.document.relations;
+      const policies = relations?.account_policies, risks = relations?.risk_profiles;
+      if (!policies || !risks || policies.availability !== "AVAILABLE" || risks.availability !== "AVAILABLE") return {};
+      return joinPolicyRisk(deployment, policies.items.map((row) => row.fields), risks.items.map((row) => row.fields));
+    } catch {
+      return {};
+    }
+  }
+
   async workbench(principal: PaperPrincipal, deploymentId: string, vnm: boolean) {
     const screenId = vnm
       ? "EXECUTION_PAPER_WORKBENCH_VNM_SCREEN"
@@ -511,7 +533,8 @@ export class PaperReadService {
         // not establish an exact scope read no identity: said, not guessed.
         deployment: deployment
           ? { ...deployment, ...identityFields(resolution.state === "FOUND" && resolution.identity
-            ? resolution.identity : IDENTITY_NOT_READ) }
+            ? resolution.identity : IDENTITY_NOT_READ),
+            ...(resolution.state === "FOUND" ? await this.policyRiskFacts(principal, deployment) : {}) }
           : null,
         observation_gate: observationGate,
         // S3-U4: Long/Short/Gross by side, exact quantity per instrument from the same

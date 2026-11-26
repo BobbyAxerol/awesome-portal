@@ -73,6 +73,7 @@ describe("FE-073 Paper served envelope", () => {
 
   it.each([
     "execution-paper-workbench.okx.valid.json",
+    "execution-paper-workbench.policy-risk.valid.json",
     "execution-full-blotter.okx.valid.json",
   ])("accepts the PAPER_OKX_SWAP body %s in standalone and OpenAPI", file => {
     const body = load(`fixtures/${file}`);

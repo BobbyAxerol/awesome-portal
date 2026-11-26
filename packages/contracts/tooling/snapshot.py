@@ -421,6 +421,7 @@ TRACKED = (
     "fixtures/execution-paper-overview.unavailable.valid.json",
     "fixtures/execution-paper-workbench.partial.valid.json",
     "fixtures/execution-paper-workbench.okx.valid.json",
+    "fixtures/execution-paper-workbench.policy-risk.valid.json",
     "fixtures/execution-paper-workbench-vnm.partial.valid.json",
     "fixtures/execution-full-blotter.partial.valid.json",
     "fixtures/execution-full-blotter.okx.valid.json",

@@ -18,6 +18,7 @@ import { Link } from "react-router-dom";
 
 import { GapWhy, JourneySpine, NotPublished, SectionPanel, StageChipRow, type SpineStageId, type StageChips, type StageChipValue } from "../../blocks";
 import { formatAsOf } from "../../boundary";
+import { formatExact, type ExactUnit } from "../../../formatExact";
 import { Flag } from "../../Flag";
 import { DockAction } from "../../Drawer";
 import { reconciliationFactOf, runtimeFactOf } from "../../readers/stageFactViews";
@@ -84,6 +85,13 @@ export interface HeaderProps {
   read: { atLabel: string | null; refreshing: boolean; failure: string | null; onRefresh(): void };
 }
 
+/** A published decimal through the shared formatter, its exact text in the title; absent says so (never 0). */
+function Limit({ value, unit }: { value: string | null; unit: ExactUnit }) {
+  if (value === null) return <span className="exec-blk-na">Not published</span>;
+  const shown = formatExact(value, unit);
+  return <span title={shown.full}>{shown.display}</span>;
+}
+
 export function Header({ deploymentId, deployment, variant, chips, identity, calendar, links, read }: HeaderProps) {
   const strategy = deployment?.strategyId ?? null;
   // The design names the page by the alpha; the alpha NAME is printed only when the profile published one (FE-066), else the strategy id as before.
@@ -117,6 +125,19 @@ export function Header({ deploymentId, deployment, variant, chips, identity, cal
           {links.account && deployment?.accountId ? <Link className="exec-blk-link" to={links.account}>{deployment.accountId}</Link> : <span>Account not published</span>}
           <span><AlphaNameLine identity={identity} /></span>
           {deployment?.accountPolicyId ? <span>Account policy <span className="exec-blk-id">{deployment.accountPolicyId}</span></span> : null}
+          {deployment?.policyRisk ? (
+            <>
+              <span>Margin mode {deployment.policyRisk.marginMode ?? <span className="exec-blk-na">Not published</span>}</span>
+              <span>Position accounting {deployment.policyRisk.positionAccounting ?? <span className="exec-blk-na">Not published</span>}</span>
+              <span>
+                Risk profile: max leverage <Limit value={deployment.policyRisk.maxLeverage} unit="qty" />
+                {" / "}daily loss <Limit value={deployment.policyRisk.maxDailyLoss} unit="money" />
+                {" / "}drawdown <Limit value={deployment.policyRisk.maxDrawdown} unit="ratio" />
+                {" / "}state {deployment.policyRisk.tradingState ?? <span className="exec-blk-na">Not published</span>}
+                {deployment.policyRisk.isActive === null ? null : deployment.policyRisk.isActive ? " (active)" : " (inactive)"}
+              </span>
+            </>
+          ) : null}
           {deployment?.riskProfileId ? <span>Risk profile <span className="exec-blk-id">{deployment.riskProfileId}</span></span> : null}
           {variant === "vnm" ? <span>VN market calendar: <VenueCalendarLine calendar={calendar} /></span> : null}
         </p>

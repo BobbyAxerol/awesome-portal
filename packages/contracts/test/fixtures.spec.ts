@@ -234,6 +234,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
   "execution-paper-workbench.okx.valid.json":
     "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
+  "execution-paper-workbench.policy-risk.valid.json":
+    "https://schemas.primusspark.com/portal/execution-paper-read.v1.schema.json",
   "execution-sandbox-overview.ready.valid.json":
     "https://schemas.primusspark.com/portal/execution-profile-read.v1.schema.json",
   "execution-live-overview.empty.valid.json":
