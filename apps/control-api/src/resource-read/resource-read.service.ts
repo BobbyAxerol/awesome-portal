@@ -615,7 +615,8 @@ function composeResourceResponse(input: ResourceResponseInput): Record<string, u
     relations: ["derived.differences"], retryable: false }] : [])];
   const resourceResolution = resolutionSummary(selections);
   const unavailableBranches = [
-    ...resourceResolution.filter((entry) => entry.state !== "FOUND"),
+    ...resourceResolution.filter((entry) => entry.state !== "FOUND" ||
+      /^EDS04_PORTFOLIO_(NO_DEPLOYMENT_IN_PROFILE|ALLOCATIONS_EMPTY_DIRECT_DEPLOYMENT_FALLBACK)$/.test(entry.reason_code ?? "")),
     ...capabilityRows.filter((entry) => entry.state !== "AVAILABLE").map((entry) => ({
       capability_id: entry.capability_id,
       state: entry.state,
@@ -878,14 +879,14 @@ function resolveScope(
     } else {
       // Not projected, or projected with no row at all (the Edge delivers an empty allocations relation today): there is
       // no membership proof to contradict, so the exact deployment FK is the only link and is used, with the reason stated.
-      warnings.push(allocationRelation?.availability === "AVAILABLE"
+      warnings.unshift(allocationRelation?.availability === "AVAILABLE"
         ? "EDS04_PORTFOLIO_ALLOCATIONS_EMPTY_DIRECT_DEPLOYMENT_FALLBACK"
         : "EDS04_PORTFOLIO_ALLOCATION_NOT_PROJECTED_DIRECT_DEPLOYMENT_FALLBACK");
       members = selectedDeployments.filter((row) => scope.portfolioIds.has(text(row, "portfolio_id") ?? ""));
     }
     // The portfolio row exists in THIS profile but nothing links a deployment to it here: a stated fact of this profile, not
     // "not found". Another profile (e.g. the other Paper venue) may hold its deployments.
-    if (members.length === 0) warnings.push("EDS04_PORTFOLIO_NO_DEPLOYMENT_IN_PROFILE");
+    if (members.length === 0) warnings.unshift("EDS04_PORTFOLIO_NO_DEPLOYMENT_IN_PROFILE");
   } else {
     members = selectedDeployments.filter((row) => scope.accountIds.has(text(row, "account_id") ?? ""));
   }
