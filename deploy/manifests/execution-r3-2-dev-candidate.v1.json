@@ -91,11 +91,11 @@
   },
   "tracked_config_inputs": {
     "deploy/.env.execution-edge.example": "sha256:71fb4c79f5490fe819d61cda381d91ce3380c62fc20144691e434815eafd07b8",
-    "deploy/compose.execution-current-source.yaml": "sha256:92fa3face5300acee6a8648b8beacd98159463057ff59152292f646616b2829d",
+    "deploy/compose.execution-current-source.yaml": "sha256:1e9dbaff4fd12ec923616d0c34659f6f69e53260b2c6b3253c089f6a9d38b800",
     "deploy/compose.execution-local-projection.yaml": "sha256:26e8c0681fa2041bfac11ebe87b7c6969f85bcd1efe426e118deddbab3bd3ee5",
     "deploy/compose.execution-manager-realtime.yaml": "sha256:6b8ba7f2a3c66cc449a95ed31e93dfa1358f71c4a8930b673e02b2d030b9cc26"
   },
-  "tracked_configuration_sha256": "sha256:3ce2ae30e9ddb7a445c2ebbe223008135412aa356d1f3f3d1caaed541f02f51c",
+  "tracked_configuration_sha256": "sha256:f5172cedc8fe0aa5f4b931cff0b6b3004ff87c1164edc9e76125f0cf2f3efe43",
   "immutable_release_inputs": {
     "state": "R3_4_GENERATION_REQUIRED",
     "required": [
