@@ -198,6 +198,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/execution-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** DR-30 default execution grants of the configured execution workspace, plus the accounts that may be named. Owner only; 404 when FEATURE_EXECUTION_DEFAULT_WORKSPACE_GRANTS is off. */
+        get: operations["listExecutionDefaultGrants"];
+        put?: never;
+        /** Issue a READ-ONLY default execution grant for one account and explicit environments (term at most 365 days). Same service as the execution-default-grant CLI. */
+        post: operations["grantExecutionDefault"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/execution-grants/{username}/renew": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace the environments and term of an active grant. */
+        post: operations["renewExecutionDefaultGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/execution-grants/{username}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke the account's active grant. Effective on the next request; a repeat answers NO_CHANGE. */
+        delete: operations["revokeExecutionDefaultGrant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -376,6 +428,65 @@ export interface components {
             accounts: components["schemas"]["AccountSummary"][];
             page?: components["schemas"]["RosterPage"];
             counts?: components["schemas"]["RosterCounts"];
+        };
+        ExecutionDefaultGrantRequest: {
+            username: string;
+            environments: ("paper" | "sandbox" | "live")[];
+            /** @description Days; omitted means 365. */
+            term_days?: number;
+        };
+        ExecutionDefaultGrantRenewRequest: {
+            environments: ("paper" | "sandbox" | "live")[];
+            /** @description Days; omitted means 365. */
+            term_days?: number;
+        };
+        ExecutionDefaultGrantChange: {
+            /** @constant */
+            schema_version: "portal.execution-default-grant-change.v1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @enum {string} */
+            outcome: "ISSUED" | "RENEWED" | "REVOKED" | "NO_CHANGE" | "APPLIED";
+            workspace_id: string;
+            user_id: string;
+            environments: ("paper" | "sandbox" | "live")[];
+            /** @constant */
+            scope: "DEFAULT_EXECUTION_READ_ONLY";
+            /** @constant */
+            writes: false;
+            /** @constant */
+            membership_changes: 0;
+        };
+        ExecutionDefaultGrantRow: {
+            user_id: string;
+            username: string;
+            display_name: string;
+            environments: ("paper" | "sandbox" | "live")[];
+            /** Format: date-time */
+            term_started_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            revoked_at: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "EXPIRED" | "REVOKED";
+        };
+        ExecutionDefaultGrants: {
+            /** @constant */
+            schema_version: "portal.execution-default-grants.v1";
+            /** @constant */
+            record_authority: "PORTAL_CONTROL";
+            /** @constant */
+            scope: "DEFAULT_EXECUTION_READ_ONLY";
+            workspace_id: string;
+            /** @constant */
+            max_term_days: 365;
+            environments: ("paper" | "sandbox" | "live")[];
+            grants: components["schemas"]["ExecutionDefaultGrantRow"][];
+            candidates: {
+                username: string;
+                display_name: string;
+            }[];
         };
     };
     responses: never;
@@ -1148,6 +1259,266 @@ export interface operations {
             };
             /** @description Current identity coordination is unresolved or unavailable; no result is confirmed. Retry only the same request and idempotency key when the typed error permits. A 503 is never an applied receipt. */
             503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    listExecutionDefaultGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Grants (active, expired and revoked) and eligible accounts. No credential is ever returned. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionDefaultGrants"];
+                };
+            };
+            /** @description No valid session. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not the owner. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Feature off. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    grantExecutionDefault: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-portal-idempotency-key": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecutionDefaultGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description Applied. The effect is visible on the next request. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionDefaultGrantChange"];
+                };
+            };
+            /** @description IDEMPOTENCY_KEY_REQUIRED. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not the owner, a bad Origin or CSRF, or STEP_UP_REQUIRED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Feature off (no route), or ACCOUNT_NOT_ELIGIBLE, or GRANT_NOT_ACTIVE for renew. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description GRANT_ALREADY_ACTIVE (renew instead) or EXECUTION_WORKSPACE_NOT_OWNED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description INVALID_REQUEST, ENVIRONMENTS_REQUIRED, TERM_OUT_OF_RANGE, OWNER_NEEDS_NO_GRANT, GRANT_REFUSED. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    renewExecutionDefaultGrant: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-portal-idempotency-key": string;
+            };
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecutionDefaultGrantRenewRequest"];
+            };
+        };
+        responses: {
+            /** @description Applied. The effect is visible on the next request. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionDefaultGrantChange"];
+                };
+            };
+            /** @description IDEMPOTENCY_KEY_REQUIRED. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not the owner, a bad Origin or CSRF, or STEP_UP_REQUIRED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Feature off (no route), or ACCOUNT_NOT_ELIGIBLE, or GRANT_NOT_ACTIVE for renew. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description EXECUTION_WORKSPACE_NOT_OWNED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description INVALID_REQUEST, ENVIRONMENTS_REQUIRED, TERM_OUT_OF_RANGE, OWNER_NEEDS_NO_GRANT, GRANT_REFUSED. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    revokeExecutionDefaultGrant: {
+        parameters: {
+            query?: never;
+            header: {
+                "x-portal-idempotency-key": string;
+            };
+            path: {
+                username: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Applied. The effect is visible on the next request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExecutionDefaultGrantChange"];
+                };
+            };
+            /** @description IDEMPOTENCY_KEY_REQUIRED. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not the owner, a bad Origin or CSRF, or STEP_UP_REQUIRED. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Feature off (no route), or ACCOUNT_NOT_ELIGIBLE, or GRANT_NOT_ACTIVE for renew. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description EXECUTION_WORKSPACE_NOT_OWNED. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description INVALID_REQUEST, ENVIRONMENTS_REQUIRED, TERM_OUT_OF_RANGE, OWNER_NEEDS_NO_GRANT, GRANT_REFUSED. */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

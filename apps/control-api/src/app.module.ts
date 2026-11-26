@@ -43,6 +43,7 @@ import { AdminService } from "./admin/admin.service";
 import { AdminGuard } from "./admin/rbac.guard";
 import { OwnerAccessController } from "./admin/owner-access.controller";
 import { AccountLifecycleController } from "./admin/account-lifecycle.controller";
+import { DefaultGrantsFlagGuard, ExecutionDefaultGrantsController } from "./admin/execution-default-grants.controller";
 import { OwnerStepUpController } from "./admin/owner-step-up.controller";
 import { GovernanceGrantsController } from "./admin/governance-grants.controller";
 import { GovernanceGrantsService } from "./admin/governance-grants.service";
@@ -436,6 +437,7 @@ export class AppModule implements OnApplicationShutdown {
         // plane would leave a way around every control it adds.
         AccountLifecycleController,
         OwnerStepUpController,
+        ExecutionDefaultGrantsController,
         GovernanceGrantsController,
         OwnerAccessController,
         FacadeController,
@@ -889,6 +891,7 @@ export class AppModule implements OnApplicationShutdown {
         },
         AdminGuard,
         OwnerAccessGuard,
+        DefaultGrantsFlagGuard,
         OwnerAccessService,
       ],
     };

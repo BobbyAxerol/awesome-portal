@@ -48,7 +48,7 @@ function Where() {
 function mount(entry = "/administration/users", props: Partial<React.ComponentProps<typeof UsersScreen>> = {}) {
   return render(
     <MemoryRouter initialEntries={[entry]}>
-      <UsersScreen {...props} />
+      <UsersScreen grantsClient={false} {...props} />
       <Where />
     </MemoryRouter>,
   );

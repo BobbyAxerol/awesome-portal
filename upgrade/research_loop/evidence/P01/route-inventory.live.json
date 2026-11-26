@@ -2,8 +2,13 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 352,
+  "route_count": 356,
   "routes": [
+    {
+      "method": "DELETE",
+      "path": "/api/admin/execution-grants/:username",
+      "owner": "apps/control-api/src/admin/execution-default-grants.controller.ts"
+    },
     {
       "method": "DELETE",
       "path": "/api/admin/profile-access/:grant_id",
@@ -28,6 +33,11 @@
       "method": "GET",
       "path": "/api/admin/c2-p7-candidate/preview",
       "owner": "apps/control-api/src/execution-v2/c2-p7-review-candidate.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/execution-grants",
+      "owner": "apps/control-api/src/admin/execution-default-grants.controller.ts"
     },
     {
       "method": "GET",
@@ -1293,6 +1303,16 @@
       "method": "POST",
       "path": "/api/admin/c2-p7-candidate/resume-by-key",
       "owner": "apps/control-api/src/execution-v2/c2-p7-review-candidate.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/execution-grants",
+      "owner": "apps/control-api/src/admin/execution-default-grants.controller.ts"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/execution-grants/:username/renew",
+      "owner": "apps/control-api/src/admin/execution-default-grants.controller.ts"
     },
     {
       "method": "POST",

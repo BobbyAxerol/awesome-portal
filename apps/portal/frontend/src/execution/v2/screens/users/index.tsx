@@ -49,6 +49,8 @@ import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
 import { useMediaQuery } from "../../useMediaQuery";
 import { PHONE_QUERY } from "../../usePhoneRows";
+import { ExecutionGrantsPanel } from "./ExecutionGrantsPanel";
+import type { GrantsClient } from "../../../../features/admin/executionGrantsApi";
 import { readDetailFromServer, readRosterPageFromServer, RosterMalformed, type RosterCounts, type RosterPage, type RosterQuery } from "./rosterReader";
 import {
   ACCOUNT_ROLES, ACCOUNT_STATES, PAGE_SIZE, PRESET_REQUESTS, ROLE_LABEL, ROW_CAP, STATE_VIEW,
@@ -71,6 +73,8 @@ const DEFAULT_CLIENT: UsersClient = { roster: readRosterPageFromServer, detail: 
 
 export interface UsersScreenProps {
   client?: UsersClient;
+  /** The DR-30 execution grants client. Omitted in tests that do not exercise the panel, which is then not mounted. */
+  grantsClient?: GrantsClient | false;
   /** Route of the V1 Users screen, where changes are still made. */
   legacyHref?: string;
   /** Where "My access" lives, for the denied state. */
@@ -193,7 +197,7 @@ function columnsFor(me: string | null): readonly CardsColumn<AccountSummary>[] {
   ];
 }
 
-export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, accessHref }: UsersScreenProps) {
+export default function UsersScreen({ client = DEFAULT_CLIENT, grantsClient, legacyHref, accessHref }: UsersScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const { access } = useSession();
@@ -486,6 +490,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                 ) : null}
                 {capped ? <span className="exec-usr-note">Showing the first {ROW_CAP} rows. Narrow the search to see the rest.</span> : null}
               </div>
+              {grantsClient === false ? null : <ExecutionGrantsPanel client={grantsClient} />}
               <details className="exec-usr-how" data-testid="users-how">
                 <summary>How accounts work</summary>
                 <ul>
