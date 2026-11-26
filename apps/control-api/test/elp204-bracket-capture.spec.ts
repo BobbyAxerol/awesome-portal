@@ -185,7 +185,8 @@ describe("ELP2-04 bounded exact bracket capture", () => {
     const snapshot = await capture(source((environment, relation) => relation === "order_brackets"
       ? response(environment, relation, [parent(environment, "same-bracket", { account_id: "foreign-account" })]) : undefined));
     expect(snapshot?.document.relations[PARENT].items).toEqual([]);
-    expect(snapshot?.document.relations[CHILD]).toMatchObject({ items: [], completeness: "PARTIAL" });
+    // A leg whose parent was filtered out of this profile is scoped out (v1.6 bracket-legs fix), not a rejected partial.
+    expect(snapshot?.document.relations[CHILD]).toMatchObject({ items: [], completeness: "COMPLETE" });
   });
 
   it("keeps duplicate parent keys unresolvable and source freshness/source clocks unchanged", async () => {

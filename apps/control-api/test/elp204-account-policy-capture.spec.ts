@@ -21,7 +21,11 @@ import { edgeSealFor } from "./edge-seal-fixture";
 const WS = productReadFixture().principal.workspaceId, TIME = "2026-10-17T00:00:00.000Z";
 const SOURCE = "manager.current.account-policies", RELATION = "account_policies", KEY = SOURCE + ":" + RELATION;
 const ACCOUNT = PRIVATE.account_id, POLICY = "TEST_ONLY-policy-A";
-const FIELDS = ["account_policy_id", "account_id", "mode", "venue", "created_at", "updated_at"];
+const FIELDS = ["account_policy_id", "account_id", "mode", "venue", "account_type", "margin_mode", "settlement_policy", "allow_borrowing", "default_leverage",
+  "maker_fee_bps", "taker_fee_bps", "maintenance_margin_rate", "enforce_pretrade_balance", "require_broker_sync", "max_sync_age_seconds",
+  "position_accounting_mode", "loan_package_id", "created_at", "updated_at"];
+// The 19 columns the account_policies binding requests; a source column outside this list is still stripped.
+const CAPTURED_EXTRAS: Row = { maker_fee_bps: "12.5", default_leverage: "20", allow_borrowing: true, loan_package_id: "LOAN-1", maintenance_margin_rate: "0.005" };
 type Environment = "paper" | "sandbox" | "live";
 type Quality = "COMPLETE" | "PARTIAL" | "UNKNOWN";
 type Row = Record<string, string | number | boolean | null>;
@@ -98,17 +102,16 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 account-policy six-fiel
   });
   it("real worker→snapshot→mirror keeps six exact fields in all three configured profiles and strips economic/private extras", async () => {
     const input = source((environment, relation) => relation === RELATION ? response(environment, relation, [row(environment, POLICY, {
-      maker_fee_bps: "12.5", default_leverage: "20", allow_borrowing: true, loan_package_id: "MUST_NOT_CAPTURE",
-      maintenance_margin_rate: "0.005", raw_secret_token: "MUST_NOT_CAPTURE", arbitrary_field: "MUST_NOT_CAPTURE" })]) : undefined);
+      ...CAPTURED_EXTRAS, raw_secret_token: "MUST_NOT_CAPTURE", arbitrary_field: "MUST_NOT_CAPTURE" })]) : undefined);
     await capture(input);
     for (const environment of environments) {
       const snapshot = await repository.rawSnapshot(WS, environment, profile(environment));
       const relation = snapshot!.document.relations[KEY];
       expect(relation).toMatchObject({ availability: "AVAILABLE", completeness: "COMPLETE", freshness: "FRESH", as_of: TIME,
-        items: [{ fields: row(environment), lineage: { workspace_id: WS, profile_id: profile(environment) } }] });
-      expect(Object.keys(relation.items[0].fields).sort()).toEqual([...FIELDS].sort());
-      expect(JSON.stringify(relation)).not.toMatch(/maker_fee_bps|default_leverage|allow_borrowing|loan_package_id|maintenance_margin_rate|MUST_NOT_CAPTURE|opaque-not-the-current-PK/);
-      expect(relation.window).toBeUndefined(); expect((await current(environment)).rows).toEqual([{ entity_key: JSON.stringify([POLICY]), fields: row(environment) }]);
+        items: [{ fields: row(environment, POLICY, CAPTURED_EXTRAS), lineage: { workspace_id: WS, profile_id: profile(environment) } }] });
+      expect(Object.keys(relation.items[0].fields).sort()).toEqual(Object.keys(row(environment, POLICY, CAPTURED_EXTRAS)).sort());
+      expect(JSON.stringify(relation)).not.toMatch(/raw_secret_token|arbitrary_field|MUST_NOT_CAPTURE|opaque-not-the-current-PK/);
+      expect(relation.window).toBeUndefined(); expect((await current(environment)).rows).toEqual([{ entity_key: JSON.stringify([POLICY]), fields: row(environment, POLICY, CAPTURED_EXTRAS) }]);
     }
     const calls = policyCalls(input); expect(calls).toHaveLength(3);
     for (const call of calls) { expect(call[0]).toBe(WS); expect(call[2]).toBe("EXECUTION_ACCOUNT_BROKER_360_SCREEN");
