@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import type { PortalRegistryDocument } from "../../../portal/contracts";
+import { OWNER_NAV_TOKENS } from "../../../app/selfNavView";
 import { sidebarGroups } from "../../../portal/navigation";
 import { readAccessSelfNavigation, type AccessSelfNavigation } from "../readers/accessSelf";
 import { loadCanonical } from "../testkit/loadCanonical";
@@ -146,5 +147,11 @@ describe("the rail built from the gate", () => {
     for (const now of [OBSERVED, UNTIL, UNTIL + 1]) {
       expect(railLabels(navCapabilities(withApprovals, selfNavigationGate(HIDDEN, now)))).toContain("Approvals");
     }
+  });
+});
+
+describe("the owner-anchor tokens", () => {
+  it("are exactly the four menu tokens of V2_NAV_TOKEN (the shell cannot import them)", () => {
+    expect([...OWNER_NAV_TOKENS].sort()).toEqual(Object.values(V2_NAV_TOKEN).sort());
   });
 });

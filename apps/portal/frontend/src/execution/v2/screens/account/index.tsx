@@ -24,10 +24,11 @@
  * | Accounts | hi-fi 6 bindings; real 10-10^2 bindings, 1-6 sleeves each | >200 DOM rows; 8 columns unreadable under 660px | keyset `Load more` at 50, stop at 200 with "Top 200 of N"; cards under 660px | `limit` + `after`/`next_cursor`, `environment`, `search`, `venue` (all exist); credential and Issues narrow loaded rows only and say so | counts are the server's (`filtered_count`); no equity or headroom is invented; broker reference never printed | <=200 DOM rows; one list read, one detail and one exposure read per open peek |
  * | Account 360 | 1 account, 1-6 sleeves, 1-4 currencies, <=200 rows per relation | >200 positions or sync rows; multi-currency ledger reads as one number | caps at 200 rows each (`ROW_CAP`), sync shows newest 10, activity keyset `Load more`; one currency at a time (`ccy`) | `/resources/accounts/{id}` bounded to 200 rows per relation; `getBindingExposure`; subject-activity cursor; equity chart is server-downsampled and says so | no sum across currencies or sleeves; Difference is the source's `delta` only; native balance is never attributed to a sleeve (R10) | one resource read, one exposure, one detail; equity and activity read only when their tab is open |
  */
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { useSession } from "../../../../auth/session";
+import { OWNER_NAV_TOKENS, ShellCapabilitiesContext } from "../../../../app/selfNavView";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { withContext } from "../../urlState";
 import { Link, useSearchParams } from "react-router-dom";
@@ -69,10 +70,16 @@ function Denied() {
 
 export default function AccountScreen({ api, accountId, binding = null, capabilities }: AccountScreenProps) {
   const { access } = useSession();
+  // The session list never holds a `nav:` token; the shell's set adds the live self-navigation rows, and the owner anchor adds all
+  // four (the projection is grant-derived and says HIDDEN for an owner without scoped grants). A non-owner still needs a row.
+  const shell = useContext(ShellCapabilitiesContext);
   const held = useMemo<ReadonlySet<string> | null>(() => {
     if (capabilities !== undefined) return capabilities;
-    return access.kind === "ready" ? new Set(access.access.capabilities) : null;
-  }, [capabilities, access]);
+    if (access.kind !== "ready") return null;
+    const set = new Set([...access.access.capabilities, ...(shell ?? [])]);
+    if (access.access.isOwner === true) for (const token of OWNER_NAV_TOKENS) set.add(token);
+    return set;
+  }, [capabilities, access, shell]);
 
   if (held === null) {
     if (access.kind === "loading") return <div className="exec-acct-v2"><PanelSkeleton label="Reading your access" /></div>;

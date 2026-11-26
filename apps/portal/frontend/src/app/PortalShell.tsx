@@ -22,7 +22,7 @@ import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
 import { opensV2CommandBar, V2_SHELL_ON } from "./commandRouting";
 import { PortalContext } from "./context";
 import { PortalRoutes } from "./PortalRoutes";
-import { NO_NAV_BADGES, NO_SELF_NAV, SELF_ENTRY_PATH, SelfWorkspaceContext, type NavBadges, type SelfNavShellView } from "./selfNavView";
+import { NO_NAV_BADGES, NO_SELF_NAV, OWNER_NAV_TOKENS, SELF_ENTRY_PATH, SelfWorkspaceContext, ShellCapabilitiesContext, type NavBadges, type SelfNavShellView } from "./selfNavView";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { usePreferences } from "./preferences";
@@ -113,10 +113,16 @@ export function PortalShell() {
       : null;
   // A live self-navigation projection can only ADD listing tokens to what the session holds (selfNavGate); nothing is removed,
   // nothing is sent back. With no tokens (flag off, nothing read, expired, failed) this is the session list itself, as before.
+  // The owner anchor lists every execution entry: the grant-derived projection has no owner exception and answers HIDDEN for an
+  // owner without scoped grants, which hid Accounts and its page from the one account that holds everything. Not-owner: unchanged.
   const capabilities = useMemo(
-    () => (selfNav.tokens.size === 0 ? sessionCapabilities : [...new Set([...sessionCapabilities, ...selfNav.tokens])]),
-    [sessionCapabilities, selfNav.tokens],
+    () =>
+      selfNav.tokens.size === 0 && !ownerAccess
+        ? sessionCapabilities
+        : [...new Set([...sessionCapabilities, ...selfNav.tokens, ...(ownerAccess ? OWNER_NAV_TOKENS : [])])],
+    [sessionCapabilities, selfNav.tokens, ownerAccess],
   );
+  const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
   const navOptions = useMemo<NavOptions>(
     () => ({ environment, showCommissioned: preferences.showCommissioned, capabilities }),
     [environment, preferences.showCommissioned, capabilities],
@@ -221,7 +227,9 @@ export function PortalShell() {
 
           <main className="portal-content" id="portal-content" tabIndex={-1}>
             <SelfWorkspaceContext.Provider value={selfNav.workspaceId}>
-              <PortalRoutes registry={registry.data} />
+              <ShellCapabilitiesContext.Provider value={capabilitySet}>
+                <PortalRoutes registry={registry.data} />
+              </ShellCapabilitiesContext.Provider>
             </SelfWorkspaceContext.Provider>
           </main>
         </div>

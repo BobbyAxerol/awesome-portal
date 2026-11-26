@@ -36,6 +36,12 @@ import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
 import { type ExecEnv } from "../urlState";
 
 export const OPERATIONAL_QUEUE_V2_SCHEMA = "portal.execution.operational-queue.v2";
+/**
+ * The queue the same route answers while Core's reader mode is LEGACY_COMPATIBILITY (control-api `GovernanceController.operationsQueue`:
+ * SCOPED_V2 -> the v2 body, otherwise this one). The server is meant to answer it, so the reader dispatches on `schema_version`
+ * instead of treating it as a foreign shape (a stable replica showed an empty page for the owner for exactly that reason).
+ */
+export const OPERATIONS_QUEUE_V1_SCHEMA = "execution.operations-queue.v1";
 export const INCIDENT_ROOT_V2_SCHEMA = "portal.execution.incident-current-root.v2";
 
 export const SEVERITIES_V2 = ["INFO", "WARNING", "ERROR", "CRITICAL"] as const;
@@ -217,7 +223,10 @@ export interface QueuePageV2 {
 }
 
 export interface OperationalQueueV2 {
-  workspaceId: string;
+  /** `null` for the legacy v1 body, which names no workspace; it is never guessed from the request. */
+  workspaceId: string | null;
+  /** `true` when the body was `execution.operations-queue.v1` (no workspace, no coverage statement, no counts/health/links). */
+  legacyV1?: true;
   /** `null` when the source published none; the queue's own value is always null today. */
   sourceAsOfMs: UtcEpochMs | null;
   observedAtMs: UtcEpochMs;
@@ -666,6 +675,46 @@ function schemaOf(raw: unknown): string | null {
 }
 
 /**
+ * `execution.operations-queue.v1` -> the same typed queue, from what the body states and nothing else: no workspace id, no
+ * `source_as_of`, no counts, health or links (all stay absent = "Not published"). The V2 row reader is reused unchanged, so the
+ * row rules are the same; a row whose target is outside ACCOUNT/PORTFOLIO/DEPLOYMENT is not modelled here, and the page is then
+ * `unsupported_shape` (nothing shown) rather than a page with rows silently left out.
+ */
+function readLegacyQueue(root: Record<string, unknown>): OperationalQueueReadV2 | null {
+  const page = record(root.page);
+  if (page !== null && Array.isArray(page.rows)) {
+    for (const entry of page.rows) {
+      const type = record(record(entry)?.target)?.type;
+      if (typeof type === "string" && !(TARGET_TYPES_V2 as readonly string[]).includes(type)) {
+        return { kind: "unsupported_shape", schemaVersion: OPERATIONS_QUEUE_V1_SCHEMA };
+      }
+    }
+  }
+  const readAt = readInstant(root.read_at);
+  const truth = record(root.read_truth);
+  const truthState = oneOf(truth?.state, ["AVAILABLE", "EMPTY"] as const);
+  const reasonCode = truth?.reason_code === null ? null : text(truth?.reason_code);
+  const read = readPage(root.page);
+  if (
+    readAt === null || truth === null || truthState === null || (truth.reason_code !== null && reasonCode === null)
+    || truth.scope !== "REQUEST" || read === null
+    || root.record_authority !== "PORTAL" || root.source_integration_state !== "UNAVAILABLE"
+  ) return null;
+  if (truthState === "EMPTY" && read.rows.length > 0) return null;
+  return {
+    kind: "queue",
+    queue: {
+      workspaceId: null, legacyV1: true, sourceAsOfMs: null, observedAtMs: readAt.ms,
+      readTruth: { state: truthState, reasonCode },
+      sourceIntegrationState: "UNAVAILABLE",
+      // The v1 body states no coverage; nothing is claimed here (no screen reads this field).
+      supportedTargetTypes: [],
+      page: read,
+    },
+  };
+}
+
+/**
  * Queue body -> typed read.
  *
  * `null` is "malformed"; a legacy or newer shape is `unsupported_shape`
@@ -675,6 +724,7 @@ export function readOperationalQueueV2(raw: unknown): OperationalQueueReadV2 | n
   const root = record(raw);
   if (root === null) return null;
   const version = schemaOf(root);
+  if (version === OPERATIONS_QUEUE_V1_SCHEMA) return readLegacyQueue(root);
   if (version !== OPERATIONAL_QUEUE_V2_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
 
   const workspaceId = workspaceIdOf(root.workspace_id);

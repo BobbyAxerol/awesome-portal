@@ -51,3 +51,23 @@ export const NO_NAV_BADGES: NavBadges = Object.freeze({});
  * AMBIGUOUS, NONE, UNAVAILABLE and a failed read all stay `null`.
  */
 export const SelfWorkspaceContext = createContext<string | null>(null);
+
+/**
+ * The listing capability set the shell computed (session capabilities + live self-navigation tokens + the owner-anchor tokens), for a
+ * screen that gates on a menu token. `null` outside the shell. It is a courtesy, never authority: the server still answers each read.
+ * Without it a screen could only see the session list, which never holds a `nav:` token, and would deny everyone.
+ */
+export const ShellCapabilitiesContext = createContext<ReadonlySet<string> | null>(null);
+
+/**
+ * The owner anchor holds every entry (Profile & Access: "You hold every capability through the owner anchor, not through a grant"),
+ * but the self-navigation projection is grant-derived with no owner exception, so it answers HIDDEN for an owner who holds no scoped
+ * grant. The shell adds these four menu tokens for a session whose own read says `is_owner === true`, and only then. Literals, since
+ * the shell may not import `execution/v2`; a test pins them to `V2_NAV_TOKEN`.
+ */
+export const OWNER_NAV_TOKENS: readonly string[] = [
+  "nav:EXECUTION_PORTFOLIOS",
+  "nav:EXECUTION_ACCOUNTS_BINDINGS",
+  "nav:EXECUTION_OPERATIONS",
+  "nav:EXECUTION_BLOTTER",
+];

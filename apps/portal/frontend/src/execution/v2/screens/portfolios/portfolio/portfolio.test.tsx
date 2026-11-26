@@ -611,8 +611,8 @@ describe("People and Activity", () => {
   });
 
   it("names an operations answer it cannot read, never a quiet empty list", async () => {
-    const legacy: Override = (_m, path) => (path === "/operations" ? { status: 200, body: { schema_version: "execution.operations-queue.v1", rows: [] } } : undefined);
-    mount(makeApi(legacy).api);
+    const foreign: Override = (_m, path) => (path === "/operations" ? { status: 200, body: { schema_version: "portal.execution.operational-queue.v3", rows: [] } } : undefined);
+    mount(makeApi(foreign).api);
     await ready();
     await goto("People and Activity");
     expect(await screen.findByText(/answered a shape this screen does not read/)).toBeTruthy();
